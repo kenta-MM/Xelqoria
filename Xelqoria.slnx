@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Xelqoria/Xelqoria.vcxproj" />
+  <Project Path="Xelqoria/Xelqoria.vcxproj" Id="1e70fa15-0556-45fc-9b1b-1b084faf819b" />
 </Solution>
