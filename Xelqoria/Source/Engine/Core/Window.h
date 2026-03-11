@@ -4,15 +4,9 @@
 
 namespace Xelqoria::Core
 {
-	/**
-	 * @brief アプリケーションウィンドウを管理するクラス
-	 *
-	 * Win32 API を使用してアプリケーションウィンドウの生成、
-	 * 表示、およびメッセージ処理を行う。
-	 *
-	 * エンジンの描画システムは、このクラスが生成した
-	 * ウィンドウハンドル (HWND) を使用してレンダリングを行う。
-	 */
+	/// <summary>
+	/// Win32 API を使用してアプリケーションウィンドウを管理する。
+	/// </summary>
 	class Window
 	{
 	public:
@@ -27,33 +21,26 @@ namespace Xelqoria::Core
 		Window(Window&&) = delete;
 		Window& operator=(Window&&) = delete;
 
-		/**
-		 * @brief ウィンドウを作成する
-		 *
-		 * 指定されたサイズとタイトルで Win32 ウィンドウを作成する。
-		 *
-		 * @param hInstance アプリケーションインスタンスハンドル
-		 * @param title ウィンドウタイトル
-		 * @param clientWidth クライアント領域の幅
-		 * @param clientHeight クライアント領域の高さ
-		 * @return 作成に成功した場合 true
-		 */
+		/// <summary>
+		/// 指定サイズとタイトルで Win32 ウィンドウを作成する。
+		/// </summary>
+		/// <param name="hInstance">アプリケーションインスタンスハンドル。</param>
+		/// <param name="title">ウィンドウタイトル。</param>
+		/// <param name="clientWidth">クライアント領域の幅。</param>
+		/// <param name="clientHeight">クライアント領域の高さ。</param>
+		/// <returns>作成に成功した場合は true。</returns>
 		bool Create(HINSTANCE hInstance, const wchar_t* title, uint32_t clientWidth, uint32_t clientHeight);
 
-		/**
-		 * @brief ウィンドウを表示する
-		 *
-		 * @param nCmdShow 表示方法 (SW_SHOW など)
-		 */
+		/// <summary>
+		/// ウィンドウを表示する。
+		/// </summary>
+		/// <param name="nCmdShow">表示方法（SW_SHOW など）。</param>
 		void Show(int nCmdShow = SW_SHOW);
 
-		/**
-		 * @brief ウィンドウメッセージを処理する
-		 *
-		 * Win32 メッセージキューからメッセージを取得し処理する。
-		 *
-		 * @return アプリケーション終了要求があった場合 false
-		 */
+		/// <summary>
+		/// Win32 メッセージキューからメッセージを取得して処理する。
+		/// </summary>
+		/// <returns>アプリケーション終了要求があった場合は false。</returns>
 		bool PumpMessages();
 
 		/// ウィンドウハンドルを取得する
@@ -66,19 +53,15 @@ namespace Xelqoria::Core
 		[[nodiscard]] uint32_t GetHeight() const;
 
 	private:
-		/**
-		 * @brief Win32 の静的ウィンドウプロシージャ
-		 *
-		 * Win32 API から呼び出されるコールバック関数。
-		 * 実際の処理はインスタンスメンバ関数 WndProc に委譲する。
-		 */
+		/// <summary>
+		/// Win32 API から呼び出される静的ウィンドウプロシージャ。
+		/// 実際の処理はインスタンスメンバ関数 WndProc に委譲する。
+		/// </summary>
 		static LRESULT CALLBACK StaticWndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp);
 
-		/**
-		 * @brief インスタンス用ウィンドウプロシージャ
-		 *
-		 * 各ウィンドウインスタンスのメッセージ処理を行う。
-		 */
+		/// <summary>
+		/// 各ウィンドウインスタンスのメッセージ処理を行う。
+		/// </summary>
 		LRESULT WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp);
 
 		HINSTANCE m_hInstance = nullptr;

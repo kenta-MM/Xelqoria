@@ -1,6 +1,11 @@
 #include <Windows.h>
 #include <chrono>
+#include <memory>
+
 #include "Engine/Core/Application.h"
+#include "Engine/Graphics/Sprite.h"
+#include "Engine/Graphics/SpriteRenderer.h"
+#include "Engine/Graphics/Texture2D.h"
 #include "Engine/RHI/GraphicsAPI.h"
 #include "Engine/RHI/GraphicsContextFactory.h"
 
@@ -47,7 +52,6 @@ namespace Xelqoria::Core
                 break;
             }
 
-            // 時間計測
             auto currentTime = clock::now();
             std::chrono::duration<float> delta = currentTime - lastTime;
             lastTime = currentTime;
@@ -65,7 +69,7 @@ namespace Xelqoria::Core
 
     bool Application::Initialize()
     {
-        RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D12;
+        RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D11;
 
         m_graphics = RHI::CreateGraphicsContext(api);
         if (!m_graphics)
@@ -83,8 +87,6 @@ namespace Xelqoria::Core
 
         m_window.Show();
 
-   
-
         if (!m_graphics->Initialize(
             m_window.GetHwnd(),
             m_hInstance,
@@ -94,11 +96,26 @@ namespace Xelqoria::Core
             return false;
         }
 
+        m_spriteRenderer = std::make_unique<Graphics::SpriteRenderer>(*m_graphics);
+        m_spriteTexture = std::make_shared<Graphics::Texture2D>();
+        m_sprite = std::make_unique<Graphics::Sprite>();
+
+        if (!m_spriteTexture->LoadFromFile(L"Resource\\mapchip.png", *m_graphics))
+        {
+            return false;
+        }
+
+        m_sprite->SetTexture(m_spriteTexture);
+
         return true;
     }
 
     void Application::Shutdown()
     {
+        m_sprite.reset();
+        m_spriteTexture.reset();
+        m_spriteRenderer.reset();
+
         if (m_graphics)
         {
             m_graphics->Shutdown();
@@ -119,6 +136,15 @@ namespace Xelqoria::Core
         }
 
         m_graphics->BeginFrame();
+
+        if (m_spriteRenderer && m_sprite)
+        {
+            m_spriteRenderer->Begin();
+            m_spriteRenderer->Draw(*m_sprite);
+            m_spriteRenderer->End();
+        }
+
         m_graphics->EndFrame();
     }
 }
+
