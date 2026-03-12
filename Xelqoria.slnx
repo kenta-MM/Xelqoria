@@ -15,5 +15,9 @@
     <File Path="docs/agents/coding-rules.md" />
     <File Path="docs/agents/workflows.md" />
   </Folder>
+  <Project Path="RHI/Xelqoria.RHI.vcxproj" Id="158b81fc-b108-4237-8a37-eb8c6ef29392" />
+  <Project Path="Graphics/Xelqoria.Graphics.vcxproj" Id="7693792a-4ad4-445a-98f7-b90d6989a837" />
+  <Project Path="Backends.D3D11/Xelqoria.Backends.D3D11.vcxproj" Id="d89979a3-9ede-4b5b-a2b1-2dd1db261114" />
+  <Project Path="Backends.D3D12/Xelqoria.Backends.D3D12.vcxproj" Id="14484bbf-f4fb-48aa-9ce4-bd7cbe1b24a4" />
   <Project Path="Xelqoria/Xelqoria.vcxproj" Id="1e70fa15-0556-45fc-9b1b-1b084faf819b" />
 </Solution>

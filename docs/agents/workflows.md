@@ -40,6 +40,7 @@
 2. D3D11 / D3D12 の Backends 実装を追加
 3. Graphics では抽象インターフェースのみ参照
 4. RHI に `Sprite` / `Mesh` 等の高レベル概念を追加しない
+5. `Xelqoria/tools/check-layer-dependencies.ps1` に通る `#include` 構成にする
 
 ## PR 前チェック
 

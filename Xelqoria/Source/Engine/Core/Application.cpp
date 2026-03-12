@@ -7,7 +7,7 @@
 #include "Engine/Graphics/SpriteRenderer.h"
 #include "Engine/Graphics/Texture2D.h"
 #include "Engine/RHI/GraphicsAPI.h"
-#include "Engine/RHI/GraphicsContextFactory.h"
+#include "Engine/Core/GraphicsContextFactory.h"
 
 namespace Xelqoria::Core
 {
@@ -71,7 +71,7 @@ namespace Xelqoria::Core
     {
         RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D11;
 
-        m_graphics = RHI::CreateGraphicsContext(api);
+        m_graphics = CreateGraphicsContext(api);
         if (!m_graphics)
         {
             return false;
@@ -147,4 +147,3 @@ namespace Xelqoria::Core
         m_graphics->EndFrame();
     }
 }
-
