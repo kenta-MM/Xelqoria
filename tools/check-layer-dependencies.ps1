@@ -4,9 +4,9 @@ param(
 )
 
 $allowedDependencies = @{
+    "App" = @("App", "Backends", "Core", "Graphics", "RHI")
     "Backends" = @("Backends", "RHI")
-    "Core" = @("Backends", "Core", "Game", "Graphics", "RHI")
-    "Entry" = @("Backends", "Core", "Game", "Graphics", "RHI")
+    "Core" = @("Core")
     "Game" = @("Core", "Game", "Graphics")
     "Graphics" = @("Core", "Graphics", "RHI")
     "RHI" = @("RHI")
@@ -63,7 +63,6 @@ function Resolve-IncludePath {
 }
 
 $projectDirs = @(
-    "Xelqoria",
     "RHI",
     "Graphics",
     "Backends.D3D11",

@@ -1,5 +1,5 @@
 #include <Windows.h>
-#include "Engine/Core/Application.h"
+#include "Engine/App/Application.h"
 
 int APIENTRY wWinMain(
     _In_ HINSTANCE hInstance,
@@ -11,6 +11,6 @@ int APIENTRY wWinMain(
     UNREFERENCED_PARAMETER(pCmdLine);
     UNREFERENCED_PARAMETER(nCmdShow);
 
-    Xelqoria::Core::Application app(hInstance);
+    Xelqoria::App::Application app(hInstance);
     return app.Run();
 }

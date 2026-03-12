@@ -137,7 +137,7 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="ValidateLayerDependencies" BeforeTargets="ClCompile">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)Xelqoria\tools\check-layer-dependencies.ps1&quot; -RepoDir &quot;$(SolutionDir)&quot;" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)tools\check-layer-dependencies.ps1&quot; -RepoDir &quot;$(SolutionDir)&quot;" />
   </Target>
   <ImportGroup Label="ExtensionTargets" />
 </Project>

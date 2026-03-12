@@ -2,14 +2,14 @@
 #include <chrono>
 #include <memory>
 
-#include "Engine/Core/Application.h"
+#include "Engine/App/Application.h"
+#include "Engine/App/GraphicsContextFactory.h"
 #include "Engine/Graphics/Sprite.h"
 #include "Engine/Graphics/SpriteRenderer.h"
 #include "Engine/Graphics/Texture2D.h"
 #include "Engine/RHI/GraphicsAPI.h"
-#include "Engine/Core/GraphicsContextFactory.h"
 
-namespace Xelqoria::Core
+namespace Xelqoria::App
 {
     Application::Application(HINSTANCE hInstance)
         : m_hInstance(hInstance)
@@ -28,28 +28,15 @@ namespace Xelqoria::Core
             return -1;
         }
 
-        MSG msg{};
-
         using clock = std::chrono::steady_clock;
         auto lastTime = clock::now();
 
         while (m_running)
         {
-            while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+            if (!m_window.PumpMessages())
             {
-                if (msg.message == WM_QUIT)
-                {
-                    m_running = false;
-                    break;
-                }
-
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
-
-            if (!m_running)
-            {
-                break;
+                m_running = false;
+                continue;
             }
 
             auto currentTime = clock::now();
@@ -64,7 +51,7 @@ namespace Xelqoria::Core
             ++m_count;
         }
 
-        return static_cast<int>(msg.wParam);
+        return 0;
     }
 
     bool Application::Initialize()

@@ -12,7 +12,7 @@ namespace Xelqoria::Graphics
 	class Texture2D;
 }
 
-namespace Xelqoria::Core
+namespace Xelqoria::App
 {
 	/// <summary>
 	/// アプリケーションのメインクラス。
@@ -108,7 +108,7 @@ namespace Xelqoria::Core
 		/// <summary>
 		/// メインウィンドウ。
 		/// </summary>
-		Window m_window{};
+		Core::Window m_window{};
 
 		/// <summary>
 		/// グラフィックスコンテキスト。

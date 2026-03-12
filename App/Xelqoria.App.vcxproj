@@ -19,25 +19,26 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Resource\64606000_p0.png" />
-    <Image Include="Resource\mapchip.png" />
-    <Image Include="Resource\無題.png" />
+    <Image Include="..\Resource\64606000_p0.png" />
+    <Image Include="..\Resource\mapchip.png" />
+    <Image Include="..\Resource\無題.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resource\untitled.fbx" />
+    <None Include="..\Resource\untitled.fbx" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Engine\Core\Application.cpp" />
-    <ClCompile Include="Source\Engine\Core\GraphicsContextFactory.cpp" />
-    <ClCompile Include="Source\Engine\Core\Window.cpp" />
-    <ClCompile Include="Source\Engine\Entry\Entry.cpp" />
+    <ClCompile Include="Source\Engine\App\Application.cpp" />
+    <ClCompile Include="Source\Engine\App\Entry.cpp" />
+    <ClCompile Include="Source\Engine\App\GraphicsContextFactory.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\Core\Application.h" />
-    <ClInclude Include="Source\Engine\Core\GraphicsContextFactory.h" />
-    <ClInclude Include="Source\Engine\Core\Window.h" />
+    <ClInclude Include="Source\Engine\App\Application.h" />
+    <ClInclude Include="Source\Engine\App\GraphicsContextFactory.h" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">
+      <Project>{79E8E826-7407-4766-B731-675CB84F6552}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\RHI\Xelqoria.RHI.vcxproj">
       <Project>{158B81FC-B108-4237-8A37-EB8C6EF29392}</Project>
     </ProjectReference>
@@ -54,8 +55,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{1E70FA15-0556-45FC-9B1B-1B084FAF819B}</ProjectGuid>
-    <RootNamespace>Xelqoria</RootNamespace>
+    <ProjectGuid>{67F2121C-56D6-425E-ADCA-DE9605AB0B9E}</ProjectGuid>
+    <RootNamespace>XelqoriaApp</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -112,7 +113,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(SolutionDir)Graphics\Source;$(SolutionDir)RHI\Source;$(SolutionDir)Backends.D3D11\Source;$(SolutionDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(SolutionDir)Core\Source;$(SolutionDir)Graphics\Source;$(SolutionDir)RHI\Source;$(SolutionDir)Backends.D3D11\Source;$(SolutionDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -130,7 +131,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(SolutionDir)Graphics\Source;$(SolutionDir)RHI\Source;$(SolutionDir)Backends.D3D11\Source;$(SolutionDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(SolutionDir)Core\Source;$(SolutionDir)Graphics\Source;$(SolutionDir)RHI\Source;$(SolutionDir)Backends.D3D11\Source;$(SolutionDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -146,7 +147,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(SolutionDir)Graphics\Source;$(SolutionDir)RHI\Source;$(SolutionDir)Backends.D3D11\Source;$(SolutionDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(SolutionDir)Core\Source;$(SolutionDir)Graphics\Source;$(SolutionDir)RHI\Source;$(SolutionDir)Backends.D3D11\Source;$(SolutionDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -164,7 +165,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(SolutionDir)Graphics\Source;$(SolutionDir)RHI\Source;$(SolutionDir)Backends.D3D11\Source;$(SolutionDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(SolutionDir)Core\Source;$(SolutionDir)Graphics\Source;$(SolutionDir)RHI\Source;$(SolutionDir)Backends.D3D11\Source;$(SolutionDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -175,7 +176,7 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="ValidateLayerDependencies" BeforeTargets="ClCompile">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(ProjectDir)tools\check-layer-dependencies.ps1&quot; -RepoDir &quot;$(SolutionDir)&quot;" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(SolutionDir)tools\check-layer-dependencies.ps1&quot; -RepoDir &quot;$(SolutionDir)&quot;" />
   </Target>
   <ImportGroup Label="ExtensionTargets" />
 </Project>

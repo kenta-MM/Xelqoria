@@ -1,11 +1,11 @@
-#include "Engine/Core/GraphicsContextFactory.h"
+#include "Engine/App/GraphicsContextFactory.h"
 
 #include <memory>
 
 #include "Engine/Backends/D3D11/D3D11GraphicsContext.h"
 #include "Engine/Backends/D3D12/D3D12GraphicsContext.h"
 
-namespace Xelqoria::Core
+namespace Xelqoria::App
 {
     std::unique_ptr<RHI::IGraphicsContext> CreateGraphicsContext(RHI::GraphicsAPI api)
     {
