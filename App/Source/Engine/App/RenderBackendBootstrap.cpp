@@ -1,4 +1,4 @@
-#include "Engine/App/GraphicsContextFactory.h"
+#include "Engine/App/RenderBackendBootstrap.h"
 
 #include <memory>
 
@@ -7,7 +7,7 @@
 
 namespace Xelqoria::App
 {
-    std::unique_ptr<RHI::IGraphicsContext> CreateGraphicsContext(RHI::GraphicsAPI api)
+    std::unique_ptr<RHI::IGraphicsContext> BootstrapRenderBackend(RHI::GraphicsAPI api)
     {
         switch (api)
         {

@@ -19,21 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\Resource\64606000_p0.png" />
     <Image Include="..\Resource\mapchip.png" />
-    <Image Include="..\Resource\無題.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Resource\untitled.fbx" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\App\Application.cpp" />
     <ClCompile Include="Source\Engine\App\Entry.cpp" />
-    <ClCompile Include="Source\Engine\App\GraphicsContextFactory.cpp" />
+    <ClCompile Include="Source\Engine\App\RenderBackendBootstrap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Engine\App\Application.h" />
-    <ClInclude Include="Source\Engine\App\GraphicsContextFactory.h" />
+    <ClInclude Include="Source\Engine\App\RenderBackendBootstrap.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">

@@ -7,5 +7,5 @@
 
 namespace Xelqoria::App
 {
-    std::unique_ptr<RHI::IGraphicsContext> CreateGraphicsContext(RHI::GraphicsAPI api);
+    std::unique_ptr<RHI::IGraphicsContext> BootstrapRenderBackend(RHI::GraphicsAPI api);
 }

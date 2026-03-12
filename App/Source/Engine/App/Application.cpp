@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "Engine/App/Application.h"
-#include "Engine/App/GraphicsContextFactory.h"
+#include "Engine/App/RenderBackendBootstrap.h"
 #include "Engine/Graphics/Sprite.h"
 #include "Engine/Graphics/SpriteRenderer.h"
 #include "Engine/Graphics/Texture2D.h"
@@ -58,7 +58,7 @@ namespace Xelqoria::App
     {
         RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D11;
 
-        m_graphics = CreateGraphicsContext(api);
+        m_graphics = BootstrapRenderBackend(api);
         if (!m_graphics)
         {
             return false;
@@ -87,7 +87,7 @@ namespace Xelqoria::App
         m_spriteTexture = std::make_shared<Graphics::Texture2D>();
         m_sprite = std::make_unique<Graphics::Sprite>();
 
-        if (!m_spriteTexture->LoadFromFile(L"Resource\\mapchip.png", *m_graphics))
+        if (!m_spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", *m_graphics))
         {
             return false;
         }
