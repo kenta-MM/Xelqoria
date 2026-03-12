@@ -5,6 +5,13 @@
 #include "Engine/Core/Window.h"
 #include "Engine/RHI/IGraphicsContext.h"
 
+namespace Xelqoria::Graphics
+{
+	class Sprite;
+	class SpriteRenderer;
+	class Texture2D;
+}
+
 namespace Xelqoria::Core
 {
 	/// <summary>
@@ -108,6 +115,10 @@ namespace Xelqoria::Core
 		/// DirectX / Vulkan などの実装を抽象化する。
 		/// </summary>
 		std::unique_ptr<RHI::IGraphicsContext> m_graphics;
+
+		std::unique_ptr<Graphics::SpriteRenderer> m_spriteRenderer;
+		std::unique_ptr<Graphics::Sprite> m_sprite;
+		std::shared_ptr<Graphics::Texture2D> m_spriteTexture;
 
 		/// <summary>
 		/// アプリケーション実行フラグ。

@@ -1,78 +1,81 @@
 #pragma once
+
 #include <Windows.h>
 #include <cstdint>
+#include <memory>
+#include <string>
 
 namespace Xelqoria::RHI
 {
-    /**
-     * @brief グラフィックスコンテキストのインターフェース
-     *
-     * 各グラフィックスAPI（Direct3D11 / Direct3D12 / Vulkan など）の
-     * 実装が共通で利用する描画コンテキストの抽象インターフェース。
-     *
-     * レンダリングシステムはこのインターフェースを介して
-     * 初期化、フレーム開始・終了、リサイズ処理などを実行する。
-     */
+    class ITexture;
+
+    /// <summary>
+    /// レンダリング基盤の初期化・フレーム制御・描画を抽象化する RHI インターフェース。
+    /// </summary>
     class IGraphicsContext
     {
     public:
-
-        /**
-         * @brief デストラクタ
-         *
-         * 派生クラスの安全な破棄のために仮想デストラクタとして定義する。
-         */
         virtual ~IGraphicsContext() = default;
-        
 
-        /**
-         * @brief グラフィックスコンテキストを初期化する
-         *
-         * 指定されたウィンドウハンドルに対して描画を行うための
-         * デバイスやスワップチェーンなどのグラフィックスリソースを初期化する。
-         *
-         * @param hWnd 描画対象となるウィンドウハンドル
-         * @param hInstance アプリケーションインスタンスハンドル
-         * @param width 描画領域の幅
-         * @param height 描画領域の高さ
-         *
-         * @return 初期化に成功した場合 true
-         */
+        /// <summary>
+        /// グラフィックスコンテキストを初期化する。
+        /// </summary>
+        /// <param name="hWnd">描画対象のウィンドウハンドル。</param>
+        /// <param name="hInstance">アプリケーションインスタンスハンドル。</param>
+        /// <param name="width">初期描画幅（ピクセル）。</param>
+        /// <param name="height">初期描画高さ（ピクセル）。</param>
+        /// <returns>初期化成功時は true。</returns>
         virtual bool Initialize(HWND hWnd, HINSTANCE hInstance, std::uint32_t width, std::uint32_t height) = 0;
 
-        /**
-         * @brief グラフィックスコンテキストを終了する
-         *
-         * 作成したデバイス、スワップチェーン、レンダーターゲットなど
-         * すべてのグラフィックスリソースを解放する。
-         */
+        /// <summary>
+        /// グラフィックスコンテキストを終了し、内部リソースを解放する。
+        /// </summary>
         virtual void Shutdown() = 0;
 
-        /**
-         * @brief フレーム描画を開始する
-         *
-         * レンダーターゲットの設定やクリア処理など、
-         * フレーム描画開始時に必要な処理を行う。
-         */
+        /// <summary>
+        /// フレーム描画を開始する。
+        /// </summary>
         virtual void BeginFrame() = 0;
 
-        /**
-         * @brief フレーム描画を終了する
-         *
-         * 描画結果をスワップチェーンに提示し、
-         * 画面へ表示する処理を行う。
-         */
+        /// <summary>
+        /// フレーム描画を終了する。
+        /// </summary>
         virtual void EndFrame() = 0;
 
-        /**
-         * @brief 描画サイズを変更する
-         *
-         * ウィンドウサイズ変更時などに呼び出され、
-         * スワップチェーンやレンダーターゲットを再作成する。
-         *
-         * @param width 新しい描画幅
-         * @param height 新しい描画高さ
-         */
+        /// <summary>
+        /// ファイルからテクスチャを生成する。
+        /// </summary>
+        /// <param name="filePath">テクスチャファイルパス。</param>
+        /// <returns>生成されたテクスチャ。失敗時は nullptr。</returns>
+        virtual std::shared_ptr<ITexture> CreateTextureFromFile(const std::wstring& filePath) = 0;
+
+        /// <summary>
+        /// 指定スロットにテクスチャをバインドする。
+        /// </summary>
+        /// <param name="slot">バインド先スロット番号。</param>
+        /// <param name="texture">バインドするテクスチャ。</param>
+        virtual void BindTexture(std::uint32_t slot, ITexture* texture) = 0;
+
+        /// <summary>
+        /// 非インデックス描画を実行する。
+        /// </summary>
+        /// <param name="vertexCount">描画頂点数。</param>
+        /// <param name="startVertexLocation">開始頂点オフセット。</param>
+        virtual void Draw(std::uint32_t vertexCount, std::uint32_t startVertexLocation = 0) = 0;
+
+        /// <summary>
+        /// インデックス描画を実行する。
+        /// </summary>
+        /// <param name="indexCount">描画インデックス数。</param>
+        /// <param name="startIndexLocation">開始インデックスオフセット。</param>
+        /// <param name="baseVertexLocation">ベース頂点オフセット。</param>
+        virtual void DrawIndexed(std::uint32_t indexCount, std::uint32_t startIndexLocation = 0, std::int32_t baseVertexLocation = 0) = 0;
+
+        /// <summary>
+        /// 描画ターゲットサイズ変更時のリソースを再構築する。
+        /// </summary>
+        /// <param name="width">変更後の幅（ピクセル）。</param>
+        /// <param name="height">変更後の高さ（ピクセル）。</param>
         virtual void Resize(std::uint32_t width, std::uint32_t height) = 0;
     };
 }

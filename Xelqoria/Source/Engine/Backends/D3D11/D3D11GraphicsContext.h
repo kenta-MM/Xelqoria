@@ -1,151 +1,96 @@
 #pragma once
+
 #include <Windows.h>
-#include <wrl/client.h>
+#include <cstdint>
+#include <memory>
+#include <string>
+
 #include <d3d11.h>
 #include <dxgi.h>
+#include <wrl/client.h>
 
 #include "Engine/RHI/IGraphicsContext.h"
+#include "Engine/RHI/IVertexBuffer.h"
 
 namespace Xelqoria::Backends::D3D11
 {
     /// <summary>
-    /// Direct3D11 を使用したグラフィックスコンテキストの実装クラス。
+    /// Direct3D 11 バックエンドのグラフィックスコンテキスト実装。
     /// </summary>
-    /// <remarks>
-    /// RHI::IGraphicsContext の D3D11 バックエンド実装。
-    /// デバイス・デバイスコンテキスト・スワップチェーンなどの
-    /// Direct3D11 の主要リソースを管理し、フレーム描画の開始と終了を提供する。
-    /// </remarks>
     class D3D11GraphicsContext final : public RHI::IGraphicsContext
     {
     public:
-
-        /// <summary>
-        /// D3D11GraphicsContext を生成する。
-        /// </summary>
         D3D11GraphicsContext() = default;
-
-        /// <summary>
-        /// デストラクタ。
-        /// Direct3D リソースの解放を行う。
-        /// </summary>
         ~D3D11GraphicsContext() override;
 
-        /// <summary>
-        /// コピーコンストラクタは禁止。
-        /// </summary>
         D3D11GraphicsContext(const D3D11GraphicsContext&) = delete;
-
-        /// <summary>
-        /// コピー代入は禁止。
-        /// </summary>
         D3D11GraphicsContext& operator=(const D3D11GraphicsContext&) = delete;
 
-        /// <summary>
-        /// グラフィックスコンテキストを初期化する。
-        /// </summary>
-        /// <param name="hwnd">描画対象となるウィンドウハンドル</param>
-        /// <param name="hInstance">アプリケーションインスタンス</param>
-        /// <param name="width">描画領域の幅</param>
-        /// <param name="height">描画領域の高さ</param>
-        /// <returns>初期化に成功した場合 true</returns>
+        /// <inheritdoc/>
         bool Initialize(HWND hwnd, HINSTANCE hInstance, std::uint32_t width, std::uint32_t height) override;
-
-        /// <summary>
-        /// グラフィックスコンテキストを終了し、リソースを解放する。
-        /// </summary>
+        /// <inheritdoc/>
         void Shutdown() override;
 
-        /// <summary>
-        /// フレーム描画を開始する。
-        /// </summary>
-        /// <remarks>
-        /// レンダーターゲットの設定やクリア処理などを行う。
-        /// </remarks>
+        /// <inheritdoc/>
         void BeginFrame() override;
-
-        /// <summary>
-        /// フレーム描画を終了する。
-        /// </summary>
-        /// <remarks>
-        /// スワップチェーンの Present を呼び出し、
-        /// バックバッファを画面へ表示する。
-        /// </remarks>
+        /// <inheritdoc/>
         void EndFrame() override;
 
-        /// <summary>
-        /// ウィンドウサイズ変更時にレンダリングターゲットを再生成する。
-        /// </summary>
-        /// <param name="width">新しい幅</param>
-        /// <param name="height">新しい高さ</param>
-        void Resize(std::uint32_t width, std::uint32_t height);
+        /// <inheritdoc/>
+        std::shared_ptr<RHI::ITexture> CreateTextureFromFile(const std::wstring& filePath) override;
+        /// <inheritdoc/>
+        void BindTexture(std::uint32_t slot, RHI::ITexture* texture) override;
+
+        /// <inheritdoc/>
+        void Draw(std::uint32_t vertexCount, std::uint32_t startVertexLocation = 0) override;
+        /// <inheritdoc/>
+        void DrawIndexed(std::uint32_t indexCount, std::uint32_t startIndexLocation = 0, std::int32_t baseVertexLocation = 0) override;
+
+        /// <inheritdoc/>
+        void Resize(std::uint32_t width, std::uint32_t height) override;
 
     private:
-
         /// <summary>
-        /// Direct3D デバイスとスワップチェーンを作成する。
+        /// D3D11 デバイスとスワップチェーンを生成する。
         /// </summary>
-        /// <param name="hWnd">描画対象ウィンドウ</param>
-        /// <param name="width">バックバッファの幅</param>
-        /// <param name="height">バックバッファの高さ</param>
-        /// <returns>作成に成功した場合 true</returns>
         bool CreateDeviceAndSwapChain(HWND hWnd, std::uint32_t width, std::uint32_t height);
-
         /// <summary>
-        /// レンダーターゲットビューを作成する。
+        /// レンダーターゲットビューを生成する。
         /// </summary>
-        /// <returns>作成に成功した場合 true</returns>
         bool CreateRenderTarget();
-
         /// <summary>
-        /// レンダーターゲットビューを解放する。
+        /// レンダーターゲット関連リソースを解放する。
         /// </summary>
         void ReleaseRenderTarget();
 
+        /// <summary>
+        /// スプライト描画用パイプラインを生成する。
+        /// </summary>
+        bool CreateSpritePipeline();
+        /// <summary>
+        /// スプライト描画用ジオメトリを生成する。
+        /// </summary>
+        bool CreateSpriteGeometry();
+        /// <summary>
+        /// スプライト描画関連リソースを解放する。
+        /// </summary>
+        void ReleaseSpriteResources();
+
     private:
-
-        /// <summary>
-        /// 描画対象ウィンドウハンドル。
-        /// </summary>
         HWND m_hwnd = nullptr;
-
-        /// <summary>
-        /// アプリケーションインスタンス。
-        /// </summary>
         HINSTANCE m_hInstance = nullptr;
-
-        /// <summary>
-        /// 現在の描画幅。
-        /// </summary>
         std::uint32_t m_width = 0;
-
-        /// <summary>
-        /// 現在の描画高さ。
-        /// </summary>
         std::uint32_t m_height = 0;
 
-        /// <summary>
-        /// Direct3D11 デバイス。
-        /// GPU リソースの生成などを担当する。
-        /// </summary>
         Microsoft::WRL::ComPtr<ID3D11Device> m_device;
-
-        /// <summary>
-        /// Direct3D11 デバイスコンテキスト。
-        /// 描画コマンドの実行を担当する。
-        /// </summary>
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_deviceContext;
-
-        /// <summary>
-        /// スワップチェーン。
-        /// バックバッファとフロントバッファの交換を管理する。
-        /// </summary>
         Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
-
-        /// <summary>
-        /// レンダーターゲットビュー。
-        /// バックバッファを描画ターゲットとして使用するためのビュー。
-        /// </summary>
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_renderTargetView;
+
+        Microsoft::WRL::ComPtr<ID3D11VertexShader> m_spriteVertexShader;
+        Microsoft::WRL::ComPtr<ID3D11PixelShader> m_spritePixelShader;
+        Microsoft::WRL::ComPtr<ID3D11InputLayout> m_spriteInputLayout;
+        std::shared_ptr<RHI::IVertexBuffer> m_spriteVertexBuffer;
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> m_spriteSamplerState;
     };
 }

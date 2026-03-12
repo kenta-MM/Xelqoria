@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -28,20 +28,37 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Backends\D3D11\D3D11GraphicsContext.cpp" />
+    <ClCompile Include="Source\Engine\Backends\D3D11\D3D11VertexBuffer.cpp" />
+    <ClCompile Include="Source\Engine\Backends\D3D11\D3D11Texture.cpp" />
     <ClCompile Include="Source\Engine\Backends\D3D12\D3D12GraphicsContext.cpp" />
+    <ClCompile Include="Source\Engine\Backends\D3D12\D3D12VertexBuffer.cpp" />
+    <ClCompile Include="Source\Engine\Backends\D3D12\D3D12Texture.cpp" />
     <ClCompile Include="Source\Engine\Core\Application.cpp" />
     <ClCompile Include="Source\Engine\Core\Window.cpp" />
     <ClCompile Include="Source\Engine\Entry\Entry.cpp" />
+    <ClCompile Include="Source\Engine\Graphics\Sprite.cpp" />
+    <ClCompile Include="Source\Engine\Graphics\SpriteRenderer.cpp" />
+    <ClCompile Include="Source\Engine\Graphics\Texture2D.cpp" />
     <ClCompile Include="Source\Engine\RHI\GraphicsContextFactory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Engine\Backends\D3D11\D3D11GraphicsContext.h" />
+    <ClInclude Include="Source\Engine\Backends\D3D11\D3D11VertexBuffer.h" />
+    <ClInclude Include="Source\Engine\Backends\D3D11\D3D11Texture.h" />
     <ClInclude Include="Source\Engine\Backends\D3D12\D3D12GraphicsContext.h" />
+    <ClInclude Include="Source\Engine\Backends\D3D12\D3D12VertexBuffer.h" />
+    <ClInclude Include="Source\Engine\Backends\D3D12\D3D12Texture.h" />
     <ClInclude Include="Source\Engine\Core\Application.h" />
     <ClInclude Include="Source\Engine\Core\Window.h" />
+    <ClInclude Include="Source\Engine\Graphics\Sprite.h" />
+    <ClInclude Include="Source\Engine\Graphics\SpriteRenderer.h" />
+    <ClInclude Include="Source\Engine\Graphics\Texture2D.h" />
     <ClInclude Include="Source\Engine\RHI\GraphicsContextFactory.h" />
     <ClInclude Include="Source\Engine\RHI\GraphicsAPI.h" />
     <ClInclude Include="Source\Engine\RHI\IGraphicsContext.h" />
+    <ClInclude Include="Source\Engine\RHI\IIndexBuffer.h" />
+    <ClInclude Include="Source\Engine\RHI\ITexture.h" />
+    <ClInclude Include="Source\Engine\RHI\IVertexBuffer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
@@ -171,3 +188,4 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
+

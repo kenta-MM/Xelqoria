@@ -3,5 +3,17 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/ソリューション項目/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="AGENTS.md" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/docs/" />
+  <Folder Name="/ソリューション項目/docs/agents/">
+    <File Path="docs/agents/architecture.md" />
+    <File Path="docs/agents/coding-rules.md" />
+    <File Path="docs/agents/workflows.md" />
+  </Folder>
   <Project Path="Xelqoria/Xelqoria.vcxproj" Id="1e70fa15-0556-45fc-9b1b-1b084faf819b" />
 </Solution>

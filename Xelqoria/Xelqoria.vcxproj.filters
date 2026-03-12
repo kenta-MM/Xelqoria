@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="ヘッダー ファイル">
@@ -36,6 +36,9 @@
     <Filter Include="Source\Engine\Backends\D3D12">
       <UniqueIdentifier>{a4e9e790-693a-45b5-9db4-50fe0df3f1a7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Graphics">
+      <UniqueIdentifier>{befa816a-0889-4044-9d52-b563964c5a0a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Resource\64606000_p0.png">
@@ -72,6 +75,27 @@
     <ClCompile Include="Source\Engine\Backends\D3D12\D3D12GraphicsContext.cpp">
       <Filter>Source\Engine\Backends\D3D12</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Backends\D3D12\D3D12VertexBuffer.cpp">
+      <Filter>Source\Engine\Backends\D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Backends\D3D12\D3D12Texture.cpp">
+      <Filter>Source\Engine\Backends\D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\Texture2D.cpp">
+      <Filter>Source\Engine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\Sprite.cpp">
+      <Filter>Source\Engine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Graphics\SpriteRenderer.cpp">
+      <Filter>Source\Engine\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Backends\D3D11\D3D11VertexBuffer.cpp">
+      <Filter>Source\Engine\Backends\D3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Backends\D3D11\D3D11Texture.cpp">
+      <Filter>Source\Engine\Backends\D3D11</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Engine\Backends\D3D11\D3D11GraphicsContext.h">
@@ -95,5 +119,36 @@
     <ClInclude Include="Source\Engine\Backends\D3D12\D3D12GraphicsContext.h">
       <Filter>Source\Engine\Backends\D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Backends\D3D12\D3D12VertexBuffer.h">
+      <Filter>Source\Engine\Backends\D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Backends\D3D12\D3D12Texture.h">
+      <Filter>Source\Engine\Backends\D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Sprite.h">
+      <Filter>Source\Engine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\Texture2D.h">
+      <Filter>Source\Engine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\RHI\ITexture.h">
+      <Filter>Source\Engine\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics\SpriteRenderer.h">
+      <Filter>Source\Engine\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Backends\D3D11\D3D11VertexBuffer.h">
+      <Filter>Source\Engine\Backends\D3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Backends\D3D11\D3D11Texture.h">
+      <Filter>Source\Engine\Backends\D3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\RHI\IIndexBuffer.h">
+      <Filter>Source\Engine\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\RHI\IVertexBuffer.h">
+      <Filter>Source\Engine\RHI</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
+
