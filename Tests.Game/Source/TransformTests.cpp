@@ -1,3 +1,4 @@
+#include "EntityManager.h"
 #include "Transform.h"
 
 namespace
@@ -45,6 +46,58 @@ int main()
 	if (!IsEqual(transform.position.x, -1.0f) ||
 		!IsEqual(transform.position.y, 2.5f) ||
 		!IsEqual(transform.position.z, 0.5f)) {
+		return 1;
+	}
+
+	Xelqoria::Game::EntityManager entities;
+	const Xelqoria::Game::EntityId firstEntity = entities.CreateEntity();
+	const Xelqoria::Game::EntityId secondEntity = entities.CreateEntity();
+
+	if (firstEntity == 0 || secondEntity == 0 || firstEntity == secondEntity) {
+		return 1;
+	}
+
+	if (!entities.HasEntity(firstEntity) || !entities.HasEntity(secondEntity)) {
+		return 1;
+	}
+
+	if (entities.GetEntityCount() != 2) {
+		return 1;
+	}
+
+	Xelqoria::Game::Transform firstTransform;
+	firstTransform.SetPosition(3.0f, 4.0f, 5.0f);
+	if (!entities.SetTransform(firstEntity, firstTransform)) {
+		return 1;
+	}
+
+	const Xelqoria::Game::Transform* storedTransform = entities.FindTransform(firstEntity);
+	if (storedTransform == nullptr ||
+		!IsEqual(storedTransform->position.x, 3.0f) ||
+		!IsEqual(storedTransform->position.y, 4.0f) ||
+		!IsEqual(storedTransform->position.z, 5.0f)) {
+		return 1;
+	}
+
+	if (entities.FindTransform(secondEntity) != nullptr) {
+		return 1;
+	}
+
+	if (entities.SetTransform(0, firstTransform)) {
+		return 1;
+	}
+
+	if (!entities.DestroyEntity(firstEntity)) {
+		return 1;
+	}
+
+	if (entities.HasEntity(firstEntity) ||
+		entities.FindTransform(firstEntity) != nullptr ||
+		entities.GetEntityCount() != 1) {
+		return 1;
+	}
+
+	if (entities.DestroyEntity(firstEntity)) {
 		return 1;
 	}
 
