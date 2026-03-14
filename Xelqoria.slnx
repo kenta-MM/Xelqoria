@@ -9,6 +9,10 @@
     <File Path="AGENTS.md" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/ソリューション項目/.github/" />
+  <Folder Name="/ソリューション項目/.github/workflows/">
+    <File Path=".github/workflows/auto-create-issue-branch.yml" />
+  </Folder>
   <Folder Name="/ソリューション項目/docs/" />
   <Folder Name="/ソリューション項目/docs/agents/">
     <File Path="docs/agents/architecture.md" />
