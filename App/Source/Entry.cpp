@@ -1,5 +1,5 @@
 #include <Windows.h>
-#include "Engine/App/Application.h"
+#include "Application.h"
 
 int APIENTRY wWinMain(
     _In_ HINSTANCE hInstance,

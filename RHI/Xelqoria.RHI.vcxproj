@@ -19,14 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Engine\RHI\RHIModule.cpp" />
+    <ClCompile Include="Source\RHIAnchor.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\RHI\GraphicsAPI.h" />
-    <ClInclude Include="Source\Engine\RHI\IGraphicsContext.h" />
-    <ClInclude Include="Source\Engine\RHI\IIndexBuffer.h" />
-    <ClInclude Include="Source\Engine\RHI\ITexture.h" />
-    <ClInclude Include="Source\Engine\RHI\IVertexBuffer.h" />
+    <ClInclude Include="Source\GraphicsAPI.h" />
+    <ClInclude Include="Source\IGraphicsContext.h" />
+    <ClInclude Include="Source\IIndexBuffer.h" />
+    <ClInclude Include="Source\ITexture.h" />
+    <ClInclude Include="Source\IVertexBuffer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>

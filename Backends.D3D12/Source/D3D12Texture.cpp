@@ -1,4 +1,4 @@
-#include "Engine/Backends/D3D12/D3D12Texture.h"
+#include "D3D12Texture.h"
 
 #include <algorithm>
 #include <cstddef>

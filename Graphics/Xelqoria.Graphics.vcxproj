@@ -19,14 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Engine\Graphics\Sprite.cpp" />
-    <ClCompile Include="Source\Engine\Graphics\SpriteRenderer.cpp" />
-    <ClCompile Include="Source\Engine\Graphics\Texture2D.cpp" />
+    <ClCompile Include="Source\Sprite.cpp" />
+    <ClCompile Include="Source\SpriteRenderer.cpp" />
+    <ClCompile Include="Source\Texture2D.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\Graphics\Sprite.h" />
-    <ClInclude Include="Source\Engine\Graphics\SpriteRenderer.h" />
-    <ClInclude Include="Source\Engine\Graphics\Texture2D.h" />
+    <ClInclude Include="Source\Sprite.h" />
+    <ClInclude Include="Source\SpriteRenderer.h" />
+    <ClInclude Include="Source\Texture2D.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RHI\Xelqoria.RHI.vcxproj">

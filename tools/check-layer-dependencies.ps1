@@ -3,6 +3,10 @@ param(
     [string]$RepoDir
 )
 
+$RepoDir = $RepoDir.Trim('"')
+$RepoDir = [System.IO.Path]::GetFullPath($RepoDir)
+
+# Allowed layer dependencies keyed by source layer name.
 $allowedDependencies = @{
     "App" = @("App", "Backends", "Core", "Graphics", "RHI")
     "Backends" = @("Backends", "RHI")
@@ -14,28 +18,19 @@ $allowedDependencies = @{
 
 function Get-LayerName {
     param(
-        [string]$FullPath
+        [string]$FilePath,
+        [System.Collections.Generic.List[string]]$SourceRoots,
+        [hashtable]$SourceRootLayers
     )
+    $normalizedPath = [System.IO.Path]::GetFullPath($FilePath)
 
-    $normalizedPath = [System.IO.Path]::GetFullPath($FullPath)
-
-    foreach ($root in $engineRoots) {
-        $normalizedRoot = [System.IO.Path]::GetFullPath($root)
+    foreach ($sourceRoot in $SourceRoots) {
+        $normalizedRoot = [System.IO.Path]::GetFullPath($sourceRoot)
         if (-not $normalizedPath.StartsWith($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
             continue
         }
 
-        $relative = $normalizedPath.Substring($normalizedRoot.Length).TrimStart('\', '/')
-        if ([string]::IsNullOrWhiteSpace($relative)) {
-            return $null
-        }
-
-        $segments = $relative -split '[\\/]'
-        if ($segments.Length -eq 0) {
-            return $null
-        }
-
-        return $segments[0]
+        return $SourceRootLayers[$normalizedRoot]
     }
 
     return $null
@@ -44,22 +39,42 @@ function Get-LayerName {
 function Resolve-IncludePath {
     param(
         [string]$SourceFile,
-        [string]$IncludePath
+        [string]$IncludePath,
+        [System.Collections.Generic.List[string]]$SourceRoots
     )
-
-    if ($IncludePath.StartsWith("Engine/") -or $IncludePath.StartsWith("Engine\")) {
-        foreach ($root in $sourceRoots) {
-            $candidate = Join-Path $root $IncludePath
-            if (Test-Path $candidate) {
-                return $candidate
-            }
-        }
-
-        return Join-Path $sourceRoots[0] $IncludePath
+    $sourceDirectory = Split-Path $SourceFile -Parent
+    $localCandidate = [System.IO.Path]::GetFullPath((Join-Path $sourceDirectory $IncludePath))
+    if (Test-Path $localCandidate) {
+        return $localCandidate
     }
 
-    $sourceDirectory = Split-Path $SourceFile -Parent
-    return [System.IO.Path]::GetFullPath((Join-Path $sourceDirectory $IncludePath))
+    foreach ($root in $SourceRoots) {
+        $candidate = Join-Path $root $IncludePath
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+    }
+
+    return $localCandidate
+}
+
+function Get-RelativePath {
+    param(
+        [string]$BasePath,
+        [string]$TargetPath
+    )
+
+    $normalizedBasePath = [System.IO.Path]::GetFullPath($BasePath)
+    $normalizedTargetPath = [System.IO.Path]::GetFullPath($TargetPath)
+
+    if (-not $normalizedBasePath.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+        $normalizedBasePath += [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    $baseUri = New-Object System.Uri($normalizedBasePath)
+    $targetUri = New-Object System.Uri($normalizedTargetPath)
+    $relativeUri = $baseUri.MakeRelativeUri($targetUri)
+    return [System.Uri]::UnescapeDataString($relativeUri.ToString()).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
 }
 
 $projectDirs = @(
@@ -73,25 +88,34 @@ $projectDirs = @(
 )
 
 $sourceRoots = New-Object System.Collections.Generic.List[string]
-$engineRoots = New-Object System.Collections.Generic.List[string]
+$sourceRootLayers = @{}
 
+# Map each existing Source directory to its logical layer name.
 foreach ($projectName in $projectDirs) {
     $sourceRoot = Join-Path (Join-Path $RepoDir $projectName) "Source"
-    $engineRoot = Join-Path $sourceRoot "Engine"
-
-    if (Test-Path $engineRoot) {
-        $sourceRoots.Add($sourceRoot)
-        $engineRoots.Add($engineRoot)
+    if (-not (Test-Path $sourceRoot)) {
+        continue
     }
+
+    $sourceRoots.Add($sourceRoot)
+    $normalizedSourceRoot = [System.IO.Path]::GetFullPath($sourceRoot)
+    $layerName = $projectName
+    if ($projectName.StartsWith("Backends")) {
+        $layerName = "Backends"
+    }
+
+    $sourceRootLayers[$normalizedSourceRoot] = $layerName
 }
 
-$violations = New-Object System.Collections.Generic.List[string]
-$sourceFiles = foreach ($root in $engineRoots) {
+# Collect all .cpp and .h files under the discovered Source directories.
+$sourceFiles = foreach ($root in $sourceRoots) {
     Get-ChildItem -Path $root -Recurse -File -Include *.h,*.cpp
 }
 
+# 
+$violations = New-Object System.Collections.Generic.List[string]
 foreach ($file in $sourceFiles) {
-    $sourceLayer = Get-LayerName -FullPath $file.FullName
+    $sourceLayer = Get-LayerName -FilePath $file.FullName -SourceRoots $sourceRoots -SourceRootLayers $sourceRootLayers
     if (-not $sourceLayer) {
         continue
     }
@@ -110,16 +134,16 @@ foreach ($file in $sourceFiles) {
         }
 
         $includePath = $matches[1]
-        $resolvedInclude = Resolve-IncludePath -SourceFile $file.FullName -IncludePath $includePath
-        $targetLayer = Get-LayerName -FullPath $resolvedInclude
+        $resolvedInclude = Resolve-IncludePath -SourceFile $file.FullName -IncludePath $includePath -SourceRoots $sourceRoots
+        $targetLayer = Get-LayerName -FilePath $resolvedInclude -SourceRoots $sourceRoots -SourceRootLayers $sourceRootLayers
 
         if (-not $targetLayer) {
             continue
         }
 
         if ($allowedTargets -notcontains $targetLayer) {
-            $relativeSource = [System.IO.Path]::GetRelativePath($RepoDir, $file.FullName)
-            $relativeTarget = [System.IO.Path]::GetRelativePath($RepoDir, $resolvedInclude)
+            $relativeSource = Get-RelativePath -BasePath $RepoDir -TargetPath $file.FullName
+            $relativeTarget = Get-RelativePath -BasePath $RepoDir -TargetPath $resolvedInclude
             $violations.Add(("{0}:{1}: {2} cannot depend on {3} ({4})" -f $relativeSource, $lineNumber, $sourceLayer, $targetLayer, $relativeTarget))
         }
     }

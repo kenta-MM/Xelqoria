@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "Engine/RHI/GraphicsAPI.h"
-#include "Engine/RHI/IGraphicsContext.h"
+#include "GraphicsAPI.h"
+#include "IGraphicsContext.h"
 
 namespace Xelqoria::App
 {

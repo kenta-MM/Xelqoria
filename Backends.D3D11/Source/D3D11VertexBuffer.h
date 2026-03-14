@@ -5,7 +5,7 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 
-#include "Engine/RHI/IVertexBuffer.h"
+#include "IVertexBuffer.h"
 
 namespace Xelqoria::Backends::D3D11
 {

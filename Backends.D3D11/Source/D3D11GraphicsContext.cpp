@@ -9,8 +9,8 @@
 #include <d3dcompiler.h>
 #include <wincodec.h>
 
-#include "Engine/Backends/D3D11/D3D11Texture.h"
-#include "Engine/Backends/D3D11/D3D11VertexBuffer.h"
+#include "D3D11Texture.h"
+#include "D3D11VertexBuffer.h"
 #include <wrl/client.h>
 #include <Windows.h>
 #include <cstdint>

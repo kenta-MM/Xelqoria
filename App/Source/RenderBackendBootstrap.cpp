@@ -1,9 +1,11 @@
-#include "Engine/App/RenderBackendBootstrap.h"
+#include "RenderBackendBootstrap.h"
 
 #include <memory>
 
-#include "Engine/Backends/D3D11/D3D11GraphicsContext.h"
-#include "Engine/Backends/D3D12/D3D12GraphicsContext.h"
+#include "D3D11GraphicsContext.h"
+#include "D3D12GraphicsContext.h"
+#include <IGraphicsContext.h>
+#include <GraphicsAPI.h>
 
 namespace Xelqoria::App
 {

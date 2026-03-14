@@ -10,8 +10,8 @@
 #include <dxgi1_6.h>
 #include <wrl/client.h>
 
-#include "Engine/RHI/IGraphicsContext.h"
-#include "Engine/RHI/IVertexBuffer.h"
+#include "IGraphicsContext.h"
+#include "IVertexBuffer.h"
 
 namespace Xelqoria::Backends::D3D12
 {

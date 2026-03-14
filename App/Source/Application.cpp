@@ -2,12 +2,12 @@
 #include <chrono>
 #include <memory>
 
-#include "Engine/App/Application.h"
-#include "Engine/App/RenderBackendBootstrap.h"
-#include "Engine/Graphics/Sprite.h"
-#include "Engine/Graphics/SpriteRenderer.h"
-#include "Engine/Graphics/Texture2D.h"
-#include "Engine/RHI/GraphicsAPI.h"
+#include "Application.h"
+#include "RenderBackendBootstrap.h"
+#include "Sprite.h"
+#include "SpriteRenderer.h"
+#include "Texture2D.h"
+#include "GraphicsAPI.h"
 
 namespace Xelqoria::App
 {

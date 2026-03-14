@@ -6,7 +6,7 @@
 #include <dxgiformat.h>
 #include <wrl/client.h>
 
-#include "Engine/RHI/ITexture.h"
+#include "ITexture.h"
 
 namespace Xelqoria::Backends::D3D12
 {

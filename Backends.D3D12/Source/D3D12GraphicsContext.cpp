@@ -1,4 +1,4 @@
-#include "Engine/Backends/D3D12/D3D12GraphicsContext.h"
+#include "D3D12GraphicsContext.h"
 
 #include <algorithm>
 #include <array>
@@ -10,8 +10,8 @@
 #include <d3dcompiler.h>
 #include <wincodec.h>
 
-#include "Engine/Backends/D3D12/D3D12Texture.h"
-#include "Engine/Backends/D3D12/D3D12VertexBuffer.h"
+#include "D3D12Texture.h"
+#include "D3D12VertexBuffer.h"
 
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "windowscodecs.lib")

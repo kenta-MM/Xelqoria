@@ -22,13 +22,13 @@
     <Image Include="..\Resource\mapchip.png" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Engine\App\Application.cpp" />
-    <ClCompile Include="Source\Engine\App\Entry.cpp" />
-    <ClCompile Include="Source\Engine\App\RenderBackendBootstrap.cpp" />
+    <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\Entry.cpp" />
+    <ClCompile Include="Source\RenderBackendBootstrap.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\App\Application.h" />
-    <ClInclude Include="Source\Engine\App\RenderBackendBootstrap.h" />
+    <ClInclude Include="Source\Application.h" />
+    <ClInclude Include="Source\RenderBackendBootstrap.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">

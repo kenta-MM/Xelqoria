@@ -2,7 +2,7 @@
 
 #include "Sprite.h"
 #include "Texture2D.h"
-#include "Engine/RHI/IGraphicsContext.h"
+#include "IGraphicsContext.h"
 
 namespace Xelqoria::Graphics
 {

@@ -2,8 +2,8 @@
 #include <Windows.h>
 #include <memory>
 
-#include "Engine/Core/Window.h"
-#include "Engine/RHI/IGraphicsContext.h"
+#include "Window.h"
+#include "IGraphicsContext.h"
 
 namespace Xelqoria::Graphics
 {

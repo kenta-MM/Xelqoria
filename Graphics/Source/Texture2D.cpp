@@ -2,8 +2,8 @@
 
 #include <utility>
 
-#include "Engine/RHI/IGraphicsContext.h"
-#include "Engine/RHI/ITexture.h"
+#include "IGraphicsContext.h"
+#include "ITexture.h"
 
 namespace Xelqoria::Graphics
 {
