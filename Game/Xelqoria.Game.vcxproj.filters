@@ -6,6 +6,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\EntityManager.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\GameAnchor.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -14,6 +17,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\EntityManager.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Transform.h">
       <Filter>Source</Filter>
     </ClInclude>
