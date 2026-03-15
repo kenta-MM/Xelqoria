@@ -1,12 +1,17 @@
 #include "Scene.h"
 
 #include <algorithm>
+#include "Sprite.h"
 #include "Entity.h"
 #include <optional>
 #include <type_traits>
 
 namespace Xelqoria::Game
 {
+	Scene::Scene() = default;
+
+	Scene::~Scene() = default;
+
 	Entity& Scene::CreateEntity()
 	{
 		m_entities.emplace_back(m_nextEntityId++);
@@ -73,5 +78,19 @@ namespace Xelqoria::Game
 	std::size_t Scene::GetEntityCount() const
 	{
 		return m_entities.size();
+	}
+
+	void Scene::AddSprite(std::shared_ptr<Graphics::Sprite> sprite)
+	{
+		if (!sprite) {
+			return;
+		}
+
+		m_sprites.push_back(std::move(sprite));
+	}
+
+	std::span<const std::shared_ptr<Graphics::Sprite>> Scene::GetSprites() const
+	{
+		return std::span<const std::shared_ptr<Graphics::Sprite>>(m_sprites.data(), m_sprites.size());
 	}
 }

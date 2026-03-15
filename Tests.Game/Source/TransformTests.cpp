@@ -1,4 +1,7 @@
+#include <memory>
+
 #include "Scene.h"
+#include "Sprite.h"
 #include "Transform.h"
 
 namespace
@@ -92,6 +95,14 @@ int main()
 
 	const std::span<const Xelqoria::Game::Entity> remainingEntities = scene.GetEntities();
 	if (remainingEntities.size() != 1 || remainingEntities[0].GetId() != secondEntityId) {
+		return 1;
+	}
+
+	auto sprite = std::make_shared<Xelqoria::Graphics::Sprite>();
+	scene.AddSprite(sprite);
+
+	const auto sprites = scene.GetSprites();
+	if (sprites.size() != 1 || sprites[0] != sprite) {
 		return 1;
 	}
 
