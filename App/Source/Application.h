@@ -2,14 +2,13 @@
 #include <Windows.h>
 #include <memory>
 
+#include "Scene.h"
 #include "Window.h"
 #include "IGraphicsContext.h"
 
 namespace Xelqoria::Graphics
 {
-	class Sprite;
 	class SpriteRenderer;
-	class Texture2D;
 }
 
 namespace Xelqoria::App
@@ -116,9 +115,15 @@ namespace Xelqoria::App
 		/// </summary>
 		std::unique_ptr<RHI::IGraphicsContext> m_graphics;
 
+		/// <summary>
+		/// 実行中の描画対象と Entity を保持する Scene。
+		/// </summary>
+		std::unique_ptr<Game::Scene> m_scene;
+
+		/// <summary>
+		/// Scene から収集した Sprite を描画するレンダラー。
+		/// </summary>
 		std::unique_ptr<Graphics::SpriteRenderer> m_spriteRenderer;
-		std::unique_ptr<Graphics::Sprite> m_sprite;
-		std::shared_ptr<Graphics::Texture2D> m_spriteTexture;
 
 		/// <summary>
 		/// Scene ベースのランタイムへ移行するための準備状態。
