@@ -3,5 +3,29 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Xelqoria/Xelqoria.vcxproj" Id="1e70fa15-0556-45fc-9b1b-1b084faf819b" />
+  <Folder Name="/ソリューション項目/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="AGENTS.md" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/docs/" />
+  <Folder Name="/ソリューション項目/docs/agents/">
+    <File Path="docs/agents/architecture.md" />
+    <File Path="docs/agents/coding-rules.md" />
+    <File Path="docs/agents/workflows.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/tools/">
+    <File Path="tools/check-layer-dependencies.ps1" />
+  </Folder>
+  <Folder Name="/ソリューション項目/tools/tests/" />
+  <Folder Name="/ソリューション項目/tools/tests/powershell/">
+    <File Path="tools/tests/powershell/check-layer-dependencies.Tests.ps1" />
+  </Folder>
+  <Project Path="App/Xelqoria.App.vcxproj" Id="67f2121c-56d6-425e-adca-de9605ab0b9e" />
+  <Project Path="Backends.D3D11/Xelqoria.Backends.D3D11.vcxproj" Id="d89979a3-9ede-4b5b-a2b1-2dd1db261114" />
+  <Project Path="Backends.D3D12/Xelqoria.Backends.D3D12.vcxproj" Id="14484bbf-f4fb-48aa-9ce4-bd7cbe1b24a4" />
+  <Project Path="Core/Xelqoria.Core.vcxproj" Id="79e8e826-7407-4766-b731-675cb84f6552" />
+  <Project Path="Graphics/Xelqoria.Graphics.vcxproj" Id="7693792a-4ad4-445a-98f7-b90d6989a837" />
+  <Project Path="RHI/Xelqoria.RHI.vcxproj" Id="158b81fc-b108-4237-8a37-eb8c6ef29392" />
 </Solution>
