@@ -9,11 +9,22 @@
     <File Path="AGENTS.md" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/ソリューション項目/.github/" />
+  <Folder Name="/ソリューション項目/.github/workflows/">
+    <File Path=".github/workflows/auto-create-issue-branch.yml" />
+  </Folder>
   <Folder Name="/ソリューション項目/docs/" />
   <Folder Name="/ソリューション項目/docs/agents/">
     <File Path="docs/agents/architecture.md" />
     <File Path="docs/agents/coding-rules.md" />
     <File Path="docs/agents/workflows.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/docs/skills/" />
+  <Folder Name="/ソリューション項目/docs/skills/xelqoria-issue-implementation/">
+    <File Path="docs/skills/xelqoria-issue-implementation/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/docs/skills/xelqoria-issue-implementation/agents/">
+    <File Path="docs/skills/xelqoria-issue-implementation/agents/openai.yaml" />
   </Folder>
   <Folder Name="/ソリューション項目/tools/">
     <File Path="tools/check-layer-dependencies.ps1" />

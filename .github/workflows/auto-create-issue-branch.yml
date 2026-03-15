@@ -1,0 +1,164 @@
+name: Auto Create Issue Branch
+
+on:
+  issues:
+    types:
+      - opened
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: auto-create-issue-branch-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  create-linked-branch:
+    if: >-
+      github.event.issue.pull_request == null &&
+      (
+        github.event.action == 'opened' &&
+        contains(join(github.event.issue.labels.*.name, ','), 'develop')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create linked issue branch
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branchName = `issue-${issue.number}`;
+
+            const hasDevelopLabel = (issue.labels || []).some((label) => label.name === 'develop');
+            if (!hasDevelopLabel) {
+              core.notice(`Issue #${issue.number} does not have the develop label.`);
+              return;
+            }
+
+            const query = `
+              query($owner: String!, $repo: String!, $issueNumber: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $issueNumber) {
+                    id
+                    number
+                    linkedBranches(first: 20) {
+                      nodes {
+                        ref {
+                          name
+                        }
+                      }
+                    }
+                    parent {
+                      number
+                      linkedBranches(first: 20) {
+                        nodes {
+                          ref {
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const issueData = await github.graphql(query, {
+              owner,
+              repo,
+              issueNumber: issue.number,
+            });
+
+            const currentIssue = issueData.repository?.issue;
+            if (!currentIssue) {
+              core.setFailed(`Issue #${issue.number} was not found via GraphQL.`);
+              return;
+            }
+
+            const linkedBranchNames = (currentIssue.linkedBranches?.nodes || [])
+              .map((node) => node?.ref?.name)
+              .filter(Boolean);
+
+            if (linkedBranchNames.includes(branchName)) {
+              core.notice(`Issue #${issue.number} is already linked to ${branchName}.`);
+              return;
+            }
+
+            async function getBranchSha(name) {
+              try {
+                const response = await github.rest.git.getRef({
+                  owner,
+                  repo,
+                  ref: `heads/${name}`,
+                });
+                return response.data.object.sha;
+              } catch (error) {
+                if (error.status === 404) {
+                  return null;
+                }
+                throw error;
+              }
+            }
+
+            const existingBranchSha = await getBranchSha(branchName);
+            if (existingBranchSha) {
+              core.notice(`Branch ${branchName} already exists. Skipping linked branch creation.`);
+              return;
+            }
+
+            let baseBranchName = 'develop';
+            const parentIssue = currentIssue.parent;
+
+            if (parentIssue) {
+              const parentLinkedBranchNames = (parentIssue.linkedBranches?.nodes || [])
+                .map((node) => node?.ref?.name)
+                .filter(Boolean);
+              const canonicalParentBranch = `issue-${parentIssue.number}`;
+
+              if (parentLinkedBranchNames.includes(canonicalParentBranch)) {
+                baseBranchName = canonicalParentBranch;
+              } else if (parentLinkedBranchNames.length === 1) {
+                baseBranchName = parentLinkedBranchNames[0];
+              } else {
+                const parentBranchSha = await getBranchSha(canonicalParentBranch);
+                if (parentBranchSha) {
+                  baseBranchName = canonicalParentBranch;
+                }
+              }
+            }
+
+            const baseBranchSha = await getBranchSha(baseBranchName);
+            if (!baseBranchSha) {
+              core.setFailed(`Base branch ${baseBranchName} does not exist.`);
+              return;
+            }
+
+            const mutation = `
+              mutation($issueId: ID!, $name: String!, $oid: GitObjectID!) {
+                createLinkedBranch(input: { issueId: $issueId, name: $name, oid: $oid }) {
+                  linkedBranch {
+                    ref {
+                      name
+                    }
+                  }
+                }
+              }
+            `;
+
+            const result = await github.graphql(mutation, {
+              issueId: currentIssue.id,
+              name: branchName,
+              oid: baseBranchSha,
+            });
+
+            const createdBranchName = result.createLinkedBranch?.linkedBranch?.ref?.name;
+            if (!createdBranchName) {
+              core.setFailed(`Failed to create linked branch ${branchName}.`);
+              return;
+            }
+
+            core.notice(`Created linked branch ${createdBranchName} from ${baseBranchName} for issue #${issue.number}.`);
