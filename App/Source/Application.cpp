@@ -86,6 +86,7 @@ namespace Xelqoria::App
         m_spriteRenderer = std::make_unique<Graphics::SpriteRenderer>(*m_graphics);
         m_spriteTexture = std::make_shared<Graphics::Texture2D>();
         m_sprite = std::make_unique<Graphics::Sprite>();
+        m_sceneRuntimeReady = true;
 
         if (!m_spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", *m_graphics))
         {
@@ -99,6 +100,7 @@ namespace Xelqoria::App
 
     void Application::Shutdown()
     {
+        m_sceneRuntimeReady = false;
         m_sprite.reset();
         m_spriteTexture.reset();
         m_spriteRenderer.reset();
