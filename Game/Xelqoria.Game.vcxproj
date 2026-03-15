@@ -19,10 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\GameAnchor.cpp" />
+    <ClCompile Include="Source\Entity.cpp" />
+    <ClCompile Include="Source\Scene.cpp" />
     <ClCompile Include="Source\Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Entity.h" />
+    <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\Transform.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

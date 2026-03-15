@@ -121,6 +121,11 @@ namespace Xelqoria::App
 		std::shared_ptr<Graphics::Texture2D> m_spriteTexture;
 
 		/// <summary>
+		/// Scene ベースのランタイムへ移行するための準備状態。
+		/// </summary>
+		bool m_sceneRuntimeReady = false;
+
+		/// <summary>
 		/// アプリケーション実行フラグ。
 		/// </summary>
 		bool m_running = true;

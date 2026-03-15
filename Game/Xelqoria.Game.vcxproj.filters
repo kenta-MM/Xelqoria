@@ -6,7 +6,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\GameAnchor.cpp">
+    <ClCompile Include="Source\Entity.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Transform.cpp">
@@ -14,6 +17,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Entity.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Transform.h">
       <Filter>Source</Filter>
     </ClInclude>
