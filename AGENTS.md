@@ -18,6 +18,7 @@
 - アーキテクチャ原則: `docs/agents/architecture.md`
 - 実装フローと追加手順: `docs/agents/workflows.md`
 - コーディングルール: `docs/agents/coding-rules.md`
+- Git 管理する Skill: `docs/skills/`
 
 ## 目的
 
@@ -27,3 +28,7 @@
 - 将来の 2D / 3D 拡張を可能にする
 - AI が誤ったレイヤーにコードを書かないようにする
 
+## 推奨運用
+
+- GitHub Issue の実装依頼では `xelqoria-issue-implementation` Skill を優先して使う
+- Issue 番号または URL が渡されたら、内容確認、責務判定、最小変更での実装、検証、報告までを標準フローとして扱う

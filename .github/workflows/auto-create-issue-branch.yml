@@ -19,8 +19,7 @@ jobs:
     if: >-
       github.event.issue.pull_request == null &&
       (
-        github.event.action == 'opened' ||
-        (github.event.action == 'labeled' && github.event.label.name == 'develop')
+        github.event.action == 'opened' && github.event.label.name == 'develop'
       )
     runs-on: ubuntu-latest
     steps:
