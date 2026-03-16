@@ -2,6 +2,7 @@
 
 #include "Scene.h"
 #include "Sprite.h"
+#include "SpriteComponent.h"
 #include "Transform.h"
 
 namespace
@@ -103,6 +104,53 @@ int main()
 
 	const auto sprites = scene.GetSprites();
 	if (sprites.size() != 1 || sprites[0] != sprite) {
+		return 1;
+	}
+
+	Xelqoria::Game::Entity spriteEntity(100);
+	if (spriteEntity.HasSpriteComponent()) {
+		return 1;
+	}
+
+	const Xelqoria::Game::SpriteComponent spriteComponent{
+		"ui/title-logo",
+		{
+			true,
+			10,
+			0.75f
+		}
+	};
+	spriteEntity.SetSpriteComponent(spriteComponent);
+
+	if (!spriteEntity.HasSpriteComponent()) {
+		return 1;
+	}
+
+	auto attachedSpriteComponent = spriteEntity.GetSpriteComponent();
+	if (!attachedSpriteComponent.has_value()) {
+		return 1;
+	}
+
+	if (attachedSpriteComponent->get().spriteAssetRef != "ui/title-logo") {
+		return 1;
+	}
+
+	if (!attachedSpriteComponent->get().renderSettings.visible ||
+		!IsEqual(attachedSpriteComponent->get().renderSettings.opacity, 0.75f) ||
+		attachedSpriteComponent->get().renderSettings.sortOrder != 10) {
+		return 1;
+	}
+
+	const Xelqoria::Game::SpriteComponent defaultSpriteComponent{};
+	if (!defaultSpriteComponent.renderSettings.visible ||
+		defaultSpriteComponent.renderSettings.sortOrder != 0 ||
+		!IsEqual(defaultSpriteComponent.renderSettings.opacity, 1.0f) ||
+		!defaultSpriteComponent.spriteAssetRef.empty()) {
+		return 1;
+	}
+
+	spriteEntity.RemoveSpriteComponent();
+	if (spriteEntity.HasSpriteComponent() || spriteEntity.GetSpriteComponent().has_value()) {
 		return 1;
 	}
 
