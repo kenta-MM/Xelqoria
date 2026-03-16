@@ -4,6 +4,7 @@
 
 #include "Application.h"
 #include "RenderBackendBootstrap.h"
+#include "Scene.h"
 #include "Sprite.h"
 #include "SpriteRenderer.h"
 #include "Texture2D.h"
@@ -84,23 +85,26 @@ namespace Xelqoria::App
         }
 
         m_spriteRenderer = std::make_unique<Graphics::SpriteRenderer>(*m_graphics);
-        m_spriteTexture = std::make_shared<Graphics::Texture2D>();
-        m_sprite = std::make_unique<Graphics::Sprite>();
+        m_scene = std::make_unique<Game::Scene>();
+        m_sceneRuntimeReady = true;
 
-        if (!m_spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", *m_graphics))
+        auto spriteTexture = std::make_shared<Graphics::Texture2D>();
+        if (!spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", *m_graphics))
         {
             return false;
         }
 
-        m_sprite->SetTexture(m_spriteTexture);
+        auto sprite = std::make_shared<Graphics::Sprite>();
+        sprite->SetTexture(spriteTexture);
+        m_scene->AddSprite(sprite);
 
         return true;
     }
 
     void Application::Shutdown()
     {
-        m_sprite.reset();
-        m_spriteTexture.reset();
+        m_sceneRuntimeReady = false;
+        m_scene.reset();
         m_spriteRenderer.reset();
 
         if (m_graphics)
@@ -124,10 +128,18 @@ namespace Xelqoria::App
 
         m_graphics->BeginFrame();
 
-        if (m_spriteRenderer && m_sprite)
+        if (m_spriteRenderer && m_scene)
         {
             m_spriteRenderer->Begin();
-            m_spriteRenderer->Draw(*m_sprite);
+            for (const auto& sprite : m_scene->GetSprites())
+            {
+                if (!sprite)
+                {
+                    continue;
+                }
+
+                m_spriteRenderer->Draw(*sprite);
+            }
             m_spriteRenderer->End();
         }
 

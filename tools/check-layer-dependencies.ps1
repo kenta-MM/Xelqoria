@@ -8,7 +8,7 @@ $RepoDir = [System.IO.Path]::GetFullPath($RepoDir)
 
 # Allowed layer dependencies keyed by source layer name.
 $allowedDependencies = @{
-    "App" = @("App", "Backends", "Core", "Graphics", "RHI")
+    "App" = @("App", "Backends", "Core", "Game", "Graphics", "RHI")
     "Backends" = @("Backends", "RHI")
     "Core" = @("Core")
     "Game" = @("Core", "Game", "Graphics")
