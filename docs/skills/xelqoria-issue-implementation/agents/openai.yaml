@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xelqoria Issue Implementation"
+  short_description: "Xelqoria の GitHub Issue 実装フロー"
+  default_prompt: "$xelqoria-issue-implementation を使って、この Xelqoria の GitHub Issue を実装します。"
+
+policy:
+  allow_implicit_invocation: true
