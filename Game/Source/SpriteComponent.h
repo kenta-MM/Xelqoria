@@ -1,7 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
+
+#include "AssetId.h"
 
 namespace Xelqoria::Game
 {
@@ -32,9 +33,9 @@ namespace Xelqoria::Game
 	struct SpriteComponent
 	{
 		/// <summary>
-		/// 描画に使用する Sprite アセット参照名を表す。
+		/// 描画に使用する Sprite アセット識別子を表す。
 		/// </summary>
-		std::string spriteAssetRef{};
+		Core::AssetId spriteAssetRef{};
 
 		/// <summary>
 		/// 描画時に使用する設定値を表す。
