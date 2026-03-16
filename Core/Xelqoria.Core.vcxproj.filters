@@ -11,6 +11,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\AssetId.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Window.h">
       <Filter>Source</Filter>
     </ClInclude>

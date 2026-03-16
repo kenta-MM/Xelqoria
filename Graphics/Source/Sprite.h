@@ -1,6 +1,8 @@
 #pragma once
-#include <memory>
 
+#include "AssetId.h"
+
+#include <memory>
 
 namespace Xelqoria::Graphics
 {
@@ -23,7 +25,20 @@ namespace Xelqoria::Graphics
 		/// </summary>
 		/// <returns>スプライトに紐づくテクスチャ。</returns>
 		std::shared_ptr<Texture2D> GetTexture() const;
+
+		/// <summary>
+		/// スプライトに対応するテクスチャアセット識別子を設定する。
+		/// </summary>
+		/// <param name="assetId">設定するアセット識別子。</param>
+		void SetTextureAssetId(Core::AssetId assetId);
+
+		/// <summary>
+		/// スプライトに対応するテクスチャアセット識別子を取得する。
+		/// </summary>
+		/// <returns>保持しているアセット識別子。</returns>
+		const Core::AssetId& GetTextureAssetId() const;
 	private:
-		std::shared_ptr<Texture2D> m_textuer;
+		std::shared_ptr<Texture2D> m_texture;
+		Core::AssetId m_textureAssetId{};
 	};
 }
