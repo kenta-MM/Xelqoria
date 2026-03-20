@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "AssetManager.h"
+#include "AssetId.h"
 #include "Scene.h"
 #include "Sprite.h"
 #include "SpriteComponent.h"
@@ -147,7 +148,13 @@ int main()
 	if (!defaultSpriteComponent.renderSettings.visible ||
 		defaultSpriteComponent.renderSettings.sortOrder != 0 ||
 		!IsEqual(defaultSpriteComponent.renderSettings.opacity, 1.0f) ||
-		!defaultSpriteComponent.spriteAssetRef.empty()) {
+		!defaultSpriteComponent.spriteAssetRef.IsEmpty()) {
+		return 1;
+	}
+
+	Xelqoria::Graphics::Sprite spriteAssetReference;
+	spriteAssetReference.SetTextureAssetId("textures/player-idle");
+	if (spriteAssetReference.GetTextureAssetId() != Xelqoria::Core::AssetId("textures/player-idle")) {
 		return 1;
 	}
 
