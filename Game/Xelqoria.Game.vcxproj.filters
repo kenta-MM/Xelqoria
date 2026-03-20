@@ -6,6 +6,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\AssetManager.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Entity.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -17,6 +20,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\AssetManager.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Entity.h">
       <Filter>Source</Filter>
     </ClInclude>

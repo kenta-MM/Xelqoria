@@ -1,8 +1,10 @@
 #include <memory>
 
+#include "AssetManager.h"
 #include "Scene.h"
 #include "Sprite.h"
 #include "SpriteComponent.h"
+#include "Texture2D.h"
 #include "Transform.h"
 
 namespace
@@ -151,6 +153,61 @@ int main()
 
 	spriteEntity.RemoveSpriteComponent();
 	if (spriteEntity.HasSpriteComponent() || spriteEntity.GetSpriteComponent().has_value()) {
+		return 1;
+	}
+
+	Xelqoria::Game::AssetManager assetManager;
+	auto texture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+	if (!assetManager.RegisterTexture2D("ui/title-logo", texture)) {
+		return 1;
+	}
+
+	const auto resolvedSpriteAsset = assetManager.ResolveSpriteAsset("ui/title-logo");
+	if (!resolvedSpriteAsset.Succeeded() ||
+		resolvedSpriteAsset.error != Xelqoria::Game::AssetResolveError::None ||
+		resolvedSpriteAsset.assetId != "ui/title-logo" ||
+		!resolvedSpriteAsset.message.empty() ||
+		!resolvedSpriteAsset.asset ||
+		resolvedSpriteAsset.asset->GetTexture() != texture) {
+		return 1;
+	}
+
+	const auto resolvedTexture = assetManager.ResolveTexture2D("ui/title-logo");
+	if (!resolvedTexture.Succeeded() ||
+		resolvedTexture.asset != texture ||
+		resolvedTexture.assetId != "ui/title-logo") {
+		return 1;
+	}
+
+	const auto unresolvedTexture = assetManager.ResolveTexture2D("missing/asset");
+	if (unresolvedTexture.Succeeded() ||
+		unresolvedTexture.asset != nullptr ||
+		unresolvedTexture.error != Xelqoria::Game::AssetResolveError::AssetNotFound ||
+		unresolvedTexture.assetId != "missing/asset" ||
+		unresolvedTexture.message.empty()) {
+		return 1;
+	}
+
+	const auto invalidSpriteAsset = assetManager.ResolveSpriteAsset("");
+	if (invalidSpriteAsset.Succeeded() ||
+		invalidSpriteAsset.asset != nullptr ||
+		invalidSpriteAsset.error != Xelqoria::Game::AssetResolveError::InvalidAssetId ||
+		invalidSpriteAsset.assetId != "" ||
+		invalidSpriteAsset.message.empty()) {
+		return 1;
+	}
+
+	Xelqoria::Game::AssetManager missingTextureManager;
+	if (!missingTextureManager.RegisterSpriteAsset("broken/asset", std::make_shared<Xelqoria::Game::SpriteAsset>(nullptr))) {
+		return 1;
+	}
+
+	const auto missingTexture = missingTextureManager.ResolveTexture2D("broken/asset");
+	if (missingTexture.Succeeded() ||
+		missingTexture.asset != nullptr ||
+		missingTexture.error != Xelqoria::Game::AssetResolveError::AssetDataMissing ||
+		missingTexture.assetId != "broken/asset" ||
+		missingTexture.message.empty()) {
 		return 1;
 	}
 
