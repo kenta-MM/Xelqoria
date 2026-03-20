@@ -28,12 +28,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\AssetManager.cpp" />
+    <ClCompile Include="Source\Assets\SpriteAssetLoader.cpp" />
     <ClCompile Include="Source\Entity.cpp" />
     <ClCompile Include="Source\Scene.cpp" />
     <ClCompile Include="Source\Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\AssetManager.h" />
+    <ClInclude Include="Source\Assets\SpriteAsset.h" />
+    <ClInclude Include="Source\Assets\SpriteAssetLoader.h" />
     <ClInclude Include="Source\Entity.h" />
     <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\SpriteComponent.h" />

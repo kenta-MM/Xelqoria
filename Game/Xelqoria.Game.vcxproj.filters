@@ -6,8 +6,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <Filter Include="Source\Assets">
+      <UniqueIdentifier>{B8FC1009-7469-4603-9862-1B2A3F98608C}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="Source\AssetManager.cpp">
       <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Assets\SpriteAssetLoader.cpp">
+      <Filter>Source\Assets</Filter>
     </ClCompile>
     <ClCompile Include="Source\Entity.cpp">
       <Filter>Source</Filter>
@@ -22,6 +30,12 @@
   <ItemGroup>
     <ClInclude Include="Source\AssetManager.h">
       <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\SpriteAsset.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\SpriteAssetLoader.h">
+      <Filter>Source\Assets</Filter>
     </ClInclude>
     <ClInclude Include="Source\Entity.h">
       <Filter>Source</Filter>
