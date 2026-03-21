@@ -96,7 +96,14 @@ namespace Xelqoria::App
 
         auto sprite = std::make_shared<Graphics::Sprite>();
         sprite->SetTexture(spriteTexture);
+        sprite->SetPosition(-160.0f, 0.0f);
         m_scene->AddSprite(sprite);
+
+        auto secondSprite = std::make_shared<Graphics::Sprite>();
+        secondSprite->SetTexture(spriteTexture);
+        secondSprite->SetPosition(160.0f, 90.0f);
+        secondSprite->SetScale(0.75f, 0.75f);
+        m_scene->AddSprite(secondSprite);
 
         return true;
     }

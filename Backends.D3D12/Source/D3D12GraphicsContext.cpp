@@ -389,6 +389,11 @@ namespace Xelqoria::Backends::D3D12
         m_hasBoundTexture = true;
     }
 
+    void D3D12GraphicsContext::SetQuadTransform(const RHI::QuadTransform2D& transform)
+    {
+        m_quadTransform = transform;
+    }
+
     void D3D12GraphicsContext::Draw(std::uint32_t vertexCount, std::uint32_t startVertexLocation)
     {
         if (!m_commandList || !m_spriteRootSignature || !m_spritePipelineState || !m_spriteVertexBuffer || !m_hasBoundTexture)
@@ -413,7 +418,15 @@ namespace Xelqoria::Backends::D3D12
         commandList->SetDescriptorHeaps(1, descriptorHeaps);
         commandList->SetGraphicsRootSignature(m_spriteRootSignature.Get());
         commandList->SetPipelineState(m_spritePipelineState.Get());
-        commandList->SetGraphicsRootDescriptorTable(0, m_boundTextureSrvGpu);
+        const float quadTransformData[4] =
+        {
+            m_quadTransform.scaleX,
+            m_quadTransform.scaleY,
+            m_quadTransform.translateX,
+            m_quadTransform.translateY
+        };
+        commandList->SetGraphicsRoot32BitConstants(0, 4, quadTransformData, 0);
+        commandList->SetGraphicsRootDescriptorTable(1, m_boundTextureSrvGpu);
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
 
@@ -653,12 +666,21 @@ namespace Xelqoria::Backends::D3D12
         }
 
         static const char* kVertexShaderSource = R"(
+cbuffer SpriteTransformBuffer : register(b0)
+{
+    float2 gScale;
+    float2 gTranslate;
+};
 struct VSInput { float3 position : POSITION; float2 uv : TEXCOORD0; };
 struct VSOutput { float4 position : SV_POSITION; float2 uv : TEXCOORD0; };
 VSOutput MainVS(VSInput input)
 {
     VSOutput output;
-    output.position = float4(input.position, 1.0f);
+    output.position = float4(
+        input.position.x * gScale.x + gTranslate.x,
+        input.position.y * gScale.y + gTranslate.y,
+        input.position.z,
+        1.0f);
     output.uv = input.uv;
     return output;
 }
@@ -691,11 +713,17 @@ float4 MainPS(PSInput input) : SV_TARGET
         descriptorRange.BaseShaderRegister = 0;
         descriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-        D3D12_ROOT_PARAMETER rootParameter{};
-        rootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        rootParameter.DescriptorTable.NumDescriptorRanges = 1;
-        rootParameter.DescriptorTable.pDescriptorRanges = &descriptorRange;
-        rootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+        D3D12_ROOT_PARAMETER rootParameters[2]{};
+        rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+        rootParameters[0].Constants.Num32BitValues = 4;
+        rootParameters[0].Constants.ShaderRegister = 0;
+        rootParameters[0].Constants.RegisterSpace = 0;
+        rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
+        rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
+        rootParameters[1].DescriptorTable.pDescriptorRanges = &descriptorRange;
+        rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
         D3D12_STATIC_SAMPLER_DESC samplerDesc{};
         samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -708,8 +736,8 @@ float4 MainPS(PSInput input) : SV_TARGET
         samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
         D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc{};
-        rootSignatureDesc.NumParameters = 1;
-        rootSignatureDesc.pParameters = &rootParameter;
+        rootSignatureDesc.NumParameters = static_cast<UINT>(_countof(rootParameters));
+        rootSignatureDesc.pParameters = rootParameters;
         rootSignatureDesc.NumStaticSamplers = 1;
         rootSignatureDesc.pStaticSamplers = &samplerDesc;
         rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -817,6 +845,7 @@ float4 MainPS(PSInput input) : SV_TARGET
     {
         m_hasBoundTexture = false;
         m_boundTextureSrvGpu = {};
+        m_quadTransform = {};
         m_spriteVertexBuffer.reset();
         m_spritePipelineState.Reset();
         m_spriteRootSignature.Reset();

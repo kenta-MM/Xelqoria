@@ -1,5 +1,6 @@
 #include "SpriteRenderer.h"
 
+#include "SpriteRenderMath.h"
 #include "Sprite.h"
 #include "Texture2D.h"
 #include "IGraphicsContext.h"
@@ -36,6 +37,16 @@ namespace Xelqoria::Graphics
         }
 
         m_context->BindTexture(0, rhiTexture.get());
+        const SpriteQuadTransform quadTransform = ComputeSpriteQuadTransform(
+            sprite,
+            m_context->GetViewportWidth(),
+            m_context->GetViewportHeight());
+        m_context->SetQuadTransform(RHI::QuadTransform2D{
+            quadTransform.scaleX,
+            quadTransform.scaleY,
+            quadTransform.translateX,
+            quadTransform.translateY
+        });
 
         // 1スプライトを2三角形(6頂点)で描画する前提。
         m_context->Draw(6, 0);

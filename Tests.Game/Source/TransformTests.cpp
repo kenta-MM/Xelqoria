@@ -1,18 +1,46 @@
 #include <memory>
+#include <cmath>
 
 #include "AssetId.h"
 #include "Assets/SpriteAssetLoader.h"
+#include "ITexture.h"
 #include "Scene.h"
 #include "Sprite.h"
 #include "SpriteComponent.h"
+#include "SpriteRenderMath.h"
+#include "Texture2D.h"
 #include "Transform.h"
 
 namespace
 {
 	bool IsEqual(float lhs, float rhs)
 	{
-		return lhs == rhs;
+		return std::fabs(lhs - rhs) < 0.0001f;
 	}
+
+	class FakeTexture final : public Xelqoria::RHI::ITexture
+	{
+	public:
+		FakeTexture(std::uint32_t width, std::uint32_t height)
+			: m_width(width)
+			, m_height(height)
+		{
+		}
+
+		std::uint32_t GetWidth() const override
+		{
+			return m_width;
+		}
+
+		std::uint32_t GetHeight() const override
+		{
+			return m_height;
+		}
+
+	private:
+		std::uint32_t m_width = 0;
+		std::uint32_t m_height = 0;
+	};
 }
 
 /// <summary>
@@ -200,6 +228,22 @@ int main()
 	Xelqoria::Graphics::Sprite spriteAssetReference;
 	spriteAssetReference.SetTextureAssetId("textures/player-idle");
 	if (spriteAssetReference.GetTextureAssetId() != Xelqoria::Core::AssetId("textures/player-idle")) {
+		return 1;
+	}
+
+	auto renderTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+	renderTexture->SetRHITexture(std::make_shared<FakeTexture>(64, 32));
+
+	Xelqoria::Graphics::Sprite positionedSprite;
+	positionedSprite.SetTexture(renderTexture);
+	positionedSprite.SetPosition(160.0f, -90.0f);
+	positionedSprite.SetScale(2.0f, 0.5f);
+
+	const auto quadTransform = Xelqoria::Graphics::ComputeSpriteQuadTransform(positionedSprite, 1280, 720);
+	if (!IsEqual(quadTransform.scaleX, 0.2f) ||
+		!IsEqual(quadTransform.scaleY, 0.044444446f) ||
+		!IsEqual(quadTransform.translateX, 0.25f) ||
+		!IsEqual(quadTransform.translateY, 0.25f)) {
 		return 1;
 	}
 
