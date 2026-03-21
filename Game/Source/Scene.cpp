@@ -27,6 +27,16 @@ namespace Xelqoria::Game
 		return m_entities.back();
 	}
 
+	Entity& Scene::CreateEntity(EntityId entityId)
+	{
+		m_entities.emplace_back(entityId);
+		if (entityId >= m_nextEntityId) {
+			m_nextEntityId = entityId + 1;
+		}
+
+		return m_entities.back();
+	}
+
 	bool Scene::DestroyEntity(EntityId entityId)
 	{
 		const auto it = std::find_if(
