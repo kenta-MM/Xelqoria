@@ -1,6 +1,9 @@
+#include <filesystem>
+#include <fstream>
 #include <memory>
 
 #include "AssetId.h"
+#include "Assets/AssetDatabase.h"
 #include "Assets/SpriteAssetLoader.h"
 #include "Scene.h"
 #include "Sprite.h"
@@ -12,6 +15,13 @@ namespace
 	bool IsEqual(float lhs, float rhs)
 	{
 		return lhs == rhs;
+	}
+
+	void WriteTextFile(const std::filesystem::path& filePath, const char* text)
+	{
+		std::filesystem::create_directories(filePath.parent_path());
+		std::ofstream stream(filePath, std::ios::binary);
+		stream << text;
 	}
 }
 
@@ -178,6 +188,52 @@ int main()
 		missingFieldLoadResult.error->fieldName != "textureAssetId") {
 		return 1;
 	}
+
+	const std::filesystem::path temporaryAssetsRoot =
+		std::filesystem::path("/tmp") / "xelqoria-tests-game-assets";
+	std::filesystem::remove_all(temporaryAssetsRoot);
+
+	WriteTextFile(
+		temporaryAssetsRoot / "ui" / "title-logo.sprite",
+		"textureAssetId = textures/title-logo\n");
+	WriteTextFile(
+		temporaryAssetsRoot / "ui" / "broken.sprite",
+		"# missing textureAssetId\n");
+	WriteTextFile(
+		temporaryAssetsRoot / "ui" / "ignored.txt",
+		"textureAssetId = textures/ignored\n");
+
+	Xelqoria::Game::Assets::AssetDatabase assetDatabase(temporaryAssetsRoot);
+	const auto& spriteEntries = assetDatabase.GetSpriteEntries();
+	if (spriteEntries.size() != 1) {
+		std::filesystem::remove_all(temporaryAssetsRoot);
+		return 1;
+	}
+
+	if (spriteEntries[0].assetId != Xelqoria::Core::AssetId("ui/title-logo") ||
+		spriteEntries[0].asset.textureAssetId != Xelqoria::Core::AssetId("textures/title-logo")) {
+		std::filesystem::remove_all(temporaryAssetsRoot);
+		return 1;
+	}
+
+	WriteTextFile(
+		temporaryAssetsRoot / "characters" / "player.sprite",
+		"textureAssetId = textures/player\n");
+	assetDatabase.RescanSprites();
+
+	const auto& rescannedSpriteEntries = assetDatabase.GetSpriteEntries();
+	if (rescannedSpriteEntries.size() != 2) {
+		std::filesystem::remove_all(temporaryAssetsRoot);
+		return 1;
+	}
+
+	if (rescannedSpriteEntries[0].assetId != Xelqoria::Core::AssetId("characters/player") ||
+		rescannedSpriteEntries[1].assetId != Xelqoria::Core::AssetId("ui/title-logo")) {
+		std::filesystem::remove_all(temporaryAssetsRoot);
+		return 1;
+	}
+
+	std::filesystem::remove_all(temporaryAssetsRoot);
 
 	spriteEntity.RemoveSpriteComponent();
 	if (spriteEntity.HasSpriteComponent() || spriteEntity.GetSpriteComponent().has_value()) {
