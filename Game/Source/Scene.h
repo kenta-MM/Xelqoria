@@ -59,6 +59,13 @@ namespace Xelqoria::Game
 		Entity& CreateEntity();
 
 		/// <summary>
+		/// 指定した Entity ID で新しい Entity を生成して Scene に追加する。
+		/// </summary>
+		/// <param name="entityId">割り当てる Entity ID。</param>
+		/// <returns>追加された Entity。</returns>
+		Entity& CreateEntity(EntityId entityId);
+
+		/// <summary>
 		/// 指定した Entity を Scene から削除する。
 		/// </summary>
 		/// <param name="entityId">削除対象の Entity ID。</param>
