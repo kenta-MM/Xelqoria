@@ -93,4 +93,30 @@ namespace Xelqoria::Game
 	{
 		return std::span<const std::shared_ptr<Graphics::Sprite>>(m_sprites.data(), m_sprites.size());
 	}
+
+	std::vector<SceneSpriteRenderItem> Scene::CollectSpriteRenderItems() const
+	{
+		std::vector<SceneSpriteRenderItem> renderItems;
+		renderItems.reserve(m_entities.size());
+
+		for (const auto& entity : m_entities) {
+			const auto spriteComponent = entity.GetSpriteComponent();
+			if (!spriteComponent.has_value()) {
+				continue;
+			}
+
+			const auto& spriteComponentValue = spriteComponent->get();
+			if (!spriteComponentValue.renderSettings.visible) {
+				continue;
+			}
+
+			renderItems.push_back(SceneSpriteRenderItem{
+				entity.GetId(),
+				&entity.GetTransform(),
+				&spriteComponentValue
+			});
+		}
+
+		return renderItems;
+	}
 }
