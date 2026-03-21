@@ -1,5 +1,7 @@
 #include <memory>
 
+#include "AssetId.h"
+#include "Assets/SpriteAssetLoader.h"
 #include "Scene.h"
 #include "Sprite.h"
 #include "SpriteComponent.h"
@@ -145,7 +147,35 @@ int main()
 	if (!defaultSpriteComponent.renderSettings.visible ||
 		defaultSpriteComponent.renderSettings.sortOrder != 0 ||
 		!IsEqual(defaultSpriteComponent.renderSettings.opacity, 1.0f) ||
-		!defaultSpriteComponent.spriteAssetRef.empty()) {
+		!defaultSpriteComponent.spriteAssetRef.IsEmpty()) {
+		return 1;
+	}
+
+	Xelqoria::Graphics::Sprite spriteAssetReference;
+	spriteAssetReference.SetTextureAssetId("textures/player-idle");
+	if (spriteAssetReference.GetTextureAssetId() != Xelqoria::Core::AssetId("textures/player-idle")) {
+		return 1;
+	}
+
+	const auto spriteAssetLoadResult = Xelqoria::Game::Assets::SpriteAssetLoader::LoadFromText(
+		"# SpriteAsset\n"
+		"textureAssetId = textures/player-idle\n");
+	if (!spriteAssetLoadResult.IsSuccess() || !spriteAssetLoadResult.asset.has_value()) {
+		return 1;
+	}
+
+	if (spriteAssetLoadResult.asset->textureAssetId != Xelqoria::Core::AssetId("textures/player-idle")) {
+		return 1;
+	}
+
+	const auto missingFieldLoadResult = Xelqoria::Game::Assets::SpriteAssetLoader::LoadFromText(
+		"# textureAssetId is missing\n");
+	if (missingFieldLoadResult.IsSuccess() || !missingFieldLoadResult.error.has_value()) {
+		return 1;
+	}
+
+	if (missingFieldLoadResult.error->code != Xelqoria::Game::Assets::SpriteAssetLoadErrorCode::MissingRequiredField ||
+		missingFieldLoadResult.error->fieldName != "textureAssetId") {
 		return 1;
 	}
 
