@@ -10,6 +10,7 @@
 #include "ITexture.h"
 #include "Scene.h"
 #include "SceneSaveFormat.h"
+#include "SceneSerializer.h"
 #include "Sprite.h"
 #include "SpriteComponent.h"
 #include "SpriteRenderMath.h"
@@ -21,6 +22,43 @@ namespace
 	bool IsEqual(float lhs, float rhs)
 	{
 		return std::fabs(lhs - rhs) < 0.0001f;
+	}
+
+	bool VerifySceneSaveSerialization()
+	{
+		Xelqoria::Game::Scene saveScene;
+		auto& playerEntity = saveScene.CreateEntity();
+		playerEntity.GetTransform().SetPosition(12.5f, -8.0f, 3.0f);
+		playerEntity.GetTransform().rotation = { 0.0f, 45.0f, 90.0f };
+		playerEntity.GetTransform().scale = { 1.0f, 2.0f, 1.0f };
+		playerEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+			"sprites/player",
+			{
+				true,
+				0,
+				1.0f
+			}
+		});
+
+		auto& backgroundEntity = saveScene.CreateEntity();
+		backgroundEntity.GetTransform().SetPosition(-32.0f, 64.0f, 0.0f);
+		backgroundEntity.GetTransform().rotation = { 0.0f, 0.0f, 0.0f };
+		backgroundEntity.GetTransform().scale = { 4.0f, 4.0f, 1.0f };
+
+		const std::string sceneSaveSnapshot =
+			"magic=xelqoria.scene\n"
+			"version=1\n"
+			"entity.0.id=1\n"
+			"entity.0.transform.position=12.500000,-8.000000,3.000000\n"
+			"entity.0.transform.rotation=0.000000,45.000000,90.000000\n"
+			"entity.0.transform.scale=1.000000,2.000000,1.000000\n"
+			"entity.0.spriteRef=sprites/player\n"
+			"entity.1.id=2\n"
+			"entity.1.transform.position=-32.000000,64.000000,0.000000\n"
+			"entity.1.transform.rotation=0.000000,0.000000,0.000000\n"
+			"entity.1.transform.scale=4.000000,4.000000,1.000000\n";
+
+		return Xelqoria::Game::SceneSerializer::SaveToText(saveScene) == sceneSaveSnapshot;
 	}
 
 	class FakeTexture final : public Xelqoria::RHI::ITexture
@@ -370,6 +408,10 @@ int main()
 		!IsEqual(sceneSaveRecord.transform.position.z, 6.0f) ||
 		!sceneSaveRecord.spriteRef.has_value() ||
 		sceneSaveRecord.spriteRef->spriteAssetRef != Xelqoria::Core::AssetId("sprites/player")) {
+		return 1;
+	}
+
+	if (!VerifySceneSaveSerialization()) {
 		return 1;
 	}
 
