@@ -41,6 +41,8 @@ namespace Xelqoria::Backends::D3D12
         std::shared_ptr<RHI::ITexture> CreateTextureFromFile(const std::wstring& filePath) override;
         /// <inheritdoc/>
         void BindTexture(std::uint32_t slot, RHI::ITexture* texture) override;
+        /// <inheritdoc/>
+        void SetQuadTransform(const RHI::QuadTransform2D& transform) override;
 
         /// <inheritdoc/>
         void Draw(std::uint32_t vertexCount, std::uint32_t startVertexLocation = 0) override;
@@ -49,6 +51,10 @@ namespace Xelqoria::Backends::D3D12
 
         /// <inheritdoc/>
         void Resize(std::uint32_t width, std::uint32_t height) override;
+        /// <inheritdoc/>
+        std::uint32_t GetViewportWidth() const override { return m_width; }
+        /// <inheritdoc/>
+        std::uint32_t GetViewportHeight() const override { return m_height; }
 
     private:
         static constexpr std::uint32_t FrameCount = 2;
@@ -118,6 +124,7 @@ namespace Xelqoria::Backends::D3D12
 
         D3D12_GPU_DESCRIPTOR_HANDLE m_boundTextureSrvGpu{};
         bool m_hasBoundTexture = false;
+        RHI::QuadTransform2D m_quadTransform{};
 
         Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
         std::array<std::uint64_t, FrameCount> m_fenceValues = {};

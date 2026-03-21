@@ -312,9 +312,14 @@ namespace Xelqoria::Backends::D3D11
         m_deviceContext->PSSetShaderResources(slot, 1, &shaderResourceView);
     }
 
+    void D3D11GraphicsContext::SetQuadTransform(const RHI::QuadTransform2D& transform)
+    {
+        m_quadTransform = transform;
+    }
+
     void D3D11GraphicsContext::Draw(std::uint32_t vertexCount, std::uint32_t startVertexLocation)
     {
-        if (!m_deviceContext || !m_spriteVertexBuffer || !m_spriteInputLayout || !m_spriteVertexShader || !m_spritePixelShader)
+        if (!m_deviceContext || !m_spriteVertexBuffer || !m_spriteInputLayout || !m_spriteVertexShader || !m_spritePixelShader || !m_spriteTransformBuffer)
         {
             return;
         }
@@ -340,6 +345,16 @@ namespace Xelqoria::Backends::D3D11
 
         m_deviceContext->VSSetShader(m_spriteVertexShader.Get(), nullptr, 0);
         m_deviceContext->PSSetShader(m_spritePixelShader.Get(), nullptr, 0);
+        const float quadTransformData[4] =
+        {
+            m_quadTransform.scaleX,
+            m_quadTransform.scaleY,
+            m_quadTransform.translateX,
+            m_quadTransform.translateY
+        };
+        m_deviceContext->UpdateSubresource(m_spriteTransformBuffer.Get(), 0, nullptr, quadTransformData, 0, 0);
+        ID3D11Buffer* transformBuffer = m_spriteTransformBuffer.Get();
+        m_deviceContext->VSSetConstantBuffers(0, 1, &transformBuffer);
 
         if (m_spriteSamplerState)
         {
@@ -472,6 +487,12 @@ namespace Xelqoria::Backends::D3D11
         }
 
         static const char* kVertexShaderSource = R"(
+cbuffer SpriteTransformBuffer : register(b0)
+{
+    float2 gScale;
+    float2 gTranslate;
+};
+
 struct VSInput
 {
     float3 position : POSITION;
@@ -487,7 +508,11 @@ struct VSOutput
 VSOutput MainVS(VSInput input)
 {
     VSOutput output;
-    output.position = float4(input.position, 1.0f);
+    output.position = float4(
+        input.position.x * gScale.x + gTranslate.x,
+        input.position.y * gScale.y + gTranslate.y,
+        input.position.z,
+        1.0f);
     output.uv = input.uv;
     return output;
 }
@@ -561,6 +586,17 @@ float4 MainPS(PSInput input) : SV_TARGET
             return false;
         }
 
+        D3D11_BUFFER_DESC constantBufferDesc{};
+        constantBufferDesc.ByteWidth = sizeof(float) * 4u;
+        constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+
+        hr = m_device->CreateBuffer(&constantBufferDesc, nullptr, m_spriteTransformBuffer.GetAddressOf());
+        if (FAILED(hr))
+        {
+            return false;
+        }
+
         D3D11_SAMPLER_DESC samplerDesc{};
         samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
         samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -610,12 +646,13 @@ float4 MainPS(PSInput input) : SV_TARGET
     {
         m_spriteSamplerState.Reset();
         m_spriteVertexBuffer.reset();
+        m_spriteTransformBuffer.Reset();
         m_spriteInputLayout.Reset();
         m_spritePixelShader.Reset();
         m_spriteVertexShader.Reset();
+        m_quadTransform = {};
     }
 }
-
 
 
 

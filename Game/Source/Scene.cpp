@@ -1,13 +1,22 @@
 #include "Scene.h"
 
 #include <algorithm>
-#include "Sprite.h"
+#include <sstream>
+
 #include "Entity.h"
-#include <optional>
-#include <type_traits>
 
 namespace Xelqoria::Game
 {
+	namespace
+	{
+		void LogMessage(const std::function<void(const std::string&)>& logger, std::string message)
+		{
+			if (logger) {
+				logger(message);
+			}
+		}
+	}
+
 	Scene::Scene() = default;
 
 	Scene::~Scene() = default;
@@ -92,5 +101,90 @@ namespace Xelqoria::Game
 	std::span<const std::shared_ptr<Graphics::Sprite>> Scene::GetSprites() const
 	{
 		return std::span<const std::shared_ptr<Graphics::Sprite>>(m_sprites.data(), m_sprites.size());
+	}
+
+	std::vector<SceneSpriteRenderItem> Scene::CollectSpriteRenderItems() const
+	{
+		std::vector<SceneSpriteRenderItem> renderItems;
+		renderItems.reserve(m_entities.size());
+
+		for (const auto& entity : m_entities) {
+			const auto spriteComponent = entity.GetSpriteComponent();
+			if (!spriteComponent.has_value()) {
+				continue;
+			}
+
+			const auto& spriteComponentValue = spriteComponent->get();
+			if (!spriteComponentValue.renderSettings.visible) {
+				continue;
+			}
+
+			renderItems.push_back(SceneSpriteRenderItem{
+				entity.GetId(),
+				&entity.GetTransform(),
+				&spriteComponentValue
+			});
+		}
+
+		return renderItems;
+	}
+
+	std::vector<Graphics::Sprite> Scene::ResolveSprites(
+		const Assets::ISpriteAssetResolver& spriteAssetResolver,
+		const Graphics::ITextureAssetResolver& textureAssetResolver,
+		const std::function<void(const std::string&)>& logger) const
+	{
+		std::vector<Graphics::Sprite> resolvedSprites;
+		const auto renderItems = CollectSpriteRenderItems();
+		resolvedSprites.reserve(renderItems.size());
+
+		for (const auto& renderItem : renderItems) {
+			if (renderItem.transform == nullptr || renderItem.spriteComponent == nullptr) {
+				LogMessage(logger, "Scene::ResolveSprites skipped an item because required references were null.");
+				continue;
+			}
+
+			const auto& spriteAssetRef = renderItem.spriteComponent->spriteAssetRef;
+			if (spriteAssetRef.IsEmpty()) {
+				std::ostringstream message;
+				message << "Scene::ResolveSprites skipped entity " << renderItem.entityId
+					<< " because spriteAssetRef was empty.";
+				LogMessage(logger, message.str());
+				continue;
+			}
+
+			const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(spriteAssetRef);
+			if (!spriteAsset.has_value()) {
+				std::ostringstream message;
+				message << "Scene::ResolveSprites could not resolve SpriteAsset '"
+					<< spriteAssetRef.GetValue() << "' for entity " << renderItem.entityId << ".";
+				LogMessage(logger, message.str());
+				continue;
+			}
+
+			const auto texture = textureAssetResolver.ResolveTexture(spriteAsset->textureAssetId);
+			if (!texture) {
+				std::ostringstream message;
+				message << "Scene::ResolveSprites could not resolve Texture2D '"
+					<< spriteAsset->textureAssetId.GetValue() << "' for entity " << renderItem.entityId << ".";
+				LogMessage(logger, message.str());
+				continue;
+			}
+
+			Graphics::Sprite sprite{};
+			sprite.SetTexture(texture);
+			sprite.SetTextureAssetId(spriteAsset->textureAssetId);
+			sprite.SetPosition(renderItem.transform->position.x, renderItem.transform->position.y);
+			sprite.SetScale(renderItem.transform->scale.x, renderItem.transform->scale.y);
+			resolvedSprites.push_back(std::move(sprite));
+
+			std::ostringstream message;
+			message << "Scene::ResolveSprites resolved entity " << renderItem.entityId
+				<< " from SpriteAsset '" << spriteAssetRef.GetValue()
+				<< "' to Texture2D '" << spriteAsset->textureAssetId.GetValue() << "'.";
+			LogMessage(logger, message.str());
+		}
+
+		return resolvedSprites;
 	}
 }

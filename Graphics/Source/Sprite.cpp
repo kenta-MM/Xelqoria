@@ -23,4 +23,34 @@ namespace Xelqoria::Graphics
 	{
 		return m_textureAssetId;
 	}
+
+	void Sprite::SetPosition(const Vector2& position)
+	{
+		m_position = position;
+	}
+
+	void Sprite::SetPosition(float x, float y)
+	{
+		SetPosition(Vector2{ x, y });
+	}
+
+	const Vector2& Sprite::GetPosition() const
+	{
+		return m_position;
+	}
+
+	void Sprite::SetScale(const Vector2& scale)
+	{
+		m_scale = scale;
+	}
+
+	void Sprite::SetScale(float x, float y)
+	{
+		SetScale(Vector2{ x, y });
+	}
+
+	const Vector2& Sprite::GetScale() const
+	{
+		return m_scale;
+	}
 }

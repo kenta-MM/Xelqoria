@@ -17,7 +17,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\ITextureAssetResolver.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Sprite.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SpriteRenderMath.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\SpriteRenderer.h">

@@ -1,11 +1,12 @@
 #include <Windows.h>
 #include <chrono>
 #include <memory>
+#include <string>
 
 #include "Application.h"
 #include "RenderBackendBootstrap.h"
 #include "Scene.h"
-#include "Sprite.h"
+#include "Assets/SpriteAsset.h"
 #include "SpriteRenderer.h"
 #include "Texture2D.h"
 #include "GraphicsAPI.h"
@@ -84,26 +85,58 @@ namespace Xelqoria::App
             return false;
         }
 
-        m_spriteRenderer = std::make_unique<Graphics::SpriteRenderer>(*m_graphics);
-        m_scene = std::make_unique<Game::Scene>();
-        m_sceneRuntimeReady = true;
+		m_spriteRenderer = std::make_unique<Graphics::SpriteRenderer>(*m_graphics);
+		m_scene = std::make_unique<Game::Scene>();
+		m_sceneRuntimeReady = true;
 
         auto spriteTexture = std::make_shared<Graphics::Texture2D>();
-        if (!spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", *m_graphics))
-        {
-            return false;
-        }
+		if (!spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", *m_graphics))
+		{
+			return false;
+		}
 
-        auto sprite = std::make_shared<Graphics::Sprite>();
-        sprite->SetTexture(spriteTexture);
-        m_scene->AddSprite(sprite);
+		m_textureAssetRegistry.RegisterTexture("textures/mapchip", spriteTexture);
+		m_spriteAssetRegistry.RegisterSpriteAsset(
+			"sprites/mapchip-left",
+			Game::Assets::SpriteAsset{ "textures/mapchip" });
+		m_spriteAssetRegistry.RegisterSpriteAsset(
+			"sprites/mapchip-right",
+			Game::Assets::SpriteAsset{ "textures/mapchip" });
 
-        return true;
-    }
+		{
+			auto& entity = m_scene->CreateEntity();
+			entity.GetTransform().SetPosition(-160.0f, 0.0f, 0.0f);
+			entity.SetSpriteComponent(Game::SpriteComponent{
+				"sprites/mapchip-left",
+				{
+					true,
+					0,
+					1.0f
+				}
+			});
+		}
+
+		{
+			auto& entity = m_scene->CreateEntity();
+			entity.GetTransform().SetPosition(160.0f, 90.0f, 0.0f);
+			entity.GetTransform().scale = { 0.75f, 0.75f, 1.0f };
+			entity.SetSpriteComponent(Game::SpriteComponent{
+				"sprites/mapchip-right",
+				{
+					true,
+					1,
+					1.0f
+				}
+			});
+		}
+
+		return true;
+	}
 
     void Application::Shutdown()
     {
         m_sceneRuntimeReady = false;
+        m_hasLoggedSceneResolution = false;
         m_scene.reset();
         m_spriteRenderer.reset();
 
@@ -128,20 +161,28 @@ namespace Xelqoria::App
 
         m_graphics->BeginFrame();
 
-        if (m_spriteRenderer && m_scene)
-        {
-            m_spriteRenderer->Begin();
-            for (const auto& sprite : m_scene->GetSprites())
-            {
-                if (!sprite)
-                {
-                    continue;
-                }
+		if (m_spriteRenderer && m_scene)
+		{
+			const auto resolvedSprites = m_scene->ResolveSprites(
+				m_spriteAssetRegistry,
+				m_textureAssetRegistry,
+				m_hasLoggedSceneResolution
+					? std::function<void(const std::string&)>{}
+					: std::function<void(const std::string&)>(
+						[](const std::string& message)
+						{
+							const std::string line = message + "\n";
+							::OutputDebugStringA(line.c_str());
+						}));
+			m_hasLoggedSceneResolution = true;
 
-                m_spriteRenderer->Draw(*sprite);
-            }
-            m_spriteRenderer->End();
-        }
+			m_spriteRenderer->Begin();
+			for (const auto& sprite : resolvedSprites)
+			{
+				m_spriteRenderer->Draw(sprite);
+			}
+			m_spriteRenderer->End();
+		}
 
         m_graphics->EndFrame();
     }
