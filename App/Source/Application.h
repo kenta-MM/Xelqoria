@@ -2,6 +2,8 @@
 #include <Windows.h>
 #include <memory>
 
+#include "Assets/ISpriteAssetResolver.h"
+#include "ITextureAssetResolver.h"
 #include "Scene.h"
 #include "Window.h"
 #include "IGraphicsContext.h"
@@ -126,9 +128,24 @@ namespace Xelqoria::App
 		std::unique_ptr<Graphics::SpriteRenderer> m_spriteRenderer;
 
 		/// <summary>
+		/// Scene が参照する SpriteAsset を解決するレジストリ。
+		/// </summary>
+		Game::Assets::SpriteAssetRegistry m_spriteAssetRegistry{};
+
+		/// <summary>
+		/// Scene が参照する Texture2D を解決するレジストリ。
+		/// </summary>
+		Graphics::TextureAssetRegistry m_textureAssetRegistry{};
+
+		/// <summary>
 		/// Scene ベースのランタイムへ移行するための準備状態。
 		/// </summary>
 		bool m_sceneRuntimeReady = false;
+
+		/// <summary>
+		/// Scene の Asset 解決ログを初回描画で出力済みかを表す。
+		/// </summary>
+		bool m_hasLoggedSceneResolution = false;
 
 		/// <summary>
 		/// アプリケーション実行フラグ。

@@ -5,15 +5,13 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string>
 #include <vector>
 
+#include "Assets/ISpriteAssetResolver.h"
 #include "Entity.h"
-#include <type_traits>
-
-namespace Xelqoria::Graphics
-{
-	class Sprite;
-}
+#include "ITextureAssetResolver.h"
+#include "Sprite.h"
 
 namespace Xelqoria::Game
 {
@@ -110,6 +108,18 @@ namespace Xelqoria::Game
 		/// </summary>
 		/// <returns>描画候補の一覧。</returns>
 		std::vector<SceneSpriteRenderItem> CollectSpriteRenderItems() const;
+
+		/// <summary>
+		/// Scene 内の Sprite 描画候補を Asset 解決経由で描画用 Sprite に変換する。
+		/// </summary>
+		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
+		/// <param name="textureAssetResolver">Texture2D を解決する Resolver。</param>
+		/// <param name="logger">解決状況を受け取るロガー。未指定時はログ出力しない。</param>
+		/// <returns>描画可能な Sprite 一覧。</returns>
+		std::vector<Graphics::Sprite> ResolveSprites(
+			const Assets::ISpriteAssetResolver& spriteAssetResolver,
+			const Graphics::ITextureAssetResolver& textureAssetResolver,
+			const std::function<void(const std::string&)>& logger = {}) const;
 
 	private:
 		std::vector<Entity> m_entities;

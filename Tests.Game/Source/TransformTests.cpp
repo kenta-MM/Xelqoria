@@ -1,8 +1,12 @@
 #include <memory>
 #include <cmath>
+#include <string>
+#include <vector>
 
 #include "AssetId.h"
+#include "Assets/ISpriteAssetResolver.h"
 #include "Assets/SpriteAssetLoader.h"
+#include "ITextureAssetResolver.h"
 #include "ITexture.h"
 #include "Scene.h"
 #include "Sprite.h"
@@ -142,6 +146,7 @@ int main()
 
 	Xelqoria::Game::Entity& visibleSpriteEntity = scene.CreateEntity();
 	visibleSpriteEntity.GetTransform().SetPosition(10.0f, 20.0f, 30.0f);
+	visibleSpriteEntity.GetTransform().scale = { 2.0f, 3.0f, 1.0f };
 	visibleSpriteEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
 		"ui/visible",
 		{
@@ -258,6 +263,45 @@ int main()
 		return 1;
 	}
 
+	Xelqoria::Game::Assets::SpriteAssetRegistry spriteAssetRegistry;
+	spriteAssetRegistry.RegisterSpriteAsset(
+		"sprites/player-idle",
+		Xelqoria::Game::Assets::SpriteAsset{ "textures/player-idle" });
+
+	Xelqoria::Graphics::TextureAssetRegistry textureAssetRegistry;
+	textureAssetRegistry.RegisterTexture("textures/player-idle", renderTexture);
+
+	std::vector<std::string> resolveLogs;
+	const auto resolvedSprites = scene.ResolveSprites(
+		spriteAssetRegistry,
+		textureAssetRegistry,
+		[&resolveLogs](const std::string& message)
+		{
+			resolveLogs.push_back(message);
+		});
+
+	if (resolvedSprites.size() != 1) {
+		return 1;
+	}
+
+	if (resolvedSprites[0].GetTexture() != renderTexture ||
+		resolvedSprites[0].GetTextureAssetId() != Xelqoria::Core::AssetId("textures/player-idle")) {
+		return 1;
+	}
+
+	if (!IsEqual(resolvedSprites[0].GetPosition().x, 10.0f) ||
+		!IsEqual(resolvedSprites[0].GetPosition().y, 20.0f) ||
+		!IsEqual(resolvedSprites[0].GetScale().x, 2.0f) ||
+		!IsEqual(resolvedSprites[0].GetScale().y, 3.0f)) {
+		return 1;
+	}
+
+	if (resolveLogs.size() != 1 ||
+		resolveLogs[0].find("resolved entity") == std::string::npos ||
+		resolveLogs[0].find("sprites/player-idle") == std::string::npos) {
+		return 1;
+	}
+
 	const auto missingFieldLoadResult = Xelqoria::Game::Assets::SpriteAssetLoader::LoadFromText(
 		"# textureAssetId is missing\n");
 	if (missingFieldLoadResult.IsSuccess() || !missingFieldLoadResult.error.has_value()) {
@@ -266,6 +310,36 @@ int main()
 
 	if (missingFieldLoadResult.error->code != Xelqoria::Game::Assets::SpriteAssetLoadErrorCode::MissingRequiredField ||
 		missingFieldLoadResult.error->fieldName != "textureAssetId") {
+		return 1;
+	}
+
+	Xelqoria::Game::Scene missingAssetScene;
+	auto& missingAssetEntity = missingAssetScene.CreateEntity();
+	missingAssetEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+		"sprites/missing",
+		{
+			true,
+			0,
+			1.0f
+		}
+	});
+
+	std::vector<std::string> missingAssetLogs;
+	const auto unresolvedSprites = missingAssetScene.ResolveSprites(
+		spriteAssetRegistry,
+		textureAssetRegistry,
+		[&missingAssetLogs](const std::string& message)
+		{
+			missingAssetLogs.push_back(message);
+		});
+
+	if (!unresolvedSprites.empty()) {
+		return 1;
+	}
+
+	if (missingAssetLogs.size() != 1 ||
+		missingAssetLogs[0].find("could not resolve SpriteAsset") == std::string::npos ||
+		missingAssetLogs[0].find("sprites/missing") == std::string::npos) {
 		return 1;
 	}
 
