@@ -38,6 +38,7 @@
     <ClInclude Include="Source\Assets\SpriteAssetLoader.h" />
     <ClInclude Include="Source\Entity.h" />
     <ClInclude Include="Source\Scene.h" />
+    <ClInclude Include="Source\SceneSaveFormat.h" />
     <ClInclude Include="Source\SpriteComponent.h" />
     <ClInclude Include="Source\Transform.h" />
   </ItemGroup>

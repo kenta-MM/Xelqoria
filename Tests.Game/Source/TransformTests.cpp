@@ -9,6 +9,7 @@
 #include "ITextureAssetResolver.h"
 #include "ITexture.h"
 #include "Scene.h"
+#include "SceneSaveFormat.h"
 #include "Sprite.h"
 #include "SpriteComponent.h"
 #include "SpriteRenderMath.h"
@@ -340,6 +341,35 @@ int main()
 	if (missingAssetLogs.size() != 1 ||
 		missingAssetLogs[0].find("could not resolve SpriteAsset") == std::string::npos ||
 		missingAssetLogs[0].find("sprites/missing") == std::string::npos) {
+		return 1;
+	}
+
+	if (Xelqoria::Game::SceneSaveFormatMagic != std::string_view("xelqoria.scene") ||
+		Xelqoria::Game::SceneSaveFormatVersion != 1 ||
+		Xelqoria::Game::SceneSaveExtensionFieldPrefix != std::string_view("extensions.")) {
+		return 1;
+	}
+
+	const std::string sceneSaveFormatDocumentation(Xelqoria::Game::SceneSaveFormatDocumentation);
+	if (sceneSaveFormatDocumentation.find("entity.<index>.transform.position=<x>,<y>,<z>") == std::string::npos ||
+		sceneSaveFormatDocumentation.find("entity.<index>.spriteRef=<SpriteAssetId>") == std::string::npos ||
+		sceneSaveFormatDocumentation.find("entity.<index>.extensions.<name>=<reserved>") == std::string::npos) {
+		return 1;
+	}
+
+	Xelqoria::Game::SceneEntitySaveRecord sceneSaveRecord{};
+	sceneSaveRecord.entityId = 77;
+	sceneSaveRecord.transform.SetPosition(4.0f, 5.0f, 6.0f);
+	sceneSaveRecord.transform.rotation = { 0.0f, 0.0f, 45.0f };
+	sceneSaveRecord.transform.scale = { 2.0f, 3.0f, 1.0f };
+	sceneSaveRecord.spriteRef = Xelqoria::Game::SceneSpriteRefRecord{ "sprites/player" };
+
+	if (sceneSaveRecord.entityId != 77 ||
+		!IsEqual(sceneSaveRecord.transform.position.x, 4.0f) ||
+		!IsEqual(sceneSaveRecord.transform.position.y, 5.0f) ||
+		!IsEqual(sceneSaveRecord.transform.position.z, 6.0f) ||
+		!sceneSaveRecord.spriteRef.has_value() ||
+		sceneSaveRecord.spriteRef->spriteAssetRef != Xelqoria::Core::AssetId("sprites/player")) {
 		return 1;
 	}
 
