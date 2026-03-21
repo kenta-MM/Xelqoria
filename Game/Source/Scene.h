@@ -18,6 +18,27 @@ namespace Xelqoria::Graphics
 namespace Xelqoria::Game
 {
 	/// <summary>
+	/// Scene から収集した Sprite 描画候補 1 件分の参照を表す。
+	/// </summary>
+	struct SceneSpriteRenderItem
+	{
+		/// <summary>
+		/// 描画候補に対応する Entity ID を表す。
+		/// </summary>
+		EntityId entityId = 0;
+
+		/// <summary>
+		/// 描画時に参照する Transform へのポインタを表す。
+		/// </summary>
+		const Transform* transform = nullptr;
+
+		/// <summary>
+		/// 描画設定を保持する SpriteComponent へのポインタを表す。
+		/// </summary>
+		const SpriteComponent* spriteComponent = nullptr;
+	};
+
+	/// <summary>
 	/// Entity 群を保持して列挙する Scene コンテナ。
 	/// </summary>
 	class Scene
@@ -83,6 +104,12 @@ namespace Xelqoria::Game
 		/// </summary>
 		/// <returns>Sprite 一覧の読み取り専用ビュー。</returns>
 		std::span<const std::shared_ptr<Graphics::Sprite>> GetSprites() const;
+
+		/// <summary>
+		/// Scene 内の Sprite 描画候補を収集する。
+		/// </summary>
+		/// <returns>描画候補の一覧。</returns>
+		std::vector<SceneSpriteRenderItem> CollectSpriteRenderItems() const;
 
 	private:
 		std::vector<Entity> m_entities;

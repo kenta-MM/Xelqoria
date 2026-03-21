@@ -101,6 +101,52 @@ int main()
 		return 1;
 	}
 
+	Xelqoria::Game::Entity& hiddenSpriteEntity = scene.CreateEntity();
+	hiddenSpriteEntity.GetTransform().SetPosition(50.0f, 60.0f, 70.0f);
+	hiddenSpriteEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+		"ui/hidden",
+		{
+			false,
+			2,
+			1.0f
+		}
+	});
+
+	Xelqoria::Game::Entity& visibleSpriteEntity = scene.CreateEntity();
+	visibleSpriteEntity.GetTransform().SetPosition(10.0f, 20.0f, 30.0f);
+	visibleSpriteEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+		"ui/visible",
+		{
+			true,
+			5,
+			0.5f
+		}
+	});
+
+	const auto renderItems = scene.CollectSpriteRenderItems();
+	if (renderItems.size() != 1) {
+		return 1;
+	}
+
+	if (renderItems[0].entityId != visibleSpriteEntity.GetId() ||
+		renderItems[0].transform == nullptr ||
+		renderItems[0].spriteComponent == nullptr) {
+		return 1;
+	}
+
+	if (!IsEqual(renderItems[0].transform->position.x, 10.0f) ||
+		!IsEqual(renderItems[0].transform->position.y, 20.0f) ||
+		!IsEqual(renderItems[0].transform->position.z, 30.0f)) {
+		return 1;
+	}
+
+	if (renderItems[0].spriteComponent->spriteAssetRef != "ui/visible" ||
+		!renderItems[0].spriteComponent->renderSettings.visible ||
+		renderItems[0].spriteComponent->renderSettings.sortOrder != 5 ||
+		!IsEqual(renderItems[0].spriteComponent->renderSettings.opacity, 0.5f)) {
+		return 1;
+	}
+
 	auto sprite = std::make_shared<Xelqoria::Graphics::Sprite>();
 	scene.AddSprite(sprite);
 
