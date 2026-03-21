@@ -26,6 +26,12 @@
   <Folder Name="/ソリューション項目/docs/skills/xelqoria-issue-implementation/agents/">
     <File Path="docs/skills/xelqoria-issue-implementation/agents/openai.yaml" />
   </Folder>
+  <Folder Name="/ソリューション項目/docs/skills/xelqoria-local-branch-cleanup/">
+    <File Path="docs/skills/xelqoria-local-branch-cleanup/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/docs/skills/xelqoria-local-branch-cleanup/agents/">
+    <File Path="docs/skills/xelqoria-local-branch-cleanup/agents/openai.yaml" />
+  </Folder>
   <Folder Name="/ソリューション項目/tools/">
     <File Path="tools/check-layer-dependencies.ps1" />
   </Folder>
