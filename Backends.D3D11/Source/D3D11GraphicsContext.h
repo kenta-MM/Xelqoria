@@ -40,6 +40,8 @@ namespace Xelqoria::Backends::D3D11
         std::shared_ptr<RHI::ITexture> CreateTextureFromFile(const std::wstring& filePath) override;
         /// <inheritdoc/>
         void BindTexture(std::uint32_t slot, RHI::ITexture* texture) override;
+        /// <inheritdoc/>
+        void SetQuadTransform(const RHI::QuadTransform2D& transform) override;
 
         /// <inheritdoc/>
         void Draw(std::uint32_t vertexCount, std::uint32_t startVertexLocation = 0) override;
@@ -48,6 +50,10 @@ namespace Xelqoria::Backends::D3D11
 
         /// <inheritdoc/>
         void Resize(std::uint32_t width, std::uint32_t height) override;
+        /// <inheritdoc/>
+        std::uint32_t GetViewportWidth() const override { return m_width; }
+        /// <inheritdoc/>
+        std::uint32_t GetViewportHeight() const override { return m_height; }
 
     private:
         /// <summary>
@@ -90,7 +96,9 @@ namespace Xelqoria::Backends::D3D11
         Microsoft::WRL::ComPtr<ID3D11VertexShader> m_spriteVertexShader;
         Microsoft::WRL::ComPtr<ID3D11PixelShader> m_spritePixelShader;
         Microsoft::WRL::ComPtr<ID3D11InputLayout> m_spriteInputLayout;
+        Microsoft::WRL::ComPtr<ID3D11Buffer> m_spriteTransformBuffer;
         std::shared_ptr<RHI::IVertexBuffer> m_spriteVertexBuffer;
         Microsoft::WRL::ComPtr<ID3D11SamplerState> m_spriteSamplerState;
+        RHI::QuadTransform2D m_quadTransform{};
     };
 }

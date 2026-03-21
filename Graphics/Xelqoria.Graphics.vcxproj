@@ -25,6 +25,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Sprite.h" />
+    <ClInclude Include="Source\SpriteRenderMath.h" />
     <ClInclude Include="Source\SpriteRenderer.h" />
     <ClInclude Include="Source\Texture2D.h" />
   </ItemGroup>

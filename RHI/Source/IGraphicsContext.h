@@ -10,6 +10,32 @@ namespace Xelqoria::RHI
     class ITexture;
 
     /// <summary>
+    /// 単位クアッドへ適用する 2D 変換値を表す。
+    /// </summary>
+    struct QuadTransform2D
+    {
+        /// <summary>
+        /// X 軸方向の拡大量を表す。
+        /// </summary>
+        float scaleX = 1.0f;
+
+        /// <summary>
+        /// Y 軸方向の拡大量を表す。
+        /// </summary>
+        float scaleY = 1.0f;
+
+        /// <summary>
+        /// X 軸方向の移動量を表す。
+        /// </summary>
+        float translateX = 0.0f;
+
+        /// <summary>
+        /// Y 軸方向の移動量を表す。
+        /// </summary>
+        float translateY = 0.0f;
+    };
+
+    /// <summary>
     /// レンダリング基盤の初期化・フレーム制御・描画を抽象化する RHI インターフェース。
     /// </summary>
     class IGraphicsContext
@@ -57,6 +83,12 @@ namespace Xelqoria::RHI
         virtual void BindTexture(std::uint32_t slot, ITexture* texture) = 0;
 
         /// <summary>
+        /// 単位クアッド描画に適用する 2D 変換値を設定する。
+        /// </summary>
+        /// <param name="transform">設定する変換値。</param>
+        virtual void SetQuadTransform(const QuadTransform2D& transform) = 0;
+
+        /// <summary>
         /// 非インデックス描画を実行する。
         /// </summary>
         /// <param name="vertexCount">描画頂点数。</param>
@@ -77,5 +109,17 @@ namespace Xelqoria::RHI
         /// <param name="width">変更後の幅（ピクセル）。</param>
         /// <param name="height">変更後の高さ（ピクセル）。</param>
         virtual void Resize(std::uint32_t width, std::uint32_t height) = 0;
+
+        /// <summary>
+        /// 現在の描画ターゲット幅を取得する。
+        /// </summary>
+        /// <returns>描画ターゲット幅。</returns>
+        virtual std::uint32_t GetViewportWidth() const = 0;
+
+        /// <summary>
+        /// 現在の描画ターゲット高さを取得する。
+        /// </summary>
+        /// <returns>描画ターゲット高さ。</returns>
+        virtual std::uint32_t GetViewportHeight() const = 0;
     };
 }
