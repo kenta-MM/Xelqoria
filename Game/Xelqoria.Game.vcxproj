@@ -33,6 +33,7 @@
     <ClCompile Include="Source\Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Assets\ISpriteAssetResolver.h" />
     <ClInclude Include="Source\Assets\SpriteAsset.h" />
     <ClInclude Include="Source\Assets\SpriteAssetLoader.h" />
     <ClInclude Include="Source\Entity.h" />

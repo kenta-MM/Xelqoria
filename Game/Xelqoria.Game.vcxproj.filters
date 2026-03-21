@@ -25,6 +25,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Assets\ISpriteAssetResolver.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Assets\SpriteAsset.h">
       <Filter>Source\Assets</Filter>
     </ClInclude>

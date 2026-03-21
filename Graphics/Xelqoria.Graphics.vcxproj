@@ -24,6 +24,7 @@
     <ClCompile Include="Source\Texture2D.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\ITextureAssetResolver.h" />
     <ClInclude Include="Source\Sprite.h" />
     <ClInclude Include="Source\SpriteRenderMath.h" />
     <ClInclude Include="Source\SpriteRenderer.h" />
