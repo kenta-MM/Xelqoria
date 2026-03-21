@@ -128,6 +128,15 @@ namespace Xelqoria::Game
 			const Graphics::ITextureAssetResolver& textureAssetResolver,
 			const std::function<void(const std::string&)>& logger = {}) const;
 
+		/// <summary>
+		/// Scene 内の Sprite アセット参照を検証して欠損状態を更新する。
+		/// </summary>
+		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
+		/// <param name="logger">検証状況を受け取るロガー。未指定時はログ出力しない。</param>
+		void ValidateSpriteReferences(
+			const Assets::ISpriteAssetResolver& spriteAssetResolver,
+			const std::function<void(const std::string&)>& logger = {});
+
 	private:
 		std::vector<Entity> m_entities;
 		std::vector<std::shared_ptr<Graphics::Sprite>> m_sprites;

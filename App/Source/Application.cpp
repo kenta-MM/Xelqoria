@@ -163,6 +163,16 @@ namespace Xelqoria::App
 
 		if (m_spriteRenderer && m_scene)
 		{
+			m_scene->ValidateSpriteReferences(
+				m_spriteAssetRegistry,
+				m_hasLoggedSceneResolution
+					? std::function<void(const std::string&)>{}
+					: std::function<void(const std::string&)>(
+						[](const std::string& message)
+						{
+							const std::string line = message + "\n";
+							::OutputDebugStringA(line.c_str());
+						}));
 			const auto resolvedSprites = m_scene->ResolveSprites(
 				m_spriteAssetRegistry,
 				m_textureAssetRegistry,

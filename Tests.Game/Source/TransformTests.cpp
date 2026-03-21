@@ -334,7 +334,9 @@ int main()
 
 	if (!attachedSpriteComponent->get().renderSettings.visible ||
 		!IsEqual(attachedSpriteComponent->get().renderSettings.opacity, 0.75f) ||
-		attachedSpriteComponent->get().renderSettings.sortOrder != 10) {
+		attachedSpriteComponent->get().renderSettings.sortOrder != 10 ||
+		attachedSpriteComponent->get().spriteAssetState != Xelqoria::Game::SpriteAssetReferenceState::Unknown ||
+		!attachedSpriteComponent->get().missingSpriteAssetRef.IsEmpty()) {
 		return 1;
 	}
 
@@ -342,7 +344,9 @@ int main()
 	if (!defaultSpriteComponent.renderSettings.visible ||
 		defaultSpriteComponent.renderSettings.sortOrder != 0 ||
 		!IsEqual(defaultSpriteComponent.renderSettings.opacity, 1.0f) ||
-		!defaultSpriteComponent.spriteAssetRef.IsEmpty()) {
+		!defaultSpriteComponent.spriteAssetRef.IsEmpty() ||
+		defaultSpriteComponent.spriteAssetState != Xelqoria::Game::SpriteAssetReferenceState::Unknown ||
+		!defaultSpriteComponent.missingSpriteAssetRef.IsEmpty()) {
 		return 1;
 	}
 
@@ -441,6 +445,20 @@ int main()
 	});
 
 	std::vector<std::string> missingAssetLogs;
+	missingAssetScene.ValidateSpriteReferences(
+		spriteAssetRegistry,
+		[&missingAssetLogs](const std::string& message)
+		{
+			missingAssetLogs.push_back(message);
+		});
+
+	const auto missingAssetComponent = missingAssetEntity.GetSpriteComponent();
+	if (!missingAssetComponent.has_value() ||
+		missingAssetComponent->get().spriteAssetState != Xelqoria::Game::SpriteAssetReferenceState::Missing ||
+		missingAssetComponent->get().missingSpriteAssetRef != Xelqoria::Core::AssetId("sprites/missing")) {
+		return 1;
+	}
+
 	const auto unresolvedSprites = missingAssetScene.ResolveSprites(
 		spriteAssetRegistry,
 		textureAssetRegistry,
@@ -453,9 +471,11 @@ int main()
 		return 1;
 	}
 
-	if (missingAssetLogs.size() != 1 ||
-		missingAssetLogs[0].find("could not resolve SpriteAsset") == std::string::npos ||
-		missingAssetLogs[0].find("sprites/missing") == std::string::npos) {
+	if (missingAssetLogs.size() != 2 ||
+		missingAssetLogs[0].find("detected missing SpriteAsset") == std::string::npos ||
+		missingAssetLogs[0].find("sprites/missing") == std::string::npos ||
+		missingAssetLogs[1].find("could not resolve SpriteAsset") == std::string::npos ||
+		missingAssetLogs[1].find("sprites/missing") == std::string::npos) {
 		return 1;
 	}
 
