@@ -1,6 +1,7 @@
 ---
 name: xelqoria-issue-implementation
 description: Use when implementing a GitHub issue in the Xelqoria repository. Follow the repo architecture rules, inspect the affected layer before editing, implement the issue with minimal changes, add Japanese XML doc comments where needed, and verify with appropriate build or tests before reporting.
+allowed-tools: Bash(git branch:*) Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git push:*) Bash(rg:*) Bash(sed:*) Bash(find:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue view:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue comment:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue edit:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" repo view:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" pr create:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth status:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth setup-git:*) Read Edit
 ---
 
 # Xelqoria Issue Implementation

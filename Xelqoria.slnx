@@ -9,6 +9,26 @@
     <File Path="AGENTS.md" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/ソリューション項目/.codex/" />
+  <Folder Name="/ソリューション項目/.codex/skills/" />
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-issue-implementation/">
+    <File Path=".codex/skills/xelqoria-issue-implementation/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-issue-implementation/agents/">
+    <File Path=".codex/skills/xelqoria-issue-implementation/agents/openai.yaml" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-local-branch-cleanup/">
+    <File Path=".codex/skills/xelqoria-local-branch-cleanup/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-local-branch-cleanup/agents/">
+    <File Path=".codex/skills/xelqoria-local-branch-cleanup/agents/openai.yaml" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-parent-issue-implementation/">
+    <File Path=".codex/skills/xelqoria-parent-issue-implementation/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-parent-issue-implementation/agents/">
+    <File Path=".codex/skills/xelqoria-parent-issue-implementation/agents/openai.yaml" />
+  </Folder>
   <Folder Name="/ソリューション項目/.github/" />
   <Folder Name="/ソリューション項目/.github/workflows/">
     <File Path=".github/workflows/auto-create-issue-branch.yml" />
@@ -18,19 +38,6 @@
     <File Path="docs/agents/architecture.md" />
     <File Path="docs/agents/coding-rules.md" />
     <File Path="docs/agents/workflows.md" />
-  </Folder>
-  <Folder Name="/ソリューション項目/docs/skills/" />
-  <Folder Name="/ソリューション項目/docs/skills/xelqoria-issue-implementation/">
-    <File Path="docs/skills/xelqoria-issue-implementation/SKILL.md" />
-  </Folder>
-  <Folder Name="/ソリューション項目/docs/skills/xelqoria-issue-implementation/agents/">
-    <File Path="docs/skills/xelqoria-issue-implementation/agents/openai.yaml" />
-  </Folder>
-  <Folder Name="/ソリューション項目/docs/skills/xelqoria-local-branch-cleanup/">
-    <File Path="docs/skills/xelqoria-local-branch-cleanup/SKILL.md" />
-  </Folder>
-  <Folder Name="/ソリューション項目/docs/skills/xelqoria-local-branch-cleanup/agents/">
-    <File Path="docs/skills/xelqoria-local-branch-cleanup/agents/openai.yaml" />
   </Folder>
   <Folder Name="/ソリューション項目/tools/">
     <File Path="tools/check-layer-dependencies.ps1" />
