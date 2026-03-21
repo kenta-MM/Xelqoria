@@ -59,6 +59,13 @@ namespace Xelqoria::Game
 		Entity& CreateEntity();
 
 		/// <summary>
+		/// 指定した Entity ID で新しい Entity を生成して Scene に追加する。
+		/// </summary>
+		/// <param name="entityId">割り当てる Entity ID。</param>
+		/// <returns>追加された Entity。</returns>
+		Entity& CreateEntity(EntityId entityId);
+
+		/// <summary>
 		/// 指定した Entity を Scene から削除する。
 		/// </summary>
 		/// <param name="entityId">削除対象の Entity ID。</param>
@@ -120,6 +127,15 @@ namespace Xelqoria::Game
 			const Assets::ISpriteAssetResolver& spriteAssetResolver,
 			const Graphics::ITextureAssetResolver& textureAssetResolver,
 			const std::function<void(const std::string&)>& logger = {}) const;
+
+		/// <summary>
+		/// Scene 内の Sprite アセット参照を検証して欠損状態を更新する。
+		/// </summary>
+		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
+		/// <param name="logger">検証状況を受け取るロガー。未指定時はログ出力しない。</param>
+		void ValidateSpriteReferences(
+			const Assets::ISpriteAssetResolver& spriteAssetResolver,
+			const std::function<void(const std::string&)>& logger = {});
 
 	private:
 		std::vector<Entity> m_entities;

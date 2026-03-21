@@ -27,6 +27,16 @@ namespace Xelqoria::Game
 		return m_entities.back();
 	}
 
+	Entity& Scene::CreateEntity(EntityId entityId)
+	{
+		m_entities.emplace_back(entityId);
+		if (entityId >= m_nextEntityId) {
+			m_nextEntityId = entityId + 1;
+		}
+
+		return m_entities.back();
+	}
+
 	bool Scene::DestroyEntity(EntityId entityId)
 	{
 		const auto it = std::find_if(
@@ -186,5 +196,39 @@ namespace Xelqoria::Game
 		}
 
 		return resolvedSprites;
+	}
+
+	void Scene::ValidateSpriteReferences(
+		const Assets::ISpriteAssetResolver& spriteAssetResolver,
+		const std::function<void(const std::string&)>& logger)
+	{
+		for (auto& entity : m_entities) {
+			auto spriteComponent = entity.GetSpriteComponent();
+			if (!spriteComponent.has_value()) {
+				continue;
+			}
+
+			auto& spriteComponentValue = spriteComponent->get();
+			if (spriteComponentValue.spriteAssetRef.IsEmpty()) {
+				spriteComponentValue.spriteAssetState = SpriteAssetReferenceState::Unknown;
+				spriteComponentValue.missingSpriteAssetRef = {};
+				continue;
+			}
+
+			const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(spriteComponentValue.spriteAssetRef);
+			if (!spriteAsset.has_value()) {
+				spriteComponentValue.spriteAssetState = SpriteAssetReferenceState::Missing;
+				spriteComponentValue.missingSpriteAssetRef = spriteComponentValue.spriteAssetRef;
+
+				std::ostringstream message;
+				message << "Scene::ValidateSpriteReferences detected missing SpriteAsset '"
+					<< spriteComponentValue.spriteAssetRef.GetValue() << "' for entity " << entity.GetId() << ".";
+				LogMessage(logger, message.str());
+				continue;
+			}
+
+			spriteComponentValue.spriteAssetState = SpriteAssetReferenceState::Resolved;
+			spriteComponentValue.missingSpriteAssetRef = {};
+		}
 	}
 }

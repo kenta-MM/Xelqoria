@@ -20,6 +20,9 @@
     <ClCompile Include="Source\Scene.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\SceneSerializer.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Transform.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -38,6 +41,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneSaveFormat.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneSerializer.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\SpriteComponent.h">

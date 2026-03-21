@@ -9,6 +9,8 @@
 #include "ITextureAssetResolver.h"
 #include "ITexture.h"
 #include "Scene.h"
+#include "SceneSaveFormat.h"
+#include "SceneSerializer.h"
 #include "Sprite.h"
 #include "SpriteComponent.h"
 #include "SpriteRenderMath.h"
@@ -20,6 +22,120 @@ namespace
 	bool IsEqual(float lhs, float rhs)
 	{
 		return std::fabs(lhs - rhs) < 0.0001f;
+	}
+
+	bool VerifySceneSaveSerialization()
+	{
+		Xelqoria::Game::Scene saveScene;
+		auto& playerEntity = saveScene.CreateEntity();
+		playerEntity.GetTransform().SetPosition(12.5f, -8.0f, 3.0f);
+		playerEntity.GetTransform().rotation = { 0.0f, 45.0f, 90.0f };
+		playerEntity.GetTransform().scale = { 1.0f, 2.0f, 1.0f };
+		playerEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+			"sprites/player",
+			{
+				true,
+				0,
+				1.0f
+			}
+		});
+
+		auto& backgroundEntity = saveScene.CreateEntity();
+		backgroundEntity.GetTransform().SetPosition(-32.0f, 64.0f, 0.0f);
+		backgroundEntity.GetTransform().rotation = { 0.0f, 0.0f, 0.0f };
+		backgroundEntity.GetTransform().scale = { 4.0f, 4.0f, 1.0f };
+
+		const std::string sceneSaveSnapshot =
+			"magic=xelqoria.scene\n"
+			"version=1\n"
+			"entity.0.id=1\n"
+			"entity.0.transform.position=12.500000,-8.000000,3.000000\n"
+			"entity.0.transform.rotation=0.000000,45.000000,90.000000\n"
+			"entity.0.transform.scale=1.000000,2.000000,1.000000\n"
+			"entity.0.spriteRef=sprites/player\n"
+			"entity.1.id=2\n"
+			"entity.1.transform.position=-32.000000,64.000000,0.000000\n"
+			"entity.1.transform.rotation=0.000000,0.000000,0.000000\n"
+			"entity.1.transform.scale=4.000000,4.000000,1.000000\n";
+
+		return Xelqoria::Game::SceneSerializer::SaveToText(saveScene) == sceneSaveSnapshot;
+	}
+
+	bool VerifySceneSaveRoundTrip()
+	{
+		Xelqoria::Game::Scene sourceScene;
+		auto& playerEntity = sourceScene.CreateEntity();
+		playerEntity.GetTransform().SetPosition(1.0f, 2.0f, 3.0f);
+		playerEntity.GetTransform().rotation = { 4.0f, 5.0f, 6.0f };
+		playerEntity.GetTransform().scale = { 7.0f, 8.0f, 9.0f };
+		playerEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+			"sprites/player",
+			{
+				true,
+				3,
+				0.8f
+			}
+		});
+
+		auto& backgroundEntity = sourceScene.CreateEntity();
+		backgroundEntity.GetTransform().SetPosition(-10.0f, 20.0f, -30.0f);
+		backgroundEntity.GetTransform().rotation = { 0.0f, 15.0f, 30.0f };
+		backgroundEntity.GetTransform().scale = { 2.0f, 2.0f, 1.0f };
+
+		const std::string serializedScene = Xelqoria::Game::SceneSerializer::SaveToText(sourceScene);
+		const auto loadResult = Xelqoria::Game::SceneSerializer::LoadFromText(serializedScene);
+		if (!loadResult.IsSuccess() || !loadResult.scene.has_value()) {
+			return false;
+		}
+
+		const auto& loadedScene = *loadResult.scene;
+		if (loadedScene.GetEntityCount() != 2) {
+			return false;
+		}
+
+		const auto loadedPlayerEntity = loadedScene.FindEntity(1);
+		const auto loadedBackgroundEntity = loadedScene.FindEntity(2);
+		if (!loadedPlayerEntity.has_value() || !loadedBackgroundEntity.has_value()) {
+			return false;
+		}
+
+		const auto& loadedPlayerTransform = loadedPlayerEntity->get().GetTransform();
+		const auto& loadedBackgroundTransform = loadedBackgroundEntity->get().GetTransform();
+		if (!IsEqual(loadedPlayerTransform.position.x, 1.0f) ||
+			!IsEqual(loadedPlayerTransform.position.y, 2.0f) ||
+			!IsEqual(loadedPlayerTransform.position.z, 3.0f) ||
+			!IsEqual(loadedPlayerTransform.rotation.x, 4.0f) ||
+			!IsEqual(loadedPlayerTransform.rotation.y, 5.0f) ||
+			!IsEqual(loadedPlayerTransform.rotation.z, 6.0f) ||
+			!IsEqual(loadedPlayerTransform.scale.x, 7.0f) ||
+			!IsEqual(loadedPlayerTransform.scale.y, 8.0f) ||
+			!IsEqual(loadedPlayerTransform.scale.z, 9.0f)) {
+			return false;
+		}
+
+		if (!IsEqual(loadedBackgroundTransform.position.x, -10.0f) ||
+			!IsEqual(loadedBackgroundTransform.position.y, 20.0f) ||
+			!IsEqual(loadedBackgroundTransform.position.z, -30.0f) ||
+			!IsEqual(loadedBackgroundTransform.rotation.x, 0.0f) ||
+			!IsEqual(loadedBackgroundTransform.rotation.y, 15.0f) ||
+			!IsEqual(loadedBackgroundTransform.rotation.z, 30.0f) ||
+			!IsEqual(loadedBackgroundTransform.scale.x, 2.0f) ||
+			!IsEqual(loadedBackgroundTransform.scale.y, 2.0f) ||
+			!IsEqual(loadedBackgroundTransform.scale.z, 1.0f)) {
+			return false;
+		}
+
+		const auto loadedPlayerSpriteComponent = loadedPlayerEntity->get().GetSpriteComponent();
+		if (!loadedPlayerSpriteComponent.has_value() ||
+			loadedPlayerSpriteComponent->get().spriteAssetRef != Xelqoria::Core::AssetId("sprites/player")) {
+			return false;
+		}
+
+		if (loadedBackgroundEntity->get().GetSpriteComponent().has_value()) {
+			return false;
+		}
+
+		return Xelqoria::Game::SceneSerializer::SaveToText(loadedScene) == serializedScene;
 	}
 
 	class FakeTexture final : public Xelqoria::RHI::ITexture
@@ -218,7 +334,9 @@ int main()
 
 	if (!attachedSpriteComponent->get().renderSettings.visible ||
 		!IsEqual(attachedSpriteComponent->get().renderSettings.opacity, 0.75f) ||
-		attachedSpriteComponent->get().renderSettings.sortOrder != 10) {
+		attachedSpriteComponent->get().renderSettings.sortOrder != 10 ||
+		attachedSpriteComponent->get().spriteAssetState != Xelqoria::Game::SpriteAssetReferenceState::Unknown ||
+		!attachedSpriteComponent->get().missingSpriteAssetRef.IsEmpty()) {
 		return 1;
 	}
 
@@ -226,7 +344,9 @@ int main()
 	if (!defaultSpriteComponent.renderSettings.visible ||
 		defaultSpriteComponent.renderSettings.sortOrder != 0 ||
 		!IsEqual(defaultSpriteComponent.renderSettings.opacity, 1.0f) ||
-		!defaultSpriteComponent.spriteAssetRef.IsEmpty()) {
+		!defaultSpriteComponent.spriteAssetRef.IsEmpty() ||
+		defaultSpriteComponent.spriteAssetState != Xelqoria::Game::SpriteAssetReferenceState::Unknown ||
+		!defaultSpriteComponent.missingSpriteAssetRef.IsEmpty()) {
 		return 1;
 	}
 
@@ -325,6 +445,20 @@ int main()
 	});
 
 	std::vector<std::string> missingAssetLogs;
+	missingAssetScene.ValidateSpriteReferences(
+		spriteAssetRegistry,
+		[&missingAssetLogs](const std::string& message)
+		{
+			missingAssetLogs.push_back(message);
+		});
+
+	const auto missingAssetComponent = missingAssetEntity.GetSpriteComponent();
+	if (!missingAssetComponent.has_value() ||
+		missingAssetComponent->get().spriteAssetState != Xelqoria::Game::SpriteAssetReferenceState::Missing ||
+		missingAssetComponent->get().missingSpriteAssetRef != Xelqoria::Core::AssetId("sprites/missing")) {
+		return 1;
+	}
+
 	const auto unresolvedSprites = missingAssetScene.ResolveSprites(
 		spriteAssetRegistry,
 		textureAssetRegistry,
@@ -337,9 +471,48 @@ int main()
 		return 1;
 	}
 
-	if (missingAssetLogs.size() != 1 ||
-		missingAssetLogs[0].find("could not resolve SpriteAsset") == std::string::npos ||
-		missingAssetLogs[0].find("sprites/missing") == std::string::npos) {
+	if (missingAssetLogs.size() != 2 ||
+		missingAssetLogs[0].find("detected missing SpriteAsset") == std::string::npos ||
+		missingAssetLogs[0].find("sprites/missing") == std::string::npos ||
+		missingAssetLogs[1].find("could not resolve SpriteAsset") == std::string::npos ||
+		missingAssetLogs[1].find("sprites/missing") == std::string::npos) {
+		return 1;
+	}
+
+	if (Xelqoria::Game::SceneSaveFormatMagic != std::string_view("xelqoria.scene") ||
+		Xelqoria::Game::SceneSaveFormatVersion != 1 ||
+		Xelqoria::Game::SceneSaveExtensionFieldPrefix != std::string_view("extensions.")) {
+		return 1;
+	}
+
+	const std::string sceneSaveFormatDocumentation(Xelqoria::Game::SceneSaveFormatDocumentation);
+	if (sceneSaveFormatDocumentation.find("entity.<index>.transform.position=<x>,<y>,<z>") == std::string::npos ||
+		sceneSaveFormatDocumentation.find("entity.<index>.spriteRef=<SpriteAssetId>") == std::string::npos ||
+		sceneSaveFormatDocumentation.find("entity.<index>.extensions.<name>=<reserved>") == std::string::npos) {
+		return 1;
+	}
+
+	Xelqoria::Game::SceneEntitySaveRecord sceneSaveRecord{};
+	sceneSaveRecord.entityId = 77;
+	sceneSaveRecord.transform.SetPosition(4.0f, 5.0f, 6.0f);
+	sceneSaveRecord.transform.rotation = { 0.0f, 0.0f, 45.0f };
+	sceneSaveRecord.transform.scale = { 2.0f, 3.0f, 1.0f };
+	sceneSaveRecord.spriteRef = Xelqoria::Game::SceneSpriteRefRecord{ "sprites/player" };
+
+	if (sceneSaveRecord.entityId != 77 ||
+		!IsEqual(sceneSaveRecord.transform.position.x, 4.0f) ||
+		!IsEqual(sceneSaveRecord.transform.position.y, 5.0f) ||
+		!IsEqual(sceneSaveRecord.transform.position.z, 6.0f) ||
+		!sceneSaveRecord.spriteRef.has_value() ||
+		sceneSaveRecord.spriteRef->spriteAssetRef != Xelqoria::Core::AssetId("sprites/player")) {
+		return 1;
+	}
+
+	if (!VerifySceneSaveSerialization()) {
+		return 1;
+	}
+
+	if (!VerifySceneSaveRoundTrip()) {
 		return 1;
 	}
 
