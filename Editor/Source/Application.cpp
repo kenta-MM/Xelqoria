@@ -6,11 +6,21 @@
 #include <memory>
 #include <string>
 
+#include "Assets/SpriteAsset.h"
 #include "GraphicsAPI.h"
 #include "RenderBackendBootstrap.h"
+#include "Texture2D.h"
 
 namespace Xelqoria::Editor
 {
+    namespace
+    {
+        std::wstring ToWideString(std::string_view value)
+        {
+            return std::wstring(value.begin(), value.end());
+        }
+    }
+
     Application::Application(HINSTANCE hInstance)
         : m_hInstance(hInstance)
     {
@@ -71,7 +81,18 @@ namespace Xelqoria::Editor
         UpdateLayout();
         m_window.Show();
 
-        return InitializeSceneViewGraphics();
+        if (!InitializeSceneViewGraphics())
+        {
+            return false;
+        }
+
+        if (!InitializeDocument())
+        {
+            return false;
+        }
+
+        RefreshAssetsPanel();
+        return true;
     }
 
     void Application::Shutdown()
@@ -87,6 +108,7 @@ namespace Xelqoria::Editor
     {
         (void)deltaTime;
         UpdateLayout();
+        SyncAssetSelection();
     }
 
     void Application::Render()
@@ -122,6 +144,14 @@ namespace Xelqoria::Editor
             L"Static",
             L"SceneView size: pending",
             WS_CHILD | WS_VISIBLE);
+        m_assetsSummaryLabel = CreateChildWindow(
+            L"Static",
+            L"Sprite assets: pending",
+            WS_CHILD | WS_VISIBLE);
+        m_assetsListBox = CreateChildWindow(
+            L"ListBox",
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
 
         return m_hierarchyPanel != nullptr
             && m_assetsPanel != nullptr
@@ -129,7 +159,9 @@ namespace Xelqoria::Editor
             && m_sceneViewPanel != nullptr
             && m_sceneViewPlanLabel != nullptr
             && m_sceneViewHost != nullptr
-            && m_sceneViewSizeLabel != nullptr;
+            && m_sceneViewSizeLabel != nullptr
+            && m_assetsSummaryLabel != nullptr
+            && m_assetsListBox != nullptr;
     }
 
     void Application::UpdateLayout()
@@ -165,6 +197,22 @@ namespace Xelqoria::Editor
         MoveWindow(m_assetsPanel, outerPadding, assetsPanelY, leftPaneWidth, assetsPanelHeight, TRUE);
         MoveWindow(m_sceneViewPanel, centerX, outerPadding, centerWidth, scenePanelHeight, TRUE);
         MoveWindow(m_inspectorPanel, rightX, outerPadding, rightWidth, scenePanelHeight, TRUE);
+
+        const int sideInnerWidth = leftPaneWidth - (outerPadding * 2);
+        MoveWindow(
+            m_assetsSummaryLabel,
+            outerPadding + outerPadding,
+            assetsPanelY + groupHeaderHeight,
+            sideInnerWidth,
+            labelHeight,
+            TRUE);
+        MoveWindow(
+            m_assetsListBox,
+            outerPadding + outerPadding,
+            assetsPanelY + groupHeaderHeight + labelHeight + 6,
+            sideInnerWidth,
+            (std::max)(100, assetsPanelHeight - groupHeaderHeight - labelHeight - outerPadding - 12),
+            TRUE);
 
         const int sceneInnerWidth = (std::max)(120, centerWidth - (outerPadding * 2));
         const int sceneHostHeight = (std::max)(160, scenePanelHeight - groupHeaderHeight - labelHeight - (outerPadding * 3));
@@ -242,6 +290,143 @@ namespace Xelqoria::Editor
             m_hInstance,
             m_sceneViewWidth,
             m_sceneViewHeight);
+    }
+
+    bool Application::InitializeDocument()
+    {
+        m_scene = std::make_unique<Game::Scene>();
+
+        auto spriteTexture = std::make_shared<Graphics::Texture2D>();
+        if (!spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", *m_graphics))
+        {
+            return false;
+        }
+
+        m_textureAssetRegistry.RegisterTexture("textures/mapchip", spriteTexture);
+
+        m_registeredSpriteAssetIds.clear();
+        m_registeredSpriteAssetIds.emplace_back("sprites/mapchip-left");
+        m_registeredSpriteAssetIds.emplace_back("sprites/mapchip-right");
+        m_registeredSpriteAssetIds.emplace_back("sprites/invalid-missing-texture");
+
+        m_spriteAssetRegistry.RegisterSpriteAsset(
+            m_registeredSpriteAssetIds[0],
+            Game::Assets::SpriteAsset{ "textures/mapchip" });
+        m_spriteAssetRegistry.RegisterSpriteAsset(
+            m_registeredSpriteAssetIds[1],
+            Game::Assets::SpriteAsset{ "textures/mapchip" });
+        m_spriteAssetRegistry.RegisterSpriteAsset(
+            m_registeredSpriteAssetIds[2],
+            Game::Assets::SpriteAsset{ "textures/missing" });
+
+        auto& firstEntity = m_scene->CreateEntity();
+        firstEntity.GetTransform().SetPosition(-160.0f, 0.0f, 0.0f);
+        firstEntity.SetSpriteComponent(Game::SpriteComponent{
+            m_registeredSpriteAssetIds[0],
+            {
+                true,
+                0,
+                1.0f
+            }
+        });
+
+        auto& secondEntity = m_scene->CreateEntity();
+        secondEntity.GetTransform().SetPosition(160.0f, 90.0f, 0.0f);
+        secondEntity.GetTransform().scale = { 0.75f, 0.75f, 1.0f };
+        secondEntity.SetSpriteComponent(Game::SpriteComponent{
+            m_registeredSpriteAssetIds[1],
+            {
+                true,
+                1,
+                1.0f
+            }
+        });
+
+        return true;
+    }
+
+    void Application::RefreshAssetsPanel()
+    {
+        m_visibleSpriteAssetIds.clear();
+
+        for (const auto& assetId : m_registeredSpriteAssetIds)
+        {
+            if (assetId.IsEmpty())
+            {
+                continue;
+            }
+
+            const auto spriteAsset = m_spriteAssetRegistry.ResolveSpriteAsset(assetId);
+            if (!spriteAsset.has_value())
+            {
+                continue;
+            }
+
+            if (!m_textureAssetRegistry.ResolveTexture(spriteAsset->textureAssetId))
+            {
+                continue;
+            }
+
+            m_visibleSpriteAssetIds.push_back(assetId);
+        }
+
+        SendMessageW(m_assetsListBox, LB_RESETCONTENT, 0, 0);
+        for (const auto& assetId : m_visibleSpriteAssetIds)
+        {
+            const auto text = ToWideString(assetId.GetValue());
+            SendMessageW(m_assetsListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text.c_str()));
+        }
+
+        if (m_selectedSpriteAssetId.IsEmpty() && !m_visibleSpriteAssetIds.empty())
+        {
+            m_selectedSpriteAssetId = m_visibleSpriteAssetIds.front();
+        }
+
+        int selectedIndex = LB_ERR;
+        for (std::size_t index = 0; index < m_visibleSpriteAssetIds.size(); ++index)
+        {
+            if (m_visibleSpriteAssetIds[index] == m_selectedSpriteAssetId)
+            {
+                selectedIndex = static_cast<int>(index);
+                break;
+            }
+        }
+
+        if (selectedIndex != LB_ERR)
+        {
+            SendMessageW(m_assetsListBox, LB_SETCURSEL, static_cast<WPARAM>(selectedIndex), 0);
+        }
+
+        wchar_t summaryText[128]{};
+        std::swprintf(
+            summaryText,
+            std::size(summaryText),
+            L"Sprite assets: %u visible / %u registered",
+            static_cast<unsigned>(m_visibleSpriteAssetIds.size()),
+            static_cast<unsigned>(m_registeredSpriteAssetIds.size()));
+        SetWindowTextW(m_assetsSummaryLabel, summaryText);
+    }
+
+    void Application::SyncAssetSelection()
+    {
+        if (m_assetsListBox == nullptr)
+        {
+            return;
+        }
+
+        const LRESULT selectedIndex = SendMessageW(m_assetsListBox, LB_GETCURSEL, 0, 0);
+        if (selectedIndex == LB_ERR)
+        {
+            return;
+        }
+
+        const auto index = static_cast<std::size_t>(selectedIndex);
+        if (index >= m_visibleSpriteAssetIds.size())
+        {
+            return;
+        }
+
+        m_selectedSpriteAssetId = m_visibleSpriteAssetIds[index];
     }
 
     HWND Application::CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle) const
