@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -113,6 +114,16 @@ namespace Xelqoria::Editor
         void SyncAssetSelection();
 
         /// <summary>
+        /// Hierarchy パネルの表示内容を更新する。
+        /// </summary>
+        void RefreshHierarchyPanel();
+
+        /// <summary>
+        /// Hierarchy パネルの選択状態を同期する。
+        /// </summary>
+        void SyncHierarchySelection();
+
+        /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
         /// </summary>
         /// <param name="className">生成する Win32 クラス名。</param>
@@ -209,6 +220,16 @@ namespace Xelqoria::Editor
         HWND m_assetsSummaryLabel = nullptr;
 
         /// <summary>
+        /// Hierarchy パネルの要約表示ラベルを保持する。
+        /// </summary>
+        HWND m_hierarchySummaryLabel = nullptr;
+
+        /// <summary>
+        /// Hierarchy パネルの一覧表示に使う ListBox を保持する。
+        /// </summary>
+        HWND m_hierarchyListBox = nullptr;
+
+        /// <summary>
         /// Editor が編集中の Scene を保持する。
         /// </summary>
         std::unique_ptr<Game::Scene> m_scene;
@@ -237,5 +258,15 @@ namespace Xelqoria::Editor
         /// Assets パネルで現在選択中の SpriteAssetId を保持する。
         /// </summary>
         Core::AssetId m_selectedSpriteAssetId{};
+
+        /// <summary>
+        /// Hierarchy パネルへ表示する EntityId 一覧を保持する。
+        /// </summary>
+        std::vector<Game::EntityId> m_visibleEntityIds{};
+
+        /// <summary>
+        /// Hierarchy パネルで現在選択中の EntityId を保持する。
+        /// </summary>
+        std::optional<Game::EntityId> m_selectedEntityId{};
     };
 }
