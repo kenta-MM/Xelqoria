@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include <cstdint>
 #include <memory>
 
 #include "IGraphicsContext.h"
@@ -8,6 +9,17 @@
 
 namespace Xelqoria::Editor
 {
+    /// <summary>
+    /// SceneView へ Runtime 描画を埋め込む方式を表す。
+    /// </summary>
+    enum class SceneViewEmbeddingMode
+    {
+        /// <summary>
+        /// SceneView 専用 child HWND を swap chain の描画先にする。
+        /// </summary>
+        ChildWindowSwapChainHost = 0
+    };
+
     /// <summary>
     /// Editor ターゲットの最小実行ループを管理する。
     /// </summary>
@@ -59,6 +71,33 @@ namespace Xelqoria::Editor
         /// </summary>
         void Render();
 
+        /// <summary>
+        /// Editor の固定パネル UI を生成する。
+        /// </summary>
+        /// <returns>生成に成功した場合は true。</returns>
+        bool CreateEditorShell();
+
+        /// <summary>
+        /// 現在のクライアントサイズに合わせてパネル配置を更新する。
+        /// </summary>
+        void UpdateLayout();
+
+        /// <summary>
+        /// SceneView 用描画領域へグラフィックスコンテキストを初期化する。
+        /// </summary>
+        /// <returns>初期化に成功した場合は true。</returns>
+        bool InitializeSceneViewGraphics();
+
+        /// <summary>
+        /// 共通設定を適用した子ウィンドウを生成する。
+        /// </summary>
+        /// <param name="className">生成する Win32 クラス名。</param>
+        /// <param name="text">初期表示文字列。</param>
+        /// <param name="style">適用するウィンドウスタイル。</param>
+        /// <param name="exStyle">適用する拡張ウィンドウスタイル。</param>
+        /// <returns>生成した子ウィンドウハンドル。失敗時は nullptr。</returns>
+        HWND CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle = 0) const;
+
     private:
         /// <summary>
         /// Windows アプリケーションインスタンスを保持する。
@@ -71,7 +110,7 @@ namespace Xelqoria::Editor
         Core::Window m_window{};
 
         /// <summary>
-        /// 将来の SceneView 実装に備える描画コンテキストを保持する。
+        /// SceneView 描画に使用するグラフィックスコンテキストを保持する。
         /// </summary>
         std::unique_ptr<RHI::IGraphicsContext> m_graphics;
 
@@ -79,5 +118,60 @@ namespace Xelqoria::Editor
         /// メインループの継続状態を表す。
         /// </summary>
         bool m_running = true;
+
+        /// <summary>
+        /// Hierarchy パネルのグループボックスを保持する。
+        /// </summary>
+        HWND m_hierarchyPanel = nullptr;
+
+        /// <summary>
+        /// Assets パネルのグループボックスを保持する。
+        /// </summary>
+        HWND m_assetsPanel = nullptr;
+
+        /// <summary>
+        /// Inspector パネルのグループボックスを保持する。
+        /// </summary>
+        HWND m_inspectorPanel = nullptr;
+
+        /// <summary>
+        /// SceneView パネルのグループボックスを保持する。
+        /// </summary>
+        HWND m_sceneViewPanel = nullptr;
+
+        /// <summary>
+        /// SceneView 埋め込み方針を説明するラベルを保持する。
+        /// </summary>
+        HWND m_sceneViewPlanLabel = nullptr;
+
+        /// <summary>
+        /// SceneView 描画対象の child HWND を保持する。
+        /// </summary>
+        HWND m_sceneViewHost = nullptr;
+
+        /// <summary>
+        /// SceneView 現在サイズを説明するラベルを保持する。
+        /// </summary>
+        HWND m_sceneViewSizeLabel = nullptr;
+
+        /// <summary>
+        /// 既定 GUI フォントを保持する。
+        /// </summary>
+        HFONT m_defaultFont = nullptr;
+
+        /// <summary>
+        /// SceneView へ採用する埋め込み方針を表す。
+        /// </summary>
+        SceneViewEmbeddingMode m_sceneViewEmbeddingMode = SceneViewEmbeddingMode::ChildWindowSwapChainHost;
+
+        /// <summary>
+        /// 前回レイアウト時の SceneView 幅を保持する。
+        /// </summary>
+        std::uint32_t m_sceneViewWidth = 0;
+
+        /// <summary>
+        /// 前回レイアウト時の SceneView 高さを保持する。
+        /// </summary>
+        std::uint32_t m_sceneViewHeight = 0;
     };
 }
