@@ -19,6 +19,22 @@ namespace Xelqoria::Editor
         {
             return std::wstring(value.begin(), value.end());
         }
+
+        std::string ToNarrowString(std::wstring_view value)
+        {
+            std::string result;
+            result.reserve(value.size());
+
+            for (const wchar_t character : value)
+            {
+                if (character >= 0 && character <= 0x7f)
+                {
+                    result.push_back(static_cast<char>(character));
+                }
+            }
+
+            return result;
+        }
     }
 
     Application::Application(HINSTANCE hInstance)
@@ -93,6 +109,7 @@ namespace Xelqoria::Editor
 
         RefreshAssetsPanel();
         RefreshHierarchyPanel();
+        RefreshInspectorPanel();
         return true;
     }
 
@@ -111,6 +128,7 @@ namespace Xelqoria::Editor
         UpdateLayout();
         SyncAssetSelection();
         SyncHierarchySelection();
+        SyncInspectorEdits();
     }
 
     void Application::Render()
@@ -162,6 +180,27 @@ namespace Xelqoria::Editor
             L"ListBox",
             L"",
             WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
+        m_inspectorSummaryLabel = CreateChildWindow(
+            L"Static",
+            L"Inspector: pending",
+            WS_CHILD | WS_VISIBLE);
+        m_transformLabels[0] = CreateChildWindow(L"Static", L"Position", WS_CHILD | WS_VISIBLE);
+        m_transformLabels[1] = CreateChildWindow(L"Static", L"Rotation", WS_CHILD | WS_VISIBLE);
+        m_transformLabels[2] = CreateChildWindow(L"Static", L"Scale", WS_CHILD | WS_VISIBLE);
+
+        for (auto& handle : m_transformEditControls)
+        {
+            handle = CreateChildWindow(
+                L"Edit",
+                L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+        }
+
+        m_spriteRefLabel = CreateChildWindow(L"Static", L"SpriteRef", WS_CHILD | WS_VISIBLE);
+        m_spriteRefEdit = CreateChildWindow(
+            L"Edit",
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
 
         return m_hierarchyPanel != nullptr
             && m_assetsPanel != nullptr
@@ -173,7 +212,18 @@ namespace Xelqoria::Editor
             && m_assetsSummaryLabel != nullptr
             && m_assetsListBox != nullptr
             && m_hierarchySummaryLabel != nullptr
-            && m_hierarchyListBox != nullptr;
+            && m_hierarchyListBox != nullptr
+            && m_inspectorSummaryLabel != nullptr
+            && m_spriteRefLabel != nullptr
+            && m_spriteRefEdit != nullptr
+            && std::all_of(
+                m_transformLabels.begin(),
+                m_transformLabels.end(),
+                [](HWND handle) { return handle != nullptr; })
+            && std::all_of(
+                m_transformEditControls.begin(),
+                m_transformEditControls.end(),
+                [](HWND handle) { return handle != nullptr; });
     }
 
     void Application::UpdateLayout()
@@ -238,6 +288,62 @@ namespace Xelqoria::Editor
             outerPadding + groupHeaderHeight + labelHeight + 6,
             sideInnerWidth,
             (std::max)(100, hierarchyPanelHeight - groupHeaderHeight - labelHeight - outerPadding - 12),
+            TRUE);
+
+        const int inspectorInnerX = rightX + outerPadding;
+        const int inspectorInnerWidth = rightWidth - (outerPadding * 2);
+        const int inspectorLabelWidth = 72;
+        const int inspectorEditWidth = (std::max)(60, (inspectorInnerWidth - inspectorLabelWidth - 24) / 3);
+        const int inspectorRowHeight = 24;
+        const int inspectorRowSpacing = 8;
+
+        MoveWindow(
+            m_inspectorSummaryLabel,
+            inspectorInnerX,
+            outerPadding + groupHeaderHeight,
+            inspectorInnerWidth,
+            labelHeight,
+            TRUE);
+
+        for (int row = 0; row < 3; ++row)
+        {
+            const int rowTop = outerPadding + groupHeaderHeight + labelHeight + 8 + row * (inspectorRowHeight + inspectorRowSpacing);
+            MoveWindow(
+                m_transformLabels[row],
+                inspectorInnerX,
+                rowTop + 4,
+                inspectorLabelWidth,
+                inspectorRowHeight,
+                TRUE);
+
+            for (int column = 0; column < 3; ++column)
+            {
+                const int editIndex = row * 3 + column;
+                const int editLeft = inspectorInnerX + inspectorLabelWidth + column * (inspectorEditWidth + 8);
+                MoveWindow(
+                    m_transformEditControls[editIndex],
+                    editLeft,
+                    rowTop,
+                    inspectorEditWidth,
+                    inspectorRowHeight,
+                    TRUE);
+            }
+        }
+
+        const int spriteRefTop = outerPadding + groupHeaderHeight + labelHeight + 8 + 3 * (inspectorRowHeight + inspectorRowSpacing) + 8;
+        MoveWindow(
+            m_spriteRefLabel,
+            inspectorInnerX,
+            spriteRefTop + 4,
+            inspectorLabelWidth,
+            inspectorRowHeight,
+            TRUE);
+        MoveWindow(
+            m_spriteRefEdit,
+            inspectorInnerX + inspectorLabelWidth,
+            spriteRefTop,
+            inspectorInnerWidth - inspectorLabelWidth,
+            inspectorRowHeight,
             TRUE);
 
         const int sceneInnerWidth = (std::max)(120, centerWidth - (outerPadding * 2));
@@ -534,6 +640,116 @@ namespace Xelqoria::Editor
         {
             m_selectedEntityId = entityId;
             RefreshHierarchyPanel();
+            RefreshInspectorPanel();
+        }
+    }
+
+    void Application::RefreshInspectorPanel()
+    {
+        if (!m_selectedEntityId.has_value() || !m_scene)
+        {
+            SetWindowTextW(m_inspectorSummaryLabel, L"Inspector: no entity selected");
+            return;
+        }
+
+        const auto entity = m_scene->FindEntity(*m_selectedEntityId);
+        if (!entity.has_value())
+        {
+            SetWindowTextW(m_inspectorSummaryLabel, L"Inspector: selected entity not found");
+            return;
+        }
+
+        const auto& transform = entity->get().GetTransform();
+        const float values[9] = {
+            transform.position.x,
+            transform.position.y,
+            transform.position.z,
+            transform.rotation.x,
+            transform.rotation.y,
+            transform.rotation.z,
+            transform.scale.x,
+            transform.scale.y,
+            transform.scale.z
+        };
+
+        for (std::size_t index = 0; index < m_transformEditControls.size(); ++index)
+        {
+            wchar_t valueText[32]{};
+            std::swprintf(valueText, std::size(valueText), L"%.3f", values[index]);
+            SetWindowTextW(m_transformEditControls[index], valueText);
+        }
+
+        if (const auto spriteComponent = entity->get().GetSpriteComponent(); spriteComponent.has_value())
+        {
+            const auto spriteRef = ToWideString(spriteComponent->get().spriteAssetRef.GetValue());
+            SetWindowTextW(m_spriteRefEdit, spriteRef.c_str());
+        }
+        else
+        {
+            SetWindowTextW(m_spriteRefEdit, L"");
+        }
+
+        wchar_t summaryText[128]{};
+        std::swprintf(
+            summaryText,
+            std::size(summaryText),
+            L"Inspector: Entity %u",
+            static_cast<unsigned>(*m_selectedEntityId));
+        SetWindowTextW(m_inspectorSummaryLabel, summaryText);
+        m_lastInspectorEntityId = m_selectedEntityId;
+    }
+
+    void Application::SyncInspectorEdits()
+    {
+        if (!m_selectedEntityId.has_value() || !m_scene)
+        {
+            return;
+        }
+
+        if (m_lastInspectorEntityId != m_selectedEntityId)
+        {
+            RefreshInspectorPanel();
+        }
+
+        const auto entity = m_scene->FindEntity(*m_selectedEntityId);
+        if (!entity.has_value())
+        {
+            return;
+        }
+
+        float* transformValues[9] = {
+            &entity->get().GetTransform().position.x,
+            &entity->get().GetTransform().position.y,
+            &entity->get().GetTransform().position.z,
+            &entity->get().GetTransform().rotation.x,
+            &entity->get().GetTransform().rotation.y,
+            &entity->get().GetTransform().rotation.z,
+            &entity->get().GetTransform().scale.x,
+            &entity->get().GetTransform().scale.y,
+            &entity->get().GetTransform().scale.z
+        };
+
+        for (std::size_t index = 0; index < m_transformEditControls.size(); ++index)
+        {
+            wchar_t buffer[64]{};
+            GetWindowTextW(m_transformEditControls[index], buffer, static_cast<int>(std::size(buffer)));
+
+            wchar_t* end = nullptr;
+            const float parsed = std::wcstof(buffer, &end);
+            if (end != buffer)
+            {
+                *transformValues[index] = parsed;
+            }
+        }
+
+        wchar_t spriteRefBuffer[256]{};
+        GetWindowTextW(m_spriteRefEdit, spriteRefBuffer, static_cast<int>(std::size(spriteRefBuffer)));
+        std::wstring spriteRefValue(spriteRefBuffer);
+        const std::string spriteRef = ToNarrowString(spriteRefValue);
+
+        if (auto spriteComponent = entity->get().GetSpriteComponent(); spriteComponent.has_value())
+        {
+            spriteComponent->get().spriteAssetRef = Core::AssetId(spriteRef);
         }
     }
 
