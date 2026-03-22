@@ -102,6 +102,8 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        m_spriteRenderer = std::make_unique<Graphics::SpriteRenderer>(*m_graphics);
+
         if (!InitializeDocument())
         {
             return false;
@@ -129,6 +131,7 @@ namespace Xelqoria::Editor
         SyncAssetSelection();
         SyncHierarchySelection();
         SyncInspectorEdits();
+        UpdateSceneViewInteraction();
     }
 
     void Application::Render()
@@ -139,6 +142,27 @@ namespace Xelqoria::Editor
         }
 
         m_graphics->BeginFrame();
+        if (m_spriteRenderer && m_scene)
+        {
+            m_scene->ValidateSpriteReferences(m_spriteAssetRegistry);
+            auto resolvedSprites = m_scene->ResolveSprites(m_spriteAssetRegistry, m_textureAssetRegistry);
+
+            m_spriteRenderer->Begin();
+            for (auto& sprite : resolvedSprites)
+            {
+                const auto position = sprite.GetPosition();
+                const auto scale = sprite.GetScale();
+
+                sprite.SetPosition(
+                    (position.x - m_sceneViewCamera.centerX) * m_sceneViewCamera.zoom,
+                    (position.y - m_sceneViewCamera.centerY) * m_sceneViewCamera.zoom);
+                sprite.SetScale(
+                    scale.x * m_sceneViewCamera.zoom,
+                    scale.y * m_sceneViewCamera.zoom);
+                m_spriteRenderer->Draw(sprite);
+            }
+            m_spriteRenderer->End();
+        }
         m_graphics->EndFrame();
     }
 
@@ -751,6 +775,68 @@ namespace Xelqoria::Editor
         {
             spriteComponent->get().spriteAssetRef = Core::AssetId(spriteRef);
         }
+    }
+
+    void Application::UpdateSceneViewInteraction()
+    {
+        if (m_sceneViewHost == nullptr || m_sceneViewWidth == 0 || m_sceneViewHeight == 0)
+        {
+            return;
+        }
+
+        POINT screenPoint{};
+        GetCursorPos(&screenPoint);
+
+        RECT sceneHostRect{};
+        GetWindowRect(m_sceneViewHost, &sceneHostRect);
+
+        const bool isCursorInside = screenPoint.x >= sceneHostRect.left
+            && screenPoint.x < sceneHostRect.right
+            && screenPoint.y >= sceneHostRect.top
+            && screenPoint.y < sceneHostRect.bottom;
+
+        const bool isLeftButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+        if (isCursorInside && isLeftButtonDown && !m_sceneViewLeftButtonDown)
+        {
+            POINT clientPoint = screenPoint;
+            ScreenToClient(m_sceneViewHost, &clientPoint);
+
+            m_lastSceneClickX =
+                (static_cast<float>(clientPoint.x) - static_cast<float>(m_sceneViewWidth) * 0.5f) / m_sceneViewCamera.zoom
+                + m_sceneViewCamera.centerX;
+            m_lastSceneClickY =
+                -(static_cast<float>(clientPoint.y) - static_cast<float>(m_sceneViewHeight) * 0.5f) / m_sceneViewCamera.zoom
+                + m_sceneViewCamera.centerY;
+            m_hasSceneClick = true;
+        }
+
+        m_sceneViewLeftButtonDown = isLeftButtonDown;
+
+        wchar_t statusText[160]{};
+        if (m_hasSceneClick)
+        {
+            std::swprintf(
+                statusText,
+                std::size(statusText),
+                L"SceneView size: %u x %u / click: (%.1f, %.1f)",
+                m_sceneViewWidth,
+                m_sceneViewHeight,
+                m_lastSceneClickX,
+                m_lastSceneClickY);
+        }
+        else
+        {
+            std::swprintf(
+                statusText,
+                std::size(statusText),
+                L"SceneView size: %u x %u / click: waiting",
+                m_sceneViewWidth,
+                m_sceneViewHeight);
+        }
+        SetWindowTextW(m_sceneViewSizeLabel, statusText);
+        SetWindowTextW(
+            m_sceneViewPlanLabel,
+            L"Runtime 描画は child HWND に埋め込み済みです。Camera center=(0,0), zoom=1.0");
     }
 
     HWND Application::CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle) const
