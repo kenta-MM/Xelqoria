@@ -37,3 +37,35 @@ TEST(EditorCamera2DTests, ClampsZoomToPositiveMinimum)
 
     EXPECT_GT(camera.GetZoom(), 0.0f);
 }
+
+TEST(EditorCamera2DTests, ConvertsScreenPointToWorldPointWithPanAndZoom)
+{
+    Xelqoria::Editor::EditorCamera2D camera;
+    camera.SetCenter(100.0f, -20.0f);
+    camera.SetZoom(2.0f);
+    camera.SetViewport(800, 600);
+
+    const auto worldPoint = camera.TransformScreenToWorld(Xelqoria::Editor::EditorScreenPoint{
+        500.0f,
+        260.0f
+    });
+
+    EXPECT_FLOAT_EQ(worldPoint.x, 150.0f);
+    EXPECT_FLOAT_EQ(worldPoint.y, 0.0f);
+}
+
+TEST(EditorCamera2DTests, ConvertsViewportCenterToCameraCenter)
+{
+    Xelqoria::Editor::EditorCamera2D camera;
+    camera.SetCenter(-32.0f, 48.0f);
+    camera.SetZoom(3.0f);
+    camera.SetViewport(1280, 720);
+
+    const auto worldPoint = camera.TransformScreenToWorld(Xelqoria::Editor::EditorScreenPoint{
+        640.0f,
+        360.0f
+    });
+
+    EXPECT_FLOAT_EQ(worldPoint.x, -32.0f);
+    EXPECT_FLOAT_EQ(worldPoint.y, 48.0f);
+}
