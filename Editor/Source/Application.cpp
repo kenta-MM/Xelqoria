@@ -92,6 +92,7 @@ namespace Xelqoria::Editor
         }
 
         RefreshAssetsPanel();
+        RefreshHierarchyPanel();
         return true;
     }
 
@@ -109,6 +110,7 @@ namespace Xelqoria::Editor
         (void)deltaTime;
         UpdateLayout();
         SyncAssetSelection();
+        SyncHierarchySelection();
     }
 
     void Application::Render()
@@ -152,6 +154,14 @@ namespace Xelqoria::Editor
             L"ListBox",
             L"",
             WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
+        m_hierarchySummaryLabel = CreateChildWindow(
+            L"Static",
+            L"Entities: pending",
+            WS_CHILD | WS_VISIBLE);
+        m_hierarchyListBox = CreateChildWindow(
+            L"ListBox",
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
 
         return m_hierarchyPanel != nullptr
             && m_assetsPanel != nullptr
@@ -161,7 +171,9 @@ namespace Xelqoria::Editor
             && m_sceneViewHost != nullptr
             && m_sceneViewSizeLabel != nullptr
             && m_assetsSummaryLabel != nullptr
-            && m_assetsListBox != nullptr;
+            && m_assetsListBox != nullptr
+            && m_hierarchySummaryLabel != nullptr
+            && m_hierarchyListBox != nullptr;
     }
 
     void Application::UpdateLayout()
@@ -212,6 +224,20 @@ namespace Xelqoria::Editor
             assetsPanelY + groupHeaderHeight + labelHeight + 6,
             sideInnerWidth,
             (std::max)(100, assetsPanelHeight - groupHeaderHeight - labelHeight - outerPadding - 12),
+            TRUE);
+        MoveWindow(
+            m_hierarchySummaryLabel,
+            outerPadding + outerPadding,
+            outerPadding + groupHeaderHeight,
+            sideInnerWidth,
+            labelHeight,
+            TRUE);
+        MoveWindow(
+            m_hierarchyListBox,
+            outerPadding + outerPadding,
+            outerPadding + groupHeaderHeight + labelHeight + 6,
+            sideInnerWidth,
+            (std::max)(100, hierarchyPanelHeight - groupHeaderHeight - labelHeight - outerPadding - 12),
             TRUE);
 
         const int sceneInnerWidth = (std::max)(120, centerWidth - (outerPadding * 2));
@@ -427,6 +453,88 @@ namespace Xelqoria::Editor
         }
 
         m_selectedSpriteAssetId = m_visibleSpriteAssetIds[index];
+    }
+
+    void Application::RefreshHierarchyPanel()
+    {
+        m_visibleEntityIds.clear();
+
+        SendMessageW(m_hierarchyListBox, LB_RESETCONTENT, 0, 0);
+        if (m_scene)
+        {
+            for (const auto& entity : m_scene->GetEntities())
+            {
+                m_visibleEntityIds.push_back(entity.GetId());
+
+                std::wstring label = L"Entity ";
+                label += std::to_wstring(entity.GetId());
+
+                if (const auto spriteComponent = entity.GetSpriteComponent(); spriteComponent.has_value())
+                {
+                    label += L" (";
+                    label += ToWideString(spriteComponent->get().spriteAssetRef.GetValue());
+                    label += L")";
+                }
+
+                SendMessageW(m_hierarchyListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
+            }
+        }
+
+        if (!m_selectedEntityId.has_value() && !m_visibleEntityIds.empty())
+        {
+            m_selectedEntityId = m_visibleEntityIds.front();
+        }
+
+        int selectedIndex = LB_ERR;
+        for (std::size_t index = 0; index < m_visibleEntityIds.size(); ++index)
+        {
+            if (m_selectedEntityId.has_value() && m_visibleEntityIds[index] == *m_selectedEntityId)
+            {
+                selectedIndex = static_cast<int>(index);
+                break;
+            }
+        }
+
+        if (selectedIndex != LB_ERR)
+        {
+            SendMessageW(m_hierarchyListBox, LB_SETCURSEL, static_cast<WPARAM>(selectedIndex), 0);
+        }
+
+        wchar_t summaryText[128]{};
+        std::swprintf(
+            summaryText,
+            std::size(summaryText),
+            L"Entities: %u / selected: %u",
+            static_cast<unsigned>(m_visibleEntityIds.size()),
+            m_selectedEntityId.has_value() ? static_cast<unsigned>(*m_selectedEntityId) : 0u);
+        SetWindowTextW(m_hierarchySummaryLabel, summaryText);
+    }
+
+    void Application::SyncHierarchySelection()
+    {
+        if (m_hierarchyListBox == nullptr)
+        {
+            return;
+        }
+
+        const LRESULT selectedIndex = SendMessageW(m_hierarchyListBox, LB_GETCURSEL, 0, 0);
+        if (selectedIndex == LB_ERR)
+        {
+            return;
+        }
+
+        const auto index = static_cast<std::size_t>(selectedIndex);
+        if (index >= m_visibleEntityIds.size())
+        {
+            return;
+        }
+
+        const auto entityId = m_visibleEntityIds[index];
+        if (!m_selectedEntityId.has_value() || *m_selectedEntityId != entityId)
+        {
+            m_selectedEntityId = entityId;
+            RefreshHierarchyPanel();
+        }
     }
 
     HWND Application::CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle) const
