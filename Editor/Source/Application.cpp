@@ -622,6 +622,8 @@ namespace Xelqoria::Editor
             return;
         }
 
+        m_assetDragReleasedThisFrame = false;
+
         POINT screenPoint{};
         GetCursorPos(&screenPoint);
 
@@ -660,12 +662,7 @@ namespace Xelqoria::Editor
             const bool wasDragging = m_isAssetDragActive;
             m_assetsListLeftButtonDown = false;
             m_isAssetDragActive = false;
-            m_draggingSpriteAssetId = {};
-
-            if (wasDragging)
-            {
-                RefreshAssetsSummaryLabel();
-            }
+            m_assetDragReleasedThisFrame = wasDragging;
         }
     }
 
@@ -921,10 +918,63 @@ namespace Xelqoria::Editor
             m_hasSceneClick = true;
         }
 
+        if (m_assetDragReleasedThisFrame && !m_draggingSpriteAssetId.IsEmpty())
+        {
+            if (isCursorInside)
+            {
+                POINT clientPoint = screenPoint;
+                ScreenToClient(m_sceneViewHost, &clientPoint);
+
+                const auto worldPoint = m_sceneViewCamera.TransformScreenToWorld(EditorScreenPoint{
+                    static_cast<float>(clientPoint.x),
+                    static_cast<float>(clientPoint.y)
+                });
+
+                m_pendingDroppedSpriteAssetId = m_draggingSpriteAssetId;
+                m_pendingDropWorldX = worldPoint.x;
+                m_pendingDropWorldY = worldPoint.y;
+                m_hasPendingSceneDrop = true;
+
+                std::string debugLine =
+                    "Editor::Application accepted SceneView drop for Sprite AssetId '"
+                    + m_pendingDroppedSpriteAssetId.GetValue()
+                    + "' at world position ("
+                    + std::to_string(m_pendingDropWorldX)
+                    + ", "
+                    + std::to_string(m_pendingDropWorldY)
+                    + ").\n";
+                ::OutputDebugStringA(debugLine.c_str());
+            }
+            else
+            {
+                std::string debugLine =
+                    "Editor::Application ignored asset drop for Sprite AssetId '"
+                    + m_draggingSpriteAssetId.GetValue()
+                    + "' because the cursor was outside SceneView.\n";
+                ::OutputDebugStringA(debugLine.c_str());
+            }
+
+            m_draggingSpriteAssetId = {};
+            RefreshAssetsSummaryLabel();
+        }
+
         m_sceneViewLeftButtonDown = isLeftButtonDown;
 
         wchar_t statusText[160]{};
-        if (m_hasSceneClick)
+        if (m_hasPendingSceneDrop && !m_pendingDroppedSpriteAssetId.IsEmpty())
+        {
+            const std::wstring assetId = ToWideString(m_pendingDroppedSpriteAssetId.GetValue());
+            std::swprintf(
+                statusText,
+                std::size(statusText),
+                L"SceneView size: %u x %u / drop: %ls @ (%.1f, %.1f)",
+                m_sceneViewWidth,
+                m_sceneViewHeight,
+                assetId.c_str(),
+                m_pendingDropWorldX,
+                m_pendingDropWorldY);
+        }
+        else if (m_hasSceneClick)
         {
             std::swprintf(
                 statusText,
@@ -947,7 +997,9 @@ namespace Xelqoria::Editor
         SetWindowTextW(m_sceneViewSizeLabel, statusText);
         SetWindowTextW(
             m_sceneViewPlanLabel,
-            L"Runtime 描画は child HWND に埋め込み済みです。2D EditorCamera で pan/zoom 状態を管理しています。");
+            m_hasPendingSceneDrop
+                ? L"SceneView はドロップを受理済みです。次段で Entity 生成へ入力を引き渡します。"
+                : L"Runtime 描画は child HWND に埋め込み済みです。2D EditorCamera で pan/zoom 状態を管理しています。");
     }
 
     HWND Application::CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle) const
