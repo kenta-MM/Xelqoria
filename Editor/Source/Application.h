@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -124,6 +125,16 @@ namespace Xelqoria::Editor
         void SyncHierarchySelection();
 
         /// <summary>
+        /// Inspector パネルの表示内容を更新する。
+        /// </summary>
+        void RefreshInspectorPanel();
+
+        /// <summary>
+        /// Inspector パネルの入力値を現在選択中 Entity へ反映する。
+        /// </summary>
+        void SyncInspectorEdits();
+
+        /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
         /// </summary>
         /// <param name="className">生成する Win32 クラス名。</param>
@@ -230,6 +241,31 @@ namespace Xelqoria::Editor
         HWND m_hierarchyListBox = nullptr;
 
         /// <summary>
+        /// Inspector パネルの要約表示ラベルを保持する。
+        /// </summary>
+        HWND m_inspectorSummaryLabel = nullptr;
+
+        /// <summary>
+        /// Transform 項目ラベルを保持する。
+        /// </summary>
+        std::array<HWND, 3> m_transformLabels{};
+
+        /// <summary>
+        /// Transform の各数値入力欄を保持する。
+        /// </summary>
+        std::array<HWND, 9> m_transformEditControls{};
+
+        /// <summary>
+        /// SpriteRef ラベルを保持する。
+        /// </summary>
+        HWND m_spriteRefLabel = nullptr;
+
+        /// <summary>
+        /// SpriteRef 入力欄を保持する。
+        /// </summary>
+        HWND m_spriteRefEdit = nullptr;
+
+        /// <summary>
         /// Editor が編集中の Scene を保持する。
         /// </summary>
         std::unique_ptr<Game::Scene> m_scene;
@@ -268,5 +304,10 @@ namespace Xelqoria::Editor
         /// Hierarchy パネルで現在選択中の EntityId を保持する。
         /// </summary>
         std::optional<Game::EntityId> m_selectedEntityId{};
+
+        /// <summary>
+        /// Inspector に最後に反映した EntityId を保持する。
+        /// </summary>
+        std::optional<Game::EntityId> m_lastInspectorEntityId{};
     };
 }
