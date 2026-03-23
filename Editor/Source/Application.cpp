@@ -9,6 +9,7 @@
 #include "Assets/SpriteAsset.h"
 #include "GraphicsAPI.h"
 #include "RenderBackendBootstrap.h"
+#include "SceneSerializer.h"
 #include "Texture2D.h"
 #include <Windows.h>
 #include <cstdint>
@@ -1058,7 +1059,26 @@ namespace Xelqoria::Editor
             }
         });
 
-        m_selectedEntityId = entity.GetId();
+        const Game::EntityId createdEntityId = entity.GetId();
+
+        m_selectedEntityId = createdEntityId;
+        m_lastInspectorEntityId.reset();
+        RefreshHierarchyPanel();
+        RefreshInspectorPanel();
+
+        const std::string serializedScene = Game::SceneSerializer::SaveToText(*m_scene);
+        const auto loadResult = Game::SceneSerializer::LoadFromText(serializedScene);
+        if (!loadResult.IsSuccess() || !loadResult.scene.has_value())
+        {
+            const std::string debugLine =
+                "Editor::Application failed to reload dropped scene placement snapshot.\n";
+            ::OutputDebugStringA(debugLine.c_str());
+            SetWindowTextW(m_sceneViewPlanLabel, L"Entity は生成されましたが、保存/再読込の確認に失敗しました。");
+            return;
+        }
+
+        m_scene = std::make_unique<Game::Scene>(*loadResult.scene);
+        m_selectedEntityId = createdEntityId;
         m_lastInspectorEntityId.reset();
         RefreshHierarchyPanel();
         RefreshInspectorPanel();
@@ -1067,23 +1087,23 @@ namespace Xelqoria::Editor
         std::swprintf(
             statusText,
             std::size(statusText),
-            L"SceneView size: %u x %u / selected Entity %u",
+            L"SceneView size: %u x %u / reloaded Entity %u",
             m_sceneViewWidth,
             m_sceneViewHeight,
-            static_cast<unsigned>(entity.GetId()));
+            static_cast<unsigned>(createdEntityId));
         SetWindowTextW(m_sceneViewSizeLabel, statusText);
-        SetWindowTextW(m_sceneViewPlanLabel, L"SceneView ドロップから生成した Entity を選択し、Inspector へ反映しました。");
+        SetWindowTextW(m_sceneViewPlanLabel, L"SceneView ドロップで生成した Entity を保存テキストへ反映し、再読込後も選択を維持しました。");
 
         std::string debugLine =
             "Editor::Application created entity "
-            + std::to_string(entity.GetId())
+            + std::to_string(createdEntityId)
             + " from Sprite AssetId '"
             + droppedAssetId.GetValue()
             + "' at world position ("
             + std::to_string(dropWorldX)
             + ", "
             + std::to_string(dropWorldY)
-            + ").\n";
+            + ") and reloaded the scene snapshot.\n";
         ::OutputDebugStringA(debugLine.c_str());
     }
 
