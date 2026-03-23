@@ -152,6 +152,11 @@ namespace Xelqoria::Editor
         void UpdateSceneViewInteraction();
 
         /// <summary>
+        /// SceneView で受理済みのドロップ入力を Entity 生成へ反映する。
+        /// </summary>
+        void ProcessPendingSceneDrop();
+
+        /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
         /// </summary>
         /// <param name="className">生成する Win32 クラス名。</param>
