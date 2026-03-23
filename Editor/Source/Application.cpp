@@ -9,6 +9,7 @@
 #include "Assets/SpriteAsset.h"
 #include "GraphicsAPI.h"
 #include "RenderBackendBootstrap.h"
+#include "SceneSerializer.h"
 #include "Texture2D.h"
 #include <Windows.h>
 #include <cstdint>
@@ -25,6 +26,8 @@ namespace Xelqoria::Editor
 {
     namespace
     {
+        constexpr int AssetDragStartThresholdPixels = 6;
+
         /// <summary>
         /// アセット識別子などの狭い文字列を簡易的にワイド文字列へ変換する。
         /// </summary>
@@ -54,6 +57,19 @@ namespace Xelqoria::Editor
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// 2 点間のドラッグ開始判定に使う距離を取得する。
+        /// </summary>
+        /// <param name="lhs">始点座標。</param>
+        /// <param name="rhs">終点座標。</param>
+        /// <returns>各軸の絶対差分のうち大きい方。</returns>
+        int GetDragDistance(POINT lhs, POINT rhs)
+        {
+            const int dx = std::abs(lhs.x - rhs.x);
+            const int dy = std::abs(lhs.y - rhs.y);
+            return (std::max)(dx, dy);
         }
     }
 
@@ -149,9 +165,11 @@ namespace Xelqoria::Editor
         (void)deltaTime;
         UpdateLayout();
         SyncAssetSelection();
+        UpdateAssetDragState();
         SyncHierarchySelection();
         SyncInspectorEdits();
         UpdateSceneViewInteraction();
+        ProcessPendingSceneDrop();
     }
 
     void Application::Render()
@@ -574,14 +592,7 @@ namespace Xelqoria::Editor
             SendMessageW(m_assetsListBox, LB_SETCURSEL, static_cast<WPARAM>(selectedIndex), 0);
         }
 
-        wchar_t summaryText[128]{};
-        std::swprintf(
-            summaryText,
-            std::size(summaryText),
-            L"Sprite assets: %u visible / %u registered",
-            static_cast<unsigned>(m_visibleSpriteAssetIds.size()),
-            static_cast<unsigned>(m_registeredSpriteAssetIds.size()));
-        SetWindowTextW(m_assetsSummaryLabel, summaryText);
+        RefreshAssetsSummaryLabel();
     }
 
     void Application::SyncAssetSelection()
@@ -604,6 +615,84 @@ namespace Xelqoria::Editor
         }
 
         m_selectedSpriteAssetId = m_visibleSpriteAssetIds[index];
+    }
+
+    void Application::UpdateAssetDragState()
+    {
+        if (m_assetsListBox == nullptr)
+        {
+            return;
+        }
+
+        m_assetDragReleasedThisFrame = false;
+
+        POINT screenPoint{};
+        GetCursorPos(&screenPoint);
+
+        RECT assetsRect{};
+        GetWindowRect(m_assetsListBox, &assetsRect);
+
+        const bool isCursorInside = screenPoint.x >= assetsRect.left
+            && screenPoint.x < assetsRect.right
+            && screenPoint.y >= assetsRect.top
+            && screenPoint.y < assetsRect.bottom;
+        const bool isLeftButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+
+        if (isCursorInside && isLeftButtonDown && !m_assetsListLeftButtonDown)
+        {
+            m_assetsListLeftButtonDown = true;
+            m_assetDragStartScreenPoint = screenPoint;
+        }
+
+        if (m_assetsListLeftButtonDown
+            && !m_isAssetDragActive
+            && isLeftButtonDown
+            && !m_selectedSpriteAssetId.IsEmpty()
+            && GetDragDistance(m_assetDragStartScreenPoint, screenPoint) >= AssetDragStartThresholdPixels)
+        {
+            m_isAssetDragActive = true;
+            m_draggingSpriteAssetId = m_selectedSpriteAssetId;
+
+            const std::string debugLine =
+                "Editor::Application began dragging Sprite AssetId '" + m_draggingSpriteAssetId.GetValue() + "'.\n";
+            ::OutputDebugStringA(debugLine.c_str());
+            RefreshAssetsSummaryLabel();
+        }
+
+        if (!isLeftButtonDown)
+        {
+            const bool wasDragging = m_isAssetDragActive;
+            m_assetsListLeftButtonDown = false;
+            m_isAssetDragActive = false;
+            m_assetDragReleasedThisFrame = wasDragging;
+        }
+    }
+
+    void Application::RefreshAssetsSummaryLabel()
+    {
+        wchar_t summaryText[256]{};
+        if (m_isAssetDragActive && !m_draggingSpriteAssetId.IsEmpty())
+        {
+            const std::wstring draggingAssetId = ToWideString(m_draggingSpriteAssetId.GetValue());
+            std::swprintf(
+                summaryText,
+                std::size(summaryText),
+                L"Sprite assets: dragging %ls / %u visible / %u registered",
+                draggingAssetId.c_str(),
+                static_cast<unsigned>(m_visibleSpriteAssetIds.size()),
+                static_cast<unsigned>(m_registeredSpriteAssetIds.size()));
+        }
+        else
+        {
+            std::swprintf(
+                summaryText,
+                std::size(summaryText),
+                L"Sprite assets: %u visible / %u registered",
+                static_cast<unsigned>(m_visibleSpriteAssetIds.size()),
+                static_cast<unsigned>(m_registeredSpriteAssetIds.size()));
+        }
+
+        SetWindowTextW(m_assetsSummaryLabel, summaryText);
     }
 
     void Application::RefreshHierarchyPanel()
@@ -831,10 +920,63 @@ namespace Xelqoria::Editor
             m_hasSceneClick = true;
         }
 
+        if (m_assetDragReleasedThisFrame && !m_draggingSpriteAssetId.IsEmpty())
+        {
+            if (isCursorInside)
+            {
+                POINT clientPoint = screenPoint;
+                ScreenToClient(m_sceneViewHost, &clientPoint);
+
+                const auto worldPoint = m_sceneViewCamera.TransformScreenToWorld(EditorScreenPoint{
+                    static_cast<float>(clientPoint.x),
+                    static_cast<float>(clientPoint.y)
+                });
+
+                m_pendingDroppedSpriteAssetId = m_draggingSpriteAssetId;
+                m_pendingDropWorldX = worldPoint.x;
+                m_pendingDropWorldY = worldPoint.y;
+                m_hasPendingSceneDrop = true;
+
+                std::string debugLine =
+                    "Editor::Application accepted SceneView drop for Sprite AssetId '"
+                    + m_pendingDroppedSpriteAssetId.GetValue()
+                    + "' at world position ("
+                    + std::to_string(m_pendingDropWorldX)
+                    + ", "
+                    + std::to_string(m_pendingDropWorldY)
+                    + ").\n";
+                ::OutputDebugStringA(debugLine.c_str());
+            }
+            else
+            {
+                std::string debugLine =
+                    "Editor::Application ignored asset drop for Sprite AssetId '"
+                    + m_draggingSpriteAssetId.GetValue()
+                    + "' because the cursor was outside SceneView.\n";
+                ::OutputDebugStringA(debugLine.c_str());
+            }
+
+            m_draggingSpriteAssetId = {};
+            RefreshAssetsSummaryLabel();
+        }
+
         m_sceneViewLeftButtonDown = isLeftButtonDown;
 
         wchar_t statusText[160]{};
-        if (m_hasSceneClick)
+        if (m_hasPendingSceneDrop && !m_pendingDroppedSpriteAssetId.IsEmpty())
+        {
+            const std::wstring assetId = ToWideString(m_pendingDroppedSpriteAssetId.GetValue());
+            std::swprintf(
+                statusText,
+                std::size(statusText),
+                L"SceneView size: %u x %u / drop: %ls @ (%.1f, %.1f)",
+                m_sceneViewWidth,
+                m_sceneViewHeight,
+                assetId.c_str(),
+                m_pendingDropWorldX,
+                m_pendingDropWorldY);
+        }
+        else if (m_hasSceneClick)
         {
             std::swprintf(
                 statusText,
@@ -857,7 +999,112 @@ namespace Xelqoria::Editor
         SetWindowTextW(m_sceneViewSizeLabel, statusText);
         SetWindowTextW(
             m_sceneViewPlanLabel,
-            L"Runtime 描画は child HWND に埋め込み済みです。2D EditorCamera で pan/zoom 状態を管理しています。");
+            m_hasPendingSceneDrop
+                ? L"SceneView はドロップを受理済みです。次段で Entity 生成へ入力を引き渡します。"
+                : L"Runtime 描画は child HWND に埋め込み済みです。2D EditorCamera で pan/zoom 状態を管理しています。");
+    }
+
+    void Application::ProcessPendingSceneDrop()
+    {
+        if (!m_hasPendingSceneDrop || !m_scene)
+        {
+            return;
+        }
+
+        const Core::AssetId droppedAssetId = m_pendingDroppedSpriteAssetId;
+        const float dropWorldX = m_pendingDropWorldX;
+        const float dropWorldY = m_pendingDropWorldY;
+
+        m_hasPendingSceneDrop = false;
+        m_pendingDroppedSpriteAssetId = {};
+
+        if (droppedAssetId.IsEmpty())
+        {
+            ::OutputDebugStringA("Editor::Application could not create an entity because drop payload AssetId was empty.\n");
+            SetWindowTextW(m_sceneViewPlanLabel, L"SceneView のドロップ入力に AssetId が含まれていないため配置を中止しました。");
+            return;
+        }
+
+        const auto spriteAsset = m_spriteAssetRegistry.ResolveSpriteAsset(droppedAssetId);
+        if (!spriteAsset.has_value())
+        {
+            const std::string debugLine =
+                "Editor::Application could not resolve dropped Sprite AssetId '" + droppedAssetId.GetValue() + "'.\n";
+            ::OutputDebugStringA(debugLine.c_str());
+            SetWindowTextW(m_sceneViewPlanLabel, L"ドロップされた Sprite AssetId を解決できないため配置を中止しました。");
+            return;
+        }
+
+        if (!m_textureAssetRegistry.ResolveTexture(spriteAsset->textureAssetId))
+        {
+            const std::string debugLine =
+                "Editor::Application could not resolve Texture AssetId '"
+                + spriteAsset->textureAssetId.GetValue()
+                + "' for dropped Sprite AssetId '"
+                + droppedAssetId.GetValue()
+                + "'.\n";
+            ::OutputDebugStringA(debugLine.c_str());
+            SetWindowTextW(m_sceneViewPlanLabel, L"ドロップされた Sprite の Texture を解決できないため配置を中止しました。");
+            return;
+        }
+
+        auto& entity = m_scene->CreateEntity();
+        entity.GetTransform().SetPosition(dropWorldX, dropWorldY, 0.0f);
+        entity.SetSpriteComponent(Game::SpriteComponent{
+            droppedAssetId,
+            {
+                true,
+                0,
+                1.0f
+            }
+        });
+
+        const Game::EntityId createdEntityId = entity.GetId();
+
+        m_selectedEntityId = createdEntityId;
+        m_lastInspectorEntityId.reset();
+        RefreshHierarchyPanel();
+        RefreshInspectorPanel();
+
+        const std::string serializedScene = Game::SceneSerializer::SaveToText(*m_scene);
+        const auto loadResult = Game::SceneSerializer::LoadFromText(serializedScene);
+        if (!loadResult.IsSuccess() || !loadResult.scene.has_value())
+        {
+            const std::string debugLine =
+                "Editor::Application failed to reload dropped scene placement snapshot.\n";
+            ::OutputDebugStringA(debugLine.c_str());
+            SetWindowTextW(m_sceneViewPlanLabel, L"Entity は生成されましたが、保存/再読込の確認に失敗しました。");
+            return;
+        }
+
+        m_scene = std::make_unique<Game::Scene>(*loadResult.scene);
+        m_selectedEntityId = createdEntityId;
+        m_lastInspectorEntityId.reset();
+        RefreshHierarchyPanel();
+        RefreshInspectorPanel();
+
+        wchar_t statusText[160]{};
+        std::swprintf(
+            statusText,
+            std::size(statusText),
+            L"SceneView size: %u x %u / reloaded Entity %u",
+            m_sceneViewWidth,
+            m_sceneViewHeight,
+            static_cast<unsigned>(createdEntityId));
+        SetWindowTextW(m_sceneViewSizeLabel, statusText);
+        SetWindowTextW(m_sceneViewPlanLabel, L"SceneView ドロップで生成した Entity を保存テキストへ反映し、再読込後も選択を維持しました。");
+
+        std::string debugLine =
+            "Editor::Application created entity "
+            + std::to_string(createdEntityId)
+            + " from Sprite AssetId '"
+            + droppedAssetId.GetValue()
+            + "' at world position ("
+            + std::to_string(dropWorldX)
+            + ", "
+            + std::to_string(dropWorldY)
+            + ") and reloaded the scene snapshot.\n";
+        ::OutputDebugStringA(debugLine.c_str());
     }
 
     HWND Application::CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle) const

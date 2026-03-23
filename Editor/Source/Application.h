@@ -117,6 +117,16 @@ namespace Xelqoria::Editor
         void SyncAssetSelection();
 
         /// <summary>
+        /// Assets パネルから開始するドラッグ状態を更新する。
+        /// </summary>
+        void UpdateAssetDragState();
+
+        /// <summary>
+        /// Assets パネルの要約表示を現在状態に合わせて更新する。
+        /// </summary>
+        void RefreshAssetsSummaryLabel();
+
+        /// <summary>
         /// Hierarchy パネルの表示内容を更新する。
         /// </summary>
         void RefreshHierarchyPanel();
@@ -140,6 +150,11 @@ namespace Xelqoria::Editor
         /// SceneView のクリック座標状態を更新する。
         /// </summary>
         void UpdateSceneViewInteraction();
+
+        /// <summary>
+        /// SceneView で受理済みのドロップ入力を Entity 生成へ反映する。
+        /// </summary>
+        void ProcessPendingSceneDrop();
 
         /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
@@ -308,6 +323,32 @@ namespace Xelqoria::Editor
         Core::AssetId m_selectedSpriteAssetId{};
 
         /// <summary>
+        /// 現在ドラッグ中の SpriteAssetId を保持する。
+        /// 未ドラッグ時は空を保持する。
+        /// </summary>
+        Core::AssetId m_draggingSpriteAssetId{};
+
+        /// <summary>
+        /// Assets パネルからのドラッグが有効かを表す。
+        /// </summary>
+        bool m_isAssetDragActive = false;
+
+        /// <summary>
+        /// Assets パネル上で左ボタン押下を監視中かを表す。
+        /// </summary>
+        bool m_assetsListLeftButtonDown = false;
+
+        /// <summary>
+        /// Asset ドラッグのボタン解放を今フレームで検出したかを表す。
+        /// </summary>
+        bool m_assetDragReleasedThisFrame = false;
+
+        /// <summary>
+        /// Assets パネルでドラッグ候補を捕捉したスクリーン座標を保持する。
+        /// </summary>
+        POINT m_assetDragStartScreenPoint{};
+
+        /// <summary>
         /// Hierarchy パネルへ表示する EntityId 一覧を保持する。
         /// </summary>
         std::vector<Game::EntityId> m_visibleEntityIds{};
@@ -346,5 +387,25 @@ namespace Xelqoria::Editor
         /// 前フレームで左クリックが押下されていたかを表す。
         /// </summary>
         bool m_sceneViewLeftButtonDown = false;
+
+        /// <summary>
+        /// SceneView が次に処理すべきドロップ済み AssetId を保持する。
+        /// </summary>
+        Core::AssetId m_pendingDroppedSpriteAssetId{};
+
+        /// <summary>
+        /// 保留中ドロップのワールド座標 X を保持する。
+        /// </summary>
+        float m_pendingDropWorldX = 0.0f;
+
+        /// <summary>
+        /// 保留中ドロップのワールド座標 Y を保持する。
+        /// </summary>
+        float m_pendingDropWorldY = 0.0f;
+
+        /// <summary>
+        /// SceneView で未処理のドロップがあるかを表す。
+        /// </summary>
+        bool m_hasPendingSceneDrop = false;
     };
 }
