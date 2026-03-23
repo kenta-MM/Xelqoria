@@ -1,10 +1,21 @@
 #pragma once
 
 #include <Windows.h>
+#include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
 
+#include "AssetId.h"
+#include "Assets/ISpriteAssetResolver.h"
 #include "IGraphicsContext.h"
+#include "ITextureAssetResolver.h"
+#include "Scene.h"
+#include "SpriteRenderer.h"
+#include "Texture2D.h"
 #include "Window.h"
 
 namespace Xelqoria::Editor
@@ -18,6 +29,27 @@ namespace Xelqoria::Editor
         /// SceneView 専用 child HWND を swap chain の描画先にする。
         /// </summary>
         ChildWindowSwapChainHost = 0
+    };
+
+    /// <summary>
+    /// SceneView で使用する簡易カメラ状態を表す。
+    /// </summary>
+    struct SceneViewCameraState
+    {
+        /// <summary>
+        /// カメラ中心 X 座標を表す。
+        /// </summary>
+        float centerX = 0.0f;
+
+        /// <summary>
+        /// カメラ中心 Y 座標を表す。
+        /// </summary>
+        float centerY = 0.0f;
+
+        /// <summary>
+        /// 表示倍率を表す。
+        /// </summary>
+        float zoom = 1.0f;
     };
 
     /// <summary>
@@ -87,6 +119,47 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>初期化に成功した場合は true。</returns>
         bool InitializeSceneViewGraphics();
+
+        /// <summary>
+        /// Editor で扱う最小サンプルデータを初期化する。
+        /// </summary>
+        /// <returns>初期化に成功した場合は true。</returns>
+        bool InitializeDocument();
+
+        /// <summary>
+        /// Assets パネルの表示内容を更新する。
+        /// </summary>
+        void RefreshAssetsPanel();
+
+        /// <summary>
+        /// Assets パネルの選択状態を同期する。
+        /// </summary>
+        void SyncAssetSelection();
+
+        /// <summary>
+        /// Hierarchy パネルの表示内容を更新する。
+        /// </summary>
+        void RefreshHierarchyPanel();
+
+        /// <summary>
+        /// Hierarchy パネルの選択状態を同期する。
+        /// </summary>
+        void SyncHierarchySelection();
+
+        /// <summary>
+        /// Inspector パネルの表示内容を更新する。
+        /// </summary>
+        void RefreshInspectorPanel();
+
+        /// <summary>
+        /// Inspector パネルの入力値を現在選択中 Entity へ反映する。
+        /// </summary>
+        void SyncInspectorEdits();
+
+        /// <summary>
+        /// SceneView のクリック座標状態を更新する。
+        /// </summary>
+        void UpdateSceneViewInteraction();
 
         /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
@@ -173,5 +246,125 @@ namespace Xelqoria::Editor
         /// 前回レイアウト時の SceneView 高さを保持する。
         /// </summary>
         std::uint32_t m_sceneViewHeight = 0;
+
+        /// <summary>
+        /// SceneView 描画に使用する SpriteRenderer を保持する。
+        /// </summary>
+        std::unique_ptr<Graphics::SpriteRenderer> m_spriteRenderer;
+
+        /// <summary>
+        /// Assets パネルの一覧表示に使う ListBox を保持する。
+        /// </summary>
+        HWND m_assetsListBox = nullptr;
+
+        /// <summary>
+        /// Assets パネルの要約表示ラベルを保持する。
+        /// </summary>
+        HWND m_assetsSummaryLabel = nullptr;
+
+        /// <summary>
+        /// Hierarchy パネルの要約表示ラベルを保持する。
+        /// </summary>
+        HWND m_hierarchySummaryLabel = nullptr;
+
+        /// <summary>
+        /// Hierarchy パネルの一覧表示に使う ListBox を保持する。
+        /// </summary>
+        HWND m_hierarchyListBox = nullptr;
+
+        /// <summary>
+        /// Inspector パネルの要約表示ラベルを保持する。
+        /// </summary>
+        HWND m_inspectorSummaryLabel = nullptr;
+
+        /// <summary>
+        /// Transform 項目ラベルを保持する。
+        /// </summary>
+        std::array<HWND, 3> m_transformLabels{};
+
+        /// <summary>
+        /// Transform の各数値入力欄を保持する。
+        /// </summary>
+        std::array<HWND, 9> m_transformEditControls{};
+
+        /// <summary>
+        /// SpriteRef ラベルを保持する。
+        /// </summary>
+        HWND m_spriteRefLabel = nullptr;
+
+        /// <summary>
+        /// SpriteRef 入力欄を保持する。
+        /// </summary>
+        HWND m_spriteRefEdit = nullptr;
+
+        /// <summary>
+        /// Editor が編集中の Scene を保持する。
+        /// </summary>
+        std::unique_ptr<Game::Scene> m_scene;
+
+        /// <summary>
+        /// Editor が参照する SpriteAsset レジストリを保持する。
+        /// </summary>
+        Game::Assets::SpriteAssetRegistry m_spriteAssetRegistry{};
+
+        /// <summary>
+        /// Editor が参照する Texture レジストリを保持する。
+        /// </summary>
+        Graphics::TextureAssetRegistry m_textureAssetRegistry{};
+
+        /// <summary>
+        /// 登録済み SpriteAssetId 一覧を保持する。
+        /// </summary>
+        std::vector<Core::AssetId> m_registeredSpriteAssetIds{};
+
+        /// <summary>
+        /// Assets パネルへ表示する SpriteAssetId 一覧を保持する。
+        /// </summary>
+        std::vector<Core::AssetId> m_visibleSpriteAssetIds{};
+
+        /// <summary>
+        /// Assets パネルで現在選択中の SpriteAssetId を保持する。
+        /// </summary>
+        Core::AssetId m_selectedSpriteAssetId{};
+
+        /// <summary>
+        /// Hierarchy パネルへ表示する EntityId 一覧を保持する。
+        /// </summary>
+        std::vector<Game::EntityId> m_visibleEntityIds{};
+
+        /// <summary>
+        /// Hierarchy パネルで現在選択中の EntityId を保持する。
+        /// </summary>
+        std::optional<Game::EntityId> m_selectedEntityId{};
+
+        /// <summary>
+        /// Inspector に最後に反映した EntityId を保持する。
+        /// </summary>
+        std::optional<Game::EntityId> m_lastInspectorEntityId{};
+
+        /// <summary>
+        /// SceneView で使用する固定カメラ状態を保持する。
+        /// </summary>
+        SceneViewCameraState m_sceneViewCamera{};
+
+        /// <summary>
+        /// 直近クリックした SceneView のワールド座標 X を保持する。
+        /// </summary>
+        float m_lastSceneClickX = 0.0f;
+
+        /// <summary>
+        /// 直近クリックした SceneView のワールド座標 Y を保持する。
+        /// </summary>
+        float m_lastSceneClickY = 0.0f;
+
+        /// <summary>
+        /// SceneView でクリック済みかを表す。
+        /// </summary>
+        bool m_hasSceneClick = false;
+
+        /// <summary>
+        /// 前フレームで左クリックが押下されていたかを表す。
+        /// </summary>
+        bool m_sceneViewLeftButtonDown = false;
     };
 }
