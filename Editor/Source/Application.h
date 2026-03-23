@@ -117,6 +117,16 @@ namespace Xelqoria::Editor
         void SyncAssetSelection();
 
         /// <summary>
+        /// Assets パネルから開始するドラッグ状態を更新する。
+        /// </summary>
+        void UpdateAssetDragState();
+
+        /// <summary>
+        /// Assets パネルの要約表示を現在状態に合わせて更新する。
+        /// </summary>
+        void RefreshAssetsSummaryLabel();
+
+        /// <summary>
         /// Hierarchy パネルの表示内容を更新する。
         /// </summary>
         void RefreshHierarchyPanel();
@@ -306,6 +316,27 @@ namespace Xelqoria::Editor
         /// Assets パネルで現在選択中の SpriteAssetId を保持する。
         /// </summary>
         Core::AssetId m_selectedSpriteAssetId{};
+
+        /// <summary>
+        /// 現在ドラッグ中の SpriteAssetId を保持する。
+        /// 未ドラッグ時は空を保持する。
+        /// </summary>
+        Core::AssetId m_draggingSpriteAssetId{};
+
+        /// <summary>
+        /// Assets パネルからのドラッグが有効かを表す。
+        /// </summary>
+        bool m_isAssetDragActive = false;
+
+        /// <summary>
+        /// Assets パネル上で左ボタン押下を監視中かを表す。
+        /// </summary>
+        bool m_assetsListLeftButtonDown = false;
+
+        /// <summary>
+        /// Assets パネルでドラッグ候補を捕捉したスクリーン座標を保持する。
+        /// </summary>
+        POINT m_assetDragStartScreenPoint{};
 
         /// <summary>
         /// Hierarchy パネルへ表示する EntityId 一覧を保持する。

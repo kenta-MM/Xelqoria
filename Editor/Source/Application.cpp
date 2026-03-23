@@ -25,6 +25,8 @@ namespace Xelqoria::Editor
 {
     namespace
     {
+        constexpr int AssetDragStartThresholdPixels = 6;
+
         /// <summary>
         /// アセット識別子などの狭い文字列を簡易的にワイド文字列へ変換する。
         /// </summary>
@@ -54,6 +56,19 @@ namespace Xelqoria::Editor
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// 2 点間のドラッグ開始判定に使う距離を取得する。
+        /// </summary>
+        /// <param name="lhs">始点座標。</param>
+        /// <param name="rhs">終点座標。</param>
+        /// <returns>各軸の絶対差分のうち大きい方。</returns>
+        int GetDragDistance(POINT lhs, POINT rhs)
+        {
+            const int dx = std::abs(lhs.x - rhs.x);
+            const int dy = std::abs(lhs.y - rhs.y);
+            return (std::max)(dx, dy);
         }
     }
 
@@ -149,6 +164,7 @@ namespace Xelqoria::Editor
         (void)deltaTime;
         UpdateLayout();
         SyncAssetSelection();
+        UpdateAssetDragState();
         SyncHierarchySelection();
         SyncInspectorEdits();
         UpdateSceneViewInteraction();
@@ -574,14 +590,7 @@ namespace Xelqoria::Editor
             SendMessageW(m_assetsListBox, LB_SETCURSEL, static_cast<WPARAM>(selectedIndex), 0);
         }
 
-        wchar_t summaryText[128]{};
-        std::swprintf(
-            summaryText,
-            std::size(summaryText),
-            L"Sprite assets: %u visible / %u registered",
-            static_cast<unsigned>(m_visibleSpriteAssetIds.size()),
-            static_cast<unsigned>(m_registeredSpriteAssetIds.size()));
-        SetWindowTextW(m_assetsSummaryLabel, summaryText);
+        RefreshAssetsSummaryLabel();
     }
 
     void Application::SyncAssetSelection()
@@ -604,6 +613,87 @@ namespace Xelqoria::Editor
         }
 
         m_selectedSpriteAssetId = m_visibleSpriteAssetIds[index];
+    }
+
+    void Application::UpdateAssetDragState()
+    {
+        if (m_assetsListBox == nullptr)
+        {
+            return;
+        }
+
+        POINT screenPoint{};
+        GetCursorPos(&screenPoint);
+
+        RECT assetsRect{};
+        GetWindowRect(m_assetsListBox, &assetsRect);
+
+        const bool isCursorInside = screenPoint.x >= assetsRect.left
+            && screenPoint.x < assetsRect.right
+            && screenPoint.y >= assetsRect.top
+            && screenPoint.y < assetsRect.bottom;
+        const bool isLeftButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+
+        if (isCursorInside && isLeftButtonDown && !m_assetsListLeftButtonDown)
+        {
+            m_assetsListLeftButtonDown = true;
+            m_assetDragStartScreenPoint = screenPoint;
+        }
+
+        if (m_assetsListLeftButtonDown
+            && !m_isAssetDragActive
+            && isLeftButtonDown
+            && !m_selectedSpriteAssetId.IsEmpty()
+            && GetDragDistance(m_assetDragStartScreenPoint, screenPoint) >= AssetDragStartThresholdPixels)
+        {
+            m_isAssetDragActive = true;
+            m_draggingSpriteAssetId = m_selectedSpriteAssetId;
+
+            const std::string debugLine =
+                "Editor::Application began dragging Sprite AssetId '" + m_draggingSpriteAssetId.GetValue() + "'.\n";
+            ::OutputDebugStringA(debugLine.c_str());
+            RefreshAssetsSummaryLabel();
+        }
+
+        if (!isLeftButtonDown)
+        {
+            const bool wasDragging = m_isAssetDragActive;
+            m_assetsListLeftButtonDown = false;
+            m_isAssetDragActive = false;
+            m_draggingSpriteAssetId = {};
+
+            if (wasDragging)
+            {
+                RefreshAssetsSummaryLabel();
+            }
+        }
+    }
+
+    void Application::RefreshAssetsSummaryLabel()
+    {
+        wchar_t summaryText[256]{};
+        if (m_isAssetDragActive && !m_draggingSpriteAssetId.IsEmpty())
+        {
+            const std::wstring draggingAssetId = ToWideString(m_draggingSpriteAssetId.GetValue());
+            std::swprintf(
+                summaryText,
+                std::size(summaryText),
+                L"Sprite assets: dragging %ls / %u visible / %u registered",
+                draggingAssetId.c_str(),
+                static_cast<unsigned>(m_visibleSpriteAssetIds.size()),
+                static_cast<unsigned>(m_registeredSpriteAssetIds.size()));
+        }
+        else
+        {
+            std::swprintf(
+                summaryText,
+                std::size(summaryText),
+                L"Sprite assets: %u visible / %u registered",
+                static_cast<unsigned>(m_visibleSpriteAssetIds.size()),
+                static_cast<unsigned>(m_registeredSpriteAssetIds.size()));
+        }
+
+        SetWindowTextW(m_assetsSummaryLabel, summaryText);
     }
 
     void Application::RefreshHierarchyPanel()
