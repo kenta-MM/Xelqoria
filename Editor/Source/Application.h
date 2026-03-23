@@ -334,6 +334,11 @@ namespace Xelqoria::Editor
         bool m_assetsListLeftButtonDown = false;
 
         /// <summary>
+        /// Asset ドラッグのボタン解放を今フレームで検出したかを表す。
+        /// </summary>
+        bool m_assetDragReleasedThisFrame = false;
+
+        /// <summary>
         /// Assets パネルでドラッグ候補を捕捉したスクリーン座標を保持する。
         /// </summary>
         POINT m_assetDragStartScreenPoint{};
@@ -377,5 +382,25 @@ namespace Xelqoria::Editor
         /// 前フレームで左クリックが押下されていたかを表す。
         /// </summary>
         bool m_sceneViewLeftButtonDown = false;
+
+        /// <summary>
+        /// SceneView が次に処理すべきドロップ済み AssetId を保持する。
+        /// </summary>
+        Core::AssetId m_pendingDroppedSpriteAssetId{};
+
+        /// <summary>
+        /// 保留中ドロップのワールド座標 X を保持する。
+        /// </summary>
+        float m_pendingDropWorldX = 0.0f;
+
+        /// <summary>
+        /// 保留中ドロップのワールド座標 Y を保持する。
+        /// </summary>
+        float m_pendingDropWorldY = 0.0f;
+
+        /// <summary>
+        /// SceneView で未処理のドロップがあるかを表す。
+        /// </summary>
+        bool m_hasPendingSceneDrop = false;
     };
 }
