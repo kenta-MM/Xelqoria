@@ -2,8 +2,8 @@
 #include <Windows.h>
 #include <memory>
 
-#include "Assets/ISpriteAssetResolver.h"
-#include "ITextureAssetResolver.h"
+#include "Assets/SpriteAssetRegistry.h"
+#include "TextureAssetRegistry.h"
 #include "Scene.h"
 #include "Window.h"
 #include "IGraphicsContext.h"

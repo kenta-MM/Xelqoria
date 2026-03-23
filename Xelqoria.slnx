@@ -39,12 +39,26 @@
     <File Path="docs/agents/coding-rules.md" />
     <File Path="docs/agents/workflows.md" />
   </Folder>
-  <Folder Name="/ソリューション項目/tools/">
-    <File Path="tools/check-layer-dependencies.ps1" />
+  <Folder Name="/ソリューション項目/tools/" />
+  <Folder Name="/ソリューション項目/tools/LayerDependencyChecker/">
+    <File Path="tools/LayerDependencyChecker/Build-LayerDependencyChecker.bat" />
+    <File Path="tools/LayerDependencyChecker/Build-LayerDependencyChecker.ps1" />
+    <File Path="tools/LayerDependencyChecker/LayerDependencyChecker.csproj" />
+    <File Path="tools/LayerDependencyChecker/Program.cs" />
   </Folder>
-  <Folder Name="/ソリューション項目/tools/tests/" />
-  <Folder Name="/ソリューション項目/tools/tests/powershell/">
-    <File Path="tools/tests/powershell/check-layer-dependencies.Tests.ps1" />
+  <Folder Name="/ソリューション項目/third_party/" />
+  <Folder Name="/ソリューション項目/third_party/googletest/">
+    <Project Path="third_party/googletest/Xelqoria.GoogleTest.vcxproj" Id="0f71d759-12a2-42d9-b1ca-9f19c4e586c9" />
+  </Folder>
+  <Folder Name="/ソリューション項目/tests/" />
+  <Folder Name="/ソリューション項目/tests/Core/">
+    <Project Path="tests/Core/Xelqoria.Tests.Core.vcxproj" Id="6ecbbc65-48e4-4e35-a6c4-72488c8444ef" />
+  </Folder>
+  <Folder Name="/ソリューション項目/tests/Game/">
+    <Project Path="tests/Game/Xelqoria.Tests.Game.vcxproj" Id="a151523d-013c-46e4-9d29-503283d8dd86" />
+  </Folder>
+  <Folder Name="/ソリューション項目/tests/Graphics/">
+    <Project Path="tests/Graphics/Xelqoria.Tests.Graphics.vcxproj" Id="a6d67a9b-2c63-4d32-b3d8-6f1c7de4d111" />
   </Folder>
   <Project Path="App/Xelqoria.App.vcxproj" Id="67f2121c-56d6-425e-adca-de9605ab0b9e" />
   <Project Path="Backends.D3D11/Xelqoria.Backends.D3D11.vcxproj" Id="d89979a3-9ede-4b5b-a2b1-2dd1db261114" />
@@ -54,5 +68,4 @@
   <Project Path="Game/Xelqoria.Game.vcxproj" Id="b43e8e97-59ef-4caa-8a27-bd9192d8833a" />
   <Project Path="Graphics/Xelqoria.Graphics.vcxproj" Id="7693792a-4ad4-445a-98f7-b90d6989a837" />
   <Project Path="RHI/Xelqoria.RHI.vcxproj" Id="158b81fc-b108-4237-8a37-eb8c6ef29392" />
-  <Project Path="Tests.Game/Xelqoria.Tests.Game.vcxproj" Id="a151523d-013c-46e4-9d29-503283d8dd86" />
 </Solution>

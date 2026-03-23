@@ -12,6 +12,20 @@
 
 #include "D3D12Texture.h"
 #include "D3D12VertexBuffer.h"
+#include <dxgi.h>
+#include <dxgi1_2.h>
+#include <dxgi1_3.h>
+#include <dxgiformat.h>
+#include <d3d12.h>
+#include <d3d12sdklayers.h>
+#include <d3dcommon.h>
+#include <Windows.h>
+#include <wrl/client.h>
+#include <climits>
+#include <cstdint>
+#include <cstdlib>
+#include <IGraphicsContext.h>
+#include <ITexture.h>
 
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "windowscodecs.lib")
@@ -28,6 +42,14 @@ namespace Xelqoria::Backends::D3D12
 
         constexpr std::array<float, 4> kClearColor = { 0.1f, 0.1f, 0.2f, 1.0f };
 
+        /// <summary>
+        /// WIC を使って画像ファイルを RGBA8 ピクセル配列として読み込む。
+        /// </summary>
+        /// <param name="filePath">読み込む画像ファイルパス。</param>
+        /// <param name="outPixels">読み込み結果のピクセル配列。</param>
+        /// <param name="outWidth">読み込んだ画像の幅。</param>
+        /// <param name="outHeight">読み込んだ画像の高さ。</param>
+        /// <returns>読み込みに成功した場合は true。</returns>
         bool LoadRgbaPixelsFromFileWIC(const std::wstring& filePath, std::vector<std::uint8_t>& outPixels, std::uint32_t& outWidth, std::uint32_t& outHeight)
         {
             outPixels.clear();
@@ -132,6 +154,14 @@ namespace Xelqoria::Backends::D3D12
             return true;
         }
 
+        /// <summary>
+        /// インライン HLSL ソースコードを指定ターゲット向けにコンパイルする。
+        /// </summary>
+        /// <param name="source">コンパイルする HLSL ソースコード。</param>
+        /// <param name="entryPoint">エントリーポイント関数名。</param>
+        /// <param name="target">シェーダーモデル文字列。</param>
+        /// <param name="outBlob">生成したシェーダーバイトコード。</param>
+        /// <returns>コンパイルに成功した場合は true。</returns>
         bool CompileShaderSource(const char* source, const char* entryPoint, const char* target, Microsoft::WRL::ComPtr<ID3DBlob>& outBlob)
         {
             outBlob.Reset();
@@ -418,12 +448,16 @@ namespace Xelqoria::Backends::D3D12
         commandList->SetDescriptorHeaps(1, descriptorHeaps);
         commandList->SetGraphicsRootSignature(m_spriteRootSignature.Get());
         commandList->SetPipelineState(m_spritePipelineState.Get());
-        const float quadTransformData[4] =
+        const float quadTransformData[8] =
         {
             m_quadTransform.scaleX,
             m_quadTransform.scaleY,
+            m_quadTransform.rotationCos,
+            m_quadTransform.rotationSin,
             m_quadTransform.translateX,
-            m_quadTransform.translateY
+            m_quadTransform.translateY,
+            0.0f,
+            0.0f
         };
         commandList->SetGraphicsRoot32BitConstants(0, 4, quadTransformData, 0);
         commandList->SetGraphicsRootDescriptorTable(1, m_boundTextureSrvGpu);
@@ -669,16 +703,24 @@ namespace Xelqoria::Backends::D3D12
 cbuffer SpriteTransformBuffer : register(b0)
 {
     float2 gScale;
+    float2 gRotation;
     float2 gTranslate;
+    float2 gPadding;
 };
 struct VSInput { float3 position : POSITION; float2 uv : TEXCOORD0; };
 struct VSOutput { float4 position : SV_POSITION; float2 uv : TEXCOORD0; };
 VSOutput MainVS(VSInput input)
 {
     VSOutput output;
+    float2 scaledPosition = float2(
+        input.position.x * gScale.x,
+        input.position.y * gScale.y);
+    float2 rotatedPosition = float2(
+        scaledPosition.x * gRotation.x - scaledPosition.y * gRotation.y,
+        scaledPosition.x * gRotation.y + scaledPosition.y * gRotation.x);
     output.position = float4(
-        input.position.x * gScale.x + gTranslate.x,
-        input.position.y * gScale.y + gTranslate.y,
+        rotatedPosition.x + gTranslate.x,
+        rotatedPosition.y + gTranslate.y,
         input.position.z,
         1.0f);
     output.uv = input.uv;
@@ -715,7 +757,7 @@ float4 MainPS(PSInput input) : SV_TARGET
 
         D3D12_ROOT_PARAMETER rootParameters[2]{};
         rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-        rootParameters[0].Constants.Num32BitValues = 4;
+        rootParameters[0].Constants.Num32BitValues = 8;
         rootParameters[0].Constants.ShaderRegister = 0;
         rootParameters[0].Constants.RegisterSpace = 0;
         rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;

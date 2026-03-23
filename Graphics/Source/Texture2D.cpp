@@ -1,9 +1,7 @@
 #include "Texture2D.h"
 
-#include <utility>
-
 #include "IGraphicsContext.h"
-#include "ITexture.h"
+#include <string>
 
 namespace Xelqoria::Graphics
 {

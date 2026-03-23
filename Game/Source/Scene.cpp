@@ -4,11 +4,28 @@
 #include <sstream>
 
 #include "Entity.h"
+#include <functional>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+#include "Assets/ISpriteAssetResolver.h"
+#include "SpriteComponent.h"
+#include <ITextureAssetResolver.h>
+#include <Sprite.h>
 
 namespace Xelqoria::Game
 {
 	namespace
 	{
+		/// <summary>
+		/// ロガーが設定されている場合だけメッセージを出力する。
+		/// </summary>
+		/// <param name="logger">出力先ロガー。</param>
+		/// <param name="message">出力するメッセージ。</param>
 		void LogMessage(const std::function<void(const std::string&)>& logger, std::string message)
 		{
 			if (logger) {
@@ -186,6 +203,7 @@ namespace Xelqoria::Game
 			sprite.SetTextureAssetId(spriteAsset->textureAssetId);
 			sprite.SetPosition(renderItem.transform->position.x, renderItem.transform->position.y);
 			sprite.SetScale(renderItem.transform->scale.x, renderItem.transform->scale.y);
+			sprite.SetRotationDegrees(renderItem.transform->rotation.z);
 			resolvedSprites.push_back(std::move(sprite));
 
 			std::ostringstream message;

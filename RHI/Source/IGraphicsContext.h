@@ -27,6 +27,16 @@ namespace Xelqoria::RHI
         /// <summary>
         /// X 軸方向の移動量を表す。
         /// </summary>
+        float rotationCos = 1.0f;
+
+        /// <summary>
+        /// 回転角度の sin 値を表す。
+        /// </summary>
+        float rotationSin = 0.0f;
+
+        /// <summary>
+        /// X 軸方向の移動量を表す。
+        /// </summary>
         float translateX = 0.0f;
 
         /// <summary>

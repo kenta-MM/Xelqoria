@@ -10,16 +10,36 @@
 #include "GraphicsAPI.h"
 #include "RenderBackendBootstrap.h"
 #include "Texture2D.h"
+#include <Windows.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <iterator>
+#include <string_view>
+#include <AssetId.h>
+#include <Scene.h>
+#include <SpriteComponent.h>
+#include <SpriteRenderer.h>
 
 namespace Xelqoria::Editor
 {
     namespace
     {
+        /// <summary>
+        /// アセット識別子などの狭い文字列を簡易的にワイド文字列へ変換する。
+        /// </summary>
+        /// <param name="value">変換元の文字列。</param>
+        /// <returns>入力文字列をそのまま拡張したワイド文字列。</returns>
         std::wstring ToWideString(std::string_view value)
         {
             return std::wstring(value.begin(), value.end());
         }
 
+        /// <summary>
+        /// ASCII 範囲の文字だけを保持してワイド文字列を狭い文字列へ変換する。
+        /// </summary>
+        /// <param name="value">変換元のワイド文字列。</param>
+        /// <returns>ASCII 文字のみを含む文字列。</returns>
         std::string ToNarrowString(std::wstring_view value)
         {
             std::string result;

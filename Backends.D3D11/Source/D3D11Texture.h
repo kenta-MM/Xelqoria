@@ -49,7 +49,10 @@ namespace Xelqoria::Backends::D3D11
         /// <param name="slot">バインド先スロット番号。</param>
         void BindPS(ID3D11DeviceContext* deviceContext, std::uint32_t slot) const;
 
+        /// <inheritdoc/>
         std::uint32_t GetWidth() const override { return m_width; }
+        
+        /// <inheritdoc/>
         std::uint32_t GetHeight() const override { return m_height; }
 
         /// <summary>

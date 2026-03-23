@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "AssetId.h"
-#include "Assets/ISpriteAssetResolver.h"
+#include "Assets/SpriteAssetRegistry.h"
 #include "IGraphicsContext.h"
-#include "ITextureAssetResolver.h"
+#include "TextureAssetRegistry.h"
 #include "Scene.h"
 #include "SpriteRenderer.h"
 #include "Texture2D.h"

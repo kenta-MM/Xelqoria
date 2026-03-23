@@ -18,6 +18,16 @@ namespace Xelqoria::Game
 	struct Transform
 	{
 		/// <summary>
+		/// 既定の Transform を生成する。
+		/// </summary>
+		Transform()
+			: position{}
+			, rotation{}
+			, scale{ 1.0f, 1.0f, 1.0f }
+		{
+		}
+
+		/// <summary>
 		/// 配置位置を表す。
 		/// </summary>
 		Vector3 position{};

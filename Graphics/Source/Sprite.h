@@ -92,10 +92,23 @@ namespace Xelqoria::Graphics
 		/// <returns>保持している拡大率。</returns>
 		const Vector2& GetScale() const;
 
+		/// <summary>
+		/// スプライトの回転角度を設定する。
+		/// </summary>
+		/// <param name="rotationDegrees">度数法で表した回転角度。</param>
+		void SetRotationDegrees(float rotationDegrees);
+
+		/// <summary>
+		/// スプライトの回転角度を取得する。
+		/// </summary>
+		/// <returns>度数法で表した回転角度。</returns>
+		float GetRotationDegrees() const;
+
 	private:
 		std::shared_ptr<Texture2D> m_texture;
 		Core::AssetId m_textureAssetId{};
 		Vector2 m_position{};
 		Vector2 m_scale{ 1.0f, 1.0f };
+		float m_rotationDegrees = 0.0f;
 	};
 }
