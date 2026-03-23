@@ -11,6 +11,7 @@
 
 #include "AssetId.h"
 #include "Assets/SpriteAssetRegistry.h"
+#include "EditorCamera2D.h"
 #include "IGraphicsContext.h"
 #include "TextureAssetRegistry.h"
 #include "Scene.h"
@@ -29,27 +30,6 @@ namespace Xelqoria::Editor
         /// SceneView 専用 child HWND を swap chain の描画先にする。
         /// </summary>
         ChildWindowSwapChainHost = 0
-    };
-
-    /// <summary>
-    /// SceneView で使用する簡易カメラ状態を表す。
-    /// </summary>
-    struct SceneViewCameraState
-    {
-        /// <summary>
-        /// カメラ中心 X 座標を表す。
-        /// </summary>
-        float centerX = 0.0f;
-
-        /// <summary>
-        /// カメラ中心 Y 座標を表す。
-        /// </summary>
-        float centerY = 0.0f;
-
-        /// <summary>
-        /// 表示倍率を表す。
-        /// </summary>
-        float zoom = 1.0f;
     };
 
     /// <summary>
@@ -345,7 +325,7 @@ namespace Xelqoria::Editor
         /// <summary>
         /// SceneView で使用する固定カメラ状態を保持する。
         /// </summary>
-        SceneViewCameraState m_sceneViewCamera{};
+        EditorCamera2D m_sceneViewCamera{};
 
         /// <summary>
         /// 直近クリックした SceneView のワールド座標 X を保持する。

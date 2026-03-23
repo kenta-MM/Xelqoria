@@ -20,6 +20,9 @@
     <ClInclude Include="Source\Application.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\EditorCamera2D.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\RenderBackendBootstrap.h">
       <Filter>Source</Filter>
     </ClInclude>
