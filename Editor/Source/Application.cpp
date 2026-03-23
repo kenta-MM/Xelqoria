@@ -1058,18 +1058,21 @@ namespace Xelqoria::Editor
             }
         });
 
+        m_selectedEntityId = entity.GetId();
+        m_lastInspectorEntityId.reset();
         RefreshHierarchyPanel();
+        RefreshInspectorPanel();
 
         wchar_t statusText[160]{};
         std::swprintf(
             statusText,
             std::size(statusText),
-            L"SceneView size: %u x %u / created Entity %u",
+            L"SceneView size: %u x %u / selected Entity %u",
             m_sceneViewWidth,
             m_sceneViewHeight,
             static_cast<unsigned>(entity.GetId()));
         SetWindowTextW(m_sceneViewSizeLabel, statusText);
-        SetWindowTextW(m_sceneViewPlanLabel, L"SceneView ドロップから Entity を生成しました。次段で選択同期を追加します。");
+        SetWindowTextW(m_sceneViewPlanLabel, L"SceneView ドロップから生成した Entity を選択し、Inspector へ反映しました。");
 
         std::string debugLine =
             "Editor::Application created entity "
