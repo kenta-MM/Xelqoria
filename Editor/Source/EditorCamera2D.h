@@ -6,6 +6,38 @@
 namespace Xelqoria::Editor
 {
     /// <summary>
+    /// SceneView 内のスクリーン座標を表す。
+    /// </summary>
+    struct EditorScreenPoint
+    {
+        /// <summary>
+        /// SceneView 左上基準の X 座標を表す。
+        /// </summary>
+        float x = 0.0f;
+
+        /// <summary>
+        /// SceneView 左上基準の Y 座標を表す。
+        /// </summary>
+        float y = 0.0f;
+    };
+
+    /// <summary>
+    /// Editor 内で扱う 2D ワールド座標を表す。
+    /// </summary>
+    struct EditorWorldPoint
+    {
+        /// <summary>
+        /// ワールド X 座標を表す。
+        /// </summary>
+        float x = 0.0f;
+
+        /// <summary>
+        /// ワールド Y 座標を表す。
+        /// </summary>
+        float y = 0.0f;
+    };
+
+    /// <summary>
     /// 2D SceneView で使用するビューポート設定を表す。
     /// </summary>
     struct EditorViewport
@@ -122,6 +154,22 @@ namespace Xelqoria::Editor
         float TransformWorldScale(float worldScale) const
         {
             return worldScale * m_zoom;
+        }
+
+        /// <summary>
+        /// SceneView のスクリーン座標をワールド座標へ変換する。
+        /// </summary>
+        /// <param name="screenPoint">SceneView 左上基準のスクリーン座標。</param>
+        /// <returns>pan/zoom を加味したワールド座標。</returns>
+        EditorWorldPoint TransformScreenToWorld(const EditorScreenPoint& screenPoint) const
+        {
+            const float halfWidth = static_cast<float>(m_viewport.width) * 0.5f;
+            const float halfHeight = static_cast<float>(m_viewport.height) * 0.5f;
+
+            return EditorWorldPoint{
+                (screenPoint.x - halfWidth) / m_zoom + m_centerX,
+                -(screenPoint.y - halfHeight) / m_zoom + m_centerY
+            };
         }
 
     private:

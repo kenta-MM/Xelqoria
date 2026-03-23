@@ -822,13 +822,12 @@ namespace Xelqoria::Editor
             POINT clientPoint = screenPoint;
             ScreenToClient(m_sceneViewHost, &clientPoint);
 
-            const float zoom = m_sceneViewCamera.GetZoom();
-            m_lastSceneClickX =
-                (static_cast<float>(clientPoint.x) - static_cast<float>(m_sceneViewWidth) * 0.5f) / zoom
-                + m_sceneViewCamera.GetCenterX();
-            m_lastSceneClickY =
-                -(static_cast<float>(clientPoint.y) - static_cast<float>(m_sceneViewHeight) * 0.5f) / zoom
-                + m_sceneViewCamera.GetCenterY();
+            const auto worldPoint = m_sceneViewCamera.TransformScreenToWorld(EditorScreenPoint{
+                static_cast<float>(clientPoint.x),
+                static_cast<float>(clientPoint.y)
+            });
+            m_lastSceneClickX = worldPoint.x;
+            m_lastSceneClickY = worldPoint.y;
             m_hasSceneClick = true;
         }
 
