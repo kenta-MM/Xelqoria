@@ -3,8 +3,16 @@
 #include <Windows.h>
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
 
+#include "AssetId.h"
+#include "Assets/ISpriteAssetResolver.h"
 #include "IGraphicsContext.h"
+#include "ITextureAssetResolver.h"
+#include "Scene.h"
+#include "Texture2D.h"
 #include "Window.h"
 
 namespace Xelqoria::Editor
@@ -87,6 +95,22 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>初期化に成功した場合は true。</returns>
         bool InitializeSceneViewGraphics();
+
+        /// <summary>
+        /// Editor で扱う最小サンプルデータを初期化する。
+        /// </summary>
+        /// <returns>初期化に成功した場合は true。</returns>
+        bool InitializeDocument();
+
+        /// <summary>
+        /// Assets パネルの表示内容を更新する。
+        /// </summary>
+        void RefreshAssetsPanel();
+
+        /// <summary>
+        /// Assets パネルの選択状態を同期する。
+        /// </summary>
+        void SyncAssetSelection();
 
         /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
@@ -173,5 +197,45 @@ namespace Xelqoria::Editor
         /// 前回レイアウト時の SceneView 高さを保持する。
         /// </summary>
         std::uint32_t m_sceneViewHeight = 0;
+
+        /// <summary>
+        /// Assets パネルの一覧表示に使う ListBox を保持する。
+        /// </summary>
+        HWND m_assetsListBox = nullptr;
+
+        /// <summary>
+        /// Assets パネルの要約表示ラベルを保持する。
+        /// </summary>
+        HWND m_assetsSummaryLabel = nullptr;
+
+        /// <summary>
+        /// Editor が編集中の Scene を保持する。
+        /// </summary>
+        std::unique_ptr<Game::Scene> m_scene;
+
+        /// <summary>
+        /// Editor が参照する SpriteAsset レジストリを保持する。
+        /// </summary>
+        Game::Assets::SpriteAssetRegistry m_spriteAssetRegistry{};
+
+        /// <summary>
+        /// Editor が参照する Texture レジストリを保持する。
+        /// </summary>
+        Graphics::TextureAssetRegistry m_textureAssetRegistry{};
+
+        /// <summary>
+        /// 登録済み SpriteAssetId 一覧を保持する。
+        /// </summary>
+        std::vector<Core::AssetId> m_registeredSpriteAssetIds{};
+
+        /// <summary>
+        /// Assets パネルへ表示する SpriteAssetId 一覧を保持する。
+        /// </summary>
+        std::vector<Core::AssetId> m_visibleSpriteAssetIds{};
+
+        /// <summary>
+        /// Assets パネルで現在選択中の SpriteAssetId を保持する。
+        /// </summary>
+        Core::AssetId m_selectedSpriteAssetId{};
     };
 }
