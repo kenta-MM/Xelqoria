@@ -168,6 +168,7 @@ namespace Xelqoria::Editor
         SyncHierarchySelection();
         SyncInspectorEdits();
         UpdateSceneViewInteraction();
+        ProcessPendingSceneDrop();
     }
 
     void Application::Render()
@@ -1000,6 +1001,87 @@ namespace Xelqoria::Editor
             m_hasPendingSceneDrop
                 ? L"SceneView はドロップを受理済みです。次段で Entity 生成へ入力を引き渡します。"
                 : L"Runtime 描画は child HWND に埋め込み済みです。2D EditorCamera で pan/zoom 状態を管理しています。");
+    }
+
+    void Application::ProcessPendingSceneDrop()
+    {
+        if (!m_hasPendingSceneDrop || !m_scene)
+        {
+            return;
+        }
+
+        const Core::AssetId droppedAssetId = m_pendingDroppedSpriteAssetId;
+        const float dropWorldX = m_pendingDropWorldX;
+        const float dropWorldY = m_pendingDropWorldY;
+
+        m_hasPendingSceneDrop = false;
+        m_pendingDroppedSpriteAssetId = {};
+
+        if (droppedAssetId.IsEmpty())
+        {
+            ::OutputDebugStringA("Editor::Application could not create an entity because drop payload AssetId was empty.\n");
+            SetWindowTextW(m_sceneViewPlanLabel, L"SceneView のドロップ入力に AssetId が含まれていないため配置を中止しました。");
+            return;
+        }
+
+        const auto spriteAsset = m_spriteAssetRegistry.ResolveSpriteAsset(droppedAssetId);
+        if (!spriteAsset.has_value())
+        {
+            const std::string debugLine =
+                "Editor::Application could not resolve dropped Sprite AssetId '" + droppedAssetId.GetValue() + "'.\n";
+            ::OutputDebugStringA(debugLine.c_str());
+            SetWindowTextW(m_sceneViewPlanLabel, L"ドロップされた Sprite AssetId を解決できないため配置を中止しました。");
+            return;
+        }
+
+        if (!m_textureAssetRegistry.ResolveTexture(spriteAsset->textureAssetId))
+        {
+            const std::string debugLine =
+                "Editor::Application could not resolve Texture AssetId '"
+                + spriteAsset->textureAssetId.GetValue()
+                + "' for dropped Sprite AssetId '"
+                + droppedAssetId.GetValue()
+                + "'.\n";
+            ::OutputDebugStringA(debugLine.c_str());
+            SetWindowTextW(m_sceneViewPlanLabel, L"ドロップされた Sprite の Texture を解決できないため配置を中止しました。");
+            return;
+        }
+
+        auto& entity = m_scene->CreateEntity();
+        entity.GetTransform().SetPosition(dropWorldX, dropWorldY, 0.0f);
+        entity.SetSpriteComponent(Game::SpriteComponent{
+            droppedAssetId,
+            {
+                true,
+                0,
+                1.0f
+            }
+        });
+
+        RefreshHierarchyPanel();
+
+        wchar_t statusText[160]{};
+        std::swprintf(
+            statusText,
+            std::size(statusText),
+            L"SceneView size: %u x %u / created Entity %u",
+            m_sceneViewWidth,
+            m_sceneViewHeight,
+            static_cast<unsigned>(entity.GetId()));
+        SetWindowTextW(m_sceneViewSizeLabel, statusText);
+        SetWindowTextW(m_sceneViewPlanLabel, L"SceneView ドロップから Entity を生成しました。次段で選択同期を追加します。");
+
+        std::string debugLine =
+            "Editor::Application created entity "
+            + std::to_string(entity.GetId())
+            + " from Sprite AssetId '"
+            + droppedAssetId.GetValue()
+            + "' at world position ("
+            + std::to_string(dropWorldX)
+            + ", "
+            + std::to_string(dropWorldY)
+            + ").\n";
+        ::OutputDebugStringA(debugLine.c_str());
     }
 
     HWND Application::CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle) const
