@@ -44,6 +44,8 @@ namespace Xelqoria::Graphics
         m_context->SetQuadTransform(RHI::QuadTransform2D{
             quadTransform.scaleX,
             quadTransform.scaleY,
+            quadTransform.rotationCos,
+            quadTransform.rotationSin,
             quadTransform.translateX,
             quadTransform.translateY
         });

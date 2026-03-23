@@ -11,6 +11,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Assets\SpriteAssetRegistry.cpp">
+      <Filter>Source\Assets</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Assets\SpriteAssetLoader.cpp">
       <Filter>Source\Assets</Filter>
     </ClCompile>
@@ -29,6 +32,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Assets\ISpriteAssetResolver.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\SpriteAssetRegistry.h">
       <Filter>Source\Assets</Filter>
     </ClInclude>
     <ClInclude Include="Source\Assets\SpriteAsset.h">

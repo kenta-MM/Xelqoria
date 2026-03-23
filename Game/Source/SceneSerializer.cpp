@@ -11,6 +11,11 @@
 
 namespace
 {
+	/// <summary>
+	/// 行単位で読み込んだ文字列の前後にある空白を取り除く。
+	/// </summary>
+	/// <param name="value">整形対象の文字列ビュー。</param>
+	/// <returns>前後の空白を除いた文字列ビュー。</returns>
 	std::string_view Trim(std::string_view value)
 	{
 		const auto first = value.find_first_not_of(" \t\r");
@@ -22,11 +27,21 @@ namespace
 		return value.substr(first, last - first + 1);
 	}
 
+	/// <summary>
+	/// Vector3 をシーン保存形式の `x,y,z` 文字列として追記する。
+	/// </summary>
+	/// <param name="stream">出力先ストリーム。</param>
+	/// <param name="value">追記するベクトル値。</param>
 	void AppendVector3(std::ostringstream& stream, const Xelqoria::Game::Vector3& value)
 	{
 		stream << value.x << "," << value.y << "," << value.z;
 	}
 
+	/// <summary>
+	/// 10 進文字列を符号なし整数へ変換する。
+	/// </summary>
+	/// <param name="value">変換対象の文字列。</param>
+	/// <returns>変換に成功した値。失敗時は nullopt。</returns>
 	std::optional<std::uint32_t> ParseUnsigned(std::string_view value)
 	{
 		std::uint32_t parsedValue = 0;
@@ -40,6 +55,11 @@ namespace
 		return parsedValue;
 	}
 
+	/// <summary>
+	/// 文字列を単精度浮動小数点値へ変換する。
+	/// </summary>
+	/// <param name="value">変換対象の文字列。</param>
+	/// <returns>変換に成功した値。失敗時は nullopt。</returns>
 	std::optional<float> ParseFloat(std::string_view value)
 	{
 		std::istringstream stream{ std::string(value) };
@@ -52,6 +72,11 @@ namespace
 		return parsedValue;
 	}
 
+	/// <summary>
+	/// `x,y,z` 形式の文字列を Vector3 へ変換する。
+	/// </summary>
+	/// <param name="value">変換対象の文字列。</param>
+	/// <returns>変換に成功した Vector3。失敗時は nullopt。</returns>
 	std::optional<Xelqoria::Game::Vector3> ParseVector3(std::string_view value)
 	{
 		Xelqoria::Game::Vector3 vector{};
@@ -84,6 +109,13 @@ namespace
 		return vector;
 	}
 
+	/// <summary>
+	/// シーン読み込み失敗時の共通エラー結果を構築する。
+	/// </summary>
+	/// <param name="lineNumber">エラーが発生した行番号。</param>
+	/// <param name="fieldName">問題のあったフィールド名。</param>
+	/// <param name="message">ユーザー向けエラーメッセージ。</param>
+	/// <returns>エラー情報を含む SceneLoadResult。</returns>
 	Xelqoria::Game::SceneLoadResult MakeError(
 		std::size_t lineNumber,
 		std::string_view fieldName,

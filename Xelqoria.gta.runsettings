@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <GoogleTestAdapterSettings>
+    <SolutionSettings>
+      <Settings>
+        <TestDiscoveryRegex>.*[\\/]artifacts[\\/](x64|Win32)[\\/](Debug|Release)[\\/]Xelqoria\.Tests\..*\.exe$</TestDiscoveryRegex>
+        <DebugMode>true</DebugMode>
+      </Settings>
+    </SolutionSettings>
+  </GoogleTestAdapterSettings>
+</RunSettings>

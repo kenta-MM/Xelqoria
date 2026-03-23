@@ -8,6 +8,11 @@
 
 namespace
 {
+	/// <summary>
+	/// 行解析前に前後の空白文字を除去する。
+	/// </summary>
+	/// <param name="value">整形対象の文字列ビュー。</param>
+	/// <returns>前後の空白を除いた文字列ビュー。</returns>
 	std::string_view Trim(std::string_view value)
 	{
 		const auto first = value.find_first_not_of(" \t\r");
@@ -19,6 +24,14 @@ namespace
 		return value.substr(first, last - first + 1);
 	}
 
+	/// <summary>
+	/// SpriteAsset 読み込み時の共通エラー結果を構築する。
+	/// </summary>
+	/// <param name="code">エラー種別。</param>
+	/// <param name="lineNumber">エラーが発生した行番号。</param>
+	/// <param name="fieldName">問題のあったフィールド名。</param>
+	/// <param name="message">ユーザー向けエラーメッセージ。</param>
+	/// <returns>エラー情報を含む SpriteAssetLoadResult。</returns>
 	Xelqoria::Game::Assets::SpriteAssetLoadResult MakeError(
 		Xelqoria::Game::Assets::SpriteAssetLoadErrorCode code,
 		std::size_t lineNumber,

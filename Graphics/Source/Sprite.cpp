@@ -53,4 +53,14 @@ namespace Xelqoria::Graphics
 	{
 		return m_scale;
 	}
+
+	void Sprite::SetRotationDegrees(float rotationDegrees)
+	{
+		m_rotationDegrees = rotationDegrees;
+	}
+
+	float Sprite::GetRotationDegrees() const
+	{
+		return m_rotationDegrees;
+	}
 }

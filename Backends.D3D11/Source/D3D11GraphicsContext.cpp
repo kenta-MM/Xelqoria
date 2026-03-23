@@ -14,6 +14,15 @@
 #include <wrl/client.h>
 #include <Windows.h>
 #include <cstdint>
+#include <dxgi.h>
+#include <dxgi1_2.h>
+#include <dxgiformat.h>
+#include <d3d11.h>
+#include <d3dcommon.h>
+#include <cstdlib>
+#include <string>
+#include <IGraphicsContext.h>
+#include <ITexture.h>
 
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "windowscodecs.lib")
@@ -28,6 +37,14 @@ namespace Xelqoria::Backends::D3D11
             float uv[2];
         };
 
+        /// <summary>
+        /// WIC を使って画像ファイルを RGBA8 ピクセル配列として読み込む。
+        /// </summary>
+        /// <param name="filePath">読み込む画像ファイルパス。</param>
+        /// <param name="outPixels">読み込み結果のピクセル配列。</param>
+        /// <param name="outWidth">読み込んだ画像の幅。</param>
+        /// <param name="outHeight">読み込んだ画像の高さ。</param>
+        /// <returns>読み込みに成功した場合は true。</returns>
         bool LoadRgbaPixelsFromFileWIC(const std::wstring& filePath, std::vector<std::uint8_t>& outPixels, std::uint32_t& outWidth, std::uint32_t& outHeight)
         {
             outPixels.clear();
@@ -132,6 +149,15 @@ namespace Xelqoria::Backends::D3D11
             outHeight = static_cast<std::uint32_t>(height);
             return true;
         }
+
+        /// <summary>
+        /// インライン HLSL ソースコードを指定ターゲット向けにコンパイルする。
+        /// </summary>
+        /// <param name="source">コンパイルする HLSL ソースコード。</param>
+        /// <param name="entryPoint">エントリーポイント関数名。</param>
+        /// <param name="target">シェーダーモデル文字列。</param>
+        /// <param name="outBlob">生成したシェーダーバイトコード。</param>
+        /// <returns>コンパイルに成功した場合は true。</returns>
         bool CompileShader(
             const char* source,
             const char* entryPoint,
@@ -345,12 +371,16 @@ namespace Xelqoria::Backends::D3D11
 
         m_deviceContext->VSSetShader(m_spriteVertexShader.Get(), nullptr, 0);
         m_deviceContext->PSSetShader(m_spritePixelShader.Get(), nullptr, 0);
-        const float quadTransformData[4] =
+        const float quadTransformData[8] =
         {
             m_quadTransform.scaleX,
             m_quadTransform.scaleY,
+            m_quadTransform.rotationCos,
+            m_quadTransform.rotationSin,
             m_quadTransform.translateX,
-            m_quadTransform.translateY
+            m_quadTransform.translateY,
+            0.0f,
+            0.0f
         };
         m_deviceContext->UpdateSubresource(m_spriteTransformBuffer.Get(), 0, nullptr, quadTransformData, 0, 0);
         ID3D11Buffer* transformBuffer = m_spriteTransformBuffer.Get();
@@ -400,18 +430,6 @@ namespace Xelqoria::Backends::D3D11
 
     bool D3D11GraphicsContext::CreateDeviceAndSwapChain(HWND hWnd, std::uint32_t width, std::uint32_t height)
     {
-        DXGI_SWAP_CHAIN_DESC swapChainDesc{};
-        swapChainDesc.BufferCount = 1;
-        swapChainDesc.BufferDesc.Width = width;
-        swapChainDesc.BufferDesc.Height = height;
-        swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.OutputWindow = hWnd;
-        swapChainDesc.SampleDesc.Count = 1;
-        swapChainDesc.SampleDesc.Quality = 0;
-        swapChainDesc.Windowed = TRUE;
-        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-
         UINT createDeviceFlags = 0;
 
 #if defined(_DEBUG)
@@ -426,7 +444,7 @@ namespace Xelqoria::Backends::D3D11
 
         D3D_FEATURE_LEVEL createdFeatureLevel{};
 
-        const HRESULT hr = D3D11CreateDeviceAndSwapChain(
+        const HRESULT deviceHr = D3D11CreateDevice(
             nullptr,
             D3D_DRIVER_TYPE_HARDWARE,
             nullptr,
@@ -434,13 +452,50 @@ namespace Xelqoria::Backends::D3D11
             featureLevels,
             static_cast<UINT>(_countof(featureLevels)),
             D3D11_SDK_VERSION,
-            &swapChainDesc,
-            m_swapChain.GetAddressOf(),
             m_device.GetAddressOf(),
             &createdFeatureLevel,
             m_deviceContext.GetAddressOf());
 
-        return SUCCEEDED(hr);
+        if (FAILED(deviceHr))
+        {
+            return false;
+        }
+
+        Microsoft::WRL::ComPtr<IDXGIFactory2> factory;
+        const HRESULT factoryHr = CreateDXGIFactory1(IID_PPV_ARGS(factory.GetAddressOf()));
+        if (FAILED(factoryHr))
+        {
+            return false;
+        }
+
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
+        swapChainDesc.Width = width;
+        swapChainDesc.Height = height;
+        swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapChainDesc.SampleDesc.Count = 1;
+        swapChainDesc.SampleDesc.Quality = 0;
+        swapChainDesc.BufferCount = 2;
+        swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+
+        Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
+        const HRESULT swapChainHr = factory->CreateSwapChainForHwnd(
+            m_device.Get(),
+            hWnd,
+            &swapChainDesc,
+            nullptr,
+            nullptr,
+            swapChain.GetAddressOf());
+        if (FAILED(swapChainHr))
+        {
+            return false;
+        }
+
+        factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+
+        return SUCCEEDED(swapChain.As(&m_swapChain));
     }
 
     bool D3D11GraphicsContext::CreateRenderTarget()
@@ -490,7 +545,9 @@ namespace Xelqoria::Backends::D3D11
 cbuffer SpriteTransformBuffer : register(b0)
 {
     float2 gScale;
+    float2 gRotation;
     float2 gTranslate;
+    float2 gPadding;
 };
 
 struct VSInput
@@ -508,9 +565,15 @@ struct VSOutput
 VSOutput MainVS(VSInput input)
 {
     VSOutput output;
+    float2 scaledPosition = float2(
+        input.position.x * gScale.x,
+        input.position.y * gScale.y);
+    float2 rotatedPosition = float2(
+        scaledPosition.x * gRotation.x - scaledPosition.y * gRotation.y,
+        scaledPosition.x * gRotation.y + scaledPosition.y * gRotation.x);
     output.position = float4(
-        input.position.x * gScale.x + gTranslate.x,
-        input.position.y * gScale.y + gTranslate.y,
+        rotatedPosition.x + gTranslate.x,
+        rotatedPosition.y + gTranslate.y,
         input.position.z,
         1.0f);
     output.uv = input.uv;
@@ -587,7 +650,7 @@ float4 MainPS(PSInput input) : SV_TARGET
         }
 
         D3D11_BUFFER_DESC constantBufferDesc{};
-        constantBufferDesc.ByteWidth = sizeof(float) * 4u;
+        constantBufferDesc.ByteWidth = sizeof(float) * 8u;
         constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 
@@ -653,9 +716,6 @@ float4 MainPS(PSInput input) : SV_TARGET
         m_quadTransform = {};
     }
 }
-
-
-
 
 
 

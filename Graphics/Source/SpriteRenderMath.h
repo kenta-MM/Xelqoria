@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 
 #include "Sprite.h"
@@ -31,6 +32,16 @@ namespace Xelqoria::Graphics
 		/// Y 軸方向の移動量を表す。
 		/// </summary>
 		float translateY = 0.0f;
+
+		/// <summary>
+		/// 回転角度の cos 値を表す。
+		/// </summary>
+		float rotationCos = 1.0f;
+
+		/// <summary>
+		/// 回転角度の sin 値を表す。
+		/// </summary>
+		float rotationSin = 0.0f;
 	};
 
 	/// <summary>
@@ -59,6 +70,9 @@ namespace Xelqoria::Graphics
 		transform.scaleY = (2.0f * static_cast<float>(texture->GetHeight()) * scale.y) / static_cast<float>(viewportHeight);
 		transform.translateX = (2.0f * position.x) / static_cast<float>(viewportWidth);
 		transform.translateY = (-2.0f * position.y) / static_cast<float>(viewportHeight);
+		const float rotationRadians = sprite.GetRotationDegrees() * (3.14159265358979323846f / 180.0f);
+		transform.rotationCos = std::cos(rotationRadians);
+		transform.rotationSin = std::sin(rotationRadians);
 		return transform;
 	}
 }

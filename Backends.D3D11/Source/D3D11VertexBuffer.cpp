@@ -1,5 +1,6 @@
 #include "D3D11VertexBuffer.h"
 #include <d3d11.h>
+#include <Windows.h>
 
 namespace Xelqoria::Backends::D3D11
 {
