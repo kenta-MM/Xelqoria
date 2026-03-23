@@ -174,11 +174,11 @@ namespace Xelqoria::Editor
                 const auto scale = sprite.GetScale();
 
                 sprite.SetPosition(
-                    (position.x - m_sceneViewCamera.centerX) * m_sceneViewCamera.zoom,
-                    (position.y - m_sceneViewCamera.centerY) * m_sceneViewCamera.zoom);
+                    m_sceneViewCamera.TransformWorldToViewX(position.x),
+                    m_sceneViewCamera.TransformWorldToViewY(position.y));
                 sprite.SetScale(
-                    scale.x * m_sceneViewCamera.zoom,
-                    scale.y * m_sceneViewCamera.zoom);
+                    m_sceneViewCamera.TransformWorldScale(scale.x),
+                    m_sceneViewCamera.TransformWorldScale(scale.y));
                 m_spriteRenderer->Draw(sprite);
             }
             m_spriteRenderer->End();
@@ -424,6 +424,7 @@ namespace Xelqoria::Editor
         {
             m_sceneViewWidth = newWidth;
             m_sceneViewHeight = newHeight;
+            m_sceneViewCamera.SetViewport(m_sceneViewWidth, m_sceneViewHeight);
 
             wchar_t sizeText[128]{};
             std::swprintf(
@@ -821,12 +822,12 @@ namespace Xelqoria::Editor
             POINT clientPoint = screenPoint;
             ScreenToClient(m_sceneViewHost, &clientPoint);
 
-            m_lastSceneClickX =
-                (static_cast<float>(clientPoint.x) - static_cast<float>(m_sceneViewWidth) * 0.5f) / m_sceneViewCamera.zoom
-                + m_sceneViewCamera.centerX;
-            m_lastSceneClickY =
-                -(static_cast<float>(clientPoint.y) - static_cast<float>(m_sceneViewHeight) * 0.5f) / m_sceneViewCamera.zoom
-                + m_sceneViewCamera.centerY;
+            const auto worldPoint = m_sceneViewCamera.TransformScreenToWorld(EditorScreenPoint{
+                static_cast<float>(clientPoint.x),
+                static_cast<float>(clientPoint.y)
+            });
+            m_lastSceneClickX = worldPoint.x;
+            m_lastSceneClickY = worldPoint.y;
             m_hasSceneClick = true;
         }
 
@@ -856,7 +857,7 @@ namespace Xelqoria::Editor
         SetWindowTextW(m_sceneViewSizeLabel, statusText);
         SetWindowTextW(
             m_sceneViewPlanLabel,
-            L"Runtime 描画は child HWND に埋め込み済みです。Camera center=(0,0), zoom=1.0");
+            L"Runtime 描画は child HWND に埋め込み済みです。2D EditorCamera で pan/zoom 状態を管理しています。");
     }
 
     HWND Application::CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle) const
