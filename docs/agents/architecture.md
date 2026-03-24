@@ -151,6 +151,60 @@ Graphics API 実装層。
 - Backends
 - Direct3D API
 
+## 保存データと実行時オブジェクトの分離
+
+Scene 保存や Asset 永続化では、保存対象と実行時だけ存在するオブジェクトを分離して扱う。
+
+判断基準:
+
+- 保存対象は識別子、値オブジェクト、設定値、シリアライズ可能な構造に限定する
+- 実行時オブジェクトは GPU ハンドル、描画キャッシュ、実行中のみ有効な参照を保持してよい
+- 保存対象から Graphics / RHI の実体を直接参照しない
+- ロード時は保存データから Runtime オブジェクトを再構築する
+
+保存対象としてよい例:
+
+- EntityId
+- Transform
+- Core::AssetId
+- SpriteComponent
+- SpriteRenderSettings
+
+保存対象にしてはいけない例:
+
+- Graphics::Sprite
+- Graphics::Texture2D
+- RHI::ITexture
+- 実行中の Window / IGraphicsContext
+
+### SpriteComponent と Graphics::Sprite の役割差
+
+SpriteComponent は Game 層に置く保存向きデータであり、Scene 保存対象として扱う。
+
+保持してよい情報:
+
+- Sprite アセット識別子
+- 可視状態
+- sortOrder
+- opacity
+- 欠損時の補助情報
+
+Graphics::Sprite は描画時に参照する Runtime オブジェクトであり、保存データへ直接含めない。
+
+保持してよい情報:
+
+- Texture2D 参照
+- 描画位置
+- 拡大率
+- 回転角度
+
+設計原則:
+
+- SceneSerializer は SpriteComponent などの保存向きデータだけを読む
+- Asset 解決後に Graphics::Sprite や Texture2D を Runtime 側で組み立てる
+- 保存フォーマットは Runtime キャッシュの有無に依存させない
+- 保存データは Editor と Runtime のどちらからも同じ意味で扱える構造にする
+
 ## 主要設計要素
 
 ### Sprite
