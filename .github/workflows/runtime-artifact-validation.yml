@@ -1,0 +1,28 @@
+name: Runtime Artifact Validation
+
+on:
+  pull_request:
+    branches:
+      - issue-94
+      - develop
+  workflow_dispatch:
+
+jobs:
+  validate-runtime-artifact:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Validate runtime artifact isolation
+        shell: pwsh
+        run: |
+          ./tools/RuntimeArtifactValidation/Check-RuntimeArtifactIsolation.ps1 `
+            -Configuration Debug `
+            -Platform x64 `
+            -PlatformToolset v143
