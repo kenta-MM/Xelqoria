@@ -151,6 +151,56 @@ Graphics API 実装層。
 - Backends
 - Direct3D API
 
+## Runtime と Editor 成果物境界
+
+Xelqoria では Runtime 成果物と Editor 成果物を別ターゲットとして扱い、依存の混入を防ぐ。
+
+成果物の基本整理:
+
+- App は Runtime 実行ファイルとして扱う
+- Editor は制作支援用の実行ファイルとして扱う
+- Core / Game / Graphics / RHI / Backends は両ターゲットから共有してよい
+- Editor 専用 UI、編集状態、制作補助コードは Runtime 成果物へ含めない
+
+Runtime 成果物に含めてよいもの:
+
+- ゲーム実行に必要な Core / Game / Graphics / RHI / Backends の依存
+- 実行時ロード対象の共通アセット
+- Runtime 起動に必要な設定値と起動エントリ
+
+Runtime 成果物に含めてはいけないもの:
+
+- Editor パネル、Inspector、Hierarchy などの UI 実装
+- Editor 専用の選択状態、ドラッグ状態、編集セッション状態
+- Editor でのみ意味を持つデバッグ補助コード
+- Editor 専用の命名やディレクトリ前提に依存したリンク
+
+Editor 成果物で追加してよいもの:
+
+- EditorCamera2D など編集作業用の表示補助
+- SceneView、Assets、Inspector のような UI シェル
+- Runtime データを読み書きするための制作補助ロジック
+
+成果物境界の判断基準:
+
+- Runtime 単体で起動・描画・アセット解決が完結するか
+- Runtime バイナリが Editor 名前空間や Editor ソースを参照していないか
+- Editor が Runtime データを利用していても、逆方向参照になっていないか
+- 共有ライブラリへ置くコードが「実行時にも必要か」で説明できるか
+
+命名と出力物の方針:
+
+- Runtime のエントリは App 配下に置き、実行用成果物として命名する
+- Editor のエントリは Editor 配下に置き、制作ツール成果物として命名する
+- 共通アセットは Runtime / Editor で共有できる形式に保つ
+- Editor 専用メタデータを追加する場合は、Runtime 配送物と分離した配置を前提にする
+
+Q04 向け確認観点:
+
+- Runtime のリンク対象に Editor プロジェクトが含まれていないこと
+- Runtime 出力物に Editor 専用 DLL / ライブラリ / リソースが混入していないこと
+- Editor は Runtime 共有層の上に成立し、Runtime は Editor なしで成立すること
+
 ## 保存データと実行時オブジェクトの分離
 
 Scene 保存や Asset 永続化では、保存対象と実行時だけ存在するオブジェクトを分離して扱う。
