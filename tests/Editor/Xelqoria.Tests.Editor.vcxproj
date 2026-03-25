@@ -21,7 +21,9 @@
   <ItemGroup>
     <ClCompile Include="Source\EditorCamera2DTests.cpp" />
     <ClCompile Include="..\..\Editor\Source\SceneCommandHistory.cpp" />
+    <ClCompile Include="..\..\Editor\Source\SceneEditingOperations.cpp" />
     <ClCompile Include="Source\SceneCommandHistoryTests.cpp" />
+    <ClCompile Include="Source\SceneEditingOperationsTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\third_party\googletest\Xelqoria.GoogleTest.vcxproj">

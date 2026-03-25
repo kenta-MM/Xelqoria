@@ -11,6 +11,7 @@
 #include "RenderBackendBootstrap.h"
 #include "SceneSerializer.h"
 #include "SceneCommandHistory.h"
+#include "SceneEditingOperations.h"
 #include "Texture2D.h"
 #include <Windows.h>
 #include <cstdint>
@@ -1116,6 +1117,8 @@ namespace Xelqoria::Editor
         const bool isControlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
         const bool isUndoDown = isControlDown && (GetAsyncKeyState('Z') & 0x8000) != 0;
         const bool isRedoDown = isControlDown && (GetAsyncKeyState('Y') & 0x8000) != 0;
+        const bool isDuplicateDown = isControlDown && (GetAsyncKeyState('D') & 0x8000) != 0;
+        const bool isDeleteDown = (GetAsyncKeyState(VK_DELETE) & 0x8000) != 0;
 
         if (isUndoDown && !m_wasUndoShortcutDown)
         {
@@ -1135,8 +1138,40 @@ namespace Xelqoria::Editor
             }
         }
 
+        if (m_scene && isDuplicateDown && !m_wasDuplicateShortcutDown)
+        {
+            const SceneEditResult duplicateResult =
+                SceneEditingOperations::DuplicateSelectedEntity(*m_scene, m_selectedEntityId);
+            if (duplicateResult.changed)
+            {
+                m_selectedEntityId = duplicateResult.selectedEntityId;
+                m_lastInspectorEntityId.reset();
+                RefreshHierarchyPanel();
+                RefreshInspectorPanel();
+                m_sceneCommandHistory.Push(CaptureSceneHistoryEntry());
+                SetWindowTextW(m_sceneViewPlanLabel, L"Ctrl+D で選択 Entity を複製しました。");
+            }
+        }
+
+        if (m_scene && isDeleteDown && !m_wasDeleteShortcutDown)
+        {
+            const SceneEditResult deleteResult =
+                SceneEditingOperations::DeleteSelectedEntity(*m_scene, m_selectedEntityId);
+            if (deleteResult.changed)
+            {
+                m_selectedEntityId = deleteResult.selectedEntityId;
+                m_lastInspectorEntityId.reset();
+                RefreshHierarchyPanel();
+                RefreshInspectorPanel();
+                m_sceneCommandHistory.Push(CaptureSceneHistoryEntry());
+                SetWindowTextW(m_sceneViewPlanLabel, L"Delete で選択 Entity を削除しました。");
+            }
+        }
+
         m_wasUndoShortcutDown = isUndoDown;
         m_wasRedoShortcutDown = isRedoDown;
+        m_wasDeleteShortcutDown = isDeleteDown;
+        m_wasDuplicateShortcutDown = isDuplicateDown;
     }
 
     SceneCommandHistoryEntry Application::CaptureSceneHistoryEntry() const
