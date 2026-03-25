@@ -13,6 +13,7 @@
 #include "Assets/SpriteAssetRegistry.h"
 #include "EditorCamera2D.h"
 #include "IGraphicsContext.h"
+#include "SceneCommandHistory.h"
 #include "TextureAssetRegistry.h"
 #include "Scene.h"
 #include "SpriteRenderer.h"
@@ -155,6 +156,24 @@ namespace Xelqoria::Editor
         /// SceneView で受理済みのドロップ入力を Entity 生成へ反映する。
         /// </summary>
         void ProcessPendingSceneDrop();
+
+        /// <summary>
+        /// Editor の Undo/Redo ショートカットを処理する。
+        /// </summary>
+        void UpdateCommandShortcuts();
+
+        /// <summary>
+        /// 現在の Scene と選択状態から履歴スナップショットを作成する。
+        /// </summary>
+        /// <returns>履歴へ保存できる Scene スナップショット。</returns>
+        SceneCommandHistoryEntry CaptureSceneHistoryEntry() const;
+
+        /// <summary>
+        /// 履歴スナップショットを Scene と選択状態へ復元する。
+        /// </summary>
+        /// <param name="entry">復元する履歴スナップショット。</param>
+        /// <returns>復元に成功した場合は true。</returns>
+        bool RestoreSceneHistoryEntry(const SceneCommandHistoryEntry& entry);
 
         /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
@@ -407,5 +426,20 @@ namespace Xelqoria::Editor
         /// SceneView で未処理のドロップがあるかを表す。
         /// </summary>
         bool m_hasPendingSceneDrop = false;
+
+        /// <summary>
+        /// Scene 編集コマンドの Undo/Redo 履歴を保持する。
+        /// </summary>
+        SceneCommandHistory m_sceneCommandHistory{};
+
+        /// <summary>
+        /// 前フレームで Ctrl+Z が押下されていたかを表す。
+        /// </summary>
+        bool m_wasUndoShortcutDown = false;
+
+        /// <summary>
+        /// 前フレームで Ctrl+Y が押下されていたかを表す。
+        /// </summary>
+        bool m_wasRedoShortcutDown = false;
     };
 }

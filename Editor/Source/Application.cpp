@@ -10,6 +10,7 @@
 #include "GraphicsAPI.h"
 #include "RenderBackendBootstrap.h"
 #include "SceneSerializer.h"
+#include "SceneCommandHistory.h"
 #include "Texture2D.h"
 #include <Windows.h>
 #include <cstdint>
@@ -148,6 +149,7 @@ namespace Xelqoria::Editor
         RefreshAssetsPanel();
         RefreshHierarchyPanel();
         RefreshInspectorPanel();
+        m_sceneCommandHistory.Reset(CaptureSceneHistoryEntry());
         return true;
     }
 
@@ -170,6 +172,7 @@ namespace Xelqoria::Editor
         SyncInspectorEdits();
         UpdateSceneViewInteraction();
         ProcessPendingSceneDrop();
+        UpdateCommandShortcuts();
     }
 
     void Application::Render()
@@ -1082,6 +1085,7 @@ namespace Xelqoria::Editor
         m_lastInspectorEntityId.reset();
         RefreshHierarchyPanel();
         RefreshInspectorPanel();
+        m_sceneCommandHistory.Push(CaptureSceneHistoryEntry());
 
         wchar_t statusText[160]{};
         std::swprintf(
@@ -1105,6 +1109,70 @@ namespace Xelqoria::Editor
             + std::to_string(dropWorldY)
             + ") and reloaded the scene snapshot.\n";
         ::OutputDebugStringA(debugLine.c_str());
+    }
+
+    void Application::UpdateCommandShortcuts()
+    {
+        const bool isControlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+        const bool isUndoDown = isControlDown && (GetAsyncKeyState('Z') & 0x8000) != 0;
+        const bool isRedoDown = isControlDown && (GetAsyncKeyState('Y') & 0x8000) != 0;
+
+        if (isUndoDown && !m_wasUndoShortcutDown)
+        {
+            const auto entry = m_sceneCommandHistory.Undo();
+            if (entry.has_value() && RestoreSceneHistoryEntry(*entry))
+            {
+                SetWindowTextW(m_sceneViewPlanLabel, L"Ctrl+Z で直前の Scene スナップショットへ戻しました。");
+            }
+        }
+
+        if (isRedoDown && !m_wasRedoShortcutDown)
+        {
+            const auto entry = m_sceneCommandHistory.Redo();
+            if (entry.has_value() && RestoreSceneHistoryEntry(*entry))
+            {
+                SetWindowTextW(m_sceneViewPlanLabel, L"Ctrl+Y で Scene スナップショットを再適用しました。");
+            }
+        }
+
+        m_wasUndoShortcutDown = isUndoDown;
+        m_wasRedoShortcutDown = isRedoDown;
+    }
+
+    SceneCommandHistoryEntry Application::CaptureSceneHistoryEntry() const
+    {
+        if (!m_scene)
+        {
+            return SceneCommandHistoryEntry{};
+        }
+
+        return SceneCommandHistoryEntry{
+            Game::SceneSerializer::SaveToText(*m_scene),
+            m_selectedEntityId
+        };
+    }
+
+    bool Application::RestoreSceneHistoryEntry(const SceneCommandHistoryEntry& entry)
+    {
+        const auto loadResult = Game::SceneSerializer::LoadFromText(entry.serializedScene);
+        if (!loadResult.IsSuccess() || !loadResult.scene.has_value())
+        {
+            ::OutputDebugStringA("Editor::Application failed to restore Scene history entry.\n");
+            SetWindowTextW(m_sceneViewPlanLabel, L"履歴スナップショットの再読込に失敗しました。");
+            return false;
+        }
+
+        m_scene = std::make_unique<Game::Scene>(*loadResult.scene);
+        m_selectedEntityId = entry.selectedEntityId;
+        if (m_selectedEntityId.has_value() && !m_scene->FindEntity(*m_selectedEntityId).has_value())
+        {
+            m_selectedEntityId.reset();
+        }
+
+        m_lastInspectorEntityId.reset();
+        RefreshHierarchyPanel();
+        RefreshInspectorPanel();
+        return true;
     }
 
     HWND Application::CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle) const
