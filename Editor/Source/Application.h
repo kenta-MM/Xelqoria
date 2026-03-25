@@ -14,6 +14,7 @@
 #include "EditorCamera2D.h"
 #include "IGraphicsContext.h"
 #include "SceneCommandHistory.h"
+#include "SceneEditingOperations.h"
 #include "TextureAssetRegistry.h"
 #include "Scene.h"
 #include "SpriteRenderer.h"
@@ -441,5 +442,15 @@ namespace Xelqoria::Editor
         /// 前フレームで Ctrl+Y が押下されていたかを表す。
         /// </summary>
         bool m_wasRedoShortcutDown = false;
+
+        /// <summary>
+        /// 前フレームで Delete が押下されていたかを表す。
+        /// </summary>
+        bool m_wasDeleteShortcutDown = false;
+
+        /// <summary>
+        /// 前フレームで Ctrl+D が押下されていたかを表す。
+        /// </summary>
+        bool m_wasDuplicateShortcutDown = false;
     };
 }

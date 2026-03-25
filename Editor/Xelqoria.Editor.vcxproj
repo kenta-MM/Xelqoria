@@ -23,12 +23,14 @@
     <ClCompile Include="Source\Entry.cpp" />
     <ClCompile Include="Source\RenderBackendBootstrap.cpp" />
     <ClCompile Include="Source\SceneCommandHistory.cpp" />
+    <ClCompile Include="Source\SceneEditingOperations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.h" />
     <ClInclude Include="Source\EditorCamera2D.h" />
     <ClInclude Include="Source\RenderBackendBootstrap.h" />
     <ClInclude Include="Source\SceneCommandHistory.h" />
+    <ClInclude Include="Source\SceneEditingOperations.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">
