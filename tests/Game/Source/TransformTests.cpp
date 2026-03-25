@@ -418,3 +418,88 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		EXPECT_FALSE(spriteEntity.HasSpriteComponent());
 		EXPECT_FALSE(spriteEntity.GetSpriteComponent().has_value());
 }
+
+TEST(TransformTests, SceneSerializerRoundTripPreservesMultipleSpritePlacementsAndMissingRefs)
+{
+	Xelqoria::Game::Scene sourceScene;
+
+	auto& playerEntity = sourceScene.CreateEntity();
+	playerEntity.GetTransform().SetPosition(24.0f, -12.0f, 0.0f);
+	playerEntity.GetTransform().scale = { 1.5f, 1.5f, 1.0f };
+	playerEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+		"sprites/player",
+		{
+			true,
+			1,
+			1.0f
+		}
+	});
+
+	auto& backgroundEntity = sourceScene.CreateEntity();
+	backgroundEntity.GetTransform().SetPosition(-320.0f, 180.0f, 0.0f);
+	backgroundEntity.GetTransform().scale = { 4.0f, 4.0f, 1.0f };
+	backgroundEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+		"sprites/background",
+		{
+			true,
+			-5,
+			0.9f
+		}
+	});
+
+	auto& missingEntity = sourceScene.CreateEntity();
+	missingEntity.GetTransform().SetPosition(512.0f, 96.0f, 0.0f);
+	missingEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+		"sprites/missing",
+		{
+			true,
+			3,
+			0.75f
+		}
+	});
+
+	const std::string serializedScene = Xelqoria::Game::SceneSerializer::SaveToText(sourceScene);
+	const auto loadResult = Xelqoria::Game::SceneSerializer::LoadFromText(serializedScene);
+	ASSERT_TRUE(loadResult.IsSuccess());
+	ASSERT_TRUE(loadResult.scene.has_value());
+
+	Xelqoria::Game::Scene loadedScene = *loadResult.scene;
+	EXPECT_EQ(static_cast<std::size_t>(3), loadedScene.GetEntityCount());
+	EXPECT_EQ(serializedScene, Xelqoria::Game::SceneSerializer::SaveToText(loadedScene));
+
+	auto playerTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+	playerTexture->SetRHITexture(std::make_shared<FakeTexture>(64, 64));
+	auto backgroundTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+	backgroundTexture->SetRHITexture(std::make_shared<FakeTexture>(512, 256));
+
+	Xelqoria::Game::Assets::SpriteAssetRegistry spriteAssetRegistry;
+	spriteAssetRegistry.RegisterSpriteAsset(
+		"sprites/player",
+		Xelqoria::Game::Assets::SpriteAsset{ "textures/player" });
+	spriteAssetRegistry.RegisterSpriteAsset(
+		"sprites/background",
+		Xelqoria::Game::Assets::SpriteAsset{ "textures/background" });
+
+	Xelqoria::Graphics::TextureAssetRegistry textureAssetRegistry;
+	textureAssetRegistry.RegisterTexture("textures/player", playerTexture);
+	textureAssetRegistry.RegisterTexture("textures/background", backgroundTexture);
+
+	loadedScene.ValidateSpriteReferences(spriteAssetRegistry);
+
+	const auto loadedMissingEntity = loadedScene.FindEntity(missingEntity.GetId());
+	ASSERT_TRUE(loadedMissingEntity.has_value());
+	const auto loadedMissingSpriteComponent = loadedMissingEntity->get().GetSpriteComponent();
+	ASSERT_TRUE(loadedMissingSpriteComponent.has_value());
+	EXPECT_EQ(Xelqoria::Game::SpriteAssetReferenceState::Missing, loadedMissingSpriteComponent->get().spriteAssetState);
+	EXPECT_EQ(Xelqoria::Core::AssetId("sprites/missing"), loadedMissingSpriteComponent->get().missingSpriteAssetRef);
+
+	const auto resolvedSprites = loadedScene.ResolveSprites(spriteAssetRegistry, textureAssetRegistry);
+	ASSERT_EQ(static_cast<std::size_t>(2), resolvedSprites.size());
+
+	EXPECT_EQ(Xelqoria::Core::AssetId("textures/player"), resolvedSprites[0].GetTextureAssetId());
+	EXPECT_EQ(Xelqoria::Core::AssetId("textures/background"), resolvedSprites[1].GetTextureAssetId());
+	EXPECT_TRUE(IsEqual(24.0f, resolvedSprites[0].GetPosition().x));
+	EXPECT_TRUE(IsEqual(-12.0f, resolvedSprites[0].GetPosition().y));
+	EXPECT_TRUE(IsEqual(-320.0f, resolvedSprites[1].GetPosition().x));
+	EXPECT_TRUE(IsEqual(180.0f, resolvedSprites[1].GetPosition().y));
+}
