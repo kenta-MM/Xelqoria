@@ -3,7 +3,10 @@
 #include <algorithm>
 #include <chrono>
 #include <cwchar>
+#include <filesystem>
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "Assets/SpriteAsset.h"
@@ -493,8 +496,6 @@ namespace Xelqoria::Editor
 
     bool Application::InitializeDocument()
     {
-        m_scene = std::make_unique<Game::Scene>();
-
         auto spriteTexture = std::make_shared<Graphics::Texture2D>();
         if (!spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", *m_graphics))
         {
@@ -518,6 +519,13 @@ namespace Xelqoria::Editor
             m_registeredSpriteAssetIds[2],
             Game::Assets::SpriteAsset{ "textures/missing" });
 
+        if (LoadSceneDocument())
+        {
+            return true;
+        }
+
+        m_scene = std::make_unique<Game::Scene>();
+
         auto& firstEntity = m_scene->CreateEntity();
         firstEntity.GetTransform().SetPosition(-160.0f, 0.0f, 0.0f);
         firstEntity.SetSpriteComponent(Game::SpriteComponent{
@@ -540,6 +548,11 @@ namespace Xelqoria::Editor
                 1.0f
             }
         });
+
+        if (!SaveSceneDocument())
+        {
+            return false;
+        }
 
         return true;
     }
@@ -1086,6 +1099,13 @@ namespace Xelqoria::Editor
         m_lastInspectorEntityId.reset();
         RefreshHierarchyPanel();
         RefreshInspectorPanel();
+
+        if (!SaveSceneDocument())
+        {
+            SetWindowTextW(m_sceneViewPlanLabel, L"Scene は再読込できましたが、保存ファイルへの書き出しに失敗しました。");
+            return;
+        }
+
         m_sceneCommandHistory.Push(CaptureSceneHistoryEntry());
 
         wchar_t statusText[160]{};
@@ -1148,6 +1168,7 @@ namespace Xelqoria::Editor
                 m_lastInspectorEntityId.reset();
                 RefreshHierarchyPanel();
                 RefreshInspectorPanel();
+                SaveSceneDocument();
                 m_sceneCommandHistory.Push(CaptureSceneHistoryEntry());
                 SetWindowTextW(m_sceneViewPlanLabel, L"Ctrl+D で選択 Entity を複製しました。");
             }
@@ -1163,6 +1184,7 @@ namespace Xelqoria::Editor
                 m_lastInspectorEntityId.reset();
                 RefreshHierarchyPanel();
                 RefreshInspectorPanel();
+                SaveSceneDocument();
                 m_sceneCommandHistory.Push(CaptureSceneHistoryEntry());
                 SetWindowTextW(m_sceneViewPlanLabel, L"Delete で選択 Entity を削除しました。");
             }
@@ -1207,6 +1229,65 @@ namespace Xelqoria::Editor
         m_lastInspectorEntityId.reset();
         RefreshHierarchyPanel();
         RefreshInspectorPanel();
+        return true;
+    }
+
+    std::filesystem::path Application::GetSceneDocumentPath() const
+    {
+        return std::filesystem::path("Saved") / "EditorScene.xelqoria.scene";
+    }
+
+    bool Application::SaveSceneDocument() const
+    {
+        if (!m_scene)
+        {
+            return false;
+        }
+
+        const std::filesystem::path sceneDocumentPath = GetSceneDocumentPath();
+        std::error_code errorCode;
+        std::filesystem::create_directories(sceneDocumentPath.parent_path(), errorCode);
+        if (errorCode)
+        {
+            return false;
+        }
+
+        std::ofstream output(sceneDocumentPath, std::ios::binary | std::ios::trunc);
+        if (!output.is_open())
+        {
+            return false;
+        }
+
+        output << Game::SceneSerializer::SaveToText(*m_scene);
+        return output.good();
+    }
+
+    bool Application::LoadSceneDocument()
+    {
+        const std::filesystem::path sceneDocumentPath = GetSceneDocumentPath();
+        if (!std::filesystem::exists(sceneDocumentPath))
+        {
+            return false;
+        }
+
+        std::ifstream input(sceneDocumentPath, std::ios::binary);
+        if (!input.is_open())
+        {
+            return false;
+        }
+
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+
+        const auto loadResult = Game::SceneSerializer::LoadFromText(buffer.str());
+        if (!loadResult.IsSuccess() || !loadResult.scene.has_value())
+        {
+            return false;
+        }
+
+        m_scene = std::make_unique<Game::Scene>(*loadResult.scene);
+        m_selectedEntityId.reset();
+        m_lastInspectorEntityId.reset();
         return true;
     }
 
