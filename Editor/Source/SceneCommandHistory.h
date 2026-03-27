@@ -1,11 +1,10 @@
 #pragma once
 
-#include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include "Scene.h"
+#include <Entity.h>
 
 namespace Xelqoria::Editor
 {

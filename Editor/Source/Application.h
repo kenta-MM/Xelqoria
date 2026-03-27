@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <filesystem>
 #include <string_view>
 #include <vector>
 
@@ -175,6 +176,24 @@ namespace Xelqoria::Editor
         /// <param name="entry">復元する履歴スナップショット。</param>
         /// <returns>復元に成功した場合は true。</returns>
         bool RestoreSceneHistoryEntry(const SceneCommandHistoryEntry& entry);
+
+        /// <summary>
+        /// Editor が永続保存に使用する Scene ファイルパスを取得する。
+        /// </summary>
+        /// <returns>Scene 保存ファイルのパス。</returns>
+        std::filesystem::path GetSceneDocumentPath() const;
+
+        /// <summary>
+        /// 現在の Scene を永続保存ファイルへ書き出す。
+        /// </summary>
+        /// <returns>保存に成功した場合は true。</returns>
+        bool SaveSceneDocument() const;
+
+        /// <summary>
+        /// 永続保存ファイルから Scene を読み込む。
+        /// </summary>
+        /// <returns>読込に成功した場合は true。</returns>
+        bool LoadSceneDocument();
 
         /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
