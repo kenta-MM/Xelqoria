@@ -1,6 +1,10 @@
 name: Runtime Artifact Validation
 
 on:
+  push:
+    branches:
+      - issue-94
+      - develop
   pull_request:
     branches:
       - issue-94
@@ -10,6 +14,12 @@ on:
 jobs:
   validate-runtime-artifact:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration:
+          - Debug
+          - Release
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,10 +29,10 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Validate runtime artifact isolation
+      - name: Validate runtime artifact isolation (${{ matrix.configuration }})
         shell: pwsh
         run: |
           ./tools/RuntimeArtifactValidation/Check-RuntimeArtifactIsolation.ps1 `
-            -Configuration Debug `
+            -Configuration ${{ matrix.configuration }} `
             -Platform x64 `
             -PlatformToolset v143

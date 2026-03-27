@@ -75,6 +75,21 @@ function Assert-NoEditorDependents {
     }
 }
 
+function Assert-NoEditorSymbols {
+    param(
+        [string]$DumpbinPath,
+        [string]$BinaryPath
+    )
+
+    $dumpbinOutput = & $DumpbinPath /symbols $BinaryPath
+    $dumpbinText = $dumpbinOutput -join [Environment]::NewLine
+    $editorSymbolPattern = "(?i)(xelqoria(\.|\:\:)editor|editor::|\\editor\\|/editor/|xelqoria\.editor\.pdb)"
+
+    if ($dumpbinText -match $editorSymbolPattern) {
+        throw "Runtime artifact '$BinaryPath' contains unexpected Editor symbol references.`n$dumpbinText"
+    }
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $layerCheckerProject = Convert-ToNativePath (Join-Path $repoRoot "tools\LayerDependencyChecker\LayerDependencyChecker.csproj")
 $appProjectPath = Join-Path $repoRoot "App\Xelqoria.App.vcxproj"
@@ -140,5 +155,8 @@ if (-not $appArtifactPath) {
 
 Write-Host "Inspecting runtime dependents..."
 Assert-NoEditorDependents -DumpbinPath $dumpbinPath -BinaryPath (Convert-ToNativePath $appArtifactPath)
+
+Write-Host "Inspecting runtime symbols..."
+Assert-NoEditorSymbols -DumpbinPath $dumpbinPath -BinaryPath (Convert-ToNativePath $appArtifactPath)
 
 Write-Host "Runtime artifact validation passed."
