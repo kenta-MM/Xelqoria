@@ -1,14 +1,11 @@
 name: Runtime Artifact Validation
 
 on:
-  push:
-    branches:
-      - issue-94
-      - develop
   pull_request:
     branches:
       - issue-94
       - develop
+      - main
   workflow_dispatch:
 
 jobs:
@@ -30,7 +27,9 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
+        with:
+           vs-version: '[18.4.2]'
 
       - name: Validate runtime artifact isolation (${{ matrix.configuration }})
         shell: pwsh

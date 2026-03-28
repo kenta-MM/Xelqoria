@@ -26,18 +26,14 @@ function Find-FirstExistingPath {
 
 function Find-VisualStudioInstallationPath {
     $vswherePath = Find-FirstExistingPath @(
-        (Get-Command vswhere -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
-        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe",
-        "${env:ProgramFiles}\Microsoft Visual Studio\Installer\vswhere.exe",
-        "/mnt/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe",
-        "/mnt/c/Program Files/Microsoft Visual Studio/Installer/vswhere.exe"
+        (Get-Command vswhere -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
     )
 
     if (-not $vswherePath) {
-        return $null
+        throw "vswhere.exe was not found."
     }
 
-    $installationPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+    $installationPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild  -property installationPath
     if ($LASTEXITCODE -ne 0) {
         throw "vswhere.exe failed to locate a Visual Studio installation."
     }
@@ -158,15 +154,7 @@ $visualStudioInstallationPath = Find-VisualStudioInstallationPath
 $latestDumpbinPath = Find-LatestMsvcToolPath -VisualStudioInstallationPath $visualStudioInstallationPath -RelativeToolPath "bin\Hostx64\x64\dumpbin.exe"
 
 $msbuildPath = Find-FirstExistingPath @(
-    (Get-Command msbuild -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
-    $(if ($visualStudioInstallationPath) { Join-Path $visualStudioInstallationPath "MSBuild\Current\Bin\amd64\MSBuild.exe" }),
-    $(if ($visualStudioInstallationPath) { Join-Path $visualStudioInstallationPath "MSBuild\Current\Bin\MSBuild.exe" }),
-    "${env:ProgramFiles}\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\amd64\MSBuild.exe",
-    "${env:ProgramFiles}\Microsoft Visual Studio\17\Community\MSBuild\Current\Bin\amd64\MSBuild.exe",
-    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\amd64\MSBuild.exe",
-    "/mnt/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/amd64/MSBuild.exe",
-    "/mnt/c/Program Files/Microsoft Visual Studio/17/Community/MSBuild/Current/Bin/amd64/MSBuild.exe",
-    "/mnt/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/MSBuild/Current/Bin/amd64/MSBuild.exe"
+    (Get-Command msbuild -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
 )
 if (-not $msbuildPath) {
     throw "MSBuild.exe was not found."

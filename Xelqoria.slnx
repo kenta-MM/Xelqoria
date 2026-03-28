@@ -64,6 +64,9 @@
   <Folder Name="/ソリューション項目/tests/Editor/">
     <Project Path="tests/Editor/Xelqoria.Tests.Editor.vcxproj" Id="5b9e9e22-77e0-4b57-9d12-6a6a86a8a6a4" />
   </Folder>
+  <Folder Name="/ソリューション項目/tools/RuntimeArtifactValidation/">
+    <File Path="tools/RuntimeArtifactValidation/Check-RuntimeArtifactIsolation.ps1" />
+  </Folder>
   <Project Path="App/Xelqoria.App.vcxproj" Id="67f2121c-56d6-425e-adca-de9605ab0b9e" />
   <Project Path="Backends.D3D11/Xelqoria.Backends.D3D11.vcxproj" Id="d89979a3-9ede-4b5b-a2b1-2dd1db261114" />
   <Project Path="Backends.D3D12/Xelqoria.Backends.D3D12.vcxproj" Id="14484bbf-f4fb-48aa-9ce4-bd7cbe1b24a4" />
