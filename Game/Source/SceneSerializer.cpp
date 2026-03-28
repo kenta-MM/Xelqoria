@@ -8,6 +8,14 @@
 #include <string_view>
 
 #include "SceneSaveFormat.h"
+#include <cstdint>
+#include <string>
+#include <system_error>
+#include <utility>
+#include <AssetId.h>
+#include "Scene.h"
+#include "SpriteComponent.h"
+#include "Transform.h"
 
 namespace
 {
@@ -180,6 +188,7 @@ namespace Xelqoria::Game
 		{
 			++lineNumber;
 
+			// パスが改行されていることを考慮する
 			const std::size_t lineEnd = source.find('\n', cursor);
 			const std::size_t lineLength = lineEnd == std::string_view::npos
 				? source.size() - cursor

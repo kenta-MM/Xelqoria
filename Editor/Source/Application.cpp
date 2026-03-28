@@ -3,13 +3,18 @@
 #include <algorithm>
 #include <chrono>
 #include <cwchar>
+#include <filesystem>
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "Assets/SpriteAsset.h"
 #include "GraphicsAPI.h"
 #include "RenderBackendBootstrap.h"
 #include "SceneSerializer.h"
+#include "SceneCommandHistory.h"
+#include "SceneEditingOperations.h"
 #include "Texture2D.h"
 #include <Windows.h>
 #include <cstdint>
@@ -21,6 +26,9 @@
 #include <Scene.h>
 #include <SpriteComponent.h>
 #include <SpriteRenderer.h>
+#include <system_error>
+#include "EditorCamera2D.h"
+#include <Entity.h>
 
 namespace Xelqoria::Editor
 {
@@ -148,6 +156,7 @@ namespace Xelqoria::Editor
         RefreshAssetsPanel();
         RefreshHierarchyPanel();
         RefreshInspectorPanel();
+        m_sceneCommandHistory.Reset(CaptureSceneHistoryEntry());
         return true;
     }
 
@@ -170,6 +179,7 @@ namespace Xelqoria::Editor
         SyncInspectorEdits();
         UpdateSceneViewInteraction();
         ProcessPendingSceneDrop();
+        UpdateCommandShortcuts();
     }
 
     void Application::Render()
@@ -489,8 +499,6 @@ namespace Xelqoria::Editor
 
     bool Application::InitializeDocument()
     {
-        m_scene = std::make_unique<Game::Scene>();
-
         auto spriteTexture = std::make_shared<Graphics::Texture2D>();
         if (!spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", *m_graphics))
         {
@@ -514,6 +522,13 @@ namespace Xelqoria::Editor
             m_registeredSpriteAssetIds[2],
             Game::Assets::SpriteAsset{ "textures/missing" });
 
+        if (LoadSceneDocument())
+        {
+            return true;
+        }
+
+        m_scene = std::make_unique<Game::Scene>();
+
         auto& firstEntity = m_scene->CreateEntity();
         firstEntity.GetTransform().SetPosition(-160.0f, 0.0f, 0.0f);
         firstEntity.SetSpriteComponent(Game::SpriteComponent{
@@ -536,6 +551,11 @@ namespace Xelqoria::Editor
                 1.0f
             }
         });
+
+        if (!SaveSceneDocument())
+        {
+            return false;
+        }
 
         return true;
     }
@@ -1083,6 +1103,14 @@ namespace Xelqoria::Editor
         RefreshHierarchyPanel();
         RefreshInspectorPanel();
 
+        if (!SaveSceneDocument())
+        {
+            SetWindowTextW(m_sceneViewPlanLabel, L"Scene は再読込できましたが、保存ファイルへの書き出しに失敗しました。");
+            return;
+        }
+
+        m_sceneCommandHistory.Push(CaptureSceneHistoryEntry());
+
         wchar_t statusText[160]{};
         std::swprintf(
             statusText,
@@ -1105,6 +1133,165 @@ namespace Xelqoria::Editor
             + std::to_string(dropWorldY)
             + ") and reloaded the scene snapshot.\n";
         ::OutputDebugStringA(debugLine.c_str());
+    }
+
+    void Application::UpdateCommandShortcuts()
+    {
+        const bool isControlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+        const bool isUndoDown = isControlDown && (GetAsyncKeyState('Z') & 0x8000) != 0;
+        const bool isRedoDown = isControlDown && (GetAsyncKeyState('Y') & 0x8000) != 0;
+        const bool isDuplicateDown = isControlDown && (GetAsyncKeyState('D') & 0x8000) != 0;
+        const bool isDeleteDown = (GetAsyncKeyState(VK_DELETE) & 0x8000) != 0;
+
+        if (isUndoDown && !m_wasUndoShortcutDown)
+        {
+            const auto entry = m_sceneCommandHistory.Undo();
+            if (entry.has_value() && RestoreSceneHistoryEntry(*entry))
+            {
+                SetWindowTextW(m_sceneViewPlanLabel, L"Ctrl+Z で直前の Scene スナップショットへ戻しました。");
+            }
+        }
+
+        if (isRedoDown && !m_wasRedoShortcutDown)
+        {
+            const auto entry = m_sceneCommandHistory.Redo();
+            if (entry.has_value() && RestoreSceneHistoryEntry(*entry))
+            {
+                SetWindowTextW(m_sceneViewPlanLabel, L"Ctrl+Y で Scene スナップショットを再適用しました。");
+            }
+        }
+
+        if (m_scene && isDuplicateDown && !m_wasDuplicateShortcutDown)
+        {
+            const SceneEditResult duplicateResult =
+                SceneEditingOperations::DuplicateSelectedEntity(*m_scene, m_selectedEntityId);
+            if (duplicateResult.changed)
+            {
+                m_selectedEntityId = duplicateResult.selectedEntityId;
+                m_lastInspectorEntityId.reset();
+                RefreshHierarchyPanel();
+                RefreshInspectorPanel();
+                SaveSceneDocument();
+                m_sceneCommandHistory.Push(CaptureSceneHistoryEntry());
+                SetWindowTextW(m_sceneViewPlanLabel, L"Ctrl+D で選択 Entity を複製しました。");
+            }
+        }
+
+        if (m_scene && isDeleteDown && !m_wasDeleteShortcutDown)
+        {
+            const SceneEditResult deleteResult =
+                SceneEditingOperations::DeleteSelectedEntity(*m_scene, m_selectedEntityId);
+            if (deleteResult.changed)
+            {
+                m_selectedEntityId = deleteResult.selectedEntityId;
+                m_lastInspectorEntityId.reset();
+                RefreshHierarchyPanel();
+                RefreshInspectorPanel();
+                SaveSceneDocument();
+                m_sceneCommandHistory.Push(CaptureSceneHistoryEntry());
+                SetWindowTextW(m_sceneViewPlanLabel, L"Delete で選択 Entity を削除しました。");
+            }
+        }
+
+        m_wasUndoShortcutDown = isUndoDown;
+        m_wasRedoShortcutDown = isRedoDown;
+        m_wasDeleteShortcutDown = isDeleteDown;
+        m_wasDuplicateShortcutDown = isDuplicateDown;
+    }
+
+    SceneCommandHistoryEntry Application::CaptureSceneHistoryEntry() const
+    {
+        if (!m_scene)
+        {
+            return SceneCommandHistoryEntry{};
+        }
+
+        return SceneCommandHistoryEntry{
+            Game::SceneSerializer::SaveToText(*m_scene),
+            m_selectedEntityId
+        };
+    }
+
+    bool Application::RestoreSceneHistoryEntry(const SceneCommandHistoryEntry& entry)
+    {
+        const auto loadResult = Game::SceneSerializer::LoadFromText(entry.serializedScene);
+        if (!loadResult.IsSuccess() || !loadResult.scene.has_value())
+        {
+            ::OutputDebugStringA("Editor::Application failed to restore Scene history entry.\n");
+            SetWindowTextW(m_sceneViewPlanLabel, L"履歴スナップショットの再読込に失敗しました。");
+            return false;
+        }
+
+        m_scene = std::make_unique<Game::Scene>(*loadResult.scene);
+        m_selectedEntityId = entry.selectedEntityId;
+        if (m_selectedEntityId.has_value() && !m_scene->FindEntity(*m_selectedEntityId).has_value())
+        {
+            m_selectedEntityId.reset();
+        }
+
+        m_lastInspectorEntityId.reset();
+        RefreshHierarchyPanel();
+        RefreshInspectorPanel();
+        return true;
+    }
+
+    std::filesystem::path Application::GetSceneDocumentPath() const
+    {
+        return std::filesystem::path("Saved") / "EditorScene.xelqoria.scene";
+    }
+
+    bool Application::SaveSceneDocument() const
+    {
+        if (!m_scene)
+        {
+            return false;
+        }
+
+        const std::filesystem::path sceneDocumentPath = GetSceneDocumentPath();
+        std::error_code errorCode;
+        std::filesystem::create_directories(sceneDocumentPath.parent_path(), errorCode);
+        if (errorCode)
+        {
+            return false;
+        }
+
+        std::ofstream output(sceneDocumentPath, std::ios::binary | std::ios::trunc);
+        if (!output.is_open())
+        {
+            return false;
+        }
+
+        output << Game::SceneSerializer::SaveToText(*m_scene);
+        return output.good();
+    }
+
+    bool Application::LoadSceneDocument()
+    {
+        const std::filesystem::path sceneDocumentPath = GetSceneDocumentPath();
+        if (!std::filesystem::exists(sceneDocumentPath))
+        {
+            return false;
+        }
+
+        std::ifstream input(sceneDocumentPath, std::ios::binary);
+        if (!input.is_open())
+        {
+            return false;
+        }
+
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+
+        const auto loadResult = Game::SceneSerializer::LoadFromText(buffer.str());
+        if (!loadResult.IsSuccess() || !loadResult.scene.has_value())
+        {
+            return false;
+        }
+
+        m_scene = std::make_unique<Game::Scene>(*loadResult.scene);
+        m_selectedEntityId.reset();
+        m_lastInspectorEntityId.reset();
+        return true;
     }
 
     HWND Application::CreateChildWindow(const wchar_t* className, const wchar_t* text, DWORD style, DWORD exStyle) const
