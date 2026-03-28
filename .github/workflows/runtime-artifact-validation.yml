@@ -3,7 +3,6 @@ name: Runtime Artifact Validation
 on:
   pull_request:
     branches:
-      - issue-94
       - develop
       - main
   workflow_dispatch:
