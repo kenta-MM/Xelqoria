@@ -6,6 +6,7 @@
 
 #include "SpriteComponent.h"
 #include "Transform.h"
+#include <type_traits>
 
 namespace Xelqoria::Game
 {

@@ -12,6 +12,9 @@
 #include "Entity.h"
 #include "ITextureAssetResolver.h"
 #include "Sprite.h"
+#include <type_traits>
+#include "SpriteComponent.h"
+#include "Transform.h"
 
 namespace Xelqoria::Game
 {

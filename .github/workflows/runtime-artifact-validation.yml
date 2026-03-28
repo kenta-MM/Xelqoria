@@ -1,0 +1,39 @@
+name: Runtime Artifact Validation
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate-runtime-artifact:
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration:
+          - Debug
+          - Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v3
+        with:
+          vs-version: '[17.0,18.0)'
+
+      - name: Validate runtime artifact isolation (${{ matrix.configuration }})
+        shell: pwsh
+        run: |
+          ./tools/RuntimeArtifactValidation/Check-RuntimeArtifactIsolation.ps1 `
+            -Configuration ${{ matrix.configuration }} `
+            -Platform x64 `
+            -PlatformToolset v143

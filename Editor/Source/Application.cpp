@@ -26,6 +26,9 @@
 #include <Scene.h>
 #include <SpriteComponent.h>
 #include <SpriteRenderer.h>
+#include <system_error>
+#include "EditorCamera2D.h"
+#include <Entity.h>
 
 namespace Xelqoria::Editor
 {

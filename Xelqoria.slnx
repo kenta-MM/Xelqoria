@@ -32,6 +32,7 @@
   <Folder Name="/ソリューション項目/.github/" />
   <Folder Name="/ソリューション項目/.github/workflows/">
     <File Path=".github/workflows/auto-create-issue-branch.yml" />
+    <File Path=".github/workflows/runtime-artifact-validation.yml" />
   </Folder>
   <Folder Name="/ソリューション項目/docs/" />
   <Folder Name="/ソリューション項目/docs/agents/">
@@ -62,6 +63,9 @@
   </Folder>
   <Folder Name="/ソリューション項目/tests/Editor/">
     <Project Path="tests/Editor/Xelqoria.Tests.Editor.vcxproj" Id="5b9e9e22-77e0-4b57-9d12-6a6a86a8a6a4" />
+  </Folder>
+  <Folder Name="/ソリューション項目/tools/RuntimeArtifactValidation/">
+    <File Path="tools/RuntimeArtifactValidation/Check-RuntimeArtifactIsolation.ps1" />
   </Folder>
   <Project Path="App/Xelqoria.App.vcxproj" Id="67f2121c-56d6-425e-adca-de9605ab0b9e" />
   <Project Path="Backends.D3D11/Xelqoria.Backends.D3D11.vcxproj" Id="d89979a3-9ede-4b5b-a2b1-2dd1db261114" />
