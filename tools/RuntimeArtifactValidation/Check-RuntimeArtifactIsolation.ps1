@@ -33,7 +33,7 @@ function Find-VisualStudioInstallationPath {
         throw "vswhere.exe was not found."
     }
 
-    $installationPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild  -property installationPath
+    $installationPath = & $vswherePath -latest -products * -requires Microsoft.Component.MSBuild -version "[17.0,18.0)" -property installationPath
     if ($LASTEXITCODE -ne 0) {
         throw "vswhere.exe failed to locate a Visual Studio installation."
     }

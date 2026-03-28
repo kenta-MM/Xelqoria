@@ -10,7 +10,7 @@ on:
 
 jobs:
   validate-runtime-artifact:
-    runs-on: windows-latest
+    runs-on: windows-2025
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +29,7 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
         with:
-           vs-version: '[18.4.2]'
+          vs-version: '[17.0,18.0)'
 
       - name: Validate runtime artifact isolation (${{ matrix.configuration }})
         shell: pwsh
