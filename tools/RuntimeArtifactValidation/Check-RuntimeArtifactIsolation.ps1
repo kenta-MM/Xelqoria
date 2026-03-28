@@ -177,9 +177,10 @@ if (-not $dumpbinPath) {
 
 Write-Host "Building LayerDependencyChecker..."
 Invoke-CheckedCommand -FilePath $dotnetPath -Arguments @(
-    "msbuild",
+    "build",
     $layerCheckerProject,
-    "/p:Configuration=$Configuration"
+    "--configuration",
+    $Configuration
 )
 
 Write-Host "Checking runtime project references..."
