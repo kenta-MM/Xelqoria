@@ -51,6 +51,19 @@
   <Folder Name="/ソリューション項目/third_party/googletest/">
     <Project Path="third_party/googletest/Xelqoria.GoogleTest.vcxproj" Id="0f71d759-12a2-42d9-b1ca-9f19c4e586c9" />
   </Folder>
+  <Folder Name="/ソリューション項目/docs/class_diagram/">
+    <File Path="docs/class_diagram/app-class-diagram.md" />
+    <File Path="docs/class_diagram/backends-d3d11-class-diagram.md" />
+    <File Path="docs/class_diagram/backends-d3d12-class-diagram.md" />
+    <File Path="docs/class_diagram/core-class-diagram.md" />
+    <File Path="docs/class_diagram/editor-class-diagram.md" />
+    <File Path="docs/class_diagram/game-class-diagram.md" />
+    <File Path="docs/class_diagram/graphics-class-diagram.md" />
+    <File Path="docs/class_diagram/rhi-class-diagram.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/docs/quality/">
+    <File Path="docs/quality/runtime-artifact-validation.md" />
+  </Folder>
   <Folder Name="/ソリューション項目/tests/" />
   <Folder Name="/ソリューション項目/tests/Core/">
     <Project Path="tests/Core/Xelqoria.Tests.Core.vcxproj" Id="6ecbbc65-48e4-4e35-a6c4-72488c8444ef" />
