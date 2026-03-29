@@ -29,6 +29,36 @@
   <Folder Name="/ソリューション項目/.codex/skills/xelqoria-parent-issue-implementation/agents/">
     <File Path=".codex/skills/xelqoria-parent-issue-implementation/agents/openai.yaml" />
   </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-architecture-review/">
+    <File Path=".codex/skills/xelqoria-architecture-review/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-architecture-review/agents/">
+    <File Path=".codex/skills/xelqoria-architecture-review/agents/openai.yaml" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-asset-pipeline-check/">
+    <File Path=".codex/skills/xelqoria-asset-pipeline-check/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-asset-pipeline-check/agents/">
+    <File Path=".codex/skills/xelqoria-asset-pipeline-check/agents/openai.yaml" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-class-diagram-update/">
+    <File Path=".codex/skills/xelqoria-class-diagram-update/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-class-diagram-update/agents/">
+    <File Path=".codex/skills/xelqoria-class-diagram-update/agents/openai.yaml" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-doc-sync/">
+    <File Path=".codex/skills/xelqoria-doc-sync/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-doc-sync/agents/">
+    <File Path=".codex/skills/xelqoria-doc-sync/agents/openai.yaml" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-runtime-editor-boundary-check/">
+    <File Path=".codex/skills/xelqoria-runtime-editor-boundary-check/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-runtime-editor-boundary-check/agents/">
+    <File Path=".codex/skills/xelqoria-runtime-editor-boundary-check/agents/openai.yaml" />
+  </Folder>
   <Folder Name="/ソリューション項目/.github/" />
   <Folder Name="/ソリューション項目/.github/workflows/">
     <File Path=".github/workflows/auto-create-issue-branch.yml" />
@@ -37,7 +67,11 @@
   <Folder Name="/ソリューション項目/docs/" />
   <Folder Name="/ソリューション項目/docs/agents/">
     <File Path="docs/agents/architecture.md" />
+    <File Path="docs/agents/asset-flow.md" />
+    <File Path="docs/agents/class-diagram-index.md" />
     <File Path="docs/agents/coding-rules.md" />
+    <File Path="docs/agents/project-map.md" />
+    <File Path="docs/agents/runtime-vs-editor-boundary.md" />
     <File Path="docs/agents/workflows.md" />
   </Folder>
   <Folder Name="/ソリューション項目/tools/" />
@@ -62,6 +96,7 @@
     <File Path="docs/class_diagram/rhi-class-diagram.md" />
   </Folder>
   <Folder Name="/ソリューション項目/docs/quality/">
+    <File Path="docs/quality/ci-matrix.md" />
     <File Path="docs/quality/runtime-artifact-validation.md" />
   </Folder>
   <Folder Name="/ソリューション項目/tests/" />

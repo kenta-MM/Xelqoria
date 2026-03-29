@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xelqoria Asset Pipeline Check"
+  short_description: "AssetId から描画までの解決経路を確認"
+  default_prompt: "$xelqoria-asset-pipeline-check を使って、この Xelqoria のアセット解決経路と保存データ境界を確認します。"
+
+policy:
+  allow_implicit_invocation: true
