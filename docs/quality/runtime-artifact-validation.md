@@ -24,5 +24,8 @@ PowerShell から次を実行する。
 
 ## CI 運用
 
-- `.github/workflows/runtime-artifact-validation.yml` が Pull Request と `develop` / `issue-94` への push で実行される
+- `.github/workflows/runtime-artifact-validation.yml` は `develop` または `main` 向けの Pull Request で実行される
+- GitHub Actions の手動実行 (`workflow_dispatch`) にも対応している
+- `windows-2025` ランナー上で `.NET 8` と `MSBuild 17.x` をセットアップしてから検証スクリプトを実行する
+- 検証は `Debug` と `Release` の 2 構成を matrix でそれぞれ実行する
 - CI が失敗した場合は Runtime への Editor 混入の可能性があるため、リリース判定を保留する
