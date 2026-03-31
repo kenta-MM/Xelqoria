@@ -18,7 +18,12 @@
 - アーキテクチャ原則: `docs/agents/architecture.md`
 - 実装フローと追加手順: `docs/agents/workflows.md`
 - コーディングルール: `docs/agents/coding-rules.md`
-- Git 管理する Skill: `docs/skills/`
+- プロジェクト責務一覧: `docs/agents/project-map.md`
+- Runtime / Editor 境界: `docs/agents/runtime-vs-editor-boundary.md`
+- アセット解決フロー: `docs/agents/asset-flow.md`
+- クラス図索引: `docs/agents/class-diagram-index.md`
+- 品質系ドキュメント: `docs/quality/`
+- Git 管理する Skill: `.codex/skills/`
 
 ## 目的
 

@@ -40,7 +40,7 @@ namespace Xelqoria::Editor
 
     std::optional<SceneCommandHistoryEntry> SceneCommandHistory::Undo()
     {
-        if (!CanUndo())
+        if (false == CanUndo())
         {
             return std::nullopt;
         }
@@ -51,7 +51,7 @@ namespace Xelqoria::Editor
 
     std::optional<SceneCommandHistoryEntry> SceneCommandHistory::Redo()
     {
-        if (!CanRedo())
+        if (false == CanRedo())
         {
             return std::nullopt;
         }

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xelqoria Architecture Review"
+  short_description: "Xelqoria の設計境界レビュー"
+  default_prompt: "$xelqoria-architecture-review を使って、この Xelqoria の変更を設計と依存方向の観点でレビューします。"
+
+policy:
+  allow_implicit_invocation: true

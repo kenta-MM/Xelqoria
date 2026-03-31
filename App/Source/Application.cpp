@@ -105,7 +105,7 @@ namespace Xelqoria::App
 
 		{
 			auto& entity = m_scene->CreateEntity();
-			entity.GetTransform().SetPosition(-160.0f, 0.0f, 0.0f);
+			entity.SetPosition(-160.0f, 0.0f, 0.0f);
 			entity.SetSpriteComponent(Game::SpriteComponent{
 				"sprites/mapchip-left",
 				{
@@ -118,8 +118,8 @@ namespace Xelqoria::App
 
 		{
 			auto& entity = m_scene->CreateEntity();
-			entity.GetTransform().SetPosition(160.0f, 90.0f, 0.0f);
-			entity.GetTransform().scale = { 0.75f, 0.75f, 1.0f };
+			entity.SetPosition(160.0f, 90.0f, 0.0f);
+			entity.SetScale(0.75f, 0.75f, 1.0f);
 			entity.SetSpriteComponent(Game::SpriteComponent{
 				"sprites/mapchip-right",
 				{

@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "Scene.h"
+#include <Entity.h>
 
 namespace Xelqoria::Editor
 {

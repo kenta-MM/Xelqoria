@@ -1,6 +1,11 @@
 #include "SceneEditingOperations.h"
 
 #include <span>
+#include <optional>
+#include <Entity.h>
+#include <Scene.h>
+#include <SpriteComponent.h>
+#include <Transform.h>
 
 namespace Xelqoria::Editor
 {
@@ -47,7 +52,7 @@ namespace Xelqoria::Editor
         /// <param name="destination">複製先 Entity。</param>
         void ApplyEntitySnapshot(const EntitySnapshot& snapshot, Game::Entity& destination)
         {
-            destination.GetTransform() = snapshot.transform;
+            destination.SetTransform(snapshot.transform);
 
             if (snapshot.spriteComponent.has_value())
             {
@@ -63,7 +68,7 @@ namespace Xelqoria::Editor
         Game::Scene& scene,
         std::optional<Game::EntityId> selectedEntityId)
     {
-        if (!selectedEntityId.has_value())
+        if (false == selectedEntityId.has_value())
         {
             return SceneEditResult{};
         }
@@ -79,7 +84,7 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (!selectedIndex.has_value())
+        if (false == selectedIndex.has_value())
         {
             return SceneEditResult{};
         }
@@ -93,7 +98,7 @@ namespace Xelqoria::Editor
             nextSelection = entities[nextIndex].GetId();
         }
 
-        if (!scene.DestroyEntity(*selectedEntityId))
+        if (false == scene.DestroyEntity(*selectedEntityId))
         {
             return SceneEditResult{};
         }
@@ -108,13 +113,13 @@ namespace Xelqoria::Editor
         Game::Scene& scene,
         std::optional<Game::EntityId> selectedEntityId)
     {
-        if (!selectedEntityId.has_value())
+        if (false == selectedEntityId.has_value())
         {
             return SceneEditResult{};
         }
 
         const auto sourceEntity = scene.FindEntity(*selectedEntityId);
-        if (!sourceEntity.has_value())
+        if (false == sourceEntity.has_value())
         {
             return SceneEditResult{};
         }

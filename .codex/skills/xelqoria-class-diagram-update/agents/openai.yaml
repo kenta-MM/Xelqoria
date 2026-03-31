@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xelqoria Class Diagram Update"
+  short_description: "公開ヘッダ変更に合わせてクラス図を更新"
+  default_prompt: "$xelqoria-class-diagram-update を使って、この Xelqoria の変更に合わせて docs/class_diagram の Mermaid 図を更新します。"
+
+policy:
+  allow_implicit_invocation: true

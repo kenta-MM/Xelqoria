@@ -530,7 +530,7 @@ namespace Xelqoria::Editor
         m_scene = std::make_unique<Game::Scene>();
 
         auto& firstEntity = m_scene->CreateEntity();
-        firstEntity.GetTransform().SetPosition(-160.0f, 0.0f, 0.0f);
+        firstEntity.SetPosition(-160.0f, 0.0f, 0.0f);
         firstEntity.SetSpriteComponent(Game::SpriteComponent{
             m_registeredSpriteAssetIds[0],
             {
@@ -541,8 +541,8 @@ namespace Xelqoria::Editor
         });
 
         auto& secondEntity = m_scene->CreateEntity();
-        secondEntity.GetTransform().SetPosition(160.0f, 90.0f, 0.0f);
-        secondEntity.GetTransform().scale = { 0.75f, 0.75f, 1.0f };
+        secondEntity.SetPosition(160.0f, 90.0f, 0.0f);
+        secondEntity.SetScale(0.75f, 0.75f, 1.0f);
         secondEntity.SetSpriteComponent(Game::SpriteComponent{
             m_registeredSpriteAssetIds[1],
             {
@@ -1069,7 +1069,7 @@ namespace Xelqoria::Editor
         }
 
         auto& entity = m_scene->CreateEntity();
-        entity.GetTransform().SetPosition(dropWorldX, dropWorldY, 0.0f);
+        entity.SetPosition(dropWorldX, dropWorldY, 0.0f);
         entity.SetSpriteComponent(Game::SpriteComponent{
             droppedAssetId,
             {

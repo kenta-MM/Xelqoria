@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xelqoria Doc Sync"
+  short_description: "実装変更に合わせて関連ドキュメントを同期"
+  default_prompt: "$xelqoria-doc-sync を使って、この Xelqoria の変更に関連する docs を必要最小限で更新します。"
+
+policy:
+  allow_implicit_invocation: true
