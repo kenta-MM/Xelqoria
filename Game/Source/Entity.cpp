@@ -1,10 +1,9 @@
 #include "Entity.h"
 
-#include <utility>
-#include "Transform.h"
-#include "SpriteComponent.h"
 #include <optional>
-#include <type_traits>
+#include <utility>
+
+#include "SpriteComponent.h"
 
 namespace Xelqoria::Game
 {
@@ -28,6 +27,46 @@ namespace Xelqoria::Game
 		return m_transform;
 	}
 
+	void Entity::SetTransform(const Transform& transform)
+	{
+		m_transform = transform;
+	}
+
+	void Entity::SetTransform(Transform&& transform)
+	{
+		m_transform = std::move(transform);
+	}
+
+	void Entity::SetPosition(const Vector3& position)
+	{
+		m_transform.SetPosition(position);
+	}
+
+	void Entity::SetPosition(float x, float y, float z)
+	{
+		m_transform.SetPosition(x, y, z);
+	}
+
+	void Entity::SetRotation(const Vector3& rotation)
+	{
+		m_transform.SetRotation(rotation);
+	}
+
+	void Entity::SetRotation(float x, float y, float z)
+	{
+		m_transform.SetRotation(x, y, z);
+	}
+
+	void Entity::SetScale(const Vector3& scale)
+	{
+		m_transform.SetScale(scale);
+	}
+
+	void Entity::SetScale(float x, float y, float z)
+	{
+		m_transform.SetScale(x, y, z);
+	}
+
 	void Entity::SetSpriteComponent(const SpriteComponent& spriteComponent)
 	{
 		m_spriteComponent = spriteComponent;
@@ -40,7 +79,7 @@ namespace Xelqoria::Game
 
 	std::optional<std::reference_wrapper<SpriteComponent>> Entity::GetSpriteComponent()
 	{
-		if (!m_spriteComponent.has_value()) {
+		if (false == m_spriteComponent.has_value()) {
 			return std::nullopt;
 		}
 
@@ -49,7 +88,7 @@ namespace Xelqoria::Game
 
 	std::optional<std::reference_wrapper<const SpriteComponent>> Entity::GetSpriteComponent() const
 	{
-		if (!m_spriteComponent.has_value()) {
+		if (false == m_spriteComponent.has_value()) {
 			return std::nullopt;
 		}
 

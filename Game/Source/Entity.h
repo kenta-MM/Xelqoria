@@ -6,7 +6,6 @@
 
 #include "SpriteComponent.h"
 #include "Transform.h"
-#include <type_traits>
 
 namespace Xelqoria::Game
 {
@@ -46,6 +45,60 @@ namespace Xelqoria::Game
 		const Transform& GetTransform() const;
 
 		/// <summary>
+		/// Transform を Entity に設定する。
+		/// </summary>
+		/// <param name="transform">設定する Transform。</param>
+		void SetTransform(const Transform& transform);
+
+		/// <summary>
+		/// Transform を Entity に設定する。
+		/// </summary>
+		/// <param name="transform">設定する Transform。</param>
+		void SetTransform(Transform&& transform);
+
+		/// <summary>
+		/// Transform の位置を更新する。
+		/// </summary>
+		/// <param name="position">設定する位置。</param>
+		void SetPosition(const Vector3& position);
+
+		/// <summary>
+		/// Transform の位置を更新する。
+		/// </summary>
+		/// <param name="x">X 座標。</param>
+		/// <param name="y">Y 座標。</param>
+		/// <param name="z">Z 座標。</param>
+		void SetPosition(float x, float y, float z);
+
+		/// <summary>
+		/// Transform の回転量を更新する。
+		/// </summary>
+		/// <param name="rotation">設定する回転量。</param>
+		void SetRotation(const Vector3& rotation);
+
+		/// <summary>
+		/// Transform の回転量を更新する。
+		/// </summary>
+		/// <param name="x">X 軸回転量。</param>
+		/// <param name="y">Y 軸回転量。</param>
+		/// <param name="z">Z 軸回転量。</param>
+		void SetRotation(float x, float y, float z);
+
+		/// <summary>
+		/// Transform の拡大率を更新する。
+		/// </summary>
+		/// <param name="scale">設定する拡大率。</param>
+		void SetScale(const Vector3& scale);
+
+		/// <summary>
+		/// Transform の拡大率を更新する。
+		/// </summary>
+		/// <param name="x">X 軸拡大率。</param>
+		/// <param name="y">Y 軸拡大率。</param>
+		/// <param name="z">Z 軸拡大率。</param>
+		void SetScale(float x, float y, float z);
+
+		/// <summary>
 		/// SpriteComponent を Entity に設定する。
 		/// </summary>
 		/// <param name="spriteComponent">設定する SpriteComponent。</param>
@@ -60,7 +113,7 @@ namespace Xelqoria::Game
 		/// <summary>
 		/// Entity に設定されている SpriteComponent を取得する。
 		/// </summary>
-		/// <returns>SpriteComponent。未設定時は空。</returns>
+		/// <returns>SpriteComponent。未設定の場合は空。</returns>
 		std::optional<std::reference_wrapper<SpriteComponent>> GetSpriteComponent();
 
 		/// <summary>

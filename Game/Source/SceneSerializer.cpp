@@ -73,7 +73,7 @@ namespace
 		std::istringstream stream{ std::string(value) };
 		float parsedValue = 0.0f;
 		stream >> parsedValue;
-		if (!stream || !stream.eof()) {
+		if (false == static_cast<bool>(stream) || false == stream.eof()) {
 			return std::nullopt;
 		}
 
@@ -98,7 +98,7 @@ namespace
 				? value.substr(cursor)
 				: value.substr(cursor, separator - cursor);
 			const auto parsedComponent = ParseFloat(Trim(token));
-			if (!parsedComponent.has_value()) {
+			if (false == parsedComponent.has_value()) {
 				return std::nullopt;
 			}
 
@@ -195,7 +195,7 @@ namespace Xelqoria::Game
 				: lineEnd - cursor;
 			std::string_view line = Trim(source.substr(cursor, lineLength));
 
-			if (!line.empty()) {
+			if (false == line.empty()) {
 				const std::size_t separator = line.find('=');
 				if (separator == std::string_view::npos) {
 					return MakeError(lineNumber, {}, "Scene の各行は key=value 形式である必要があります。");
@@ -208,7 +208,7 @@ namespace Xelqoria::Game
 				}
 				else if (key == "version") {
 					version = ParseUnsigned(value);
-					if (!version.has_value()) {
+					if (false == version.has_value()) {
 						return MakeError(lineNumber, key, "version は符号なし整数である必要があります。");
 					}
 				}
@@ -220,7 +220,7 @@ namespace Xelqoria::Game
 					}
 
 					const auto entityIndex = ParseUnsigned(remainder.substr(0, nextDot));
-					if (!entityIndex.has_value()) {
+					if (false == entityIndex.has_value()) {
 						return MakeError(lineNumber, key, "entity index は符号なし整数である必要があります。");
 					}
 
@@ -228,7 +228,7 @@ namespace Xelqoria::Game
 					const std::string_view fieldKey = remainder.substr(nextDot + 1);
 					if (fieldKey == "id") {
 						const auto entityId = ParseUnsigned(value);
-						if (!entityId.has_value()) {
+						if (false == entityId.has_value()) {
 							return MakeError(lineNumber, key, "entity id は符号なし整数である必要があります。");
 						}
 
@@ -236,7 +236,7 @@ namespace Xelqoria::Game
 					}
 					else if (fieldKey == "transform.position") {
 						const auto parsedVector = ParseVector3(value);
-						if (!parsedVector.has_value()) {
+						if (false == parsedVector.has_value()) {
 							return MakeError(lineNumber, key, "position は x,y,z 形式である必要があります。");
 						}
 
@@ -244,7 +244,7 @@ namespace Xelqoria::Game
 					}
 					else if (fieldKey == "transform.rotation") {
 						const auto parsedVector = ParseVector3(value);
-						if (!parsedVector.has_value()) {
+						if (false == parsedVector.has_value()) {
 							return MakeError(lineNumber, key, "rotation は x,y,z 形式である必要があります。");
 						}
 
@@ -252,7 +252,7 @@ namespace Xelqoria::Game
 					}
 					else if (fieldKey == "transform.scale") {
 						const auto parsedVector = ParseVector3(value);
-						if (!parsedVector.has_value()) {
+						if (false == parsedVector.has_value()) {
 							return MakeError(lineNumber, key, "scale は x,y,z 形式である必要があります。");
 						}
 
@@ -261,7 +261,7 @@ namespace Xelqoria::Game
 					else if (fieldKey == "spriteRef") {
 						record.spriteRef = SceneSpriteRefRecord{ Core::AssetId(value) };
 					}
-					else if (!fieldKey.starts_with(SceneSaveExtensionFieldPrefix)) {
+					else if (false == fieldKey.starts_with(SceneSaveExtensionFieldPrefix)) {
 						return MakeError(lineNumber, key, "未対応の Scene フィールドです。");
 					}
 				}
@@ -277,11 +277,11 @@ namespace Xelqoria::Game
 			cursor = lineEnd + 1;
 		}
 
-		if (!magic.has_value() || *magic != SceneSaveFormatMagic) {
+		if (false == magic.has_value() || *magic != SceneSaveFormatMagic) {
 			return MakeError(0, "magic", "SceneSaveFormatMagic と一致する magic が必要です。");
 		}
 
-		if (!version.has_value() || *version != SceneSaveFormatVersion) {
+		if (false == version.has_value() || *version != SceneSaveFormatVersion) {
 			return MakeError(0, "version", "対応していない Scene 保存バージョンです。");
 		}
 
@@ -293,7 +293,7 @@ namespace Xelqoria::Game
 			}
 
 			auto& entity = scene.CreateEntity(record.entityId);
-			entity.GetTransform() = record.transform;
+			entity.SetTransform(record.transform);
 			if (record.spriteRef.has_value()) {
 				entity.SetSpriteComponent(SpriteComponent{
 					record.spriteRef->spriteAssetRef,
