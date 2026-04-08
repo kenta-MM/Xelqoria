@@ -1,17 +1,8 @@
 #pragma once
+#include "Vector3.h"
 
 namespace Xelqoria::Game
 {
-	/// <summary>
-	/// 3 次元空間での位置・回転・拡大率を表す最小ベクトル値。
-	/// </summary>
-	struct Vector3
-	{
-		float x = 0.0f;
-		float y = 0.0f;
-		float z = 0.0f;
-	};
-
 	/// <summary>
 	/// Scene 上のオブジェクト配置に必要な最小 Transform 情報を保持する。
 	/// </summary>
@@ -30,24 +21,24 @@ namespace Xelqoria::Game
 		/// <summary>
 		/// 配置位置を表す。
 		/// </summary>
-		Vector3 position{};
+		Xelqoria::Math::Vector3 position{};
 
 		/// <summary>
 		/// 回転量を表す。
 		/// </summary>
-		Vector3 rotation{};
+		Xelqoria::Math::Vector3 rotation{};
 
 		/// <summary>
 		/// 拡大率を表す。
 		/// 初期値は等倍とする。
 		/// </summary>
-		Vector3 scale{ 1.0f, 1.0f, 1.0f };
+		Xelqoria::Math::Vector3 scale{ 1.0f, 1.0f, 1.0f };
 
 		/// <summary>
 		/// 配置位置を一括で更新する。
 		/// </summary>
 		/// <param name="newPosition">設定する新しい位置。</param>
-		void SetPosition(const Vector3& newPosition);
+		void SetPosition(const Xelqoria::Math::Vector3& newPosition);
 
 		/// <summary>
 		/// 配置位置を各成分で更新する。
@@ -61,7 +52,7 @@ namespace Xelqoria::Game
 		/// 回転量を一括で更新する。
 		/// </summary>
 		/// <param name="newRotation">設定する新しい回転量。</param>
-		void SetRotation(const Vector3& newRotation);
+		void SetRotation(const Xelqoria::Math::Vector3& newRotation);
 
 		/// <summary>
 		/// 回転量を各成分で更新する。
@@ -75,7 +66,7 @@ namespace Xelqoria::Game
 		/// 拡大率を一括で更新する。
 		/// </summary>
 		/// <param name="newScale">設定する新しい拡大率。</param>
-		void SetScale(const Vector3& newScale);
+		void SetScale(const Xelqoria::Math::Vector3& newScale);
 
 		/// <summary>
 		/// 拡大率を各成分で更新する。

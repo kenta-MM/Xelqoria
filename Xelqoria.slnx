@@ -9,7 +9,12 @@
     <File Path="AGENTS.md" />
     <File Path="README.md" />
   </Folder>
-  <Folder Name="/ソリューション項目/.codex/" />
+  <Folder Name="/ソリューション項目/.codex/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="AGENTS.md" />
+    <File Path="README.md" />
+  </Folder>
   <Folder Name="/ソリューション項目/.codex/skills/" />
   <Folder Name="/ソリューション項目/.codex/skills/xelqoria-issue-implementation/">
     <File Path=".codex/skills/xelqoria-issue-implementation/SKILL.md" />
@@ -123,4 +128,5 @@
   <Project Path="Game/Xelqoria.Game.vcxproj" Id="b43e8e97-59ef-4caa-8a27-bd9192d8833a" />
   <Project Path="Graphics/Xelqoria.Graphics.vcxproj" Id="7693792a-4ad4-445a-98f7-b90d6989a837" />
   <Project Path="RHI/Xelqoria.RHI.vcxproj" Id="158b81fc-b108-4237-8a37-eb8c6ef29392" />
+  <Project Path="Xelqoria.Math/Xelqoria.Math.vcxproj" Id="9143e43a-0447-43e1-9fe4-9c3edec98212" />
 </Solution>

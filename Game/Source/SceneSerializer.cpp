@@ -40,7 +40,7 @@ namespace
 	/// </summary>
 	/// <param name="stream">出力先ストリーム。</param>
 	/// <param name="value">追記するベクトル値。</param>
-	void AppendVector3(std::ostringstream& stream, const Xelqoria::Game::Vector3& value)
+	void AppendVector3(std::ostringstream& stream, const Xelqoria::Math::Vector3& value)
 	{
 		stream << value.x << "," << value.y << "," << value.z;
 	}
@@ -85,9 +85,9 @@ namespace
 	/// </summary>
 	/// <param name="value">変換対象の文字列。</param>
 	/// <returns>変換に成功した Vector3。失敗時は nullopt。</returns>
-	std::optional<Xelqoria::Game::Vector3> ParseVector3(std::string_view value)
+	std::optional<Xelqoria::Math::Vector3> ParseVector3(std::string_view value)
 	{
-		Xelqoria::Game::Vector3 vector{};
+		Xelqoria::Math::Vector3 vector{};
 		std::size_t cursor = 0;
 		float* components[3] = { &vector.x, &vector.y, &vector.z };
 
@@ -104,7 +104,7 @@ namespace
 
 			*components[index] = *parsedComponent;
 			if (separator == std::string_view::npos) {
-				return index == 2 ? std::optional<Xelqoria::Game::Vector3>(vector) : std::nullopt;
+				return index == 2 ? std::optional<Xelqoria::Math::Vector3>(vector) : std::nullopt;
 			}
 
 			cursor = separator + 1;

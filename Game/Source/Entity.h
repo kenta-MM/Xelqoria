@@ -60,7 +60,7 @@ namespace Xelqoria::Game
 		/// Transform の位置を更新する。
 		/// </summary>
 		/// <param name="position">設定する位置。</param>
-		void SetPosition(const Vector3& position);
+		void SetPosition(const Xelqoria::Math::Vector3& position);
 
 		/// <summary>
 		/// Transform の位置を更新する。
@@ -74,7 +74,7 @@ namespace Xelqoria::Game
 		/// Transform の回転量を更新する。
 		/// </summary>
 		/// <param name="rotation">設定する回転量。</param>
-		void SetRotation(const Vector3& rotation);
+		void SetRotation(const Xelqoria::Math::Vector3& rotation);
 
 		/// <summary>
 		/// Transform の回転量を更新する。
@@ -88,7 +88,7 @@ namespace Xelqoria::Game
 		/// Transform の拡大率を更新する。
 		/// </summary>
 		/// <param name="scale">設定する拡大率。</param>
-		void SetScale(const Vector3& scale);
+		void SetScale(const Xelqoria::Math::Vector3& scale);
 
 		/// <summary>
 		/// Transform の拡大率を更新する。

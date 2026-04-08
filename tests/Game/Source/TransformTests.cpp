@@ -185,7 +185,7 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		EXPECT_TRUE(IsEqual(transform.position.y, 20.0f));
 		EXPECT_TRUE(IsEqual(transform.position.z, 30.0f));
 
-		transform.SetPosition(Xelqoria::Game::Vector3{ -1.0f, 2.5f, 0.5f });
+		transform.SetPosition(Xelqoria::Math::Vector3{ -1.0f, 2.5f, 0.5f });
 		EXPECT_TRUE(IsEqual(transform.position.x, -1.0f));
 		EXPECT_TRUE(IsEqual(transform.position.y, 2.5f));
 		EXPECT_TRUE(IsEqual(transform.position.z, 0.5f));

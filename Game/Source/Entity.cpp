@@ -37,7 +37,7 @@ namespace Xelqoria::Game
 		m_transform = std::move(transform);
 	}
 
-	void Entity::SetPosition(const Vector3& position)
+	void Entity::SetPosition(const Xelqoria::Math::Vector3& position)
 	{
 		m_transform.SetPosition(position);
 	}
@@ -47,7 +47,7 @@ namespace Xelqoria::Game
 		m_transform.SetPosition(x, y, z);
 	}
 
-	void Entity::SetRotation(const Vector3& rotation)
+	void Entity::SetRotation(const Xelqoria::Math::Vector3& rotation)
 	{
 		m_transform.SetRotation(rotation);
 	}
@@ -57,7 +57,7 @@ namespace Xelqoria::Game
 		m_transform.SetRotation(x, y, z);
 	}
 
-	void Entity::SetScale(const Vector3& scale)
+	void Entity::SetScale(const Xelqoria::Math::Vector3& scale)
 	{
 		m_transform.SetScale(scale);
 	}
