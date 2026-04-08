@@ -15,6 +15,14 @@ classDiagram
         }
     }
 
+    namespace Math {
+        class Vector3 {
+            +x float
+            +y float
+            +z float
+        }
+    }
+
     namespace Game_Assets {
         class SpriteAsset {
             +textureAssetId AssetId
@@ -37,12 +45,6 @@ classDiagram
     }
 
     namespace Game {
-        class Vector3 {
-            +x float
-            +y float
-            +z float
-        }
-
         class Transform {
             +position Vector3
             +rotation Vector3
@@ -97,6 +99,7 @@ classDiagram
     SpriteAsset --> AssetId : references
     ISpriteAssetResolver --> SpriteAsset : resolves
 
+    Entity ..> Vector3 : updates with
     Transform *-- Vector3
     SpriteComponent --> AssetId : references
     SpriteComponent *-- SpriteRenderSettings

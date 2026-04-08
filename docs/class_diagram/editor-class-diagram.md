@@ -19,6 +19,11 @@ classDiagram
         }
     }
 
+    namespace Math {
+        class Vector2
+        class Vector3
+    }
+
     namespace Graphics {
         class SpriteRenderer
         class Texture2D

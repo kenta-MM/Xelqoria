@@ -18,6 +18,13 @@ classDiagram
         }
     }
 
+    namespace Math {
+        class Vector2 {
+            +x float
+            +y float
+        }
+    }
+
     namespace Graphics {
         class Texture2D {
             -m_width uint32_t
@@ -26,11 +33,6 @@ classDiagram
             +LoadFromFile(...)
             +SetRHITexture(...)
             +GetRHITexture()
-        }
-
-        class Vector2 {
-            +x float
-            +y float
         }
 
         class Sprite {
@@ -69,6 +71,7 @@ classDiagram
     Texture2D ..> IGraphicsContext : loads via
     Sprite --> Texture2D : holds
     Sprite --> AssetId : references
+    Sprite ..> Vector2 : uses
     Sprite *-- Vector2
     SpriteRenderer --> IGraphicsContext : uses
     SpriteRenderer --> Sprite : draws
