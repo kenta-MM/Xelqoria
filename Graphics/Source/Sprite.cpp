@@ -63,4 +63,34 @@ namespace Xelqoria::Graphics
 	{
 		return m_rotationDegrees;
 	}
+
+	void Sprite::SetOutlineEnabled(bool enabled)
+	{
+		m_outlineEnabled = enabled;
+	}
+
+	bool Sprite::IsOutlineEnabled() const
+	{
+		return m_outlineEnabled;
+	}
+
+	void Sprite::SetOutlineThickness(float thickness)
+	{
+		m_outlineThickness = thickness;
+	}
+
+	float Sprite::GetOutlineThickness() const
+	{
+		return m_outlineThickness;
+	}
+
+	void Sprite::SetOutlineColor(float red, float green, float blue, float alpha)
+	{
+		m_outlineColor = { red, green, blue, alpha };
+	}
+
+	const std::array<float, 4>& Sprite::GetOutlineColor() const
+	{
+		return m_outlineColor;
+	}
 }

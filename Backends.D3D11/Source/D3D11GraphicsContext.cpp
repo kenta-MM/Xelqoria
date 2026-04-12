@@ -371,7 +371,7 @@ namespace Xelqoria::Backends::D3D11
 
         m_deviceContext->VSSetShader(m_spriteVertexShader.Get(), nullptr, 0);
         m_deviceContext->PSSetShader(m_spritePixelShader.Get(), nullptr, 0);
-        const float quadTransformData[8] =
+        const float quadTransformData[12] =
         {
             m_quadTransform.scaleX,
             m_quadTransform.scaleY,
@@ -379,12 +379,17 @@ namespace Xelqoria::Backends::D3D11
             m_quadTransform.rotationSin,
             m_quadTransform.translateX,
             m_quadTransform.translateY,
-            0.0f,
-            0.0f
+            m_quadTransform.outlineEnabled,
+            m_quadTransform.outlineThickness,
+            m_quadTransform.outlineColorR,
+            m_quadTransform.outlineColorG,
+            m_quadTransform.outlineColorB,
+            m_quadTransform.outlineColorA
         };
         m_deviceContext->UpdateSubresource(m_spriteTransformBuffer.Get(), 0, nullptr, quadTransformData, 0, 0);
         ID3D11Buffer* transformBuffer = m_spriteTransformBuffer.Get();
         m_deviceContext->VSSetConstantBuffers(0, 1, &transformBuffer);
+        m_deviceContext->PSSetConstantBuffers(0, 1, &transformBuffer);
 
         if (m_spriteSamplerState)
         {
@@ -547,7 +552,8 @@ cbuffer SpriteTransformBuffer : register(b0)
     float2 gScale;
     float2 gRotation;
     float2 gTranslate;
-    float2 gPadding;
+    float2 gOutlineState;
+    float4 gOutlineColor;
 };
 
 struct VSInput
@@ -584,6 +590,14 @@ VSOutput MainVS(VSInput input)
         static const char* kPixelShaderSource = R"(
 Texture2D gTexture : register(t0);
 SamplerState gSampler : register(s0);
+cbuffer SpriteTransformBuffer : register(b0)
+{
+    float2 gScale;
+    float2 gRotation;
+    float2 gTranslate;
+    float2 gOutlineState;
+    float4 gOutlineColor;
+};
 
 struct PSInput
 {
@@ -593,7 +607,28 @@ struct PSInput
 
 float4 MainPS(PSInput input) : SV_TARGET
 {
-    return gTexture.Sample(gSampler, input.uv);
+    float4 baseColor = gTexture.Sample(gSampler, input.uv);
+    if (gOutlineState.x > 0.5f)
+    {
+        uint textureWidth = 0;
+        uint textureHeight = 0;
+        gTexture.GetDimensions(textureWidth, textureHeight);
+
+        float outlineWidthU = gOutlineState.y / max((float)textureWidth, 1.0f);
+        float outlineWidthV = gOutlineState.y / max((float)textureHeight, 1.0f);
+        bool isOutlinePixel =
+            input.uv.x <= outlineWidthU
+            || input.uv.x >= 1.0f - outlineWidthU
+            || input.uv.y <= outlineWidthV
+            || input.uv.y >= 1.0f - outlineWidthV;
+
+        if (isOutlinePixel)
+        {
+            return gOutlineColor;
+        }
+    }
+
+    return baseColor;
 }
 )";
 
@@ -650,7 +685,7 @@ float4 MainPS(PSInput input) : SV_TARGET
         }
 
         D3D11_BUFFER_DESC constantBufferDesc{};
-        constantBufferDesc.ByteWidth = sizeof(float) * 8u;
+        constantBufferDesc.ByteWidth = sizeof(float) * 12u;
         constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 
@@ -716,7 +751,6 @@ float4 MainPS(PSInput input) : SV_TARGET
         m_quadTransform = {};
     }
 }
-
 
 
 

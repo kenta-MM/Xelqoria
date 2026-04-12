@@ -1246,6 +1246,9 @@ namespace Xelqoria::Editor
             m_sceneViewCamera.TransformWorldScale(1.0f),
             m_sceneViewCamera.TransformWorldScale(1.0f));
         previewSprite.SetRotationDegrees(0.0f);
+        previewSprite.SetOutlineEnabled(true);
+        previewSprite.SetOutlineThickness(1.0f);
+        previewSprite.SetOutlineColor(1.0f, 0.84f, 0.04f, 1.0f);
         m_spriteRenderer->Draw(previewSprite);
     }
 

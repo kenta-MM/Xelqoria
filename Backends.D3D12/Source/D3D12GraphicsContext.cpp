@@ -448,7 +448,7 @@ namespace Xelqoria::Backends::D3D12
         commandList->SetDescriptorHeaps(1, descriptorHeaps);
         commandList->SetGraphicsRootSignature(m_spriteRootSignature.Get());
         commandList->SetPipelineState(m_spritePipelineState.Get());
-        const float quadTransformData[8] =
+        const float quadTransformData[12] =
         {
             m_quadTransform.scaleX,
             m_quadTransform.scaleY,
@@ -456,10 +456,14 @@ namespace Xelqoria::Backends::D3D12
             m_quadTransform.rotationSin,
             m_quadTransform.translateX,
             m_quadTransform.translateY,
-            0.0f,
-            0.0f
+            m_quadTransform.outlineEnabled,
+            m_quadTransform.outlineThickness,
+            m_quadTransform.outlineColorR,
+            m_quadTransform.outlineColorG,
+            m_quadTransform.outlineColorB,
+            m_quadTransform.outlineColorA
         };
-        commandList->SetGraphicsRoot32BitConstants(0, 4, quadTransformData, 0);
+        commandList->SetGraphicsRoot32BitConstants(0, 12, quadTransformData, 0);
         commandList->SetGraphicsRootDescriptorTable(1, m_boundTextureSrvGpu);
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
@@ -705,7 +709,8 @@ cbuffer SpriteTransformBuffer : register(b0)
     float2 gScale;
     float2 gRotation;
     float2 gTranslate;
-    float2 gPadding;
+    float2 gOutlineState;
+    float4 gOutlineColor;
 };
 struct VSInput { float3 position : POSITION; float2 uv : TEXCOORD0; };
 struct VSOutput { float4 position : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -731,10 +736,39 @@ VSOutput MainVS(VSInput input)
         static const char* kPixelShaderSource = R"(
 Texture2D gTexture : register(t0);
 SamplerState gSampler : register(s0);
+cbuffer SpriteTransformBuffer : register(b0)
+{
+    float2 gScale;
+    float2 gRotation;
+    float2 gTranslate;
+    float2 gOutlineState;
+    float4 gOutlineColor;
+};
 struct PSInput { float4 position : SV_POSITION; float2 uv : TEXCOORD0; };
 float4 MainPS(PSInput input) : SV_TARGET
 {
-    return gTexture.Sample(gSampler, input.uv);
+    float4 baseColor = gTexture.Sample(gSampler, input.uv);
+    if (gOutlineState.x > 0.5f)
+    {
+        uint textureWidth = 0;
+        uint textureHeight = 0;
+        gTexture.GetDimensions(textureWidth, textureHeight);
+
+        float outlineWidthU = gOutlineState.y / max((float)textureWidth, 1.0f);
+        float outlineWidthV = gOutlineState.y / max((float)textureHeight, 1.0f);
+        bool isOutlinePixel =
+            input.uv.x <= outlineWidthU
+            || input.uv.x >= 1.0f - outlineWidthU
+            || input.uv.y <= outlineWidthV
+            || input.uv.y >= 1.0f - outlineWidthV;
+
+        if (isOutlinePixel)
+        {
+            return gOutlineColor;
+        }
+    }
+
+    return baseColor;
 }
 )";
 
@@ -757,10 +791,10 @@ float4 MainPS(PSInput input) : SV_TARGET
 
         D3D12_ROOT_PARAMETER rootParameters[2]{};
         rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-        rootParameters[0].Constants.Num32BitValues = 8;
+        rootParameters[0].Constants.Num32BitValues = 12;
         rootParameters[0].Constants.ShaderRegister = 0;
         rootParameters[0].Constants.RegisterSpace = 0;
-        rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+        rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
         rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
         rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
