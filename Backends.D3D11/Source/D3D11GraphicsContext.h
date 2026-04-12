@@ -99,6 +99,7 @@ namespace Xelqoria::Backends::D3D11
         Microsoft::WRL::ComPtr<ID3D11Buffer> m_spriteTransformBuffer;
         std::shared_ptr<RHI::IVertexBuffer> m_spriteVertexBuffer;
         Microsoft::WRL::ComPtr<ID3D11SamplerState> m_spriteSamplerState;
+        bool m_hasBoundTexture = false;
         RHI::QuadTransform2D m_quadTransform{};
     };
 }

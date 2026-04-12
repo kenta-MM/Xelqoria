@@ -2,10 +2,12 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cwchar>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -15,6 +17,8 @@
 #include "SceneSerializer.h"
 #include "SceneCommandHistory.h"
 #include "SceneEditingOperations.h"
+#include "SceneViewOverlay.h"
+#include "SolidQuadRenderer.h"
 #include "Texture2D.h"
 #include <Windows.h>
 #include <cstdint>
@@ -35,6 +39,20 @@ namespace Xelqoria::Editor
     namespace
     {
         constexpr int AssetDragStartThresholdPixels = 6;
+        constexpr float SceneGridStepWorldUnits = 64.0f;
+        constexpr float SceneGridLineThicknessPixels = 1.0f;
+        constexpr float SceneAxisLineThicknessPixels = 2.0f;
+        constexpr float SelectionOutlineThicknessPixels = 2.0f;
+        constexpr float SelectionPivotSizePixels = 8.0f;
+
+        /// <summary>
+        /// SceneView オーバーレイ描画に使う色定義を返す。
+        /// </summary>
+        /// <returns>色定義一覧。</returns>
+        std::array<float, 4> MakeColor(float red, float green, float blue, float alpha)
+        {
+            return std::array<float, 4>{ red, green, blue, alpha };
+        }
 
         /// <summary>
         /// アセット識別子などの狭い文字列を簡易的にワイド文字列へ変換する。
@@ -78,6 +96,22 @@ namespace Xelqoria::Editor
             const int dx = std::abs(lhs.x - rhs.x);
             const int dy = std::abs(lhs.y - rhs.y);
             return (std::max)(dx, dy);
+        }
+
+        /// <summary>
+        /// ワールド値を指定ステップへ切り下げる。
+        /// </summary>
+        /// <param name="value">丸め対象の値。</param>
+        /// <param name="step">使用するステップ幅。</param>
+        /// <returns>step 単位で切り下げた値。</returns>
+        float FloorToStep(float value, float step)
+        {
+            if (step <= 0.0f)
+            {
+                return value;
+            }
+
+            return std::floor(value / step) * step;
         }
     }
 
@@ -147,6 +181,7 @@ namespace Xelqoria::Editor
         }
 
         m_spriteRenderer = std::make_unique<Graphics::SpriteRenderer>(*m_graphics);
+        m_solidQuadRenderer = std::make_unique<Graphics::SolidQuadRenderer>(*m_graphics);
 
         if (!InitializeDocument())
         {
@@ -196,6 +231,8 @@ namespace Xelqoria::Editor
             auto resolvedSprites = m_scene->ResolveSprites(m_spriteAssetRegistry, m_textureAssetRegistry);
 
             m_spriteRenderer->Begin();
+            RenderSceneGrid();
+            RenderSceneOrigin();
             for (auto& sprite : resolvedSprites)
             {
                 const auto position = sprite.GetPosition();
@@ -209,6 +246,7 @@ namespace Xelqoria::Editor
                     m_sceneViewCamera.TransformWorldScale(scale.y));
                 m_spriteRenderer->Draw(sprite);
             }
+            RenderSelectedEntityOverlay();
             RenderSceneDragPreview();
             m_spriteRenderer->End();
         }
@@ -769,6 +807,7 @@ namespace Xelqoria::Editor
             static_cast<unsigned>(m_visibleEntityIds.size()),
             m_selectedEntityId.has_value() ? static_cast<unsigned>(*m_selectedEntityId) : 0u);
         SetWindowTextW(m_hierarchySummaryLabel, summaryText);
+        RefreshSceneViewSelectionStatus();
     }
 
     void Application::SyncHierarchySelection()
@@ -852,6 +891,7 @@ namespace Xelqoria::Editor
             static_cast<unsigned>(*m_selectedEntityId));
         SetWindowTextW(m_inspectorSummaryLabel, summaryText);
         m_lastInspectorEntityId = m_selectedEntityId;
+        RefreshSceneViewSelectionStatus();
     }
 
     void Application::SyncInspectorEdits()
@@ -940,6 +980,19 @@ namespace Xelqoria::Editor
             m_lastSceneClickX = worldPoint.x;
             m_lastSceneClickY = worldPoint.y;
             m_hasSceneClick = true;
+
+            if (false == m_isAssetDragActive)
+            {
+                const auto hitTargets = BuildSceneHitTargets();
+                const auto selectedEntityId = PickTopmostEntityAtWorldPoint(hitTargets, worldPoint.x, worldPoint.y);
+                if (selectedEntityId != m_selectedEntityId)
+                {
+                    m_selectedEntityId = selectedEntityId;
+                    m_lastInspectorEntityId.reset();
+                    RefreshHierarchyPanel();
+                    RefreshInspectorPanel();
+                }
+            }
         }
 
         if (m_isAssetDragActive && !m_draggingSpriteAssetId.IsEmpty())
@@ -1036,6 +1089,22 @@ namespace Xelqoria::Editor
                 m_sceneDragPreviewWorldX,
                 m_sceneDragPreviewWorldY);
         }
+        else if (m_selectedEntityId.has_value() && m_scene)
+        {
+            const auto entity = m_scene->FindEntity(*m_selectedEntityId);
+            if (entity.has_value())
+            {
+                std::swprintf(
+                    statusText,
+                    std::size(statusText),
+                    L"SceneView size: %u x %u / selected: Entity %u @ (%.1f, %.1f)",
+                    m_sceneViewWidth,
+                    m_sceneViewHeight,
+                    static_cast<unsigned>(*m_selectedEntityId),
+                    entity->get().GetTransform().position.x,
+                    entity->get().GetTransform().position.y);
+            }
+        }
         else if (m_hasSceneClick)
         {
             std::swprintf(
@@ -1063,7 +1132,7 @@ namespace Xelqoria::Editor
                 ? L"SceneView はドロップを受理済みです。次段で Entity 生成へ入力を引き渡します。"
                 : (m_hasSceneDragPreview && m_isSceneDragPreviewCursorInside)
                     ? L"SceneView 上でドラッグ配置プレビューを表示中です。ドロップ位置と表示サイズを確認できます。"
-                : L"Runtime 描画は child HWND に埋め込み済みです。2D EditorCamera で pan/zoom 状態を管理しています。");
+                : L"SceneView にはグリッド、原点、選択フィードバックを重ねて表示しています。");
     }
 
     void Application::ProcessPendingSceneDrop()
@@ -1177,6 +1246,51 @@ namespace Xelqoria::Editor
         ::OutputDebugStringA(debugLine.c_str());
     }
 
+    std::vector<SceneViewHitTarget> Application::BuildSceneHitTargets() const
+    {
+        std::vector<SceneViewHitTarget> hitTargets;
+        if (!m_scene)
+        {
+            return hitTargets;
+        }
+
+        const auto renderItems = m_scene->CollectSpriteRenderItems();
+        hitTargets.reserve(renderItems.size());
+
+        for (const Game::SceneSpriteRenderItem& renderItem : renderItems)
+        {
+            if (renderItem.transform == nullptr || renderItem.spriteComponent == nullptr)
+            {
+                continue;
+            }
+
+            float width = std::abs(renderItem.transform->scale.x);
+            float height = std::abs(renderItem.transform->scale.y);
+
+            const auto spriteAsset = m_spriteAssetRegistry.ResolveSpriteAsset(renderItem.spriteComponent->spriteAssetRef);
+            if (spriteAsset.has_value())
+            {
+                const auto texture = m_textureAssetRegistry.ResolveTexture(spriteAsset->textureAssetId);
+                if (texture)
+                {
+                    width = static_cast<float>(texture->GetWidth()) * std::abs(renderItem.transform->scale.x);
+                    height = static_cast<float>(texture->GetHeight()) * std::abs(renderItem.transform->scale.y);
+                }
+            }
+
+            hitTargets.push_back(SceneViewHitTarget{
+                renderItem.entityId,
+                renderItem.transform->position.x,
+                renderItem.transform->position.y,
+                (std::max)(width, 1.0f),
+                (std::max)(height, 1.0f),
+                renderItem.spriteComponent->renderSettings.sortOrder
+            });
+        }
+
+        return hitTargets;
+    }
+
     void Application::UpdateSceneDragPreview(
         const Core::AssetId& spriteAssetId,
         const EditorWorldPoint& worldPoint,
@@ -1250,6 +1364,158 @@ namespace Xelqoria::Editor
         previewSprite.SetOutlineThickness(1.0f);
         previewSprite.SetOutlineColor(1.0f, 0.84f, 0.04f, 1.0f);
         m_spriteRenderer->Draw(previewSprite);
+    }
+
+    void Application::RenderSceneGrid()
+    {
+        if (!m_solidQuadRenderer || m_sceneViewWidth == 0 || m_sceneViewHeight == 0)
+        {
+            return;
+        }
+
+        const EditorWorldRect visibleWorldRect = m_sceneViewCamera.GetVisibleWorldRect();
+        const float startX = FloorToStep(visibleWorldRect.left, SceneGridStepWorldUnits);
+        for (float worldX = startX; worldX <= visibleWorldRect.right; worldX += SceneGridStepWorldUnits)
+        {
+            const float viewX = m_sceneViewCamera.TransformWorldToViewX(worldX);
+            m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+                viewX,
+                0.0f,
+                SceneGridLineThicknessPixels,
+                static_cast<float>(m_sceneViewHeight),
+                MakeColor(0.25f, 0.27f, 0.31f, 0.45f)
+            });
+        }
+
+        const float startY = FloorToStep(visibleWorldRect.bottom, SceneGridStepWorldUnits);
+        for (float worldY = startY; worldY <= visibleWorldRect.top; worldY += SceneGridStepWorldUnits)
+        {
+            const float viewY = m_sceneViewCamera.TransformWorldToViewY(worldY);
+            m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+                0.0f,
+                viewY,
+                static_cast<float>(m_sceneViewWidth),
+                SceneGridLineThicknessPixels,
+                MakeColor(0.25f, 0.27f, 0.31f, 0.45f)
+            });
+        }
+    }
+
+    void Application::RenderSceneOrigin()
+    {
+        if (!m_solidQuadRenderer || m_sceneViewWidth == 0 || m_sceneViewHeight == 0)
+        {
+            return;
+        }
+
+        const float originViewX = m_sceneViewCamera.TransformWorldToViewX(0.0f);
+        const float originViewY = m_sceneViewCamera.TransformWorldToViewY(0.0f);
+
+        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+            originViewX,
+            0.0f,
+            SceneAxisLineThicknessPixels,
+            static_cast<float>(m_sceneViewHeight),
+            MakeColor(0.91f, 0.35f, 0.31f, 0.8f)
+        });
+        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+            0.0f,
+            originViewY,
+            static_cast<float>(m_sceneViewWidth),
+            SceneAxisLineThicknessPixels,
+            MakeColor(0.31f, 0.76f, 0.43f, 0.8f)
+        });
+    }
+
+    void Application::RenderSelectedEntityOverlay()
+    {
+        if (!m_solidQuadRenderer || !m_selectedEntityId.has_value())
+        {
+            return;
+        }
+
+        const auto hitTargets = BuildSceneHitTargets();
+        const auto selectedTarget = std::find_if(
+            hitTargets.begin(),
+            hitTargets.end(),
+            [this](const SceneViewHitTarget& target)
+            {
+                return m_selectedEntityId.has_value() && target.entityId == *m_selectedEntityId;
+            });
+        if (selectedTarget == hitTargets.end())
+        {
+            return;
+        }
+
+        const float centerViewX = m_sceneViewCamera.TransformWorldToViewX(selectedTarget->centerX);
+        const float centerViewY = m_sceneViewCamera.TransformWorldToViewY(selectedTarget->centerY);
+        const float widthPixels = m_sceneViewCamera.TransformWorldScale(selectedTarget->width);
+        const float heightPixels = m_sceneViewCamera.TransformWorldScale(selectedTarget->height);
+        const float horizontalBorderY = (heightPixels * 0.5f) + (SelectionOutlineThicknessPixels * 0.5f);
+        const float verticalBorderX = (widthPixels * 0.5f) + (SelectionOutlineThicknessPixels * 0.5f);
+        const std::array<float, 4> outlineColor = MakeColor(0.98f, 0.86f, 0.18f, 0.95f);
+
+        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+            centerViewX,
+            centerViewY - horizontalBorderY,
+            widthPixels + SelectionOutlineThicknessPixels * 2.0f,
+            SelectionOutlineThicknessPixels,
+            outlineColor
+        });
+        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+            centerViewX,
+            centerViewY + horizontalBorderY,
+            widthPixels + SelectionOutlineThicknessPixels * 2.0f,
+            SelectionOutlineThicknessPixels,
+            outlineColor
+        });
+        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+            centerViewX - verticalBorderX,
+            centerViewY,
+            SelectionOutlineThicknessPixels,
+            heightPixels + SelectionOutlineThicknessPixels * 2.0f,
+            outlineColor
+        });
+        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+            centerViewX + verticalBorderX,
+            centerViewY,
+            SelectionOutlineThicknessPixels,
+            heightPixels + SelectionOutlineThicknessPixels * 2.0f,
+            outlineColor
+        });
+        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+            centerViewX,
+            centerViewY,
+            SelectionPivotSizePixels,
+            SelectionPivotSizePixels,
+            MakeColor(1.0f, 0.94f, 0.45f, 1.0f)
+        });
+    }
+
+    void Application::RefreshSceneViewSelectionStatus()
+    {
+        if (!m_selectedEntityId.has_value() || !m_scene)
+        {
+            return;
+        }
+
+        const auto entity = m_scene->FindEntity(*m_selectedEntityId);
+        if (!entity.has_value())
+        {
+            return;
+        }
+
+        wchar_t statusText[160]{};
+        std::swprintf(
+            statusText,
+            std::size(statusText),
+            L"SceneView size: %u x %u / selected: Entity %u @ (%.1f, %.1f)",
+            m_sceneViewWidth,
+            m_sceneViewHeight,
+            static_cast<unsigned>(*m_selectedEntityId),
+            entity->get().GetTransform().position.x,
+            entity->get().GetTransform().position.y);
+        SetWindowTextW(m_sceneViewSizeLabel, statusText);
     }
 
     void Application::UpdateCommandShortcuts()

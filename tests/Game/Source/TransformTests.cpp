@@ -243,11 +243,12 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 			0.5f
 		}
 	});
+		const Xelqoria::Game::EntityId visibleSpriteEntityId = visibleSpriteEntity.GetId();
 
 		const auto renderItems = scene.CollectSpriteRenderItems();
 		ASSERT_EQ(static_cast<std::size_t>(1), renderItems.size());
 
-		EXPECT_EQ(visibleSpriteEntity.GetId(), renderItems[0].entityId);
+		EXPECT_EQ(visibleSpriteEntityId, renderItems[0].entityId);
 		ASSERT_NE(nullptr, renderItems[0].transform);
 		ASSERT_NE(nullptr, renderItems[0].spriteComponent);
 
@@ -259,6 +260,21 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		EXPECT_TRUE(renderItems[0].spriteComponent->renderSettings.visible);
 		EXPECT_EQ(5, renderItems[0].spriteComponent->renderSettings.sortOrder);
 		EXPECT_TRUE(IsEqual(renderItems[0].spriteComponent->renderSettings.opacity, 0.5f));
+
+		Xelqoria::Game::Entity& backgroundSpriteEntity = scene.CreateEntity();
+		backgroundSpriteEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+		"sprites/background",
+		{
+			true,
+			-10,
+			1.0f
+		}
+	});
+
+		const auto sortedRenderItems = scene.CollectSpriteRenderItems();
+		ASSERT_EQ(static_cast<std::size_t>(2), sortedRenderItems.size());
+		EXPECT_EQ(backgroundSpriteEntity.GetId(), sortedRenderItems[0].entityId);
+		EXPECT_EQ(visibleSpriteEntityId, sortedRenderItems[1].entityId);
 
 		auto sprite = std::make_shared<Xelqoria::Graphics::Sprite>();
 		scene.AddSprite(sprite);
@@ -336,9 +352,9 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		EXPECT_TRUE(IsEqual(resolvedSprites[0].GetScale().x, 2.0f));
 		EXPECT_TRUE(IsEqual(resolvedSprites[0].GetScale().y, 3.0f));
 
-		ASSERT_EQ(static_cast<std::size_t>(1), resolveLogs.size());
-		EXPECT_NE(resolveLogs[0].find("resolved entity"), std::string::npos);
-		EXPECT_NE(resolveLogs[0].find("sprites/player-idle"), std::string::npos);
+		ASSERT_EQ(static_cast<std::size_t>(2), resolveLogs.size());
+		EXPECT_NE(resolveLogs[1].find("resolved entity"), std::string::npos);
+		EXPECT_NE(resolveLogs[1].find("sprites/player-idle"), std::string::npos);
 
 		const auto missingFieldLoadResult = Xelqoria::Game::Assets::SpriteAssetLoader::LoadFromText(
 		"# textureAssetId is missing\n");

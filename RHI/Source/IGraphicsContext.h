@@ -83,6 +83,46 @@ namespace Xelqoria::RHI
         /// 外枠色のアルファ成分を表す。
         /// </summary>
         float outlineColorA = 1.0f;
+
+        /// <summary>
+        /// 塗りつぶし色の赤成分を表す。
+        /// </summary>
+        float fillColorR = 1.0f;
+
+        /// <summary>
+        /// 塗りつぶし色の緑成分を表す。
+        /// </summary>
+        float fillColorG = 1.0f;
+
+        /// <summary>
+        /// 塗りつぶし色の青成分を表す。
+        /// </summary>
+        float fillColorB = 1.0f;
+
+        /// <summary>
+        /// 塗りつぶし色のアルファ成分を表す。
+        /// </summary>
+        float fillColorA = 1.0f;
+
+        /// <summary>
+        /// テクスチャサンプリングを使用する場合は 1.0f、それ以外は 0.0f を表す。
+        /// </summary>
+        float textureEnabled = 1.0f;
+
+        /// <summary>
+        /// 将来拡張用の予約領域を表す。
+        /// </summary>
+        float reserved2 = 0.0f;
+
+        /// <summary>
+        /// 将来拡張用の予約領域を表す。
+        /// </summary>
+        float reserved3 = 0.0f;
+
+        /// <summary>
+        /// 将来拡張用の予約領域を表す。
+        /// </summary>
+        float reserved4 = 0.0f;
     };
 
     /// <summary>

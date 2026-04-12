@@ -16,6 +16,8 @@
 #include "IGraphicsContext.h"
 #include "SceneCommandHistory.h"
 #include "SceneEditingOperations.h"
+#include "SceneViewOverlay.h"
+#include "SolidQuadRenderer.h"
 #include "TextureAssetRegistry.h"
 #include "Scene.h"
 #include "SpriteRenderer.h"
@@ -183,6 +185,32 @@ namespace Xelqoria::Editor
         void RenderSceneDragPreview();
 
         /// <summary>
+        /// SceneView のグリッドを描画する。
+        /// </summary>
+        void RenderSceneGrid();
+
+        /// <summary>
+        /// SceneView の原点表示を描画する。
+        /// </summary>
+        void RenderSceneOrigin();
+
+        /// <summary>
+        /// 現在選択中 Entity のフィードバックを描画する。
+        /// </summary>
+        void RenderSelectedEntityOverlay();
+
+        /// <summary>
+        /// 選択可能な Entity ヒットターゲットを収集する。
+        /// </summary>
+        /// <returns>ヒット判定に使用するターゲット一覧。</returns>
+        std::vector<SceneViewHitTarget> BuildSceneHitTargets() const;
+
+        /// <summary>
+        /// 現在の選択状態に応じて SceneView ラベル表示を更新する。
+        /// </summary>
+        void RefreshSceneViewSelectionStatus();
+
+        /// <summary>
         /// Editor の Undo/Redo ショートカットを処理する。
         /// </summary>
         void UpdateCommandShortcuts();
@@ -308,6 +336,11 @@ namespace Xelqoria::Editor
         /// SceneView 描画に使用する SpriteRenderer を保持する。
         /// </summary>
         std::unique_ptr<Graphics::SpriteRenderer> m_spriteRenderer;
+
+        /// <summary>
+        /// SceneView オーバーレイ描画に使用する単色クアッドレンダラーを保持する。
+        /// </summary>
+        std::unique_ptr<Graphics::SolidQuadRenderer> m_solidQuadRenderer;
 
         /// <summary>
         /// Assets パネルの一覧表示に使う ListBox を保持する。
