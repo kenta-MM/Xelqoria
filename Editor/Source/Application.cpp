@@ -113,6 +113,73 @@ namespace Xelqoria::Editor
 
             return std::floor(value / step) * step;
         }
+
+        /// <summary>
+        /// Entity ID と対になる描画用 Sprite を表す。
+        /// </summary>
+        struct SceneRenderSprite
+        {
+            /// <summary>
+            /// 描画対象に対応する Entity ID を表す。
+            /// </summary>
+            Game::EntityId entityId = 0;
+
+            /// <summary>
+            /// 描画に使用する Sprite を保持する。
+            /// </summary>
+            Graphics::Sprite sprite{};
+        };
+
+        /// <summary>
+        /// Scene の描画候補を Entity ID 付きの Sprite 一覧へ解決する。
+        /// </summary>
+        /// <param name="scene">解決対象の Scene。</param>
+        /// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
+        /// <param name="textureAssetResolver">Texture2D を解決する Resolver。</param>
+        /// <returns>描画可能な Sprite 一覧。</returns>
+        std::vector<SceneRenderSprite> ResolveSceneRenderSprites(
+            const Game::Scene& scene,
+            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
+            const Graphics::ITextureAssetResolver& textureAssetResolver)
+        {
+            std::vector<SceneRenderSprite> resolvedSprites;
+            const auto renderItems = scene.CollectSpriteRenderItems();
+            resolvedSprites.reserve(renderItems.size());
+
+            for (const Game::SceneSpriteRenderItem& renderItem : renderItems)
+            {
+                if (renderItem.transform == nullptr || renderItem.spriteComponent == nullptr)
+                {
+                    continue;
+                }
+
+                const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(renderItem.spriteComponent->spriteAssetRef);
+                if (!spriteAsset.has_value())
+                {
+                    continue;
+                }
+
+                const auto texture = textureAssetResolver.ResolveTexture(spriteAsset->textureAssetId);
+                if (!texture)
+                {
+                    continue;
+                }
+
+                Graphics::Sprite sprite{};
+                sprite.SetTexture(texture);
+                sprite.SetTextureAssetId(spriteAsset->textureAssetId);
+                sprite.SetPosition(renderItem.transform->position.x, renderItem.transform->position.y);
+                sprite.SetScale(renderItem.transform->scale.x, renderItem.transform->scale.y);
+                sprite.SetRotationDegrees(renderItem.transform->rotation.z);
+
+                resolvedSprites.push_back(SceneRenderSprite{
+                    renderItem.entityId,
+                    std::move(sprite)
+                });
+            }
+
+            return resolvedSprites;
+        }
     }
 
     Application::Application(HINSTANCE hInstance)
@@ -228,13 +295,15 @@ namespace Xelqoria::Editor
         if (m_spriteRenderer && m_scene)
         {
             m_scene->ValidateSpriteReferences(m_spriteAssetRegistry);
-            auto resolvedSprites = m_scene->ResolveSprites(m_spriteAssetRegistry, m_textureAssetRegistry);
+            auto resolvedSprites = ResolveSceneRenderSprites(*m_scene, m_spriteAssetRegistry, m_textureAssetRegistry);
 
             m_spriteRenderer->Begin();
             RenderSceneGrid();
             RenderSceneOrigin();
-            for (auto& sprite : resolvedSprites)
+            std::optional<Graphics::Sprite> selectedSprite;
+            for (auto& renderSprite : resolvedSprites)
             {
+                auto& sprite = renderSprite.sprite;
                 const auto position = sprite.GetPosition();
                 const auto scale = sprite.GetScale();
 
@@ -244,7 +313,19 @@ namespace Xelqoria::Editor
                 sprite.SetScale(
                     m_sceneViewCamera.TransformWorldScale(scale.x),
                     m_sceneViewCamera.TransformWorldScale(scale.y));
+
+                if (m_selectedEntityId.has_value() && renderSprite.entityId == *m_selectedEntityId)
+                {
+                    selectedSprite = sprite;
+                    continue;
+                }
+
                 m_spriteRenderer->Draw(sprite);
+            }
+
+            if (selectedSprite.has_value())
+            {
+                m_spriteRenderer->Draw(*selectedSprite);
             }
             RenderSelectedEntityOverlay();
             RenderSceneDragPreview();
