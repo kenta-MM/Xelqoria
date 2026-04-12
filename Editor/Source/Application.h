@@ -160,6 +160,29 @@ namespace Xelqoria::Editor
         void ProcessPendingSceneDrop();
 
         /// <summary>
+        /// 現在のドラッグ状態に合わせて SceneView 用プレビューを更新する。
+        /// </summary>
+        /// <param name="spriteAssetId">プレビュー対象の SpriteAssetId。</param>
+        /// <param name="worldPoint">プレビュー中心に使用するワールド座標。</param>
+        /// <param name="screenPoint">プレビュー描画に使用する SceneView スクリーン座標。</param>
+        /// <param name="isCursorInside">カーソルが SceneView 内にある場合は true。</param>
+        void UpdateSceneDragPreview(
+            const Core::AssetId& spriteAssetId,
+            const EditorWorldPoint& worldPoint,
+            const EditorScreenPoint& screenPoint,
+            bool isCursorInside);
+
+        /// <summary>
+        /// SceneView 用ドラッグプレビュー状態を破棄する。
+        /// </summary>
+        void ClearSceneDragPreview();
+
+        /// <summary>
+        /// 現在のドラッグプレビュー用 Sprite を描画する。
+        /// </summary>
+        void RenderSceneDragPreview();
+
+        /// <summary>
         /// Editor の Undo/Redo ショートカットを処理する。
         /// </summary>
         void UpdateCommandShortcuts();
@@ -446,6 +469,46 @@ namespace Xelqoria::Editor
         /// SceneView で未処理のドロップがあるかを表す。
         /// </summary>
         bool m_hasPendingSceneDrop = false;
+
+        /// <summary>
+        /// SceneView で現在表示中のプレビュー用 SpriteAssetId を保持する。
+        /// </summary>
+        Core::AssetId m_sceneDragPreviewSpriteAssetId{};
+
+        /// <summary>
+        /// SceneView で現在表示中のプレビュー用テクスチャを保持する。
+        /// </summary>
+        std::shared_ptr<Graphics::Texture2D> m_sceneDragPreviewTexture{};
+
+        /// <summary>
+        /// SceneView プレビュー中心のワールド座標 X を保持する。
+        /// </summary>
+        float m_sceneDragPreviewWorldX = 0.0f;
+
+        /// <summary>
+        /// SceneView プレビュー中心のワールド座標 Y を保持する。
+        /// </summary>
+        float m_sceneDragPreviewWorldY = 0.0f;
+
+        /// <summary>
+        /// SceneView プレビュー描画位置の View X 座標を保持する。
+        /// </summary>
+        float m_sceneDragPreviewViewX = 0.0f;
+
+        /// <summary>
+        /// SceneView プレビュー描画位置の View Y 座標を保持する。
+        /// </summary>
+        float m_sceneDragPreviewViewY = 0.0f;
+
+        /// <summary>
+        /// SceneView 内に表示可能なドラッグプレビューがあるかを表す。
+        /// </summary>
+        bool m_hasSceneDragPreview = false;
+
+        /// <summary>
+        /// SceneView 内にカーソルがありプレビューを表示すべきかを表す。
+        /// </summary>
+        bool m_isSceneDragPreviewCursorInside = false;
 
         /// <summary>
         /// Scene 編集コマンドの Undo/Redo 履歴を保持する。

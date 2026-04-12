@@ -209,6 +209,7 @@ namespace Xelqoria::Editor
                     m_sceneViewCamera.TransformWorldScale(scale.y));
                 m_spriteRenderer->Draw(sprite);
             }
+            RenderSceneDragPreview();
             m_spriteRenderer->End();
         }
         m_graphics->EndFrame();
@@ -911,6 +912,7 @@ namespace Xelqoria::Editor
     {
         if (m_sceneViewHost == nullptr || m_sceneViewWidth == 0 || m_sceneViewHeight == 0)
         {
+            ClearSceneDragPreview();
             return;
         }
 
@@ -938,6 +940,30 @@ namespace Xelqoria::Editor
             m_lastSceneClickX = worldPoint.x;
             m_lastSceneClickY = worldPoint.y;
             m_hasSceneClick = true;
+        }
+
+        if (m_isAssetDragActive && !m_draggingSpriteAssetId.IsEmpty())
+        {
+            if (isCursorInside)
+            {
+                POINT clientPoint = screenPoint;
+                ScreenToClient(m_sceneViewHost, &clientPoint);
+
+                const EditorScreenPoint previewScreenPoint{
+                    static_cast<float>(clientPoint.x),
+                    static_cast<float>(clientPoint.y)
+                };
+                const EditorWorldPoint previewWorldPoint = m_sceneViewCamera.TransformScreenToWorld(previewScreenPoint);
+                UpdateSceneDragPreview(m_draggingSpriteAssetId, previewWorldPoint, previewScreenPoint, true);
+            }
+            else
+            {
+                ClearSceneDragPreview();
+            }
+        }
+        else
+        {
+            ClearSceneDragPreview();
         }
 
         if (m_assetDragReleasedThisFrame && !m_draggingSpriteAssetId.IsEmpty())
@@ -976,6 +1002,7 @@ namespace Xelqoria::Editor
                 ::OutputDebugStringA(debugLine.c_str());
             }
 
+            ClearSceneDragPreview();
             m_draggingSpriteAssetId = {};
             RefreshAssetsSummaryLabel();
         }
@@ -995,6 +1022,19 @@ namespace Xelqoria::Editor
                 assetId.c_str(),
                 m_pendingDropWorldX,
                 m_pendingDropWorldY);
+        }
+        else if (m_hasSceneDragPreview && m_isSceneDragPreviewCursorInside && !m_sceneDragPreviewSpriteAssetId.IsEmpty())
+        {
+            const std::wstring previewAssetId = ToWideString(m_sceneDragPreviewSpriteAssetId.GetValue());
+            std::swprintf(
+                statusText,
+                std::size(statusText),
+                L"SceneView size: %u x %u / drag preview: %ls @ (%.1f, %.1f)",
+                m_sceneViewWidth,
+                m_sceneViewHeight,
+                previewAssetId.c_str(),
+                m_sceneDragPreviewWorldX,
+                m_sceneDragPreviewWorldY);
         }
         else if (m_hasSceneClick)
         {
@@ -1021,6 +1061,8 @@ namespace Xelqoria::Editor
             m_sceneViewPlanLabel,
             m_hasPendingSceneDrop
                 ? L"SceneView はドロップを受理済みです。次段で Entity 生成へ入力を引き渡します。"
+                : (m_hasSceneDragPreview && m_isSceneDragPreviewCursorInside)
+                    ? L"SceneView 上でドラッグ配置プレビューを表示中です。ドロップ位置と表示サイズを確認できます。"
                 : L"Runtime 描画は child HWND に埋め込み済みです。2D EditorCamera で pan/zoom 状態を管理しています。");
     }
 
@@ -1133,6 +1175,81 @@ namespace Xelqoria::Editor
             + std::to_string(dropWorldY)
             + ") and reloaded the scene snapshot.\n";
         ::OutputDebugStringA(debugLine.c_str());
+    }
+
+    void Application::UpdateSceneDragPreview(
+        const Core::AssetId& spriteAssetId,
+        const EditorWorldPoint& worldPoint,
+        const EditorScreenPoint& screenPoint,
+        bool isCursorInside)
+    {
+        m_isSceneDragPreviewCursorInside = isCursorInside;
+        if (false == isCursorInside || spriteAssetId.IsEmpty())
+        {
+            ClearSceneDragPreview();
+            return;
+        }
+
+        if (m_sceneDragPreviewSpriteAssetId.GetValue() != spriteAssetId.GetValue() || !m_sceneDragPreviewTexture)
+        {
+            const auto spriteAsset = m_spriteAssetRegistry.ResolveSpriteAsset(spriteAssetId);
+            if (!spriteAsset.has_value())
+            {
+                ClearSceneDragPreview();
+                return;
+            }
+
+            const auto previewTexture = m_textureAssetRegistry.ResolveTexture(spriteAsset->textureAssetId);
+            if (!previewTexture)
+            {
+                ClearSceneDragPreview();
+                return;
+            }
+
+            m_sceneDragPreviewSpriteAssetId = spriteAssetId;
+            m_sceneDragPreviewTexture = previewTexture;
+        }
+
+        m_sceneDragPreviewWorldX = worldPoint.x;
+        m_sceneDragPreviewWorldY = worldPoint.y;
+        m_sceneDragPreviewViewX = screenPoint.x - static_cast<float>(m_sceneViewWidth) * 0.5f;
+        m_sceneDragPreviewViewY = screenPoint.y - static_cast<float>(m_sceneViewHeight) * 0.5f;
+        m_hasSceneDragPreview = true;
+    }
+
+    void Application::ClearSceneDragPreview()
+    {
+        m_sceneDragPreviewSpriteAssetId = {};
+        m_sceneDragPreviewTexture.reset();
+        m_sceneDragPreviewWorldX = 0.0f;
+        m_sceneDragPreviewWorldY = 0.0f;
+        m_sceneDragPreviewViewX = 0.0f;
+        m_sceneDragPreviewViewY = 0.0f;
+        m_hasSceneDragPreview = false;
+        m_isSceneDragPreviewCursorInside = false;
+    }
+
+    void Application::RenderSceneDragPreview()
+    {
+        if (!m_spriteRenderer
+            || false == m_hasSceneDragPreview
+            || false == m_isSceneDragPreviewCursorInside
+            || !m_sceneDragPreviewTexture)
+        {
+            return;
+        }
+
+        Graphics::Sprite previewSprite{};
+        previewSprite.SetTexture(m_sceneDragPreviewTexture);
+        previewSprite.SetPosition(m_sceneDragPreviewViewX, m_sceneDragPreviewViewY);
+        previewSprite.SetScale(
+            m_sceneViewCamera.TransformWorldScale(1.0f),
+            m_sceneViewCamera.TransformWorldScale(1.0f));
+        previewSprite.SetRotationDegrees(0.0f);
+        previewSprite.SetOutlineEnabled(true);
+        previewSprite.SetOutlineThickness(1.0f);
+        previewSprite.SetOutlineColor(1.0f, 0.84f, 0.04f, 1.0f);
+        m_spriteRenderer->Draw(previewSprite);
     }
 
     void Application::UpdateCommandShortcuts()

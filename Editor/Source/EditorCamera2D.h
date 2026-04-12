@@ -168,7 +168,7 @@ namespace Xelqoria::Editor
 
             return EditorWorldPoint{
                 (screenPoint.x - halfWidth) / m_zoom + m_centerX,
-                -(screenPoint.y - halfHeight) / m_zoom + m_centerY
+                (screenPoint.y - halfHeight) / m_zoom + m_centerY
             };
         }
 

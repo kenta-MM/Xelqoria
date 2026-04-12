@@ -43,6 +43,46 @@ namespace Xelqoria::RHI
         /// Y 軸方向の移動量を表す。
         /// </summary>
         float translateY = 0.0f;
+
+        /// <summary>
+        /// 外枠描画が有効な場合は 1.0f、それ以外は 0.0f を表す。
+        /// </summary>
+        float outlineEnabled = 0.0f;
+
+        /// <summary>
+        /// 外枠太さを画面ピクセル単位で表す。
+        /// </summary>
+        float outlineThickness = 0.0f;
+
+        /// <summary>
+        /// 将来拡張用の予約領域を表す。
+        /// </summary>
+        float reserved0 = 0.0f;
+
+        /// <summary>
+        /// 将来拡張用の予約領域を表す。
+        /// </summary>
+        float reserved1 = 0.0f;
+
+        /// <summary>
+        /// 外枠色の赤成分を表す。
+        /// </summary>
+        float outlineColorR = 1.0f;
+
+        /// <summary>
+        /// 外枠色の緑成分を表す。
+        /// </summary>
+        float outlineColorG = 1.0f;
+
+        /// <summary>
+        /// 外枠色の青成分を表す。
+        /// </summary>
+        float outlineColorB = 0.0f;
+
+        /// <summary>
+        /// 外枠色のアルファ成分を表す。
+        /// </summary>
+        float outlineColorA = 1.0f;
     };
 
     /// <summary>

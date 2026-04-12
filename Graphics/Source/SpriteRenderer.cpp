@@ -47,7 +47,15 @@ namespace Xelqoria::Graphics
             quadTransform.rotationCos,
             quadTransform.rotationSin,
             quadTransform.translateX,
-            quadTransform.translateY
+            quadTransform.translateY,
+            sprite.IsOutlineEnabled() ? 1.0f : 0.0f,
+            sprite.GetOutlineThickness(),
+            0.0f,
+            0.0f,
+            sprite.GetOutlineColor()[0],
+            sprite.GetOutlineColor()[1],
+            sprite.GetOutlineColor()[2],
+            sprite.GetOutlineColor()[3]
         });
 
         // 1スプライトを2三角形(6頂点)で描画する前提。
