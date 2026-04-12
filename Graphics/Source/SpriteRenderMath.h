@@ -5,6 +5,7 @@
 
 #include "Sprite.h"
 #include "Texture2D.h"
+#include <Vector2.h>
 
 namespace Xelqoria::Graphics
 {
@@ -63,8 +64,8 @@ namespace Xelqoria::Graphics
 			return transform;
 		}
 
-		const Vector2 position = sprite.GetPosition();
-		const Vector2 scale = sprite.GetScale();
+		const Xelqoria::Math::Vector2 position = sprite.GetPosition();
+		const Xelqoria::Math::Vector2 scale = sprite.GetScale();
 
 		transform.scaleX = (2.0f * static_cast<float>(texture->GetWidth()) * scale.x) / static_cast<float>(viewportWidth);
 		transform.scaleY = (2.0f * static_cast<float>(texture->GetHeight()) * scale.y) / static_cast<float>(viewportHeight);

@@ -19,41 +19,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">
-      <Project>{79E8E826-7407-4766-B731-675CB84F6552}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Graphics\Xelqoria.Graphics.vcxproj">
-      <Project>{7693792A-4AD4-445A-98F7-B90D6989A837}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Xelqoria.Math\Xelqoria.Math.vcxproj">
-      <Project>{9143e43a-0447-43e1-9fe4-9c3edec98212}</Project>
-    </ProjectReference>
+    <ClInclude Include="Source\Vector2.h" />
+    <ClInclude Include="Source\Vector3.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Assets\SpriteAssetRegistry.cpp" />
-    <ClCompile Include="Source\Assets\SpriteAssetLoader.cpp" />
-    <ClCompile Include="Source\Entity.cpp" />
-    <ClCompile Include="Source\Scene.cpp" />
-    <ClCompile Include="Source\SceneSerializer.cpp" />
-    <ClCompile Include="Source\Transform.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Source\Assets\ISpriteAssetResolver.h" />
-    <ClInclude Include="Source\Assets\SpriteAsset.h" />
-    <ClInclude Include="Source\Assets\SpriteAssetLoader.h" />
-    <ClInclude Include="Source\Assets\SpriteAssetRegistry.h" />
-    <ClInclude Include="Source\Entity.h" />
-    <ClInclude Include="Source\Scene.h" />
-    <ClInclude Include="Source\SceneSaveFormat.h" />
-    <ClInclude Include="Source\SceneSerializer.h" />
-    <ClInclude Include="Source\SpriteComponent.h" />
-    <ClInclude Include="Source\Transform.h" />
+    <ClCompile Include="Source\MathModule.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{B43E8E97-59EF-4CAA-8A27-BD9192D8833A}</ProjectGuid>
-    <RootNamespace>XelqoriaGame</RootNamespace>
+    <ProjectGuid>{9143e43a-0447-43e1-9fe4-9c3edec98212}</ProjectGuid>
+    <RootNamespace>XelqoriaMath</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -84,8 +60,10 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings" />
-  <ImportGroup Label="Shared" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -99,21 +77,21 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup>
-    <RepoRootDir>$(MSBuildProjectDirectory)\..\</RepoRootDir>
-    <OutDir>$(RepoRootDir)artifacts\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(RepoRootDir)build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)Xelqoria.Math\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -121,23 +99,33 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)Xelqoria.Math\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)Xelqoria.Math\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -145,20 +133,19 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)Xelqoria.Math\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <PropertyGroup>
-    <LayerDependencyCheckerExe>$(RepoRootDir)tools\LayerDependencyChecker\bin\$(Configuration)\net8.0\LayerDependencyChecker.exe</LayerDependencyCheckerExe>
-  </PropertyGroup>
-  <Target Name="ValidateLayerDependencies" BeforeTargets="ClCompile">
-    <Error Condition="!Exists('$(LayerDependencyCheckerExe)')" Text="LayerDependencyChecker.exe が見つかりません。tools\LayerDependencyChecker をビルドしてください。期待パス: $(LayerDependencyCheckerExe)" />
-    <Exec Command="&quot;$(LayerDependencyCheckerExe)&quot; &quot;$(RepoRootDir)&quot;" />
-  </Target>
-  <ImportGroup Label="ExtensionTargets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
 </Project>

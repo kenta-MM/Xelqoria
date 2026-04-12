@@ -5,6 +5,7 @@
 ## 一覧
 
 - Core: `docs/class_diagram/core-class-diagram.md`
+- Xelqoria.Math: `docs/class_diagram/math-class-diagram.md`
 - RHI: `docs/class_diagram/rhi-class-diagram.md`
 - Graphics: `docs/class_diagram/graphics-class-diagram.md`
 - Game: `docs/class_diagram/game-class-diagram.md`
