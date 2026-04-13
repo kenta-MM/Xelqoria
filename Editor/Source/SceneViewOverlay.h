@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -40,10 +39,6 @@ namespace Xelqoria::Editor
         /// </summary>
         float height = 0.0f;
 
-        /// <summary>
-        /// 描画順制御に使用するソートキーを表す。
-        /// </summary>
-        std::int32_t sortOrder = 0;
     };
 
     /// <summary>
@@ -66,7 +61,7 @@ namespace Xelqoria::Editor
     /// <summary>
     /// 指定座標に重なる候補から最前面相当の Entity を選択する。
     /// </summary>
-    /// <param name="targets">判定対象の候補一覧。</param>
+    /// <param name="targets">判定対象の候補一覧。配列末尾ほど前面に描画された候補を表す。</param>
     /// <param name="worldX">判定するワールド X 座標。</param>
     /// <param name="worldY">判定するワールド Y 座標。</param>
     /// <returns>選択された Entity ID。候補が無い場合は空。</returns>
@@ -75,25 +70,17 @@ namespace Xelqoria::Editor
         float worldX,
         float worldY)
     {
-        std::optional<Game::EntityId> selectedEntityId;
-        std::int32_t selectedSortOrder = 0;
-        bool hasSelection = false;
-
-        for (const SceneViewHitTarget& target : targets)
+        for (auto iterator = targets.rbegin(); iterator != targets.rend(); ++iterator)
         {
+            const SceneViewHitTarget& target = *iterator;
             if (false == ContainsPoint(target, worldX, worldY))
             {
                 continue;
             }
 
-            if (false == hasSelection || target.sortOrder >= selectedSortOrder)
-            {
-                selectedEntityId = target.entityId;
-                selectedSortOrder = target.sortOrder;
-                hasSelection = true;
-            }
+            return target.entityId;
         }
 
-        return selectedEntityId;
+        return std::nullopt;
     }
 }

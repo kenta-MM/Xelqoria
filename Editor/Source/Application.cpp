@@ -33,6 +33,12 @@
 #include <system_error>
 #include "EditorCamera2D.h"
 #include <Entity.h>
+#include <array>
+#include <utility>
+#include <vector>
+#include <Assets/ISpriteAssetResolver.h>
+#include <ITextureAssetResolver.h>
+#include <Sprite.h>
 
 namespace Xelqoria::Editor
 {
@@ -180,6 +186,44 @@ namespace Xelqoria::Editor
 
             return resolvedSprites;
         }
+
+        /// <summary>
+        /// SceneView 上で実際に使用する最終描画順へ Sprite 一覧を並べ替える。
+        /// </summary>
+        /// <param name="resolvedSprites">描画候補として解決済みの Sprite 一覧。</param>
+        /// <param name="selectedEntityId">見た目上最前面に再描画する選択中 Entity ID。</param>
+        /// <returns>SceneView の最終描画順に並んだ Sprite 一覧。</returns>
+        std::vector<SceneRenderSprite> OrderSceneRenderSpritesForSceneView(
+            std::vector<SceneRenderSprite> resolvedSprites,
+            const std::optional<Game::EntityId>& selectedEntityId)
+        {
+            if (!selectedEntityId.has_value())
+            {
+                return resolvedSprites;
+            }
+
+            std::vector<SceneRenderSprite> orderedSprites;
+            orderedSprites.reserve(resolvedSprites.size());
+            std::optional<SceneRenderSprite> selectedSprite;
+
+            for (auto& renderSprite : resolvedSprites)
+            {
+                if (renderSprite.entityId == *selectedEntityId)
+                {
+                    selectedSprite = std::move(renderSprite);
+                    continue;
+                }
+
+                orderedSprites.push_back(std::move(renderSprite));
+            }
+
+            if (selectedSprite.has_value())
+            {
+                orderedSprites.push_back(std::move(*selectedSprite));
+            }
+
+            return orderedSprites;
+        }
     }
 
     Application::Application(HINSTANCE hInstance)
@@ -296,11 +340,11 @@ namespace Xelqoria::Editor
         {
             m_scene->ValidateSpriteReferences(m_spriteAssetRegistry);
             auto resolvedSprites = ResolveSceneRenderSprites(*m_scene, m_spriteAssetRegistry, m_textureAssetRegistry);
+            resolvedSprites = OrderSceneRenderSpritesForSceneView(std::move(resolvedSprites), m_selectedEntityId);
 
             m_spriteRenderer->Begin();
             RenderSceneGrid();
             RenderSceneOrigin();
-            std::optional<Graphics::Sprite> selectedSprite;
             for (auto& renderSprite : resolvedSprites)
             {
                 auto& sprite = renderSprite.sprite;
@@ -314,18 +358,7 @@ namespace Xelqoria::Editor
                     m_sceneViewCamera.TransformWorldScale(scale.x),
                     m_sceneViewCamera.TransformWorldScale(scale.y));
 
-                if (m_selectedEntityId.has_value() && renderSprite.entityId == *m_selectedEntityId)
-                {
-                    selectedSprite = sprite;
-                    continue;
-                }
-
                 m_spriteRenderer->Draw(sprite);
-            }
-
-            if (selectedSprite.has_value())
-            {
-                m_spriteRenderer->Draw(*selectedSprite);
             }
             RenderSelectedEntityOverlay();
             RenderSceneDragPreview();
@@ -1335,37 +1368,30 @@ namespace Xelqoria::Editor
             return hitTargets;
         }
 
-        const auto renderItems = m_scene->CollectSpriteRenderItems();
-        hitTargets.reserve(renderItems.size());
+        auto resolvedSprites = ResolveSceneRenderSprites(*m_scene, m_spriteAssetRegistry, m_textureAssetRegistry);
+        resolvedSprites = OrderSceneRenderSpritesForSceneView(std::move(resolvedSprites), m_selectedEntityId);
+        hitTargets.reserve(resolvedSprites.size());
 
-        for (const Game::SceneSpriteRenderItem& renderItem : renderItems)
+        for (const SceneRenderSprite& renderSprite : resolvedSprites)
         {
-            if (renderItem.transform == nullptr || renderItem.spriteComponent == nullptr)
+            const auto& sprite = renderSprite.sprite;
+            const auto texture = sprite.GetTexture();
+            if (!texture)
             {
                 continue;
             }
 
-            float width = std::abs(renderItem.transform->scale.x);
-            float height = std::abs(renderItem.transform->scale.y);
-
-            const auto spriteAsset = m_spriteAssetRegistry.ResolveSpriteAsset(renderItem.spriteComponent->spriteAssetRef);
-            if (spriteAsset.has_value())
-            {
-                const auto texture = m_textureAssetRegistry.ResolveTexture(spriteAsset->textureAssetId);
-                if (texture)
-                {
-                    width = static_cast<float>(texture->GetWidth()) * std::abs(renderItem.transform->scale.x);
-                    height = static_cast<float>(texture->GetHeight()) * std::abs(renderItem.transform->scale.y);
-                }
-            }
+            const auto position = sprite.GetPosition();
+            const auto scale = sprite.GetScale();
+            const float width = static_cast<float>(texture->GetWidth()) * std::abs(scale.x);
+            const float height = static_cast<float>(texture->GetHeight()) * std::abs(scale.y);
 
             hitTargets.push_back(SceneViewHitTarget{
-                renderItem.entityId,
-                renderItem.transform->position.x,
-                renderItem.transform->position.y,
+                renderSprite.entityId,
+                position.x,
+                position.y,
                 (std::max)(width, 1.0f),
-                (std::max)(height, 1.0f),
-                renderItem.spriteComponent->renderSettings.sortOrder
+                (std::max)(height, 1.0f)
             });
         }
 
