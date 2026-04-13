@@ -373,45 +373,119 @@ namespace Xelqoria::Editor
 
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE | BS_GROUPBOX;
         m_hierarchyPanel = CreateChildWindow(L"Button", L"Hierarchy", panelStyle);
+        if (nullptr == m_hierarchyPanel)
+        {
+            return false;
+        }
+
         m_assetsPanel = CreateChildWindow(L"Button", L"Assets", panelStyle);
+        if (nullptr == m_assetsPanel)
+        {
+            return false;
+        }
+
         m_inspectorPanel = CreateChildWindow(L"Button", L"Inspector", panelStyle);
+        if (nullptr == m_inspectorPanel)
+        {
+            return false;
+        }
+
         m_sceneViewPanel = CreateChildWindow(L"Button", L"SceneView", panelStyle);
+        if (nullptr == m_sceneViewPanel)
+        {
+            return false;
+        }
+
         m_sceneViewPlanLabel = CreateChildWindow(
             L"Static",
             L"Runtime 描画は SceneView 専用 child HWND に埋め込みます。",
             WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_sceneViewPlanLabel)
+        {
+            return false;
+        }
+
         m_sceneViewHost = CreateChildWindow(
             L"Static",
             L"",
             WS_CHILD | WS_VISIBLE | SS_NOTIFY,
             WS_EX_CLIENTEDGE);
+        if (nullptr == m_sceneViewHost)
+        {
+            return false;
+        }
+
         m_sceneViewSizeLabel = CreateChildWindow(
             L"Static",
             L"SceneView size: pending",
             WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_sceneViewSizeLabel)
+        {
+            return false;
+        }
+
         m_assetsSummaryLabel = CreateChildWindow(
             L"Static",
             L"Sprite assets: pending",
             WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_assetsSummaryLabel)
+        {
+            return false;
+        }
+
         m_assetsListBox = CreateChildWindow(
             L"ListBox",
             L"",
             WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
+        if (nullptr == m_assetsListBox)
+        {
+            return false;
+        }
+
         m_hierarchySummaryLabel = CreateChildWindow(
             L"Static",
             L"Entities: pending",
             WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_hierarchySummaryLabel)
+        {
+            return false;
+        }
+
         m_hierarchyListBox = CreateChildWindow(
             L"ListBox",
             L"",
             WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
+        if (nullptr == m_hierarchyListBox)
+        {
+            return false;
+        }
+
         m_inspectorSummaryLabel = CreateChildWindow(
             L"Static",
             L"Inspector: pending",
             WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_inspectorSummaryLabel)
+        {
+            return false;
+        }
+
         m_transformLabels[0] = CreateChildWindow(L"Static", L"Position", WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_transformLabels[0])
+        {
+            return false;
+        }
+
         m_transformLabels[1] = CreateChildWindow(L"Static", L"Rotation", WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_transformLabels[1])
+        {
+            return false;
+        }
+
         m_transformLabels[2] = CreateChildWindow(L"Static", L"Scale", WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_transformLabels[2])
+        {
+            return false;
+        }
 
         for (auto& handle : m_transformEditControls)
         {
@@ -419,36 +493,28 @@ namespace Xelqoria::Editor
                 L"Edit",
                 L"",
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+            if (nullptr == handle)
+            {
+                return false;
+            }
         }
 
         m_spriteRefLabel = CreateChildWindow(L"Static", L"SpriteRef", WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_spriteRefLabel)
+        {
+            return false;
+        }
+
         m_spriteRefEdit = CreateChildWindow(
             L"Edit",
             L"",
             WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+        if (nullptr == m_spriteRefEdit)
+        {
+            return false;
+        }
 
-        return m_hierarchyPanel != nullptr
-            && m_assetsPanel != nullptr
-            && m_inspectorPanel != nullptr
-            && m_sceneViewPanel != nullptr
-            && m_sceneViewPlanLabel != nullptr
-            && m_sceneViewHost != nullptr
-            && m_sceneViewSizeLabel != nullptr
-            && m_assetsSummaryLabel != nullptr
-            && m_assetsListBox != nullptr
-            && m_hierarchySummaryLabel != nullptr
-            && m_hierarchyListBox != nullptr
-            && m_inspectorSummaryLabel != nullptr
-            && m_spriteRefLabel != nullptr
-            && m_spriteRefEdit != nullptr
-            && std::all_of(
-                m_transformLabels.begin(),
-                m_transformLabels.end(),
-                [](HWND handle) { return handle != nullptr; })
-            && std::all_of(
-                m_transformEditControls.begin(),
-                m_transformEditControls.end(),
-                [](HWND handle) { return handle != nullptr; });
+        return true;
     }
 
     void Application::UpdateLayout()
