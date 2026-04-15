@@ -1,6 +1,7 @@
 #include "SceneCommandHistory.h"
 
 #include <utility>
+#include <optional>
 
 namespace Xelqoria::Editor
 {
