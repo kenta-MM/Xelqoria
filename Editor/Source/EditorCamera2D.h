@@ -38,6 +38,32 @@ namespace Xelqoria::Editor
     };
 
     /// <summary>
+    /// SceneView 上で現在見えているワールド範囲を表す。
+    /// </summary>
+    struct EditorWorldRect
+    {
+        /// <summary>
+        /// 可視範囲の左端 X 座標を表す。
+        /// </summary>
+        float left = 0.0f;
+
+        /// <summary>
+        /// 可視範囲の右端 X 座標を表す。
+        /// </summary>
+        float right = 0.0f;
+
+        /// <summary>
+        /// 可視範囲の上端 Y 座標を表す。
+        /// </summary>
+        float top = 0.0f;
+
+        /// <summary>
+        /// 可視範囲の下端 Y 座標を表す。
+        /// </summary>
+        float bottom = 0.0f;
+    };
+
+    /// <summary>
     /// 2D SceneView で使用するビューポート設定を表す。
     /// </summary>
     struct EditorViewport
@@ -168,7 +194,24 @@ namespace Xelqoria::Editor
 
             return EditorWorldPoint{
                 (screenPoint.x - halfWidth) / m_zoom + m_centerX,
-                (screenPoint.y - halfHeight) / m_zoom + m_centerY
+                -(halfHeight - screenPoint.y) / m_zoom + m_centerY
+            };
+        }
+
+        /// <summary>
+        /// 現在のビューポートで表示されるワールド範囲を取得する。
+        /// </summary>
+        /// <returns>SceneView に見えているワールド矩形。</returns>
+        EditorWorldRect GetVisibleWorldRect() const
+        {
+            const float halfWidth = static_cast<float>(m_viewport.width) * 0.5f / m_zoom;
+            const float halfHeight = static_cast<float>(m_viewport.height) * 0.5f / m_zoom;
+
+            return EditorWorldRect{
+                m_centerX - halfWidth,
+                m_centerX + halfWidth,
+                m_centerY + halfHeight,
+                m_centerY - halfHeight
             };
         }
 

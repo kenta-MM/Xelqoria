@@ -9,10 +9,40 @@
     <ClCompile Include="Source\Application.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\AssetsPanelController.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\EditorCommandController.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\EditorSceneDocument.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\EditorShell.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Entry.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\HierarchyPanelController.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\InspectorPanelController.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\RenderBackendBootstrap.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneCommandHistory.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneEditingOperations.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneViewController.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneViewRenderer.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -20,10 +50,43 @@
     <ClInclude Include="Source\Application.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\AssetsPanelController.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EditorCommandController.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EditorSceneDocument.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EditorShell.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EditorStringUtils.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\EditorCamera2D.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\HierarchyPanelController.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\InspectorPanelController.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\RenderBackendBootstrap.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneCommandHistory.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneEditingOperations.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneViewController.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneViewRenderer.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

@@ -385,8 +385,25 @@ namespace Xelqoria::Backends::D3D12
 
     void D3D12GraphicsContext::BindTexture(std::uint32_t slot, RHI::ITexture* texture)
     {
-        if (slot != 0 || !m_device || !m_srvHeap || texture == nullptr)
+        if (slot != 0 || !m_device || !m_srvHeap)
         {
+            m_hasBoundTexture = false;
+            return;
+        }
+
+        if (texture == nullptr)
+        {
+            D3D12_SHADER_RESOURCE_VIEW_DESC nullSrvDesc{};
+            nullSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            nullSrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            nullSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+            nullSrvDesc.Texture2D.MostDetailedMip = 0;
+            nullSrvDesc.Texture2D.MipLevels = 1;
+            nullSrvDesc.Texture2D.PlaneSlice = 0;
+            nullSrvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+            m_device->CreateShaderResourceView(nullptr, &nullSrvDesc, m_srvHeap->GetCPUDescriptorHandleForHeapStart());
+            m_boundTextureSrvGpu = m_srvHeap->GetGPUDescriptorHandleForHeapStart();
             m_hasBoundTexture = false;
             return;
         }
@@ -426,7 +443,7 @@ namespace Xelqoria::Backends::D3D12
 
     void D3D12GraphicsContext::Draw(std::uint32_t vertexCount, std::uint32_t startVertexLocation)
     {
-        if (!m_commandList || !m_spriteRootSignature || !m_spritePipelineState || !m_spriteVertexBuffer || !m_hasBoundTexture)
+        if (!m_commandList || !m_spriteRootSignature || !m_spritePipelineState || !m_spriteVertexBuffer)
         {
             return;
         }
@@ -448,7 +465,7 @@ namespace Xelqoria::Backends::D3D12
         commandList->SetDescriptorHeaps(1, descriptorHeaps);
         commandList->SetGraphicsRootSignature(m_spriteRootSignature.Get());
         commandList->SetPipelineState(m_spritePipelineState.Get());
-        const float quadTransformData[12] =
+        const float quadTransformData[20] =
         {
             m_quadTransform.scaleX,
             m_quadTransform.scaleY,
@@ -461,9 +478,17 @@ namespace Xelqoria::Backends::D3D12
             m_quadTransform.outlineColorR,
             m_quadTransform.outlineColorG,
             m_quadTransform.outlineColorB,
-            m_quadTransform.outlineColorA
+            m_quadTransform.outlineColorA,
+            m_quadTransform.fillColorR,
+            m_quadTransform.fillColorG,
+            m_quadTransform.fillColorB,
+            m_quadTransform.fillColorA,
+            m_hasBoundTexture ? 1.0f : 0.0f,
+            m_quadTransform.reserved2,
+            m_quadTransform.reserved3,
+            m_quadTransform.reserved4
         };
-        commandList->SetGraphicsRoot32BitConstants(0, 12, quadTransformData, 0);
+        commandList->SetGraphicsRoot32BitConstants(0, 20, quadTransformData, 0);
         commandList->SetGraphicsRootDescriptorTable(1, m_boundTextureSrvGpu);
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
@@ -711,6 +736,8 @@ cbuffer SpriteTransformBuffer : register(b0)
     float2 gTranslate;
     float2 gOutlineState;
     float4 gOutlineColor;
+    float4 gFillColor;
+    float4 gTextureState;
 };
 struct VSInput { float3 position : POSITION; float2 uv : TEXCOORD0; };
 struct VSOutput { float4 position : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -743,10 +770,17 @@ cbuffer SpriteTransformBuffer : register(b0)
     float2 gTranslate;
     float2 gOutlineState;
     float4 gOutlineColor;
+    float4 gFillColor;
+    float4 gTextureState;
 };
 struct PSInput { float4 position : SV_POSITION; float2 uv : TEXCOORD0; };
 float4 MainPS(PSInput input) : SV_TARGET
 {
+    if (gTextureState.x <= 0.5f)
+    {
+        return gFillColor;
+    }
+
     float4 baseColor = gTexture.Sample(gSampler, input.uv);
     if (gOutlineState.x > 0.5f)
     {
@@ -791,7 +825,7 @@ float4 MainPS(PSInput input) : SV_TARGET
 
         D3D12_ROOT_PARAMETER rootParameters[2]{};
         rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-        rootParameters[0].Constants.Num32BitValues = 12;
+        rootParameters[0].Constants.Num32BitValues = 20;
         rootParameters[0].Constants.ShaderRegister = 0;
         rootParameters[0].Constants.RegisterSpace = 0;
         rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;

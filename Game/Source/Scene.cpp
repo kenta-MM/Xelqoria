@@ -153,6 +153,20 @@ namespace Xelqoria::Game
 			});
 		}
 
+		std::stable_sort(
+			renderItems.begin(),
+			renderItems.end(),
+			[](const SceneSpriteRenderItem& lhs, const SceneSpriteRenderItem& rhs)
+			{
+				const std::int32_t lhsSortOrder = lhs.spriteComponent != nullptr
+					? lhs.spriteComponent->renderSettings.sortOrder
+					: 0;
+				const std::int32_t rhsSortOrder = rhs.spriteComponent != nullptr
+					? rhs.spriteComponent->renderSettings.sortOrder
+					: 0;
+				return lhsSortOrder < rhsSortOrder;
+			});
+
 		return renderItems;
 	}
 

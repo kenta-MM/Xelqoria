@@ -335,6 +335,7 @@ namespace Xelqoria::Backends::D3D11
             }
         }
 
+        m_hasBoundTexture = shaderResourceView != nullptr;
         m_deviceContext->PSSetShaderResources(slot, 1, &shaderResourceView);
     }
 
@@ -371,7 +372,7 @@ namespace Xelqoria::Backends::D3D11
 
         m_deviceContext->VSSetShader(m_spriteVertexShader.Get(), nullptr, 0);
         m_deviceContext->PSSetShader(m_spritePixelShader.Get(), nullptr, 0);
-        const float quadTransformData[12] =
+        const float quadTransformData[20] =
         {
             m_quadTransform.scaleX,
             m_quadTransform.scaleY,
@@ -384,7 +385,15 @@ namespace Xelqoria::Backends::D3D11
             m_quadTransform.outlineColorR,
             m_quadTransform.outlineColorG,
             m_quadTransform.outlineColorB,
-            m_quadTransform.outlineColorA
+            m_quadTransform.outlineColorA,
+            m_quadTransform.fillColorR,
+            m_quadTransform.fillColorG,
+            m_quadTransform.fillColorB,
+            m_quadTransform.fillColorA,
+            m_hasBoundTexture ? 1.0f : 0.0f,
+            m_quadTransform.reserved2,
+            m_quadTransform.reserved3,
+            m_quadTransform.reserved4
         };
         m_deviceContext->UpdateSubresource(m_spriteTransformBuffer.Get(), 0, nullptr, quadTransformData, 0, 0);
         ID3D11Buffer* transformBuffer = m_spriteTransformBuffer.Get();
@@ -554,6 +563,8 @@ cbuffer SpriteTransformBuffer : register(b0)
     float2 gTranslate;
     float2 gOutlineState;
     float4 gOutlineColor;
+    float4 gFillColor;
+    float4 gTextureState;
 };
 
 struct VSInput
@@ -597,6 +608,8 @@ cbuffer SpriteTransformBuffer : register(b0)
     float2 gTranslate;
     float2 gOutlineState;
     float4 gOutlineColor;
+    float4 gFillColor;
+    float4 gTextureState;
 };
 
 struct PSInput
@@ -607,6 +620,11 @@ struct PSInput
 
 float4 MainPS(PSInput input) : SV_TARGET
 {
+    if (gTextureState.x <= 0.5f)
+    {
+        return gFillColor;
+    }
+
     float4 baseColor = gTexture.Sample(gSampler, input.uv);
     if (gOutlineState.x > 0.5f)
     {
@@ -685,7 +703,7 @@ float4 MainPS(PSInput input) : SV_TARGET
         }
 
         D3D11_BUFFER_DESC constantBufferDesc{};
-        constantBufferDesc.ByteWidth = sizeof(float) * 12u;
+        constantBufferDesc.ByteWidth = sizeof(float) * 20u;
         constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 
@@ -748,10 +766,10 @@ float4 MainPS(PSInput input) : SV_TARGET
         m_spriteInputLayout.Reset();
         m_spritePixelShader.Reset();
         m_spriteVertexShader.Reset();
+        m_hasBoundTexture = false;
         m_quadTransform = {};
     }
 }
-
 
 
 
