@@ -1,6 +1,7 @@
 #include "Entity.h"
 
 #include <optional>
+#include <string>
 #include <utility>
 
 #include "SpriteComponent.h"
@@ -9,12 +10,28 @@ namespace Xelqoria::Game
 {
 	Entity::Entity(EntityId id)
 		: m_id(id)
+		, m_name("Entity " + std::to_string(id))
 	{
 	}
 
 	EntityId Entity::GetId() const
 	{
 		return m_id;
+	}
+
+	const std::string& Entity::GetName() const
+	{
+		return m_name;
+	}
+
+	void Entity::SetName(const std::string& name)
+	{
+		m_name = name;
+	}
+
+	void Entity::SetName(std::string&& name)
+	{
+		m_name = std::move(name);
 	}
 
 	Transform& Entity::GetTransform()

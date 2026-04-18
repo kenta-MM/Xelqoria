@@ -116,6 +116,50 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        m_hierarchyNameEdit = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Edit",
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+        if (nullptr == m_hierarchyNameEdit)
+        {
+            return false;
+        }
+
+        m_hierarchyCreateButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"New",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_hierarchyCreateButton)
+        {
+            return false;
+        }
+
+        m_hierarchyDuplicateButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"Duplicate",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_hierarchyDuplicateButton)
+        {
+            return false;
+        }
+
+        m_hierarchyDeleteButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"Delete",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_hierarchyDeleteButton)
+        {
+            return false;
+        }
+
         m_inspectorSummaryLabel = CreateChildWindow(
             parentWindow,
             hInstance,
@@ -232,6 +276,7 @@ namespace Xelqoria::Editor
         constexpr int groupHeaderHeight = 26;
         constexpr int hierarchyHeight = 280;
         constexpr int labelHeight = 24;
+        constexpr int buttonHeight = 28;
 
         const int centerX = outerPadding + leftPaneWidth + panelSpacing;
         const int centerWidth =
@@ -271,12 +316,42 @@ namespace Xelqoria::Editor
             sideInnerWidth,
             labelHeight,
             TRUE);
+        const int hierarchyButtonTop = outerPadding + groupHeaderHeight + labelHeight + 6;
+        const int hierarchyButtonWidth = (std::max)(70, (sideInnerWidth - 16) / 3);
+        MoveWindow(
+            m_hierarchyCreateButton,
+            outerPadding + outerPadding,
+            hierarchyButtonTop,
+            hierarchyButtonWidth,
+            buttonHeight,
+            TRUE);
+        MoveWindow(
+            m_hierarchyDuplicateButton,
+            outerPadding + outerPadding + hierarchyButtonWidth + 8,
+            hierarchyButtonTop,
+            hierarchyButtonWidth,
+            buttonHeight,
+            TRUE);
+        MoveWindow(
+            m_hierarchyDeleteButton,
+            outerPadding + outerPadding + (hierarchyButtonWidth + 8) * 2,
+            hierarchyButtonTop,
+            sideInnerWidth - (hierarchyButtonWidth + 8) * 2,
+            buttonHeight,
+            TRUE);
         MoveWindow(
             m_hierarchyListBox,
             outerPadding + outerPadding,
-            outerPadding + groupHeaderHeight + labelHeight + 6,
+            hierarchyButtonTop + buttonHeight + 8,
             sideInnerWidth,
-            (std::max)(100, hierarchyPanelHeight - groupHeaderHeight - labelHeight - outerPadding - 12),
+            (std::max)(72, hierarchyPanelHeight - groupHeaderHeight - labelHeight - buttonHeight - outerPadding - labelHeight - 28),
+            TRUE);
+        MoveWindow(
+            m_hierarchyNameEdit,
+            outerPadding + outerPadding,
+            outerPadding + hierarchyPanelHeight - outerPadding - labelHeight,
+            sideInnerWidth,
+            labelHeight,
             TRUE);
 
         const int inspectorInnerX = rightX + outerPadding;
@@ -420,6 +495,26 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetHierarchySummaryLabel() const
     {
         return m_hierarchySummaryLabel;
+    }
+
+    HWND EditorShell::GetHierarchyNameEdit() const
+    {
+        return m_hierarchyNameEdit;
+    }
+
+    HWND EditorShell::GetHierarchyCreateButton() const
+    {
+        return m_hierarchyCreateButton;
+    }
+
+    HWND EditorShell::GetHierarchyDuplicateButton() const
+    {
+        return m_hierarchyDuplicateButton;
+    }
+
+    HWND EditorShell::GetHierarchyDeleteButton() const
+    {
+        return m_hierarchyDeleteButton;
     }
 
     HWND EditorShell::GetAssetsListBox() const

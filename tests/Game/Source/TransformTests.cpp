@@ -29,6 +29,7 @@ namespace
 	{
 		Xelqoria::Game::Scene saveScene;
 		auto& playerEntity = saveScene.CreateEntity();
+		playerEntity.SetName("Player");
 		playerEntity.GetTransform().SetPosition(12.5f, -8.0f, 3.0f);
 		playerEntity.GetTransform().rotation = { 0.0f, 45.0f, 90.0f };
 		playerEntity.GetTransform().scale = { 1.0f, 2.0f, 1.0f };
@@ -42,6 +43,7 @@ namespace
 		});
 
 		auto& backgroundEntity = saveScene.CreateEntity();
+		backgroundEntity.SetName("Background Layer");
 		backgroundEntity.GetTransform().SetPosition(-32.0f, 64.0f, 0.0f);
 		backgroundEntity.GetTransform().rotation = { 0.0f, 0.0f, 0.0f };
 		backgroundEntity.GetTransform().scale = { 4.0f, 4.0f, 1.0f };
@@ -50,14 +52,18 @@ namespace
 			"magic=xelqoria.scene\n"
 			"version=1\n"
 			"entity.0.id=1\n"
+			"entity.0.name=\"Player\"\n"
 			"entity.0.transform.position=12.500000,-8.000000,3.000000\n"
 			"entity.0.transform.rotation=0.000000,45.000000,90.000000\n"
 			"entity.0.transform.scale=1.000000,2.000000,1.000000\n"
+			"entity.0.hasSpriteComponent=true\n"
 			"entity.0.spriteRef=sprites/player\n"
 			"entity.1.id=2\n"
+			"entity.1.name=\"Background Layer\"\n"
 			"entity.1.transform.position=-32.000000,64.000000,0.000000\n"
 			"entity.1.transform.rotation=0.000000,0.000000,0.000000\n"
-			"entity.1.transform.scale=4.000000,4.000000,1.000000\n";
+			"entity.1.transform.scale=4.000000,4.000000,1.000000\n"
+			"entity.1.hasSpriteComponent=false\n";
 
 		return Xelqoria::Game::SceneSerializer::SaveToText(saveScene) == sceneSaveSnapshot;
 	}
@@ -66,6 +72,7 @@ namespace
 	{
 		Xelqoria::Game::Scene sourceScene;
 		auto& playerEntity = sourceScene.CreateEntity();
+		playerEntity.SetName("Player \"Alpha\"");
 		playerEntity.GetTransform().SetPosition(1.0f, 2.0f, 3.0f);
 		playerEntity.GetTransform().rotation = { 4.0f, 5.0f, 6.0f };
 		playerEntity.GetTransform().scale = { 7.0f, 8.0f, 9.0f };
@@ -79,6 +86,7 @@ namespace
 		});
 
 		auto& backgroundEntity = sourceScene.CreateEntity();
+		backgroundEntity.SetName("Background\\Layer");
 		backgroundEntity.GetTransform().SetPosition(-10.0f, 20.0f, -30.0f);
 		backgroundEntity.GetTransform().rotation = { 0.0f, 15.0f, 30.0f };
 		backgroundEntity.GetTransform().scale = { 2.0f, 2.0f, 1.0f };
@@ -97,6 +105,11 @@ namespace
 		const auto loadedPlayerEntity = loadedScene.FindEntity(1);
 		const auto loadedBackgroundEntity = loadedScene.FindEntity(2);
 		if (!loadedPlayerEntity.has_value() || !loadedBackgroundEntity.has_value()) {
+			return false;
+		}
+
+		if (loadedPlayerEntity->get().GetName() != "Player \"Alpha\"" ||
+			loadedBackgroundEntity->get().GetName() != "Background\\Layer") {
 			return false;
 		}
 
@@ -410,17 +423,23 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 
 		const std::string sceneSaveFormatDocumentation(Xelqoria::Game::SceneSaveFormatDocumentation);
 		EXPECT_NE(sceneSaveFormatDocumentation.find("entity.<index>.transform.position=<x>,<y>,<z>"), std::string::npos);
+		EXPECT_NE(sceneSaveFormatDocumentation.find("entity.<index>.name=\"<EntityName>\""), std::string::npos);
+		EXPECT_NE(sceneSaveFormatDocumentation.find("entity.<index>.hasSpriteComponent=<true|false>"), std::string::npos);
 		EXPECT_NE(sceneSaveFormatDocumentation.find("entity.<index>.spriteRef=<SpriteAssetId>"), std::string::npos);
 		EXPECT_NE(sceneSaveFormatDocumentation.find("entity.<index>.extensions.<name>=<reserved>"), std::string::npos);
 
 		Xelqoria::Game::SceneEntitySaveRecord sceneSaveRecord{};
 		sceneSaveRecord.entityId = 77;
+		sceneSaveRecord.name = "Scene Save Record";
+		sceneSaveRecord.hasSpriteComponent = true;
 		sceneSaveRecord.transform.SetPosition(4.0f, 5.0f, 6.0f);
 		sceneSaveRecord.transform.rotation = { 0.0f, 0.0f, 45.0f };
 		sceneSaveRecord.transform.scale = { 2.0f, 3.0f, 1.0f };
 		sceneSaveRecord.spriteRef = Xelqoria::Game::SceneSpriteRefRecord{ "sprites/player" };
 
 		EXPECT_EQ(static_cast<Xelqoria::Game::EntityId>(77), sceneSaveRecord.entityId);
+		EXPECT_EQ("Scene Save Record", sceneSaveRecord.name);
+		EXPECT_TRUE(sceneSaveRecord.hasSpriteComponent);
 		EXPECT_TRUE(IsEqual(sceneSaveRecord.transform.position.x, 4.0f));
 		EXPECT_TRUE(IsEqual(sceneSaveRecord.transform.position.y, 5.0f));
 		EXPECT_TRUE(IsEqual(sceneSaveRecord.transform.position.z, 6.0f));

@@ -5,6 +5,7 @@
 #include "EditorStringUtils.h"
 #include <Windows.h>
 #include <cstdio>
+#include <cstdio>
 #include <iterator>
 #include <optional>
 #include "EditorShell.h"
@@ -17,6 +18,10 @@ namespace Xelqoria::Editor
     {
         m_hierarchyListBox = shell.GetHierarchyListBox();
         m_hierarchySummaryLabel = shell.GetHierarchySummaryLabel();
+        m_hierarchyNameEdit = shell.GetHierarchyNameEdit();
+        m_hierarchyCreateButton = shell.GetHierarchyCreateButton();
+        m_hierarchyDuplicateButton = shell.GetHierarchyDuplicateButton();
+        m_hierarchyDeleteButton = shell.GetHierarchyDeleteButton();
     }
 
     void HierarchyPanelController::Refresh(const Game::Scene* scene)
@@ -30,16 +35,7 @@ namespace Xelqoria::Editor
             {
                 m_visibleEntityIds.push_back(entity.GetId());
 
-                std::wstring label = L"Entity ";
-                label += std::to_wstring(entity.GetId());
-
-                if (const auto spriteComponent = entity.GetSpriteComponent(); spriteComponent.has_value())
-                {
-                    label += L" (";
-                    label += ToWideString(spriteComponent->get().spriteAssetRef.GetValue());
-                    label += L")";
-                }
-
+                std::wstring label = ToWideString(entity.GetName());
                 SendMessageW(m_hierarchyListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
             }
         }
@@ -59,9 +55,44 @@ namespace Xelqoria::Editor
             }
         }
 
+        if (selectedIndex == LB_ERR)
+        {
+            if (false == m_visibleEntityIds.empty())
+            {
+                m_selectedEntityId = m_visibleEntityIds.front();
+                selectedIndex = 0;
+            }
+            else
+            {
+                m_selectedEntityId.reset();
+            }
+        }
+
         if (selectedIndex != LB_ERR)
         {
             SendMessageW(m_hierarchyListBox, LB_SETCURSEL, static_cast<WPARAM>(selectedIndex), 0);
+        }
+
+        const bool hasSelection = selectedIndex != LB_ERR;
+        EnableWindow(m_hierarchyDuplicateButton, hasSelection ? TRUE : FALSE);
+        EnableWindow(m_hierarchyDeleteButton, hasSelection ? TRUE : FALSE);
+        EnableWindow(m_hierarchyNameEdit, hasSelection ? TRUE : FALSE);
+
+        if (true == hasSelection && nullptr != scene)
+        {
+            const auto entity = scene->FindEntity(*m_selectedEntityId);
+            const bool shouldOverwriteNameEdit = m_lastEditedEntityId != m_selectedEntityId || GetFocus() != m_hierarchyNameEdit;
+            if (true == shouldOverwriteNameEdit && true == entity.has_value())
+            {
+                const std::wstring entityName = ToWideString(entity->get().GetName());
+                SetWindowTextW(m_hierarchyNameEdit, entityName.c_str());
+                m_lastEditedEntityId = m_selectedEntityId;
+            }
+        }
+        else
+        {
+            SetWindowTextW(m_hierarchyNameEdit, L"");
+            m_lastEditedEntityId.reset();
         }
 
         wchar_t summaryText[128]{};
@@ -101,6 +132,65 @@ namespace Xelqoria::Editor
         }
 
         return false;
+    }
+
+    SceneEditResult HierarchyPanelController::ApplyEdits(Game::Scene* scene)
+    {
+        SceneEditResult result{};
+        if (nullptr == scene)
+        {
+            return result;
+        }
+
+        const auto selectedEntity = m_selectedEntityId.has_value()
+            ? scene->FindEntity(*m_selectedEntityId)
+            : std::optional<std::reference_wrapper<Game::Entity>>{};
+        const bool isNameEditFocused = GetFocus() == m_hierarchyNameEdit;
+        const bool isEnterKeyDown = (GetAsyncKeyState(VK_RETURN) & 0x8000) != 0;
+        POINT cursorScreenPoint{};
+        GetCursorPos(&cursorScreenPoint);
+        const HierarchyButtonFrameInput frameInput{
+            (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0,
+            cursorScreenPoint
+        };
+
+        if (selectedEntity.has_value())
+        {
+            wchar_t nameBuffer[256]{};
+            GetWindowTextW(m_hierarchyNameEdit, nameBuffer, static_cast<int>(std::size(nameBuffer)));
+
+            if ((false == isNameEditFocused || (true == isEnterKeyDown && false == m_wasEnterKeyDown))
+                && true == SceneEditingOperations::RenameEntity(selectedEntity->get(), ToNarrowString(nameBuffer)))
+            {
+                result.changed = true;
+                result.selectedEntityId = selectedEntity->get().GetId();
+            }
+        }
+
+        if (true == TryConsumeHierarchyButtonClick(m_hierarchyCreateButton, frameInput, m_buttonInputState))
+        {
+            result = SceneEditingOperations::CreateEntity(*scene);
+            m_buttonInputState.pressedButtonHandle = nullptr;
+        }
+        else if (true == TryConsumeHierarchyButtonClick(m_hierarchyDuplicateButton, frameInput, m_buttonInputState))
+        {
+            result = SceneEditingOperations::DuplicateSelectedEntity(*scene, m_selectedEntityId);
+            m_buttonInputState.pressedButtonHandle = nullptr;
+        }
+        else if (true == TryConsumeHierarchyButtonClick(m_hierarchyDeleteButton, frameInput, m_buttonInputState))
+        {
+            result = SceneEditingOperations::DeleteSelectedEntity(*scene, m_selectedEntityId);
+            m_buttonInputState.pressedButtonHandle = nullptr;
+        }
+
+        if (false == frameInput.isLeftMouseButtonDown && true == m_buttonInputState.wasLeftMouseButtonDown)
+        {
+            m_buttonInputState.pressedButtonHandle = nullptr;
+        }
+
+        m_wasEnterKeyDown = isEnterKeyDown;
+        m_buttonInputState.wasLeftMouseButtonDown = frameInput.isLeftMouseButtonDown;
+        return result;
     }
 
     void HierarchyPanelController::SetSelectedEntityId(std::optional<Game::EntityId> selectedEntityId)

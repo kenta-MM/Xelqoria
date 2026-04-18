@@ -46,6 +46,16 @@ namespace
 	}
 
 	/// <summary>
+	/// 文字列を引用符付きの保存形式として追記する。
+	/// </summary>
+	/// <param name="stream">出力先ストリーム。</param>
+	/// <param name="value">追記する文字列。</param>
+	void AppendQuotedString(std::ostringstream& stream, std::string_view value)
+	{
+		stream << std::quoted(std::string(value));
+	}
+
+	/// <summary>
 	/// 10 進文字列を符号なし整数へ変換する。
 	/// </summary>
 	/// <param name="value">変換対象の文字列。</param>
@@ -74,6 +84,46 @@ namespace
 		float parsedValue = 0.0f;
 		stream >> parsedValue;
 		if (false == static_cast<bool>(stream) || false == stream.eof()) {
+			return std::nullopt;
+		}
+
+		return parsedValue;
+	}
+
+	/// <summary>
+	/// 真偽値文字列を bool へ変換する。
+	/// </summary>
+	/// <param name="value">変換対象の文字列。</param>
+	/// <returns>変換に成功した bool 値。失敗時は nullopt。</returns>
+	std::optional<bool> ParseBool(std::string_view value)
+	{
+		if (value == "true") {
+			return true;
+		}
+
+		if (value == "false") {
+			return false;
+		}
+
+		return std::nullopt;
+	}
+
+	/// <summary>
+	/// 引用符付き文字列を復元する。
+	/// </summary>
+	/// <param name="value">変換対象の文字列。</param>
+	/// <returns>変換に成功した文字列。失敗時は nullopt。</returns>
+	std::optional<std::string> ParseQuotedString(std::string_view value)
+	{
+		std::istringstream stream{ std::string(value) };
+		std::string parsedValue{};
+		stream >> std::quoted(parsedValue);
+		if (false == static_cast<bool>(stream)) {
+			return std::nullopt;
+		}
+
+		stream >> std::ws;
+		if (std::char_traits<char>::eof() != stream.peek()) {
 			return std::nullopt;
 		}
 
@@ -157,6 +207,9 @@ namespace Xelqoria::Game
 			const auto prefix = "entity." + std::to_string(entityIndex);
 
 			stream << prefix << ".id=" << entity.GetId() << "\n";
+			stream << prefix << ".name=";
+			AppendQuotedString(stream, entity.GetName());
+			stream << "\n";
 			stream << prefix << ".transform.position=";
 			AppendVector3(stream, transform.position);
 			stream << "\n";
@@ -168,7 +221,8 @@ namespace Xelqoria::Game
 			stream << "\n";
 
 			const auto spriteComponent = entity.GetSpriteComponent();
-			if (spriteComponent.has_value() && !spriteComponent->get().spriteAssetRef.IsEmpty()) {
+			stream << prefix << ".hasSpriteComponent=" << (spriteComponent.has_value() ? "true" : "false") << "\n";
+			if (spriteComponent.has_value() && false == spriteComponent->get().spriteAssetRef.IsEmpty()) {
 				stream << prefix << ".spriteRef=" << spriteComponent->get().spriteAssetRef.GetValue() << "\n";
 			}
 		}
@@ -234,6 +288,22 @@ namespace Xelqoria::Game
 
 						record.entityId = *entityId;
 					}
+					else if (fieldKey == "name") {
+						const auto entityName = ParseQuotedString(value);
+						if (false == entityName.has_value()) {
+							return MakeError(lineNumber, key, "name は引用符付き文字列である必要があります。");
+						}
+
+						record.name = *entityName;
+					}
+					else if (fieldKey == "hasSpriteComponent") {
+						const auto hasSpriteComponent = ParseBool(value);
+						if (false == hasSpriteComponent.has_value()) {
+							return MakeError(lineNumber, key, "hasSpriteComponent は true または false である必要があります。");
+						}
+
+						record.hasSpriteComponent = *hasSpriteComponent;
+					}
 					else if (fieldKey == "transform.position") {
 						const auto parsedVector = ParseVector3(value);
 						if (false == parsedVector.has_value()) {
@@ -259,6 +329,7 @@ namespace Xelqoria::Game
 						record.transform.scale = *parsedVector;
 					}
 					else if (fieldKey == "spriteRef") {
+						record.hasSpriteComponent = true;
 						record.spriteRef = SceneSpriteRefRecord{ Core::AssetId(value) };
 					}
 					else if (false == fieldKey.starts_with(SceneSaveExtensionFieldPrefix)) {
@@ -294,9 +365,15 @@ namespace Xelqoria::Game
 
 			auto& entity = scene.CreateEntity(record.entityId);
 			entity.SetTransform(record.transform);
-			if (record.spriteRef.has_value()) {
+			if (false == record.name.empty()) {
+				entity.SetName(record.name);
+			}
+			if (record.hasSpriteComponent || record.spriteRef.has_value()) {
+				const Core::AssetId spriteAssetRef = record.spriteRef.has_value()
+					? record.spriteRef->spriteAssetRef
+					: Core::AssetId{};
 				entity.SetSpriteComponent(SpriteComponent{
-					record.spriteRef->spriteAssetRef,
+					spriteAssetRef,
 					{}
 				});
 			}

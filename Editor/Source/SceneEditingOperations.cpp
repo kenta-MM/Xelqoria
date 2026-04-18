@@ -1,7 +1,10 @@
 #include "SceneEditingOperations.h"
 
+#include <cctype>
 #include <span>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <Entity.h>
 #include <Scene.h>
 #include <SpriteComponent.h>
@@ -12,10 +15,66 @@ namespace Xelqoria::Editor
     namespace
     {
         /// <summary>
+        /// Entity ID から既定の Entity 名を生成する。
+        /// </summary>
+        /// <param name="entityId">名前に使用する Entity ID。</param>
+        /// <returns>既定の Entity 名。</returns>
+        std::string BuildDefaultEntityName(Game::EntityId entityId)
+        {
+            return "Entity " + std::to_string(entityId);
+        }
+
+        /// <summary>
+        /// 入力された Entity 名の前後空白を除去する。
+        /// </summary>
+        /// <param name="value">整形対象の Entity 名。</param>
+        /// <returns>前後空白を除去した Entity 名。</returns>
+        std::string TrimEntityName(std::string_view value)
+        {
+            std::size_t start = 0;
+            while (start < value.size()
+                && 0 != std::isspace(static_cast<unsigned char>(value[start])))
+            {
+                ++start;
+            }
+
+            std::size_t end = value.size();
+            while (end > start
+                && 0 != std::isspace(static_cast<unsigned char>(value[end - 1])))
+            {
+                --end;
+            }
+
+            return std::string(value.substr(start, end - start));
+        }
+
+        /// <summary>
+        /// 複製先に割り当てる Entity 名を生成する。
+        /// </summary>
+        /// <param name="sourceName">複製元の Entity 名。</param>
+        /// <param name="duplicateEntityId">複製先の Entity ID。</param>
+        /// <returns>複製先の Entity 名。</returns>
+        std::string BuildDuplicateEntityName(std::string_view sourceName, Game::EntityId duplicateEntityId)
+        {
+            const std::string trimmedSourceName = TrimEntityName(sourceName);
+            if (true == trimmedSourceName.empty())
+            {
+                return BuildDefaultEntityName(duplicateEntityId);
+            }
+
+            return trimmedSourceName + " Copy";
+        }
+
+        /// <summary>
         /// 複製に必要な Entity 状態のスナップショットを表す。
         /// </summary>
         struct EntitySnapshot
         {
+            /// <summary>
+            /// Entity 名を保持する。
+            /// </summary>
+            std::string name{};
+
             /// <summary>
             /// Entity の Transform を保持する。
             /// </summary>
@@ -35,6 +94,7 @@ namespace Xelqoria::Editor
         EntitySnapshot CaptureEntitySnapshot(const Game::Entity& source)
         {
             EntitySnapshot snapshot{};
+            snapshot.name = source.GetName();
             snapshot.transform = source.GetTransform();
 
             if (const auto spriteComponent = source.GetSpriteComponent(); spriteComponent.has_value())
@@ -52,6 +112,7 @@ namespace Xelqoria::Editor
         /// <param name="destination">複製先 Entity。</param>
         void ApplyEntitySnapshot(const EntitySnapshot& snapshot, Game::Entity& destination)
         {
+            destination.SetName(snapshot.name);
             destination.SetTransform(snapshot.transform);
 
             if (snapshot.spriteComponent.has_value())
@@ -62,6 +123,17 @@ namespace Xelqoria::Editor
 
             destination.RemoveSpriteComponent();
         }
+    }
+
+    SceneEditResult SceneEditingOperations::CreateEntity(Game::Scene& scene)
+    {
+        auto& entity = scene.CreateEntity();
+        entity.SetName(BuildDefaultEntityName(entity.GetId()));
+
+        return SceneEditResult{
+            true,
+            entity.GetId()
+        };
     }
 
     SceneEditResult SceneEditingOperations::DeleteSelectedEntity(
@@ -127,11 +199,29 @@ namespace Xelqoria::Editor
         const EntitySnapshot snapshot = CaptureEntitySnapshot(sourceEntity->get());
         auto& duplicateEntity = scene.CreateEntity();
         ApplyEntitySnapshot(snapshot, duplicateEntity);
+        duplicateEntity.SetName(BuildDuplicateEntityName(snapshot.name, duplicateEntity.GetId()));
 
         return SceneEditResult{
             true,
             duplicateEntity.GetId()
         };
+    }
+
+    bool SceneEditingOperations::RenameEntity(Game::Entity& entity, std::string_view newName)
+    {
+        std::string normalizedName = TrimEntityName(newName);
+        if (true == normalizedName.empty())
+        {
+            normalizedName = BuildDefaultEntityName(entity.GetId());
+        }
+
+        if (entity.GetName() == normalizedName)
+        {
+            return false;
+        }
+
+        entity.SetName(std::move(normalizedName));
+        return true;
     }
 
     bool SceneEditingOperations::AddSpriteComponent(Game::Entity& entity)

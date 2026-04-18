@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 
 #include "AssetId.h"
@@ -52,6 +53,16 @@ namespace Xelqoria::Game
 		Transform transform{};
 
 		/// <summary>
+		/// 保存対象の Entity 名を表す。
+		/// </summary>
+		std::string name{};
+
+		/// <summary>
+		/// SpriteComponent を保持しているかを表す。
+		/// </summary>
+		bool hasSpriteComponent = false;
+
+		/// <summary>
 		/// 保存対象の SpriteRef を表す。
 		/// 未設定の Entity では空を許容する。
 		/// </summary>
@@ -65,6 +76,8 @@ namespace Xelqoria::Game
 		R"(magic=xelqoria.scene
 version=1
 entity.<index>.id=<EntityId>
+entity.<index>.name="<EntityName>"
+entity.<index>.hasSpriteComponent=<true|false>
 entity.<index>.transform.position=<x>,<y>,<z>
 entity.<index>.transform.rotation=<x>,<y>,<z>
 entity.<index>.transform.scale=<x>,<y>,<z>
