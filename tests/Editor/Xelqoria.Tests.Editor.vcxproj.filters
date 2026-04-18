@@ -9,5 +9,8 @@
     <ClCompile Include="Source\EditorCamera2DTests.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\InspectorPanelControllerTests.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

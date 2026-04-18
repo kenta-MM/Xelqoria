@@ -127,6 +127,17 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        m_transformSectionLabel = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"Transform",
+            WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_transformSectionLabel)
+        {
+            return false;
+        }
+
         m_transformLabels[0] = CreateChildWindow(parentWindow, hInstance, L"Static", L"Position", WS_CHILD | WS_VISIBLE);
         if (nullptr == m_transformLabels[0])
         {
@@ -159,6 +170,17 @@ namespace Xelqoria::Editor
             }
         }
 
+        m_spriteComponentSectionLabel = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"SpriteComponent",
+            WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_spriteComponentSectionLabel)
+        {
+            return false;
+        }
+
         m_spriteRefLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"SpriteRef", WS_CHILD | WS_VISIBLE);
         if (nullptr == m_spriteRefLabel)
         {
@@ -172,6 +194,17 @@ namespace Xelqoria::Editor
             L"",
             WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
         if (nullptr == m_spriteRefEdit)
+        {
+            return false;
+        }
+
+        m_spriteComponentActionButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"Add SpriteComponent",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_spriteComponentActionButton)
         {
             return false;
         }
@@ -252,6 +285,7 @@ namespace Xelqoria::Editor
         const int inspectorEditWidth = (std::max)(60, (inspectorInnerWidth - inspectorLabelWidth - 24) / 3);
         const int inspectorRowHeight = 24;
         const int inspectorRowSpacing = 8;
+        const int inspectorSectionSpacing = 12;
 
         MoveWindow(
             m_inspectorSummaryLabel,
@@ -261,9 +295,19 @@ namespace Xelqoria::Editor
             labelHeight,
             TRUE);
 
+        const int transformSectionTop = outerPadding + groupHeaderHeight + labelHeight + 8;
+        MoveWindow(
+            m_transformSectionLabel,
+            inspectorInnerX,
+            transformSectionTop,
+            inspectorInnerWidth,
+            labelHeight,
+            TRUE);
+
         for (int row = 0; row < 3; ++row)
         {
-            const int rowTop = outerPadding + groupHeaderHeight + labelHeight + 8 + row * (inspectorRowHeight + inspectorRowSpacing);
+            const int rowTop =
+                transformSectionTop + labelHeight + 4 + row * (inspectorRowHeight + inspectorRowSpacing);
             MoveWindow(
                 m_transformLabels[static_cast<std::size_t>(row)],
                 inspectorInnerX,
@@ -286,8 +330,17 @@ namespace Xelqoria::Editor
             }
         }
 
-        const int spriteRefTop =
-            outerPadding + groupHeaderHeight + labelHeight + 8 + 3 * (inspectorRowHeight + inspectorRowSpacing) + 8;
+        const int spriteSectionTop =
+            transformSectionTop + labelHeight + 4 + 3 * (inspectorRowHeight + inspectorRowSpacing) + inspectorSectionSpacing;
+        MoveWindow(
+            m_spriteComponentSectionLabel,
+            inspectorInnerX,
+            spriteSectionTop,
+            inspectorInnerWidth,
+            labelHeight,
+            TRUE);
+
+        const int spriteRefTop = spriteSectionTop + labelHeight + 4;
         MoveWindow(
             m_spriteRefLabel,
             inspectorInnerX,
@@ -301,6 +354,13 @@ namespace Xelqoria::Editor
             spriteRefTop,
             inspectorInnerWidth - inspectorLabelWidth,
             inspectorRowHeight,
+            TRUE);
+        MoveWindow(
+            m_spriteComponentActionButton,
+            inspectorInnerX,
+            spriteRefTop + inspectorRowHeight + inspectorRowSpacing,
+            inspectorInnerWidth,
+            inspectorRowHeight + 4,
             TRUE);
 
         const int sceneInnerWidth = (std::max)(120, centerWidth - (outerPadding * 2));
@@ -377,6 +437,11 @@ namespace Xelqoria::Editor
         return m_inspectorSummaryLabel;
     }
 
+    HWND EditorShell::GetTransformSectionLabel() const
+    {
+        return m_transformSectionLabel;
+    }
+
     const std::array<HWND, 3>& EditorShell::GetTransformLabels() const
     {
         return m_transformLabels;
@@ -392,9 +457,19 @@ namespace Xelqoria::Editor
         return m_spriteRefLabel;
     }
 
+    HWND EditorShell::GetSpriteComponentSectionLabel() const
+    {
+        return m_spriteComponentSectionLabel;
+    }
+
     HWND EditorShell::GetSpriteRefEdit() const
     {
         return m_spriteRefEdit;
+    }
+
+    HWND EditorShell::GetSpriteComponentActionButton() const
+    {
+        return m_spriteComponentActionButton;
     }
 
     HWND EditorShell::GetSceneViewSizeLabel() const
