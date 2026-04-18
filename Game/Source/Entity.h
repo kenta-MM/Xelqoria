@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <string>
 
 #include "SpriteComponent.h"
 #include "Transform.h"
@@ -31,6 +32,24 @@ namespace Xelqoria::Game
 		/// </summary>
 		/// <returns>Entity ID。</returns>
 		EntityId GetId() const;
+
+		/// <summary>
+		/// Entity 名を取得する。
+		/// </summary>
+		/// <returns>現在の Entity 名。</returns>
+		const std::string& GetName() const;
+
+		/// <summary>
+		/// Entity 名を設定する。
+		/// </summary>
+		/// <param name="name">設定する Entity 名。</param>
+		void SetName(const std::string& name);
+
+		/// <summary>
+		/// Entity 名を設定する。
+		/// </summary>
+		/// <param name="name">設定する Entity 名。</param>
+		void SetName(std::string&& name);
 
 		/// <summary>
 		/// Transform を取得する。
@@ -135,6 +154,7 @@ namespace Xelqoria::Game
 
 	private:
 		EntityId m_id = 0;
+		std::string m_name{};
 		Transform m_transform{};
 		std::optional<SpriteComponent> m_spriteComponent{};
 	};

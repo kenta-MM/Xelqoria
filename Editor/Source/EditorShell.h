@@ -40,6 +40,30 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetHierarchySummaryLabel() const;
 
         /// <summary>
+        /// Hierarchy パネルの Entity 名入力欄を取得する。
+        /// </summary>
+        /// <returns>Entity 名入力欄の HWND。</returns>
+        [[nodiscard]] HWND GetHierarchyNameEdit() const;
+
+        /// <summary>
+        /// Hierarchy パネルの新規作成ボタンを取得する。
+        /// </summary>
+        /// <returns>新規作成ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetHierarchyCreateButton() const;
+
+        /// <summary>
+        /// Hierarchy パネルの複製ボタンを取得する。
+        /// </summary>
+        /// <returns>複製ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetHierarchyDuplicateButton() const;
+
+        /// <summary>
+        /// Hierarchy パネルの削除ボタンを取得する。
+        /// </summary>
+        /// <returns>削除ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetHierarchyDeleteButton() const;
+
+        /// <summary>
         /// Assets パネルの ListBox を取得する。
         /// </summary>
         /// <returns>Assets ListBox の HWND。</returns>
@@ -161,6 +185,10 @@ namespace Xelqoria::Editor
         HWND m_assetsSummaryLabel = nullptr;
         HWND m_hierarchySummaryLabel = nullptr;
         HWND m_hierarchyListBox = nullptr;
+        HWND m_hierarchyNameEdit = nullptr;
+        HWND m_hierarchyCreateButton = nullptr;
+        HWND m_hierarchyDuplicateButton = nullptr;
+        HWND m_hierarchyDeleteButton = nullptr;
         HWND m_inspectorSummaryLabel = nullptr;
         HWND m_transformSectionLabel = nullptr;
         std::array<HWND, 3> m_transformLabels{};

@@ -145,6 +145,31 @@ namespace Xelqoria::Editor
                 canAddSpriteComponent);
         }
 
+        const SceneEditResult hierarchyEditResult = m_hierarchyPanelController.ApplyEdits(m_sceneDocument.GetScene());
+        if (true == hierarchyEditResult.changed)
+        {
+            m_hierarchyPanelController.SetSelectedEntityId(hierarchyEditResult.selectedEntityId);
+            if (m_sceneDocument.Save())
+            {
+                m_editorCommandController.PushSnapshot(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Hierarchy の編集内容を Scene へ保存しました。");
+            }
+            else
+            {
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Hierarchy の編集内容は反映されましたが、Scene の保存に失敗しました。");
+            }
+
+            m_inspectorPanelController.ResetTrackedEntity();
+            m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
+            m_inspectorPanelController.Refresh(
+                m_sceneDocument.GetScene(),
+                m_hierarchyPanelController.GetSelectedEntityId(),
+                canAddSpriteComponent);
+            m_sceneViewController.RefreshSelectionStatus(
+                m_sceneDocument.GetScene(),
+                m_hierarchyPanelController.GetSelectedEntityId());
+        }
+
         const InspectorApplyResult inspectorResult = m_inspectorPanelController.ApplyEdits(
             m_sceneDocument.GetScene(),
             m_hierarchyPanelController.GetSelectedEntityId(),

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <string_view>
 
 #include "Scene.h"
 #include <Entity.h>
@@ -30,6 +31,13 @@ namespace Xelqoria::Editor
     {
     public:
         /// <summary>
+        /// 新しい Entity を作成する。
+        /// </summary>
+        /// <param name="scene">編集対象の Scene。</param>
+        /// <returns>作成結果と更新後の選択状態。</returns>
+        static SceneEditResult CreateEntity(Game::Scene& scene);
+
+        /// <summary>
         /// 現在選択中の Entity を削除する。
         /// </summary>
         /// <param name="scene">編集対象の Scene。</param>
@@ -48,6 +56,14 @@ namespace Xelqoria::Editor
         static SceneEditResult DuplicateSelectedEntity(
             Game::Scene& scene,
             std::optional<Game::EntityId> selectedEntityId);
+
+        /// <summary>
+        /// Entity 名を更新する。
+        /// </summary>
+        /// <param name="entity">更新対象の Entity。</param>
+        /// <param name="newName">設定する Entity 名。</param>
+        /// <returns>名前変更で更新が発生した場合は true。</returns>
+        static bool RenameEntity(Game::Entity& entity, std::string_view newName);
 
         /// <summary>
         /// Entity に既定の SpriteComponent を追加する。

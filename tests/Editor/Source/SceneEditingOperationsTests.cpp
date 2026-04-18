@@ -7,6 +7,7 @@ TEST(SceneEditingOperationsTests, DuplicateSelectedEntityCopiesTransformAndSprit
 {
     Xelqoria::Game::Scene scene;
     auto& sourceEntity = scene.CreateEntity();
+    sourceEntity.SetName("Player");
     sourceEntity.GetTransform().SetPosition(12.0f, -8.0f, 1.0f);
     sourceEntity.GetTransform().rotation = { 2.0f, 4.0f, 8.0f };
     sourceEntity.GetTransform().scale = { 3.0f, 5.0f, 1.0f };
@@ -34,6 +35,7 @@ TEST(SceneEditingOperationsTests, DuplicateSelectedEntityCopiesTransformAndSprit
 
     const auto duplicateEntity = scene.FindEntity(*result.selectedEntityId);
     ASSERT_TRUE(duplicateEntity.has_value());
+    EXPECT_EQ("Player Copy", duplicateEntity->get().GetName());
 
     const auto& duplicateTransform = duplicateEntity->get().GetTransform();
     EXPECT_FLOAT_EQ(expectedTransform.position.x, duplicateTransform.position.x);
@@ -47,6 +49,19 @@ TEST(SceneEditingOperationsTests, DuplicateSelectedEntityCopiesTransformAndSprit
     EXPECT_EQ(expectedSpriteComponent.spriteAssetRef.GetValue(), duplicateSpriteComponent->get().spriteAssetRef.GetValue());
     EXPECT_EQ(expectedSpriteComponent.renderSettings.sortOrder, duplicateSpriteComponent->get().renderSettings.sortOrder);
     EXPECT_FLOAT_EQ(expectedSpriteComponent.renderSettings.opacity, duplicateSpriteComponent->get().renderSettings.opacity);
+}
+
+TEST(SceneEditingOperationsTests, CreateEntityAssignsDefaultNameAndSelectsCreatedEntity)
+{
+    Xelqoria::Game::Scene scene;
+
+    const auto result = Xelqoria::Editor::SceneEditingOperations::CreateEntity(scene);
+
+    ASSERT_TRUE(result.changed);
+    ASSERT_TRUE(result.selectedEntityId.has_value());
+    const auto createdEntity = scene.FindEntity(*result.selectedEntityId);
+    ASSERT_TRUE(createdEntity.has_value());
+    EXPECT_EQ("Entity 1", createdEntity->get().GetName());
 }
 
 TEST(SceneEditingOperationsTests, DeleteSelectedEntityChoosesRemainingNeighbor)
@@ -104,6 +119,20 @@ TEST(SceneEditingOperationsTests, AddSpriteComponentAttachesDefaultComponentAndS
     const auto loadedEntity = loadResult.scene->FindEntity(entity.GetId());
     ASSERT_TRUE(loadedEntity.has_value());
     EXPECT_TRUE(loadedEntity->get().HasSpriteComponent());
+}
+
+TEST(SceneEditingOperationsTests, RenameEntityTrimsWhitespaceAndFallsBackToDefaultName)
+{
+    Xelqoria::Game::Scene scene;
+    auto& entity = scene.CreateEntity();
+
+    EXPECT_TRUE(Xelqoria::Editor::SceneEditingOperations::RenameEntity(entity, "  Player  "));
+    EXPECT_EQ("Player", entity.GetName());
+
+    EXPECT_TRUE(Xelqoria::Editor::SceneEditingOperations::RenameEntity(entity, "   "));
+    EXPECT_EQ("Entity 1", entity.GetName());
+
+    EXPECT_FALSE(Xelqoria::Editor::SceneEditingOperations::RenameEntity(entity, "Entity 1"));
 }
 
 TEST(SceneEditingOperationsTests, RemoveSpriteComponentDetachesComponentAndSurvivesSerialization)
