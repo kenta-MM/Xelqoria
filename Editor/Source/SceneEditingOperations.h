@@ -48,5 +48,19 @@ namespace Xelqoria::Editor
         static SceneEditResult DuplicateSelectedEntity(
             Game::Scene& scene,
             std::optional<Game::EntityId> selectedEntityId);
+
+        /// <summary>
+        /// Entity に既定の SpriteComponent を追加する。
+        /// </summary>
+        /// <param name="entity">追加対象の Entity。</param>
+        /// <returns>追加で変更が発生した場合は true。</returns>
+        static bool AddSpriteComponent(Game::Entity& entity);
+
+        /// <summary>
+        /// Entity から SpriteComponent を削除する。
+        /// </summary>
+        /// <param name="entity">削除対象の Entity。</param>
+        /// <returns>削除で変更が発生した場合は true。</returns>
+        static bool RemoveSpriteComponent(Game::Entity& entity);
     };
 }

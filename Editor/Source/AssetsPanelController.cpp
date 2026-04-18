@@ -197,6 +197,11 @@ namespace Xelqoria::Editor
         return m_assetDragReleasedThisFrame;
     }
 
+    bool AssetsPanelController::HasVisibleSpriteAssets() const
+    {
+        return false == m_visibleSpriteAssetIds.empty();
+    }
+
     void AssetsPanelController::RefreshSummaryLabel()
     {
         wchar_t summaryText[256]{};

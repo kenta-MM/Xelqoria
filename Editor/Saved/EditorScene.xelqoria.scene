@@ -1,2 +1,11 @@
 magic=xelqoria.scene
 version=1
+entity.0.id=1
+entity.0.transform.position=-91.000000,-70.000000,0.000000
+entity.0.transform.rotation=0.000000,0.000000,0.000000
+entity.0.transform.scale=1.000000,1.000000,1.000000
+entity.1.id=2
+entity.1.transform.position=-64.000000,-101.000000,0.000000
+entity.1.transform.rotation=0.000000,0.000000,0.000000
+entity.1.transform.scale=1.000000,1.000000,1.000000
+entity.1.spriteRef=sprites/mapchip-right

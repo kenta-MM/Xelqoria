@@ -133,4 +133,26 @@ namespace Xelqoria::Editor
             duplicateEntity.GetId()
         };
     }
+
+    bool SceneEditingOperations::AddSpriteComponent(Game::Entity& entity)
+    {
+        if (entity.HasSpriteComponent())
+        {
+            return false;
+        }
+
+        entity.SetSpriteComponent(Game::SpriteComponent{});
+        return true;
+    }
+
+    bool SceneEditingOperations::RemoveSpriteComponent(Game::Entity& entity)
+    {
+        if (false == entity.HasSpriteComponent())
+        {
+            return false;
+        }
+
+        entity.RemoveSpriteComponent();
+        return true;
+    }
 }

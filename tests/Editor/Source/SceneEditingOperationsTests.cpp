@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "SceneEditingOperations.h"
+#include "SceneSerializer.h"
 
 TEST(SceneEditingOperationsTests, DuplicateSelectedEntityCopiesTransformAndSpriteComponent)
 {
@@ -77,4 +78,58 @@ TEST(SceneEditingOperationsTests, DeleteLastEntityClearsSelection)
     ASSERT_TRUE(result.changed);
     EXPECT_EQ(static_cast<std::size_t>(0), scene.GetEntityCount());
     EXPECT_FALSE(result.selectedEntityId.has_value());
+}
+
+TEST(SceneEditingOperationsTests, AddSpriteComponentAttachesDefaultComponentAndSurvivesSerialization)
+{
+    Xelqoria::Game::Scene scene;
+    auto& entity = scene.CreateEntity();
+
+    const bool changed = Xelqoria::Editor::SceneEditingOperations::AddSpriteComponent(entity);
+
+    ASSERT_TRUE(changed);
+    ASSERT_TRUE(entity.HasSpriteComponent());
+    const auto spriteComponent = entity.GetSpriteComponent();
+    ASSERT_TRUE(spriteComponent.has_value());
+    EXPECT_TRUE(spriteComponent->get().spriteAssetRef.IsEmpty());
+    EXPECT_TRUE(spriteComponent->get().renderSettings.visible);
+    EXPECT_EQ(0, spriteComponent->get().renderSettings.sortOrder);
+    EXPECT_FLOAT_EQ(1.0f, spriteComponent->get().renderSettings.opacity);
+
+    const auto loadResult = Xelqoria::Game::SceneSerializer::LoadFromText(
+        Xelqoria::Game::SceneSerializer::SaveToText(scene));
+    ASSERT_TRUE(loadResult.IsSuccess());
+    ASSERT_TRUE(loadResult.scene.has_value());
+
+    const auto loadedEntity = loadResult.scene->FindEntity(entity.GetId());
+    ASSERT_TRUE(loadedEntity.has_value());
+    EXPECT_TRUE(loadedEntity->get().HasSpriteComponent());
+}
+
+TEST(SceneEditingOperationsTests, RemoveSpriteComponentDetachesComponentAndSurvivesSerialization)
+{
+    Xelqoria::Game::Scene scene;
+    auto& entity = scene.CreateEntity();
+    entity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+        Xelqoria::Core::AssetId("sprites/player"),
+        {
+            true,
+            2,
+            0.75f
+        }
+    });
+
+    const bool changed = Xelqoria::Editor::SceneEditingOperations::RemoveSpriteComponent(entity);
+
+    ASSERT_TRUE(changed);
+    EXPECT_FALSE(entity.HasSpriteComponent());
+
+    const auto loadResult = Xelqoria::Game::SceneSerializer::LoadFromText(
+        Xelqoria::Game::SceneSerializer::SaveToText(scene));
+    ASSERT_TRUE(loadResult.IsSuccess());
+    ASSERT_TRUE(loadResult.scene.has_value());
+
+    const auto loadedEntity = loadResult.scene->FindEntity(entity.GetId());
+    ASSERT_TRUE(loadedEntity.has_value());
+    EXPECT_FALSE(loadedEntity->get().HasSpriteComponent());
 }

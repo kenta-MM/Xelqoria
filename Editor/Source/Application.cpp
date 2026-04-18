@@ -98,10 +98,12 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetRegisteredSpriteAssetIds(),
             m_sceneDocument.GetSpriteAssetRegistry(),
             m_sceneDocument.GetTextureAssetRegistry());
+        const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
         m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
         m_inspectorPanelController.Refresh(
             m_sceneDocument.GetScene(),
-            m_hierarchyPanelController.GetSelectedEntityId());
+            m_hierarchyPanelController.GetSelectedEntityId(),
+            canAddSpriteComponent);
         m_sceneViewController.RefreshSelectionStatus(
             m_sceneDocument.GetScene(),
             m_hierarchyPanelController.GetSelectedEntityId());
@@ -131,6 +133,7 @@ namespace Xelqoria::Editor
 
         m_assetsPanelController.SyncSelection();
         m_assetsPanelController.UpdateDragState();
+        const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
 
         if (true == m_hierarchyPanelController.SyncSelection())
         {
@@ -138,12 +141,35 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
             m_inspectorPanelController.Refresh(
                 m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId());
+                m_hierarchyPanelController.GetSelectedEntityId(),
+                canAddSpriteComponent);
         }
 
-        m_inspectorPanelController.ApplyEdits(
+        const InspectorApplyResult inspectorResult = m_inspectorPanelController.ApplyEdits(
             m_sceneDocument.GetScene(),
-            m_hierarchyPanelController.GetSelectedEntityId());
+            m_hierarchyPanelController.GetSelectedEntityId(),
+            canAddSpriteComponent);
+        if (true == inspectorResult.changed)
+        {
+            if (m_sceneDocument.Save())
+            {
+                m_editorCommandController.PushSnapshot(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Inspector の編集内容を Scene へ保存しました。");
+            }
+            else
+            {
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Inspector の編集内容は反映されましたが、Scene の保存に失敗しました。");
+            }
+
+            m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
+            m_inspectorPanelController.Refresh(
+                m_sceneDocument.GetScene(),
+                m_hierarchyPanelController.GetSelectedEntityId(),
+                canAddSpriteComponent);
+            m_sceneViewController.RefreshSelectionStatus(
+                m_sceneDocument.GetScene(),
+                m_hierarchyPanelController.GetSelectedEntityId());
+        }
 
         const SceneViewInteractionResult interactionResult = m_sceneViewController.UpdateInteraction(
             m_sceneDocument.GetScene(),
@@ -158,7 +184,8 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
             m_inspectorPanelController.Refresh(
                 m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId());
+                m_hierarchyPanelController.GetSelectedEntityId(),
+                canAddSpriteComponent);
         }
 
         if (true == m_assetsPanelController.WasDragReleasedThisFrame())
@@ -178,7 +205,8 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
             m_inspectorPanelController.Refresh(
                 m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId());
+                m_hierarchyPanelController.GetSelectedEntityId(),
+                canAddSpriteComponent);
         }
 
         if (true == dropResult.shouldPushHistory)
@@ -197,7 +225,8 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
             m_inspectorPanelController.Refresh(
                 m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId());
+                m_hierarchyPanelController.GetSelectedEntityId(),
+                canAddSpriteComponent);
             m_sceneViewController.RefreshSelectionStatus(
                 m_sceneDocument.GetScene(),
                 m_hierarchyPanelController.GetSelectedEntityId());

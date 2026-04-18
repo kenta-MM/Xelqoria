@@ -33,7 +33,8 @@
 - エンジンシステム (`RenderSystem`, `SceneSystem`, `ResourceManager`) は Graphics または Core
 - ゲームロジック (`Player`, `Enemy`, `Stage`, `UI`) は Game
 - 戻り値、引数、ローカル変数などには、可能な限り `const` を付与する
-- 否定条件を判定する場合は `if (!value)` ではなく `if (false == value)` の形式を使用する
+- 否定条件を判定する場合は `if (!value)` ではなく `if (false == value)` の形式を使用する。
+	- ただし、条件がtrueの場合は`if(value)`を使用する。
 - 制御文はネストを深くしすぎず、可能な限り早期 `return` を実装する
 - `using` を用いて名前空間を省略することを禁止し、型名は完全修飾名または既存の明示的な記述方針に従って記述する
 - ローカル変数は可能な限り使用直前で定義し、不要に広いスコープを持たせない

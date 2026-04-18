@@ -72,6 +72,12 @@ namespace Xelqoria::Editor
         /// <returns>今フレームでドラッグ解放した場合は true。</returns>
         [[nodiscard]] bool WasDragReleasedThisFrame() const;
 
+        /// <summary>
+        /// Inspector から追加可能な SpriteAsset が存在するかを取得する。
+        /// </summary>
+        /// <returns>表示可能な SpriteAsset が 1 件以上ある場合は true。</returns>
+        [[nodiscard]] bool HasVisibleSpriteAssets() const;
+
     private:
         /// <summary>
         /// Assets パネルの要約ラベルを更新する。

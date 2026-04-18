@@ -58,6 +58,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetInspectorSummaryLabel() const;
 
         /// <summary>
+        /// Transform セクション見出しラベルを取得する。
+        /// </summary>
+        /// <returns>Transform セクション見出しの HWND。</returns>
+        [[nodiscard]] HWND GetTransformSectionLabel() const;
+
+        /// <summary>
         /// Transform 項目ラベル群を取得する。
         /// </summary>
         /// <returns>Transform ラベル配列。</returns>
@@ -70,6 +76,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] const std::array<HWND, 9>& GetTransformEditControls() const;
 
         /// <summary>
+        /// SpriteComponent セクション見出しラベルを取得する。
+        /// </summary>
+        /// <returns>SpriteComponent セクション見出しの HWND。</returns>
+        [[nodiscard]] HWND GetSpriteComponentSectionLabel() const;
+
+        /// <summary>
         /// SpriteRef ラベルを取得する。
         /// </summary>
         /// <returns>SpriteRef ラベルの HWND。</returns>
@@ -80,6 +92,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>SpriteRef 入力欄の HWND。</returns>
         [[nodiscard]] HWND GetSpriteRefEdit() const;
+
+        /// <summary>
+        /// SpriteComponent 操作ボタンを取得する。
+        /// </summary>
+        /// <returns>SpriteComponent 操作用ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetSpriteComponentActionButton() const;
 
         /// <summary>
         /// SceneView の状態ラベルを取得する。
@@ -144,10 +162,13 @@ namespace Xelqoria::Editor
         HWND m_hierarchySummaryLabel = nullptr;
         HWND m_hierarchyListBox = nullptr;
         HWND m_inspectorSummaryLabel = nullptr;
+        HWND m_transformSectionLabel = nullptr;
         std::array<HWND, 3> m_transformLabels{};
         std::array<HWND, 9> m_transformEditControls{};
+        HWND m_spriteComponentSectionLabel = nullptr;
         HWND m_spriteRefLabel = nullptr;
         HWND m_spriteRefEdit = nullptr;
+        HWND m_spriteComponentActionButton = nullptr;
         std::uint32_t m_sceneViewWidth = 0;
         std::uint32_t m_sceneViewHeight = 0;
     };
