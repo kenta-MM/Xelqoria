@@ -1,56 +1,56 @@
-# Project Map For Agents
+# エージェント向けプロジェクト構成
 
-## Dependency
+## 依存関係
 
-App / Editor
-↓
-Game
-↓
-Graphics
-↓
-RHI
-↓
-Backends
+App / Editor  
+↓  
+Game  
+↓  
+Graphics  
+↓  
+RHI  
+↓  
+Backends  
 
-Core is a shared base layer.
+Core は共通基盤レイヤー
 
 ## Core
 
-- Responsibility: application base, window, asset identifiers
-- Must NOT contain rendering logic
+- 役割: アプリ基盤、ウィンドウ、アセット識別子
+- 描画ロジックを持たない
 
 ## RHI
 
-- Responsibility: GPU abstraction
-- Must NOT contain rendering concepts
-- Must NOT expose Direct3D types in public abstractions
+- 役割: GPU抽象化
+- 描画概念を持たない
+- 公開インターフェースで Direct3D 型を露出しない
 
 ## Graphics
 
-- Responsibility: rendering concepts and rendering systems
-- May use: Core, RHI
-- Must NOT use Direct3D types
-- Must use RHI for GPU operations
+- 役割: 描画概念と描画システム
+- 利用可能: Core, RHI
+- Direct3D 型を使用しない
+- GPU操作は RHI を使用する
 
 ## Game
 
-- Responsibility: gameplay logic, scene, entity, component, persistent gameplay data
-- May use: Core, Graphics
-- Must NOT use: Backends, Direct3D
+- 役割: ゲームロジック、シーン、エンティティ、コンポーネント、永続データ
+- 利用可能: Core, Graphics
+- Backends および Direct3D を使用しない
 
 ## Backends
 
-- Responsibility: platform-specific implementation of RHI
-- Only layer allowed to use Direct3D
+- 役割: RHI のプラットフォーム固有実装
+- Direct3D を使用できる唯一のレイヤー
 
 ## App
 
-- Responsibility: runtime composition and startup
-- May compose: Core, Game, Graphics, RHI, Backends
-- Must NOT contain Editor-only logic
+- 役割: ランタイム構成と起動処理
+- 利用可能: Core, Game, Graphics, RHI, Backends
+- Editor専用ロジックを含めない
 
 ## Editor
 
-- Responsibility: editor-only tools and editing support
-- May compose: Core, Game, Graphics, RHI, Backends
-- Must NOT push editor-only concepts into shared runtime layers
+- 役割: エディタ専用ツールおよび編集支援
+- 利用可能: Core, Game, Graphics, RHI, Backends
+- エディタ専用概念を共有ランタイム層に持ち込まない

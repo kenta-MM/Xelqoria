@@ -1,26 +1,26 @@
-# Architecture For Agents
+# エージェント向けアーキテクチャ
 
-## Dependency
+## 依存関係
 
-Game -> Graphics -> RHI -> Backends
+Game → Graphics → RHI → Backends
 
-Never break this order.
+この順序を絶対に崩してはならない。
 
-## Layer Responsibility
+## レイヤー責務
 
-- Game = gameplay logic and persistent gameplay data
-- Graphics = API-independent rendering logic and rendering concepts
-- RHI = low-level GPU abstraction
-- Backends = platform-specific implementation of RHI
+- Game = ゲームロジックおよび永続的なゲームデータ
+- Graphics = APIに依存しない描画ロジックおよび描画概念
+- RHI = 低レベルなGPU抽象化
+- Backends = RHIのプラットフォーム固有実装
 
-## Core Rules
+## コアルール
 
-- Platform-specific API is allowed ONLY in Backends projects
-- Graphics must NOT use Direct3D types
-- RHI must NOT contain rendering concepts such as Sprite, Camera, Material, or Renderer
-- Game must NOT reference Backends or Direct3D
+- プラットフォーム固有APIは Backends プロジェクトでのみ使用可能
+- Graphics は Direct3D 型を使用してはならない
+- RHI は Sprite、Camera、Material、Renderer などの描画概念を含めてはならない
+- Game は Backends や Direct3D を参照してはならない
 
-## Rendering Rule
+## 描画ルール
 
-- Rendering is performed by Renderer classes
-- Data objects such as Sprite must NOT render themselves
+- 描画は Renderer クラスが担当する
+- Sprite などのデータオブジェクトは自ら描画してはならない

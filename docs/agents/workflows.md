@@ -1,27 +1,27 @@
-# Workflows For Agents
+# エージェント向けワークフロー
 
-## Placement Decision
+## 配置判断
 
-1. Rendering concept -> Graphics
-2. Platform-specific API -> Backends
-3. GPU abstraction -> RHI
-4. Engine base system -> Core
-5. Gameplay logic or persistent gameplay data -> Game
+1. 描画概念 → Graphics
+2. プラットフォーム固有API → Backends
+3. GPU抽象化 → RHI
+4. エンジン基盤 → Core
+5. ゲームロジック / 永続データ → Game
 
-If unsure, re-check `architecture.md` and `project-map.md`.
+迷った場合は architecture.md と project-map.md を確認する
 
-## Implementation Flow
+## 実装手順
 
-1. Identify the responsibility of the change
-2. Choose the correct layer
-3. Keep the change minimal
-4. Ensure no platform-specific leakage outside Backends
-5. Verify build and behavior
+1. 変更の責務を特定
+2. 適切なレイヤーを選択
+3. 変更は最小限にする
+4. Backends 以外にプラットフォーム依存を漏らさない
+5. ビルドと動作を確認
 
-## Validation Checklist
+## チェックリスト
 
-- No layer boundary violation
-- No Direct3D types outside Backends
-- No rendering in data objects
-- No Game-to-Backends reference
-- No rendering concepts added to RHI
+- レイヤー境界を破っていない
+- Backends 以外で Direct3D 型を使用していない
+- データオブジェクトが描画していない
+- Game から Backends を参照していない
+- RHI に描画概念を追加していない

@@ -1,27 +1,21 @@
 # AGENTS.md
 
-## Rules
+## ルール
 
-- Follow `architecture.md` as the source of truth for dependency direction and layer responsibility.
-- Platform-specific API is allowed ONLY in Backends projects.
-- Data objects must NOT render themselves.
+- 依存方向・レイヤー責務は architecture.md に従う
+- 詳細ルールは各ドキュメントに従う
 
-## Never
 
-- Use Direct3D types in Graphics
-- Put rendering concepts in RHI
-- Reference Backends from Game
-- Break layer boundaries for convenience
+## 禁止事項
 
-## Decision
+- Graphics で Direct3D 型を使用しない
+- RHI に描画概念を持ち込まない
+- Game から Backends を参照しない
+- 便宜的なレイヤー違反をしない
 
-- If unsure about placement, check `project-map.md`.
-- If unsure about implementation flow, check `workflows.md`.
-- If unsure about architecture, follow `architecture.md`.
+## 判断基準
 
-## Docs
-
-- architecture.md
-- coding-rules.md
-- workflows.md
-- project-map.md
+- 配置に迷った場合 → project-map.md を参照する
+- 実装フローに迷った場合 → workflows.md を参照する
+- アーキテクチャに迷った場合 → architecture.md を参照する
+- コーディングルールに迷った場合 → coding-rules.md を参照する

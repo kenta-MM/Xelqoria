@@ -1,64 +1,62 @@
 ---
 name: xelqoria-class-diagram-update
-description: Use AFTER a pull request that changes public headers or dependencies. Update only the affected project diagram.
+description: PR後、公開ヘッダや依存関係の変更に応じて対象プロジェクトのクラス図のみ更新する
 ---
 
-# Class Diagram Update (PR-based)
+# クラス図更新（PRベース）
 
-## Use
+## 使用タイミング
 
-- Public header (.h) changes
-- Class relationship changes
-- ProjectReference changes
+- 公開ヘッダ（.h）変更
+- クラス関係変更
+- ProjectReference変更
 
-## Steps
+## 手順
 
-1. Inspect PR changed files
-2. Identify affected project
-3. Update ONLY that project's diagram:
-   docs/class_diagram/<project>-class-diagram.md
-4. Reflect only code-visible relationships
-5. Keep diagram minimal
-6. Explain what changed and why
+1. PRの変更ファイルを確認
+2. 影響プロジェクトを特定
+3. 対象プロジェクトのクラス図のみ更新  
+   - docs/class_diagram/<project>-class-diagram.md
+4. コード上の関係のみ反映
+5. 図は最小限にする
+6. 自明でない変更のみ理由を1〜2行で説明（誤字修正等は不要）
 
-## Include
+## 図の対象
 
-- Public classes in the project
-- Direct relationships (inheritance, composition, usage)
-- Lower-layer interfaces ONLY if directly referenced
+- 対象プロジェクトの公開型（class / struct / interface）
+- 継承・保持・利用などの直接関係
+- 必要な場合のみ下位レイヤー型（1段まで）
 
-## Do NOT Include
+## 図の制約
 
-- Unrelated projects
-- Full-system diagrams
-- Speculative relationships
-- Future design
+- 関係のないプロジェクトは含めない
+- 全体図にしない
+- 推測・将来設計・未実装の関係は禁止
+- 依存関係を再帰的に展開しない
+- 下位レイヤーの内部構造は展開しない
 
-## Layer Rules
+## Mermaidルール
 
-- Core → Core only
-- RHI → RHI only
-- Backends → Backends + RHI interfaces
-- Graphics → Graphics + RHI interfaces
-- Game → Game + Graphics/Core if needed
-- App/Editor → direct dependencies only
+- 図は小さく保つ
+- 基本関係のみ使用（--> ..> *-- o--）
+- 複雑なジェネリクスは避ける
+- 不安定構文は使わない
 
-## Mermaid Rules
+## 更新ルール
 
-- Keep diagrams small
-- Prefer simple relations:
-  -->  ..>  *--  o--
-- Avoid complex generics
-- Avoid unsupported syntax
-- Do NOT over-detail
+- 更新対象は1図のみ
+- 必要がない限り複数更新しない
+- 既存ファイルを優先
+- 存在しない場合のみ新規作成
 
-## Update Policy
+## 対象外
 
-- Update ONE diagram only
-- Do NOT update multiple diagrams unless required
-- Prefer editing existing file
-- Create new diagram ONLY if missing
+- Xelqoria.Tests.*
 
-## Fail-safe
+## ソリューション反映
 
-- If project cannot be identified → do nothing
+- 新規作成時のみ Xelqoria.slnx に追加
+
+## フェイルセーフ
+
+- 対象不明の場合は更新しない

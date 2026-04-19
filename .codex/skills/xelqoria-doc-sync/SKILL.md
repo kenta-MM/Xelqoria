@@ -1,67 +1,53 @@
 ---
 name: xelqoria-doc-sync
-description: Use AFTER a pull request is created. Update only the necessary docs based on PR changes.
+description: PR作成後、変更に基づき必要最小限のドキュメントのみ更新する
 ---
 
-# Doc Sync (PR-based)
+# ドキュメント同期（PRベース）
 
-## Use
+## 使用タイミング
 
-- After a pull request is prepared
-- When code changes may affect documentation
+- PR作成後
 
-## Steps
+## 手順
 
-1. Inspect PR:
-   - title
-   - description
-   - changed files
-
-2. Identify ONE affected doc
-
-3. Update only that doc
-
-4. Keep changes minimal
-
-5. Explain what changed and why
+1. PRを確認（タイトル・説明・変更ファイル）
+2. 主対象ドキュメントを特定
+3. そのドキュメントを更新
+4. 明確に必要な場合のみ他ドキュメントも更新
+5. 変更は最小限にする
+6. 自明でない変更のみ、理由を1〜2行で説明（誤字修正等は不要）
 
 
-## Mapping (select primary doc)
+## 対応表
 
-Choose the SINGLE most relevant document to update.
+主対象となるドキュメントを選択する。
 
-Only update multiple docs if the change clearly affects multiple areas.
 
-- Dependency / architecture change
-  → docs/agents/architecture.md
+- 依存関係 / アーキテクチャ → architecture.md（docs/agents 配下）
+- レイヤー責務 / 配置 → project-map.md（docs/agents 配下）
+- 実装フロー → workflows.md（docs/agents 配下）
+- コーディングルール → coding-rules.md（docs/agents 配下）
+- ランタイム / エディタ境界 → runtime-vs-editor-boundary.md（docs/agents 配下）
+- アセットフロー → asset-flow.md（docs/agents 配下）
+- CI / バリデーション → docs/quality 配下
 
-- Layer responsibility / placement change
-  → docs/agents/project-map.md
 
-- Implementation flow change
-  → docs/agents/workflows.md
+## 更新対象外
 
-- Coding rule change
-  → docs/agents/coding-rules.md
+- docs/class_diagram/**
 
-- Runtime / Editor boundary change
-  → docs/agents/runtime-vs-editor-boundary.md
 
-- Asset resolution change
-  → docs/agents/asset-flow.md
+## ルール
 
-- CI / validation change
-  → docs/quality/*.md
+- PRの変更内容のみを根拠とする
+- リポジトリ全体を探索しない
+- 必要がない限り複数ドキュメントを更新しない
+- 新規ドキュメントを作成しない
+- 大規模な書き換えをしない
+- 推測で書かない
 
-## Rules
 
-- Use ONLY PR-visible changes as source
-- Do NOT scan entire repository
-- Do NOT update multiple docs unless required
-- Do NOT create new docs
-- Do NOT rewrite large sections
-- Do NOT speculate
+## フェイルセーフ
 
-## Fail-safe
-
-- If affected doc is unclear → update nothing
+- 対象が不明な場合は更新しない
