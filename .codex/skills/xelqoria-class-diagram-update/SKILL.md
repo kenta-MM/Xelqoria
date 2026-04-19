@@ -1,38 +1,64 @@
 ---
 name: xelqoria-class-diagram-update
-description: Use when public headers or project dependencies change in the Xelqoria repository and the class diagrams under docs/class_diagram must be updated. Prefer project-scoped diagrams, include directly referenced lower layers, and keep Mermaid syntax simple and preview-friendly.
+description: Use AFTER a pull request that changes public headers or dependencies. Update only the affected project diagram.
 ---
 
-# Xelqoria Class Diagram Update
+# Class Diagram Update (PR-based)
 
-Xelqoria の公開ヘッダやプロジェクト参照が変わった時に、`docs/class_diagram` の mermaid 図を更新するための skill。
+## Use
 
-## 使いどころ
+- Public header (.h) changes
+- Class relationship changes
+- ProjectReference changes
 
-- `.h` の型定義や継承、保持関係を変えた時
-- `.vcxproj` の `ProjectReference` を変えた時
-- クラス図を新規作成または更新したい時
+## Steps
 
-## 最初にやること
+1. Inspect PR changed files
+2. Identify affected project
+3. Update ONLY that project's diagram:
+   docs/class_diagram/<project>-class-diagram.md
+4. Reflect only code-visible relationships
+5. Keep diagram minimal
+6. Explain what changed and why
 
-1. [AGENTS.md]($XELQORIA_ROOT/AGENTS.md) を確認する
-2. 対象プロジェクトの `.vcxproj` と `.h` を読む
-3. 既存の `docs/class_diagram/*.md` を確認する
+## Include
 
-## 標準ワークフロー
+- Public classes in the project
+- Direct relationships (inheritance, composition, usage)
+- Lower-layer interfaces ONLY if directly referenced
 
-1. どのプロジェクト図を更新するか決める
-2. 対象プロジェクト自身の公開型を拾う
-3. そのプロジェクトが直接参照している下位レイヤーだけを図へ含める
-4. mermaid は小さく保つ
-- 全体図を 1 枚へ戻さない
-- ネストしすぎたジェネリクス表記を避ける
-- quoted namespace など、プレビュー互換性が低い構文を避ける
-5. 図と実装のズレがないかを見直す
+## Do NOT Include
 
-## 判断基準
+- Unrelated projects
+- Full-system diagrams
+- Speculative relationships
+- Future design
 
-- `RHI` は単体で完結させる
-- `Backends` の図には、実装対象である `RHI` を含める
-- `App` と `Editor` は組み立て対象なので、直接参照している共有層を含める
-- 実装から読み取れない関係は図へ足さない
+## Layer Rules
+
+- Core → Core only
+- RHI → RHI only
+- Backends → Backends + RHI interfaces
+- Graphics → Graphics + RHI interfaces
+- Game → Game + Graphics/Core if needed
+- App/Editor → direct dependencies only
+
+## Mermaid Rules
+
+- Keep diagrams small
+- Prefer simple relations:
+  -->  ..>  *--  o--
+- Avoid complex generics
+- Avoid unsupported syntax
+- Do NOT over-detail
+
+## Update Policy
+
+- Update ONE diagram only
+- Do NOT update multiple diagrams unless required
+- Prefer editing existing file
+- Create new diagram ONLY if missing
+
+## Fail-safe
+
+- If project cannot be identified → do nothing

@@ -1,7 +1,7 @@
 interface:
-  display_name: "Xelqoria Doc Sync"
-  short_description: "実装変更に合わせて関連ドキュメントを同期"
-  default_prompt: "$xelqoria-doc-sync を使って、この Xelqoria の変更に関連する docs を必要最小限で更新します。"
+  display_name: "Xelqoria ドキュメント同期"
+  short_description: "PR差分に基づいて必要なドキュメントのみ更新"
+  default_prompt: "$xelqoria-doc-sync を使って、このPR差分を確認し、最も関連する docs 配下のドキュメント1つだけを最小限更新してください。PRに含まれない内容は変更せず、推測で追記しません。不明な場合は更新しません。"
 
 policy:
   allow_implicit_invocation: true
