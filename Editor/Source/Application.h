@@ -65,6 +65,43 @@ namespace Xelqoria::Editor
         /// </summary>
         void Render();
 
+        /// <summary>
+        /// Assets パネル、Hierarchy、Inspector の表示を現在状態へ同期する。
+        /// </summary>
+        /// <param name="canAddSpriteComponent">SpriteComponent を追加可能な場合は true。</param>
+        /// <param name="resetTrackedEntity">Inspector の追跡状態をリセットする場合は true。</param>
+        void RefreshEditorPanels(bool canAddSpriteComponent, bool resetTrackedEntity);
+
+        /// <summary>
+        /// 現在選択中 Entity に合わせて SceneView 状態ラベルを更新する。
+        /// </summary>
+        void RefreshSceneViewSelectionStatus();
+
+        /// <summary>
+        /// 選択 Entity を更新し、関連パネルを再同期する。
+        /// </summary>
+        /// <param name="selectedEntityId">更新後の選択 EntityId。</param>
+        /// <param name="canAddSpriteComponent">SpriteComponent を追加可能な場合は true。</param>
+        /// <param name="resetTrackedEntity">Inspector の追跡状態をリセットする場合は true。</param>
+        /// <param name="refreshSceneViewSelectionStatus">SceneView 状態ラベルも更新する場合は true。</param>
+        void ApplySelectionChange(
+            std::optional<Game::EntityId> selectedEntityId,
+            bool canAddSpriteComponent,
+            bool resetTrackedEntity,
+            bool refreshSceneViewSelectionStatus);
+
+        /// <summary>
+        /// Scene 変更内容を保存し、必要に応じて履歴へ積む。
+        /// </summary>
+        /// <param name="successMessage">保存成功時の表示文面。</param>
+        /// <param name="failureMessage">保存失敗時の表示文面。</param>
+        /// <param name="pushHistory">保存成功時に履歴へ積む場合は true。</param>
+        /// <returns>保存に成功した場合は true。</returns>
+        bool PersistSceneChanges(
+            const wchar_t* successMessage,
+            const wchar_t* failureMessage,
+            bool pushHistory);
+
     private:
         HINSTANCE m_hInstance = nullptr;
         Core::Window m_window{};

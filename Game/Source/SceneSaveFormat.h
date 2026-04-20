@@ -58,6 +58,11 @@ namespace Xelqoria::Game
 		std::string name{};
 
 		/// <summary>
+		/// Entity 名フィールドが明示的に保存されていたかを表す。
+		/// </summary>
+		bool hasName = false;
+
+		/// <summary>
 		/// SpriteComponent を保持しているかを表す。
 		/// </summary>
 		bool hasSpriteComponent = false;

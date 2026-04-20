@@ -99,14 +99,8 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetSpriteAssetRegistry(),
             m_sceneDocument.GetTextureAssetRegistry());
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
-        m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
-        m_inspectorPanelController.Refresh(
-            m_sceneDocument.GetScene(),
-            m_hierarchyPanelController.GetSelectedEntityId(),
-            canAddSpriteComponent);
-        m_sceneViewController.RefreshSelectionStatus(
-            m_sceneDocument.GetScene(),
-            m_hierarchyPanelController.GetSelectedEntityId());
+        RefreshEditorPanels(canAddSpriteComponent, false);
+        RefreshSceneViewSelectionStatus();
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         return true;
     }
@@ -137,37 +131,17 @@ namespace Xelqoria::Editor
 
         if (true == m_hierarchyPanelController.SyncSelection())
         {
-            m_inspectorPanelController.ResetTrackedEntity();
-            m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
-            m_inspectorPanelController.Refresh(
-                m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId(),
-                canAddSpriteComponent);
+            RefreshEditorPanels(canAddSpriteComponent, true);
         }
 
         const SceneEditResult hierarchyEditResult = m_hierarchyPanelController.ApplyEdits(m_sceneDocument.GetScene());
         if (true == hierarchyEditResult.changed)
         {
-            m_hierarchyPanelController.SetSelectedEntityId(hierarchyEditResult.selectedEntityId);
-            if (m_sceneDocument.Save())
-            {
-                m_editorCommandController.PushSnapshot(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
-                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Hierarchy の編集内容を Scene へ保存しました。");
-            }
-            else
-            {
-                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Hierarchy の編集内容は反映されましたが、Scene の保存に失敗しました。");
-            }
-
-            m_inspectorPanelController.ResetTrackedEntity();
-            m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
-            m_inspectorPanelController.Refresh(
-                m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId(),
-                canAddSpriteComponent);
-            m_sceneViewController.RefreshSelectionStatus(
-                m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId());
+            ApplySelectionChange(hierarchyEditResult.selectedEntityId, canAddSpriteComponent, true, true);
+            PersistSceneChanges(
+                L"Hierarchy の編集内容を Scene へ保存しました。",
+                L"Hierarchy の編集内容は反映されましたが、Scene の保存に失敗しました。",
+                true);
         }
 
         const InspectorApplyResult inspectorResult = m_inspectorPanelController.ApplyEdits(
@@ -176,24 +150,12 @@ namespace Xelqoria::Editor
             canAddSpriteComponent);
         if (true == inspectorResult.changed)
         {
-            if (m_sceneDocument.Save())
-            {
-                m_editorCommandController.PushSnapshot(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
-                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Inspector の編集内容を Scene へ保存しました。");
-            }
-            else
-            {
-                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Inspector の編集内容は反映されましたが、Scene の保存に失敗しました。");
-            }
-
-            m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
-            m_inspectorPanelController.Refresh(
-                m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId(),
-                canAddSpriteComponent);
-            m_sceneViewController.RefreshSelectionStatus(
-                m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId());
+            PersistSceneChanges(
+                L"Inspector の編集内容を Scene へ保存しました。",
+                L"Inspector の編集内容は反映されましたが、Scene の保存に失敗しました。",
+                true);
+            RefreshEditorPanels(canAddSpriteComponent, false);
+            RefreshSceneViewSelectionStatus();
         }
 
         const SceneViewInteractionResult interactionResult = m_sceneViewController.UpdateInteraction(
@@ -204,13 +166,7 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.GetSelectedEntityId());
         if (true == interactionResult.selectionChanged)
         {
-            m_hierarchyPanelController.SetSelectedEntityId(interactionResult.selectedEntityId);
-            m_inspectorPanelController.ResetTrackedEntity();
-            m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
-            m_inspectorPanelController.Refresh(
-                m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId(),
-                canAddSpriteComponent);
+            ApplySelectionChange(interactionResult.selectedEntityId, canAddSpriteComponent, true, false);
         }
 
         if (true == m_assetsPanelController.WasDragReleasedThisFrame())
@@ -226,12 +182,7 @@ namespace Xelqoria::Editor
 
         if (true == dropResult.sceneChanged || true == dropResult.selectionChanged)
         {
-            m_inspectorPanelController.ResetTrackedEntity();
-            m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
-            m_inspectorPanelController.Refresh(
-                m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId(),
-                canAddSpriteComponent);
+            RefreshEditorPanels(canAddSpriteComponent, true);
         }
 
         if (true == dropResult.shouldPushHistory)
@@ -245,16 +196,7 @@ namespace Xelqoria::Editor
             m_editorShell.GetSceneViewPlanLabel());
         if (true == commandResult.changed)
         {
-            m_hierarchyPanelController.SetSelectedEntityId(commandResult.selectedEntityId);
-            m_inspectorPanelController.ResetTrackedEntity();
-            m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
-            m_inspectorPanelController.Refresh(
-                m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId(),
-                canAddSpriteComponent);
-            m_sceneViewController.RefreshSelectionStatus(
-                m_sceneDocument.GetScene(),
-                m_hierarchyPanelController.GetSelectedEntityId());
+            ApplySelectionChange(commandResult.selectedEntityId, canAddSpriteComponent, true, true);
         }
     }
 
@@ -267,5 +209,60 @@ namespace Xelqoria::Editor
             m_sceneViewController.GetCamera(),
             m_hierarchyPanelController.GetSelectedEntityId(),
             m_sceneViewController.GetDragPreviewState());
+    }
+
+    void Application::RefreshEditorPanels(bool canAddSpriteComponent, bool resetTrackedEntity)
+    {
+        if (true == resetTrackedEntity)
+        {
+            m_inspectorPanelController.ResetTrackedEntity();
+        }
+
+        m_hierarchyPanelController.Refresh(m_sceneDocument.GetScene());
+        m_inspectorPanelController.Refresh(
+            m_sceneDocument.GetScene(),
+            m_hierarchyPanelController.GetSelectedEntityId(),
+            canAddSpriteComponent);
+    }
+
+    void Application::RefreshSceneViewSelectionStatus()
+    {
+        m_sceneViewController.RefreshSelectionStatus(
+            m_sceneDocument.GetScene(),
+            m_hierarchyPanelController.GetSelectedEntityId());
+    }
+
+    void Application::ApplySelectionChange(
+        std::optional<Game::EntityId> selectedEntityId,
+        bool canAddSpriteComponent,
+        bool resetTrackedEntity,
+        bool refreshSceneViewSelectionStatus)
+    {
+        m_hierarchyPanelController.SetSelectedEntityId(selectedEntityId);
+        RefreshEditorPanels(canAddSpriteComponent, resetTrackedEntity);
+        if (true == refreshSceneViewSelectionStatus)
+        {
+            RefreshSceneViewSelectionStatus();
+        }
+    }
+
+    bool Application::PersistSceneChanges(
+        const wchar_t* successMessage,
+        const wchar_t* failureMessage,
+        bool pushHistory)
+    {
+        if (m_sceneDocument.Save())
+        {
+            if (true == pushHistory)
+            {
+                m_editorCommandController.PushSnapshot(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+            }
+
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), successMessage);
+            return true;
+        }
+
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), failureMessage);
+        return false;
     }
 }

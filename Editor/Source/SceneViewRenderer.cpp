@@ -62,80 +62,13 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
-        /// Entity ID と対になる描画用 Sprite を表す。
-        /// </summary>
-        struct SceneRenderSprite
-        {
-            /// <summary>
-            /// 描画対象に対応する Entity ID を表す。
-            /// </summary>
-            Game::EntityId entityId = 0;
-
-            /// <summary>
-            /// 描画に使用する Sprite を保持する。
-            /// </summary>
-            Graphics::Sprite sprite{};
-        };
-
-        /// <summary>
-        /// Scene の描画候補を Entity ID 付き Sprite 一覧へ解決する。
-        /// </summary>
-        /// <param name="scene">解決対象の Scene。</param>
-        /// <param name="spriteAssetResolver">SpriteAsset レジストリ。</param>
-        /// <param name="textureAssetResolver">Texture レジストリ。</param>
-        /// <returns>描画可能な Sprite 一覧。</returns>
-        std::vector<SceneRenderSprite> ResolveSceneRenderSprites(
-            const Game::Scene& scene,
-            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
-            const Graphics::ITextureAssetResolver& textureAssetResolver)
-        {
-            std::vector<SceneRenderSprite> resolvedSprites;
-            const auto renderItems = scene.CollectSpriteRenderItems();
-            resolvedSprites.reserve(renderItems.size());
-
-            for (const Game::SceneSpriteRenderItem& renderItem : renderItems)
-            {
-                if (nullptr == renderItem.transform || nullptr == renderItem.spriteComponent)
-                {
-                    continue;
-                }
-
-                const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(renderItem.spriteComponent->spriteAssetRef);
-                if (false == spriteAsset.has_value())
-                {
-                    continue;
-                }
-
-                const auto texture = textureAssetResolver.ResolveTexture(spriteAsset->textureAssetId);
-                if (false == static_cast<bool>(texture))
-                {
-                    continue;
-                }
-
-                Graphics::Sprite sprite{};
-                sprite.SetTexture(texture);
-                sprite.SetTextureAssetId(spriteAsset->textureAssetId);
-                sprite.SetPosition(renderItem.transform->position.x, renderItem.transform->position.y);
-                sprite.SetScale(renderItem.transform->scale.x, renderItem.transform->scale.y);
-                sprite.SetRotationDegrees(renderItem.transform->rotation.z);
-
-                resolvedSprites.push_back(SceneRenderSprite{
-                    renderItem.entityId,
-                    std::move(sprite)
-                });
-            }
-
-            return resolvedSprites;
-        }
-
-        /// <summary>
         /// SceneView 描画順に合わせて Sprite 一覧を並べ替える。
         /// </summary>
         /// <param name="resolvedSprites">描画候補 Sprite 一覧。</param>
         /// <param name="selectedEntityId">選択中 EntityId。</param>
         /// <returns>最終描画順に並んだ Sprite 一覧。</returns>
-        std::vector<SceneRenderSprite> OrderSceneRenderSpritesForSceneView(
-            std::vector<SceneRenderSprite> resolvedSprites,
+        std::vector<Game::ResolvedSceneSprite> OrderSceneRenderSpritesForSceneView(
+            std::vector<Game::ResolvedSceneSprite> resolvedSprites,
             std::optional<Game::EntityId> selectedEntityId)
         {
             if (false == selectedEntityId.has_value())
@@ -143,11 +76,11 @@ namespace Xelqoria::Editor
                 return resolvedSprites;
             }
 
-            std::vector<SceneRenderSprite> orderedSprites;
+            std::vector<Game::ResolvedSceneSprite> orderedSprites;
             orderedSprites.reserve(resolvedSprites.size());
-            std::optional<SceneRenderSprite> selectedSprite{};
+            std::optional<Game::ResolvedSceneSprite> selectedSprite{};
 
-            for (SceneRenderSprite& renderSprite : resolvedSprites)
+            for (Game::ResolvedSceneSprite& renderSprite : resolvedSprites)
             {
                 if (renderSprite.entityId == *selectedEntityId)
                 {
@@ -242,8 +175,8 @@ namespace Xelqoria::Editor
         if (nullptr != m_spriteRenderer && nullptr != scene)
         {
             scene->ValidateSpriteReferences(spriteAssetRegistry);
-            std::vector<SceneRenderSprite> resolvedSprites =
-                ResolveSceneRenderSprites(*scene, spriteAssetRegistry, textureAssetRegistry);
+            std::vector<Game::ResolvedSceneSprite> resolvedSprites =
+                scene->ResolveSceneSprites(spriteAssetRegistry, textureAssetRegistry);
             resolvedSprites = OrderSceneRenderSpritesForSceneView(std::move(resolvedSprites), selectedEntityId);
 
             m_spriteRenderer->Begin();
@@ -296,7 +229,7 @@ namespace Xelqoria::Editor
                 });
             }
 
-            for (SceneRenderSprite& renderSprite : resolvedSprites)
+            for (Game::ResolvedSceneSprite& renderSprite : resolvedSprites)
             {
                 Graphics::Sprite& sprite = renderSprite.sprite;
                 const auto position = sprite.GetPosition();
@@ -317,7 +250,7 @@ namespace Xelqoria::Editor
                 const auto selectedTarget = std::find_if(
                     resolvedSprites.begin(),
                     resolvedSprites.end(),
-                    [selectedEntityId](const SceneRenderSprite& renderSprite)
+                    [selectedEntityId](const Game::ResolvedSceneSprite& renderSprite)
                     {
                         return true == selectedEntityId.has_value() && renderSprite.entityId == *selectedEntityId;
                     });

@@ -8,7 +8,7 @@
 #include "GraphicsAPI.h"
 #include "IGraphicsContext.h"
 #include "Scene.h"
-#include "SceneViewController.h"
+#include "SceneViewInteractionTypes.h"
 #include "SolidQuadRenderer.h"
 #include "SpriteRenderer.h"
 #include "TextureAssetRegistry.h"

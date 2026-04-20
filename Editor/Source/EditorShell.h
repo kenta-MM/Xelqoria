@@ -155,6 +155,58 @@ namespace Xelqoria::Editor
 
     private:
         /// <summary>
+        /// レイアウト計算結果を保持する。
+        /// </summary>
+        struct LayoutMetrics;
+
+        /// <summary>
+        /// Hierarchy パネル用 child window 群を生成する。
+        /// </summary>
+        bool InitializeHierarchyPanel(HWND parentWindow, HINSTANCE hInstance);
+
+        /// <summary>
+        /// Assets パネル用 child window 群を生成する。
+        /// </summary>
+        bool InitializeAssetsPanel(HWND parentWindow, HINSTANCE hInstance);
+
+        /// <summary>
+        /// Inspector パネル用 child window 群を生成する。
+        /// </summary>
+        bool InitializeInspectorPanel(HWND parentWindow, HINSTANCE hInstance);
+
+        /// <summary>
+        /// SceneView パネル用 child window 群を生成する。
+        /// </summary>
+        bool InitializeSceneViewPanel(HWND parentWindow, HINSTANCE hInstance);
+
+        /// <summary>
+        /// Hierarchy パネルをレイアウトする。
+        /// </summary>
+        void LayoutHierarchyPanel(const LayoutMetrics& metrics);
+
+        /// <summary>
+        /// Assets パネルをレイアウトする。
+        /// </summary>
+        void LayoutAssetsPanel(const LayoutMetrics& metrics);
+
+        /// <summary>
+        /// Inspector パネルをレイアウトする。
+        /// </summary>
+        void LayoutInspectorPanel(const LayoutMetrics& metrics);
+
+        /// <summary>
+        /// SceneView パネルをレイアウトする。
+        /// </summary>
+        void LayoutSceneViewPanel(const LayoutMetrics& metrics);
+
+        /// <summary>
+        /// SceneView host の現在サイズを反映する。
+        /// </summary>
+        /// <returns>サイズが変化した場合は true。</returns>
+        bool UpdateSceneViewHostSize();
+
+    private:
+        /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
         /// </summary>
         /// <param name="parentWindow">親ウィンドウ。</param>
