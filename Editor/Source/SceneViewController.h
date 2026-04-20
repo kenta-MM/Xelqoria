@@ -10,6 +10,12 @@
 #include "SceneViewInputTracker.h"
 #include "SceneViewInteractionTypes.h"
 #include "SceneViewStatusPresenter.h"
+#include "AssetsPanelController.h"
+#include "EditorSceneDocument.h"
+#include <Assets/SpriteAssetRegistry.h>
+#include <Entity.h>
+#include <Scene.h>
+#include <TextureAssetRegistry.h>
 
 namespace Xelqoria::Editor
 {
@@ -42,7 +48,7 @@ namespace Xelqoria::Editor
         /// <param name="currentSelectedEntityId">現在選択中の EntityId。</param>
         /// <returns>入力更新結果。</returns>
         SceneViewInteractionResult UpdateInteraction(
-            const Game::Scene* scene,
+            Game::Scene* scene,
             const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
             const Graphics::TextureAssetRegistry& textureAssetRegistry,
             const AssetsPanelController& assetsPanelController,

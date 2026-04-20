@@ -58,6 +58,20 @@ namespace Xelqoria::Editor
             std::optional<Game::EntityId> selectedEntityId);
 
         /// <summary>
+        /// 指定 Entity の配置位置を更新する。
+        /// </summary>
+        /// <param name="scene">編集対象の Scene。</param>
+        /// <param name="entityId">更新対象の EntityId。</param>
+        /// <param name="x">設定する X 座標。</param>
+        /// <param name="y">設定する Y 座標。</param>
+        /// <returns>位置変更で更新が発生した場合は true。</returns>
+        static bool MoveEntity(
+            Game::Scene& scene,
+            Game::EntityId entityId,
+            float x,
+            float y);
+
+        /// <summary>
         /// Entity 名を更新する。
         /// </summary>
         /// <param name="entity">更新対象の Entity。</param>

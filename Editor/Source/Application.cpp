@@ -169,6 +169,20 @@ namespace Xelqoria::Editor
             ApplySelectionChange(interactionResult.selectedEntityId, canAddSpriteComponent, true, false);
         }
 
+        if (true == interactionResult.sceneChanged)
+        {
+            RefreshEditorPanels(canAddSpriteComponent, false);
+            RefreshSceneViewSelectionStatus();
+        }
+
+        if (true == interactionResult.shouldPersistScene)
+        {
+            PersistSceneChanges(
+                L"SceneView で Sprite の位置を保存しました。",
+                L"SceneView で Sprite は移動しましたが、Scene の保存に失敗しました。",
+                interactionResult.shouldPushHistory);
+        }
+
         if (true == m_assetsPanelController.WasDragReleasedThisFrame())
         {
             m_assetsPanelController.CompleteReleasedDrag();

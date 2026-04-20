@@ -30,7 +30,7 @@ namespace Xelqoria::Editor
     }
 
     SceneViewInteractionResult SceneViewController::UpdateInteraction(
-        const Game::Scene* scene,
+        Game::Scene* scene,
         const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
         const Graphics::TextureAssetRegistry& textureAssetRegistry,
         const AssetsPanelController& assetsPanelController,

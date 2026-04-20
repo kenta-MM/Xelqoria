@@ -87,6 +87,21 @@ namespace Xelqoria::Editor
     struct SceneViewInteractionResult
     {
         /// <summary>
+        /// Scene に変更が加わったかを表す。
+        /// </summary>
+        bool sceneChanged = false;
+
+        /// <summary>
+        /// 変更内容を保存すべきタイミングかを表す。
+        /// </summary>
+        bool shouldPersistScene = false;
+
+        /// <summary>
+        /// 保存成功時にコマンド履歴へ積むべきかを表す。
+        /// </summary>
+        bool shouldPushHistory = false;
+
+        /// <summary>
         /// 選択状態が変化したかを表す。
         /// </summary>
         bool selectionChanged = false;

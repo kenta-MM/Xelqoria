@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <string>
 
+#include "SceneEditingOperations.h"
 #include "SceneViewOverlay.h"
 #include <Windows.h>
 #include <cstdlib>
@@ -17,6 +18,7 @@
 #include <Entity.h>
 #include <Scene.h>
 #include <TextureAssetRegistry.h>
+#include <Transform.h>
 
 namespace Xelqoria::Editor
 {
@@ -26,7 +28,7 @@ namespace Xelqoria::Editor
     }
 
     SceneViewInteractionResult SceneViewInputTracker::UpdateInteraction(
-        const Game::Scene* scene,
+        Game::Scene* scene,
         const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
         const Graphics::TextureAssetRegistry& textureAssetRegistry,
         const AssetsPanelController& assetsPanelController,
@@ -78,6 +80,46 @@ namespace Xelqoria::Editor
                     result.selectionChanged = true;
                     result.selectedEntityId = selectedEntityId;
                 }
+
+                if (selectedEntityId.has_value())
+                {
+                    const auto entity = scene->FindEntity(*selectedEntityId);
+                    if (true == entity.has_value())
+                    {
+                        const Game::Transform& transform = entity->get().GetTransform();
+                        m_entityDragState.entityId = *selectedEntityId;
+                        m_entityDragState.grabOffsetX = worldPoint.x - transform.position.x;
+                        m_entityDragState.grabOffsetY = worldPoint.y - transform.position.y;
+                        m_entityDragState.initialWorldX = transform.position.x;
+                        m_entityDragState.initialWorldY = transform.position.y;
+                        m_entityDragState.hasMoved = false;
+                    }
+                }
+                else
+                {
+                    ClearEntityDrag();
+                }
+            }
+        }
+
+        if (false == assetsPanelController.IsDragActive()
+            && true == isLeftButtonDown
+            && true == m_entityDragState.entityId.has_value()
+            && nullptr != scene)
+        {
+            POINT clientPoint = screenPoint;
+            ScreenToClient(m_sceneViewHost, &clientPoint);
+
+            const auto worldPoint = camera.TransformScreenToWorld(EditorScreenPoint{
+                static_cast<float>(clientPoint.x),
+                static_cast<float>(clientPoint.y)
+            });
+            const float nextWorldX = worldPoint.x - m_entityDragState.grabOffsetX;
+            const float nextWorldY = worldPoint.y - m_entityDragState.grabOffsetY;
+            if (SceneEditingOperations::MoveEntity(*scene, *m_entityDragState.entityId, nextWorldX, nextWorldY))
+            {
+                result.sceneChanged = true;
+                m_entityDragState.hasMoved = true;
             }
         }
 
@@ -150,6 +192,18 @@ namespace Xelqoria::Editor
             }
 
             ClearSceneDragPreview();
+        }
+
+        if (false == isLeftButtonDown && true == m_sceneViewLeftButtonDown)
+        {
+            if (true == m_entityDragState.entityId.has_value() && true == m_entityDragState.hasMoved)
+            {
+                result.sceneChanged = true;
+                result.shouldPersistScene = true;
+                result.shouldPushHistory = true;
+            }
+
+            ClearEntityDrag();
         }
 
         m_sceneViewLeftButtonDown = isLeftButtonDown;
@@ -286,5 +340,10 @@ namespace Xelqoria::Editor
         m_dragPreviewState.viewY = 0.0f;
         m_dragPreviewState.hasPreview = false;
         m_dragPreviewState.isCursorInside = false;
+    }
+
+    void SceneViewInputTracker::ClearEntityDrag()
+    {
+        m_entityDragState = {};
     }
 }

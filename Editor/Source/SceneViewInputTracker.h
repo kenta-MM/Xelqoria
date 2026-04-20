@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <optional>
+#include <cstdint>
 #include <vector>
 
 #include "Assets/SpriteAssetRegistry.h"
@@ -39,7 +40,7 @@ namespace Xelqoria::Editor
         /// <param name="currentSelectedEntityId">現在選択中の EntityId。</param>
         /// <returns>入力更新結果。</returns>
         SceneViewInteractionResult UpdateInteraction(
-            const Game::Scene* scene,
+            Game::Scene* scene,
             const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
             const Graphics::TextureAssetRegistry& textureAssetRegistry,
             const AssetsPanelController& assetsPanelController,
@@ -120,7 +121,48 @@ namespace Xelqoria::Editor
         /// </summary>
         void ClearSceneDragPreview();
 
+        /// <summary>
+        /// Entity ドラッグ状態を破棄する。
+        /// </summary>
+        void ClearEntityDrag();
+
     private:
+        /// <summary>
+        /// SceneView 上での Entity ドラッグ中状態を表す。
+        /// </summary>
+        struct SceneEntityDragState
+        {
+            /// <summary>
+            /// ドラッグ対象の EntityId を表す。
+            /// </summary>
+            std::optional<Game::EntityId> entityId{};
+
+            /// <summary>
+            /// ドラッグ開始時のカーソルと Entity 位置の X 差分を表す。
+            /// </summary>
+            float grabOffsetX = 0.0f;
+
+            /// <summary>
+            /// ドラッグ開始時のカーソルと Entity 位置の Y 差分を表す。
+            /// </summary>
+            float grabOffsetY = 0.0f;
+
+            /// <summary>
+            /// ドラッグ開始時の Entity X 座標を表す。
+            /// </summary>
+            float initialWorldX = 0.0f;
+
+            /// <summary>
+            /// ドラッグ開始時の Entity Y 座標を表す。
+            /// </summary>
+            float initialWorldY = 0.0f;
+
+            /// <summary>
+            /// 現在フレームまでに位置が変化したかを表す。
+            /// </summary>
+            bool hasMoved = false;
+        };
+
         HWND m_sceneViewHost = nullptr;
         float m_lastSceneClickX = 0.0f;
         float m_lastSceneClickY = 0.0f;
@@ -128,5 +170,6 @@ namespace Xelqoria::Editor
         bool m_sceneViewLeftButtonDown = false;
         ScenePendingDropState m_pendingDropState{};
         SceneDragPreviewState m_dragPreviewState{};
+        SceneEntityDragState m_entityDragState{};
     };
 }
