@@ -83,7 +83,24 @@ classDiagram
             +selectedEntityId optional
         }
 
+        class SceneViewInteractionResult {
+            +sceneChanged bool
+            +shouldPersistScene bool
+            +shouldPushHistory bool
+            +selectionChanged bool
+            +selectedEntityId optional
+        }
+
+        class SceneViewInputTracker {
+            +UpdateInteraction(scene, spriteAssetRegistry, textureAssetRegistry, assetsPanelController, camera, sceneViewWidth, sceneViewHeight, currentSelectedEntityId)
+        }
+
+        class SceneViewController {
+            +UpdateInteraction(scene, spriteAssetRegistry, textureAssetRegistry, assetsPanelController, currentSelectedEntityId)
+        }
+
         class SceneEditingOperations {
+            +MoveEntity(scene, entityId, x, y)
             +DeleteSelectedEntity(scene, selectedEntityId)
             +DuplicateSelectedEntity(scene, selectedEntityId)
         }
@@ -112,12 +129,20 @@ classDiagram
     EditorCamera2D ..> EditorWorldPoint : converts to
 
     SceneCommandHistory *-- SceneCommandHistoryEntry
+    SceneViewController *-- SceneViewInputTracker
+    SceneViewController *-- EditorCamera2D
+    SceneViewController --> SceneViewInteractionResult : returns
+    SceneViewInputTracker --> Scene : edits or selects
+    SceneViewInputTracker --> SceneViewInteractionResult : returns
+    SceneViewInputTracker ..> SceneEditingOperations : moves
+    SceneViewInputTracker ..> EditorCamera2D : transforms cursor
     SceneEditingOperations --> Scene : edits
     SceneEditingOperations --> SceneEditResult : returns
 
     Application *-- Window
     Application *-- SceneCommandHistory
     Application *-- EditorCamera2D
+    Application *-- SceneViewController
     Application --> Scene
     Application --> SpriteRenderer
     Application --> SpriteAssetRegistry
