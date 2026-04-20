@@ -28,10 +28,13 @@
     <ClCompile Include="Source\HierarchyPanelController.cpp" />
     <ClCompile Include="Source\InspectorPanelController.cpp" />
     <ClCompile Include="Source\RenderBackendBootstrap.cpp" />
+    <ClCompile Include="Source\SceneDropPlacementService.cpp" />
     <ClCompile Include="Source\SceneCommandHistory.cpp" />
     <ClCompile Include="Source\SceneEditingOperations.cpp" />
     <ClCompile Include="Source\SceneViewController.cpp" />
+    <ClCompile Include="Source\SceneViewInputTracker.cpp" />
     <ClCompile Include="Source\SceneViewRenderer.cpp" />
+    <ClCompile Include="Source\SceneViewStatusPresenter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.h" />
@@ -44,10 +47,14 @@
     <ClInclude Include="Source\HierarchyPanelController.h" />
     <ClInclude Include="Source\InspectorPanelController.h" />
     <ClInclude Include="Source\RenderBackendBootstrap.h" />
+    <ClInclude Include="Source\SceneDropPlacementService.h" />
     <ClInclude Include="Source\SceneCommandHistory.h" />
     <ClInclude Include="Source\SceneEditingOperations.h" />
     <ClInclude Include="Source\SceneViewController.h" />
+    <ClInclude Include="Source\SceneViewInputTracker.h" />
+    <ClInclude Include="Source\SceneViewInteractionTypes.h" />
     <ClInclude Include="Source\SceneViewRenderer.h" />
+    <ClInclude Include="Source\SceneViewStatusPresenter.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">

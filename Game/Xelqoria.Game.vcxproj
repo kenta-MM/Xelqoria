@@ -34,6 +34,8 @@
     <ClCompile Include="Source\Assets\SpriteAssetLoader.cpp" />
     <ClCompile Include="Source\Entity.cpp" />
     <ClCompile Include="Source\Scene.cpp" />
+    <ClCompile Include="Source\SceneTextReader.cpp" />
+    <ClCompile Include="Source\SceneTextWriter.cpp" />
     <ClCompile Include="Source\SceneSerializer.cpp" />
     <ClCompile Include="Source\Transform.cpp" />
   </ItemGroup>
@@ -46,6 +48,8 @@
     <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\SceneSaveFormat.h" />
     <ClInclude Include="Source\SceneSerializer.h" />
+    <ClInclude Include="Source\SceneTextReader.h" />
+    <ClInclude Include="Source\SceneTextWriter.h" />
     <ClInclude Include="Source\SpriteComponent.h" />
     <ClInclude Include="Source\Transform.h" />
   </ItemGroup>

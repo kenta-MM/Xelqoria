@@ -23,6 +23,12 @@
     <ClCompile Include="Source\Scene.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\SceneTextReader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneTextWriter.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\SceneSerializer.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -53,6 +59,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\SceneSerializer.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneTextReader.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneTextWriter.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\SpriteComponent.h">

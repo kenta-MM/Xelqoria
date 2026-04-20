@@ -9,7 +9,13 @@
     <ClCompile Include="Source\D3D11GraphicsContext.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\D3D11SpritePipeline.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\D3D11Texture.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\D3D11TextureLoader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\D3D11VertexBuffer.cpp">
@@ -20,7 +26,13 @@
     <ClInclude Include="Source\D3D11GraphicsContext.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\D3D11SpritePipeline.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\D3D11Texture.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\D3D11TextureLoader.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\D3D11VertexBuffer.h">

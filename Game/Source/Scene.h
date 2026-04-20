@@ -40,6 +40,22 @@ namespace Xelqoria::Game
 	};
 
 	/// <summary>
+	/// Scene 内アセット参照を解決済みの描画用 Sprite を表す。
+	/// </summary>
+	struct ResolvedSceneSprite
+	{
+		/// <summary>
+		/// 描画対象に対応する Entity ID を表す。
+		/// </summary>
+		EntityId entityId = 0;
+
+		/// <summary>
+		/// 描画に使用する Sprite を保持する。
+		/// </summary>
+		Graphics::Sprite sprite{};
+	};
+
+	/// <summary>
 	/// Entity 群を保持して列挙する Scene コンテナ。
 	/// </summary>
 	class Scene
@@ -118,6 +134,18 @@ namespace Xelqoria::Game
 		/// </summary>
 		/// <returns>描画候補の一覧。</returns>
 		std::vector<SceneSpriteRenderItem> CollectSpriteRenderItems() const;
+
+		/// <summary>
+		/// Scene 内の Sprite 描画候補を Asset 解決済み Sprite 一覧へ変換する。
+		/// </summary>
+		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
+		/// <param name="textureAssetResolver">Texture2D を解決する Resolver。</param>
+		/// <param name="logger">解決状況を受け取るロガー。未指定時はログ出力しない。</param>
+		/// <returns>描画可能な Sprite 一覧。</returns>
+		std::vector<ResolvedSceneSprite> ResolveSceneSprites(
+			const Assets::ISpriteAssetResolver& spriteAssetResolver,
+			const Graphics::ITextureAssetResolver& textureAssetResolver,
+			const std::function<void(const std::string&)>& logger = {}) const;
 
 		/// <summary>
 		/// Scene 内の Sprite 描画候補を Asset 解決経由で描画用 Sprite に変換する。

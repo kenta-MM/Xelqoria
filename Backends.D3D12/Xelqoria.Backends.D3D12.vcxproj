@@ -20,12 +20,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\D3D12GraphicsContext.cpp" />
+    <ClCompile Include="Source\D3D12SpritePipeline.cpp" />
     <ClCompile Include="Source\D3D12Texture.cpp" />
+    <ClCompile Include="Source\D3D12TextureLoader.cpp" />
     <ClCompile Include="Source\D3D12VertexBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\D3D12GraphicsContext.h" />
+    <ClInclude Include="Source\D3D12SpritePipeline.h" />
     <ClInclude Include="Source\D3D12Texture.h" />
+    <ClInclude Include="Source\D3D12TextureLoader.h" />
     <ClInclude Include="Source\D3D12VertexBuffer.h" />
   </ItemGroup>
   <ItemGroup>

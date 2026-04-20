@@ -1,7 +1,0 @@
-interface:
-  display_name: "Xelqoria Runtime Editor Boundary Check"
-  short_description: "Runtime と Editor の成果物境界を確認"
-  default_prompt: "$xelqoria-runtime-editor-boundary-check を使って、この Xelqoria の変更が Runtime と Editor の境界を壊していないか確認します。"
-
-policy:
-  allow_implicit_invocation: true

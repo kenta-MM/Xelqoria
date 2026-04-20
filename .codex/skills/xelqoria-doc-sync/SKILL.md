@@ -1,42 +1,53 @@
 ---
 name: xelqoria-doc-sync
-description: Use when implementation changes in the Xelqoria repository may require documentation updates. Check AGENTS guidance, inspect changed files, update the smallest relevant docs under docs/agents, docs/quality, or docs/class_diagram, and avoid speculative rewrites.
+description: PR作成後、変更に基づき必要最小限のドキュメントのみ更新する
 ---
 
-# Xelqoria Doc Sync
+# ドキュメント同期（PRベース）
 
-Xelqoria で、実装変更に合わせてドキュメント更新が必要かを判断し、必要最小限の文書だけを更新する時に使う。
+## 使用タイミング
 
-## 使いどころ
+- PR作成後
 
-- ユーザーが「関連ドキュメントも更新して」と依頼した時
-- `.h` や workflow、成果物境界、アセット解決経路を変えた時
-- 変更に対して `docs/agents`、`docs/quality`、`docs/class_diagram` が古くなりそうな時
+## 手順
 
-## 最初にやること
+1. PRを確認（タイトル・説明・変更ファイル）
+2. 主対象ドキュメントを特定
+3. そのドキュメントを更新
+4. 明確に必要な場合のみ他ドキュメントも更新
+5. 変更は最小限にする
+6. 自明でない変更のみ、理由を1〜2行で説明（誤字修正等は不要）
 
-1. [AGENTS.md]($XELQORIA_ROOT/AGENTS.md) を確認する
-2. 変更ファイルを確認する
-3. どの文書が責務上もっとも近いかを 1 つずつ判定する
 
-## 標準ワークフロー
+## 対応表
 
-1. `git diff --name-only` などで変更範囲を確認する
-2. 変更を次のどれに当てはめるか判断する
-- レイヤー責務: `docs/agents/architecture.md`
-- 実装の流れ: `docs/agents/workflows.md`
-- 判断補助: `docs/agents/project-map.md`
-- Runtime / Editor 境界: `docs/agents/runtime-vs-editor-boundary.md`
-- アセット解決: `docs/agents/asset-flow.md`
-- クラス関係: `docs/class_diagram/*.md`
-- CI / 品質: `docs/quality/*.md`
-3. 関係する文書だけを更新する
-4. 実装内容から説明できない推測は書かない
-5. 最後に「どの変更に合わせてどの文書を直したか」を整理する
+主対象となるドキュメントを選択する。
 
-## 判断基準
 
-- まず既存文書を直し、同じ内容の新規文書を増やしすぎない
-- 仕様未確定の内容は断定しない
-- 実装が 1 つしかない時は、その実装ベースで書く
-- 「将来こうしたい」は、現状説明と混ぜない
+- 依存関係 / アーキテクチャ → architecture.md（docs/agents 配下）
+- レイヤー責務 / 配置 → project-map.md（docs/agents 配下）
+- 実装フロー → workflows.md（docs/agents 配下）
+- コーディングルール → coding-rules.md（docs/agents 配下）
+- ランタイム / エディタ境界 → runtime-vs-editor-boundary.md（docs/agents 配下）
+- アセットフロー → asset-flow.md（docs/agents 配下）
+- CI / バリデーション → docs/quality 配下
+
+
+## 更新対象外
+
+- docs/class_diagram/**
+
+
+## ルール
+
+- PRの変更内容のみを根拠とする
+- リポジトリ全体を探索しない
+- 必要がない限り複数ドキュメントを更新しない
+- 新規ドキュメントを作成しない
+- 大規模な書き換えをしない
+- 推測で書かない
+
+
+## フェイルセーフ
+
+- 対象が不明な場合は更新しない

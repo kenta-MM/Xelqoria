@@ -1,38 +1,62 @@
 ---
 name: xelqoria-class-diagram-update
-description: Use when public headers or project dependencies change in the Xelqoria repository and the class diagrams under docs/class_diagram must be updated. Prefer project-scoped diagrams, include directly referenced lower layers, and keep Mermaid syntax simple and preview-friendly.
+description: PR後、公開ヘッダや依存関係の変更に応じて対象プロジェクトのクラス図のみ更新する
 ---
 
-# Xelqoria Class Diagram Update
+# クラス図更新（PRベース）
 
-Xelqoria の公開ヘッダやプロジェクト参照が変わった時に、`docs/class_diagram` の mermaid 図を更新するための skill。
+## 使用タイミング
 
-## 使いどころ
+- 公開ヘッダ（.h）変更
+- クラス関係変更
+- ProjectReference変更
 
-- `.h` の型定義や継承、保持関係を変えた時
-- `.vcxproj` の `ProjectReference` を変えた時
-- クラス図を新規作成または更新したい時
+## 手順
 
-## 最初にやること
+1. PRの変更ファイルを確認
+2. 影響プロジェクトを特定
+3. 対象プロジェクトのクラス図のみ更新  
+   - docs/class_diagram/<project>-class-diagram.md
+4. コード上の関係のみ反映
+5. 図は最小限にする
+6. 自明でない変更のみ理由を1〜2行で説明（誤字修正等は不要）
 
-1. [AGENTS.md]($XELQORIA_ROOT/AGENTS.md) を確認する
-2. 対象プロジェクトの `.vcxproj` と `.h` を読む
-3. 既存の `docs/class_diagram/*.md` を確認する
+## 図の対象
 
-## 標準ワークフロー
+- 対象プロジェクトの公開型（class / struct / interface）
+- 継承・保持・利用などの直接関係
+- 必要な場合のみ下位レイヤー型（1段まで）
 
-1. どのプロジェクト図を更新するか決める
-2. 対象プロジェクト自身の公開型を拾う
-3. そのプロジェクトが直接参照している下位レイヤーだけを図へ含める
-4. mermaid は小さく保つ
-- 全体図を 1 枚へ戻さない
-- ネストしすぎたジェネリクス表記を避ける
-- quoted namespace など、プレビュー互換性が低い構文を避ける
-5. 図と実装のズレがないかを見直す
+## 図の制約
 
-## 判断基準
+- 関係のないプロジェクトは含めない
+- 全体図にしない
+- 推測・将来設計・未実装の関係は禁止
+- 依存関係を再帰的に展開しない
+- 下位レイヤーの内部構造は展開しない
 
-- `RHI` は単体で完結させる
-- `Backends` の図には、実装対象である `RHI` を含める
-- `App` と `Editor` は組み立て対象なので、直接参照している共有層を含める
-- 実装から読み取れない関係は図へ足さない
+## Mermaidルール
+
+- 図は小さく保つ
+- 基本関係のみ使用（--> ..> *-- o--）
+- 複雑なジェネリクスは避ける
+- 不安定構文は使わない
+
+## 更新ルール
+
+- 更新対象は1図のみ
+- 必要がない限り複数更新しない
+- 既存ファイルを優先
+- 存在しない場合のみ新規作成
+
+## 対象外
+
+- Xelqoria.Tests.*
+
+## ソリューション反映
+
+- 新規作成時のみ Xelqoria.slnx に追加
+
+## フェイルセーフ
+
+- 対象不明の場合は更新しない

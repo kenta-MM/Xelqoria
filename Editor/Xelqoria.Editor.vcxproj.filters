@@ -33,6 +33,9 @@
     <ClCompile Include="Source\RenderBackendBootstrap.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\SceneDropPlacementService.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\SceneCommandHistory.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -42,7 +45,13 @@
     <ClCompile Include="Source\SceneViewController.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\SceneViewInputTracker.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\SceneViewRenderer.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneViewStatusPresenter.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -77,6 +86,9 @@
     <ClInclude Include="Source\RenderBackendBootstrap.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\SceneDropPlacementService.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\SceneCommandHistory.h">
       <Filter>Source</Filter>
     </ClInclude>
@@ -86,7 +98,16 @@
     <ClInclude Include="Source\SceneViewController.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\SceneViewInputTracker.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneViewInteractionTypes.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\SceneViewRenderer.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneViewStatusPresenter.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

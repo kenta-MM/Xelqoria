@@ -10,8 +10,8 @@
 #include <dxgi1_6.h>
 #include <wrl/client.h>
 
+#include "D3D12SpritePipeline.h"
 #include "IGraphicsContext.h"
-#include "IVertexBuffer.h"
 
 namespace Xelqoria::Backends::D3D12
 {
@@ -77,15 +77,8 @@ namespace Xelqoria::Backends::D3D12
         /// <summary>ビューポートとシザー矩形を更新する。</summary>
         bool CreateViewportAndScissor();
 
-        /// <summary>スプライト描画用パイプラインを生成する。</summary>
-        bool CreateSpritePipeline();
-        /// <summary>スプライト描画用ジオメトリを生成する。</summary>
-        bool CreateSpriteGeometry();
-
         /// <summary>レンダーターゲット関連リソースを解放する。</summary>
         void ReleaseRenderTargets();
-        /// <summary>スプライト描画関連リソースを解放する。</summary>
-        void ReleaseSpriteResources();
 
         /// <summary>GPU 完了を待機する。</summary>
         bool WaitForGpu();
@@ -111,20 +104,10 @@ namespace Xelqoria::Backends::D3D12
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
         std::uint32_t m_rtvDescriptorSize = 0;
 
-        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
-        std::uint32_t m_srvDescriptorSize = 0;
-
         std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, FrameCount> m_renderTargets;
         std::array<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>, FrameCount> m_commandAllocators;
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_commandList;
-
-        Microsoft::WRL::ComPtr<ID3D12RootSignature> m_spriteRootSignature;
-        Microsoft::WRL::ComPtr<ID3D12PipelineState> m_spritePipelineState;
-        std::shared_ptr<RHI::IVertexBuffer> m_spriteVertexBuffer;
-
-        D3D12_GPU_DESCRIPTOR_HANDLE m_boundTextureSrvGpu{};
-        bool m_hasBoundTexture = false;
-        RHI::QuadTransform2D m_quadTransform{};
+        D3D12SpritePipeline m_spritePipeline{};
 
         Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
         std::array<std::uint64_t, FrameCount> m_fenceValues = {};

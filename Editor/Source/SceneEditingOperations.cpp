@@ -207,6 +207,28 @@ namespace Xelqoria::Editor
         };
     }
 
+    bool SceneEditingOperations::MoveEntity(
+        Game::Scene& scene,
+        Game::EntityId entityId,
+        float x,
+        float y)
+    {
+        const auto entity = scene.FindEntity(entityId);
+        if (false == entity.has_value())
+        {
+            return false;
+        }
+
+        const Game::Transform& transform = entity->get().GetTransform();
+        if (transform.position.x == x && transform.position.y == y)
+        {
+            return false;
+        }
+
+        entity->get().SetPosition(x, y, transform.position.z);
+        return true;
+    }
+
     bool SceneEditingOperations::RenameEntity(Game::Entity& entity, std::string_view newName)
     {
         std::string normalizedName = TrimEntityName(newName);

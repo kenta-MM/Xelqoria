@@ -64,6 +64,35 @@ TEST(SceneEditingOperationsTests, CreateEntityAssignsDefaultNameAndSelectsCreate
     EXPECT_EQ("Entity 1", createdEntity->get().GetName());
 }
 
+TEST(SceneEditingOperationsTests, MoveEntityUpdatesPositionAndPreservesZ)
+{
+    Xelqoria::Game::Scene scene;
+    auto& entity = scene.CreateEntity();
+    entity.SetPosition(12.0f, -8.0f, 3.0f);
+
+    const bool changed =
+        Xelqoria::Editor::SceneEditingOperations::MoveEntity(scene, entity.GetId(), 48.0f, 96.0f);
+
+    ASSERT_TRUE(changed);
+    const auto movedEntity = scene.FindEntity(entity.GetId());
+    ASSERT_TRUE(movedEntity.has_value());
+    EXPECT_FLOAT_EQ(48.0f, movedEntity->get().GetTransform().position.x);
+    EXPECT_FLOAT_EQ(96.0f, movedEntity->get().GetTransform().position.y);
+    EXPECT_FLOAT_EQ(3.0f, movedEntity->get().GetTransform().position.z);
+}
+
+TEST(SceneEditingOperationsTests, MoveEntitySkipsWhenPositionIsUnchanged)
+{
+    Xelqoria::Game::Scene scene;
+    auto& entity = scene.CreateEntity();
+    entity.SetPosition(24.0f, 36.0f, 1.0f);
+
+    const bool changed =
+        Xelqoria::Editor::SceneEditingOperations::MoveEntity(scene, entity.GetId(), 24.0f, 36.0f);
+
+    EXPECT_FALSE(changed);
+}
+
 TEST(SceneEditingOperationsTests, DeleteSelectedEntityChoosesRemainingNeighbor)
 {
     Xelqoria::Game::Scene scene;

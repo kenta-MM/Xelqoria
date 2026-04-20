@@ -1,39 +1,21 @@
 # AGENTS.md
 
-このドキュメントは **Xelqoria エンジン開発に参加する AI エージェント（Codex 等）向けの入口ガイド**です。  
-詳細は `docs/agents/` 以下を参照してください。
+## ルール
 
-## 最重要ルール
+- 依存方向・レイヤー責務は architecture.md に従う
+- 詳細ルールは各ドキュメントに従う
 
-1. 依存方向を崩さない: `Game -> Graphics -> RHI -> Backends`
-2. `Graphics` に Direct3D 型を入れない
-3. `RHI` に `Sprite` や `Camera` などの描画概念を入れない
-4. `Game` から `Backends` を参照しない
-5. `Sprite` は描画しない。描画は `SpriteRenderer` など Renderer が担当する
 
-不明な場合は **Graphics レイヤー優先で責務を再確認**すること。
+## 禁止事項
 
-## ドキュメントマップ
+- Graphics で Direct3D 型を使用しない
+- RHI に描画概念を持ち込まない
+- Game から Backends を参照しない
+- 便宜的なレイヤー違反をしない
 
-- アーキテクチャ原則: `docs/agents/architecture.md`
-- 実装フローと追加手順: `docs/agents/workflows.md`
-- コーディングルール: `docs/agents/coding-rules.md`
-- プロジェクト責務一覧: `docs/agents/project-map.md`
-- Runtime / Editor 境界: `docs/agents/runtime-vs-editor-boundary.md`
-- アセット解決フロー: `docs/agents/asset-flow.md`
-- クラス図索引: `docs/agents/class-diagram-index.md`
-- 品質系ドキュメント: `docs/quality/`
-- Git 管理する Skill: `.codex/skills/`
+## 判断基準
 
-## 目的
-
-- エンジン設計の崩壊を防ぐ
-- レイヤー責務を維持する
-- Graphics API 抽象を守る
-- 将来の 2D / 3D 拡張を可能にする
-- AI が誤ったレイヤーにコードを書かないようにする
-
-## 推奨運用
-
-- GitHub Issue の実装依頼では `xelqoria-issue-implementation` Skill を優先して使う
-- Issue 番号または URL が渡されたら、内容確認、責務判定、最小変更での実装、検証、報告までを標準フローとして扱う
+- 配置に迷った場合 → project-map.md を参照する
+- 実装フローに迷った場合 → workflows.md を参照する
+- アーキテクチャに迷った場合 → architecture.md を参照する
+- コーディングルールに迷った場合 → coding-rules.md を参照する

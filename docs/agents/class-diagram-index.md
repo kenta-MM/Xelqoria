@@ -13,6 +13,10 @@
 - Backends.D3D12: `docs/class_diagram/backends-d3d12-class-diagram.md`
 - App: `docs/class_diagram/app-class-diagram.md`
 - Editor: `docs/class_diagram/editor-class-diagram.md`
+- Tests.Core: `docs/class_diagram/tests-core-class-diagram.md`
+- Tests.Graphics: `docs/class_diagram/tests-graphics-class-diagram.md`
+- Tests.Game: `docs/class_diagram/tests-game-class-diagram.md`
+- Tests.Editor: `docs/class_diagram/tests-editor-class-diagram.md`
 
 ## 見方
 
