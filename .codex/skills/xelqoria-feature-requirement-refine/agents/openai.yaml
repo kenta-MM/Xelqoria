@@ -1,0 +1,10 @@
+interface:
+  display_name: 要件整理（Issue前）
+  short_description: 最小限の質問で要件を明確化し、Issue草案を作成します。
+  default_prompt: >-
+    新しい機能の要件を整理したいです。
+    実装はせず、必要最小限の質問で要件を明確化してください。
+
+policy:
+  allow_implicit_invocation: true
+

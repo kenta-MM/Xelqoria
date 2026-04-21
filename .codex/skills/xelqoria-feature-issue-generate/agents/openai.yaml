@@ -1,0 +1,11 @@
+interface:
+  display_name: 要件定義からIssue作成
+  short_description: 要件定義の結果を、実装向けのGitHub Issueに圧縮します
+  default_prompt: >
+    作成済みの要件定義結果から、実装者がそのまま着手できるGitHub Issueを作成してください。
+    要件にない内容は追加せず、曖昧な内容は未確定事項として分離してください。
+    不要な説明は書かず、受け入れ条件は必ずチェックリスト形式にしてください。
+
+    
+policy:
+  allow_implicit_invocation: true

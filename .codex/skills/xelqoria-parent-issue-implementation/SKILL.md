@@ -1,119 +1,123 @@
 ---
 name: xelqoria-parent-issue-implementation
-description: Use when implementing a parent GitHub issue in the Xelqoria repository by processing the listed child issues in numeric order. Switch to each child issue branch, implement the required changes with minimal edits, commit and push each branch, and create a pull request back to the parent or ancestor issue branch even when the child branch is created from a previous child branch.
-allowed-tools: Bash(git fetch:*) Bash(git branch:*) Bash(git checkout:*) Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git push:*) Bash(rg:*) Bash(sed:*) Bash(find:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue view:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" repo view:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" pr create:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth status:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth setup-git:*) Read Edit
+description: 親Issue配下の子Issueを整理し、独立したものはサブエージェントで並列実装して各PRを作成する。
+allowed-tools: Bash(git fetch:*) Bash(git checkout:*) Bash(git branch:*) Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git push:*) Bash(rg:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue view:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" pr create:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth status:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth setup-git:*) Read Edit
 ---
 
-# Xelqoria Parent Issue Implementation
+# 目的
+親Issueに列挙された子Issueを整理し、独立した子Issueはサブエージェントで並列実装する。  
+各子Issueは個別のブランチで完結させ、子IssueごとにPRを作成する。
 
-Xelqoria で、親 Issue に列挙された子 Issue を順番に実装する時に使う。
+# 前提
+- `XELQORIA_ROOT` はリポジトリルート
+- GitHub CLI が使用可能
+- 親Issueは1件のみ扱う
+- 子Issueごとに作業ブランチが存在する、または必要に応じて作成できる
+- サブエージェントは担当する子Issue以外を変更しない
 
-`XELQORIA_ROOT` には Xelqoria リポジトリのルートパスが入っている前提で扱う。
+# 初期確認
+1. 必要なら `docs/agents` 配下を参照
 
-## 使いどころ
+# 親Issue取得
+1. ユーザー指定のIssue番号を使用
+   1. 未指定の場合のみブランチ名 `issue-<番号>` から取得
+2. `gh issue view` で取得
+3. 取得できなければ不足情報を1回だけ聞く
 
-- ユーザーが「親 Issue の子 Issue を順に全部実装して」と依頼した時
-- 親 Issue に子 Issue 一覧があり、各子 Issue を個別ブランチで実装して親 Issue または先祖 Issue に対する PR を積みたい時
+# 子Issue取得
+1. 親Issue本文から `#番号` を抽出
+2. 各子Issueを取得
+3. 子Issue番号の昇順で整列
+4. 順序を確定できないものは最後に回す
 
-## 最初にやること
+# 依存関係の整理
+1. 各子Issueの内容を確認し、依存関係の有無を判定する
+2. 次の条件をすべて満たす場合は独立しているとみなす
+   - 他の子Issueの完了を前提にしていない
+   - 同じファイルや同じ公開インターフェースを競合する形で変更しない
+   - 単独で実装と検証が可能
+3. 上記を満たさない場合は依存ありとして扱う
+4. 独立した子Issueは並列実行対象、依存がある子Issueは直列実行対象に分類する
 
-1. まず [AGENTS.md]($XELQORIA_ROOT/AGENTS.md) を確認する
-2. 必要に応じて次を読む
-- アーキテクチャ: [docs/agents/architecture.md]($XELQORIA_ROOT/docs/agents/architecture.md)
-- 実装フロー: [docs/agents/workflows.md]($XELQORIA_ROOT/docs/agents/workflows.md)
-- コーディング規約: [docs/agents/coding-rules.md]($XELQORIA_ROOT/docs/agents/coding-rules.md)
+# 実行フロー
+## 1. 全体最新化
+1. `git fetch` を実行する
+2. 未コミット変更がある場合は中断する
 
-## 親 Issue の特定方法
+## 2. 親ブランチ確認
+1. 親ブランチを `issue-<親番号>` とする
+2. 親ブランチが存在しない場合は中断する
 
-1. まずユーザーが渡した親 Issue 番号または URL を使う
-2. 明示指定がない場合だけ現在ブランチ名から親 Issue 番号を推定する
-- ブランチ名は `issue-<番号>` を前提とする
-- `issue-60` にいるなら親 Issue は `60` とみなす
-3. 番号が取れたら `gh issue view` で本文を取得する
-4. 取得できない場合は止まらず、ローカル文脈で補えるか確認し、それでも無理なら短く不足情報を聞く
-5. 親 Issue はこの 1 件だけを起点として扱う
-- 親 Issue の本文にさらに上位 Issue への参照があっても、それは追跡しない
-- 親の親、祖先 Issue、epic などへ自動で遡らない
+## 3. 並列実行対象の処理
+1. 独立した子Issueごとにサブエージェントを1つ割り当てる
+2. 各サブエージェントは担当する子Issueのみを処理する
+3. 各サブエージェントは次を実施する
+   - 対象子Issueを確認する
+   - `git status` で未コミット変更がないことを確認する
+   - 子ブランチ `issue-<子番号>` に checkout する
+   - 必要に応じて親ブランチ `issue-<親番号>` から作成する
+   - `AGENTS.md` に従い最小限の変更を実装する
+   - ビルドまたはテストを実行する
+   - 実行不可の場合は理由を記録する
+   - `git add` / `git commit` / `git push` を実行する
+   - PRを作成する（下記PR作成ルールに従う）
+4. 各サブエージェントは結果のみを返す
+5. 親エージェントは結果を収集し整理する
 
-## 子 Issue の抽出ルール
+## 4. 直列実行対象の処理
+1. 依存関係がある子Issueは順に処理する
+2. 各Issueごとに次を実施する
+   - `git status` を確認する
+   - 子ブランチ `issue-<子番号>` に checkout する
+   - 必要な依存関係を確認する
+   - `AGENTS.md` に従い実装する
+   - ビルドまたはテストを実行する
+   - 実行不可の場合は理由を記録する
+   - `git add` / `git commit` / `git push`
+   - PRを作成する
 
-1. 親 Issue 本文の「子 Issue」節またはチェックリストから `#<番号>` を抽出する
-2. 各子 Issue を `gh issue view` で開き、タイトルと本文を確認する
-3. 子 Issue 名に含まれる数値を実装順として扱う
-- 例: `S01`, `S02`, `F03`
-4. 順序数が比較できる子 Issue は昇順で処理する
-5. 順序数が読めないものは末尾に回し、必要ならユーザーに確認する
+## 5. PR作成
+- base: `issue-<親番号>` または指定ブランチ
+- head: `issue-<子番号>`
+- 親Issue番号と子Issue番号を本文に含める
+- コンフリクトの有無に関係なく必ず作成する
 
-## 依存する子 Issue ブランチの切り方
+## 6. 結果統合
+1. 全PRを確認する
+2. baseが正しいことを確認する
+3. 未処理Issueがないことを確認する
+4. コンフリクトがある場合は記録のみ行う
 
-1. 後続の子 Issue が前の子 Issue 実装に依存する場合は、その子 Issue ブランチを前の子 Issue ブランチから作成してよい
-2. その場合でも PR の base は、ユーザーが指定した親 Issue または先祖 Issue ブランチに向ける
-3. 例: `issue-96` が `issue-95` に依存するなら、`issue-95` から `issue-96` を切って実装し、PR は `issue-92` に向ける
-4. つまり「ブランチの作成元」と「PR の base」は別々に判断する
+# 判断ルール
+- 独立した子Issueはサブエージェントで並列実行する
+- 依存関係がある子Issueのみ直列実行する
+- 子Issueは必ず1PRで完結させる
+- 子Issueは単独で検証可能にする
+- PRのbaseは常に親Issueブランチとする
+- コンフリクトが発生する可能性がある場合でもPRは必ず作成する
+- コンフリクトの解消は本フローでは行わない
+- 要件にない変更は禁止
+- 競合の可能性がある場合は並列実行しない
 
-## 標準ワークフロー
+# 禁止事項
+- 親Issue以外を起点にしない
+- PR base を子ブランチにしない
+- 未コミット状態でブランチを切り替えない
+- サブエージェントが複数Issueを処理しない
+- 担当外のブランチを変更しない
+- 不要なリファクタを行わない
 
-1. 親ブランチを確認する
-- 親 Issue の作業ブランチは `issue-<親番号>` を前提とする
-- ローカルになければ `origin/issue-<親番号>` の存在を確認する
-- 作業開始前に `git fetch` でリモート参照を更新する
+# 完了条件
+- 全子IssueでPR作成完了
+- 各PRのbaseが正しい
+- 未処理Issueが存在しない
 
-2. 子 Issue を 1 件ずつ処理する
-- 対象の子 Issue ブランチ `issue-<子番号>` へ切り替える
-- ローカルにない場合は、通常は親ブランチから新規作成する
-- 直前の子 Issue 実装に依存する場合は、その直前の子 Issue ブランチから新規作成してよい
-- 既にブランチがある場合は未コミット変更の有無を確認してから切り替える
-
-3. 子 Issue の内容を実装する
-- 変更対象の責務は [AGENTS.md]($XELQORIA_ROOT/AGENTS.md) と `docs/agents` に従って判定する
-- 既存の設計パターンに寄せる
-- 不要な横展開や大規模リファクタは避ける
-- 重要な宣言には日本語の XML ドキュメントコメントを付ける
-
-4. 子 Issue 単位で検証する
-- 可能なら関連テスト、ビルド、静的チェックを実行する
-- 失敗時は原因を切り分け、修正可能なら修正する
-- 環境制約で実行できない場合は明示する
-
-5. 子 Issue 単位で反映する
-- 差分を確認して `git add`、`git commit`、`git push` を行う
-- `gh auth status` で認証状態を確認し、必要なら `gh auth setup-git` を使う
-- PR は `issue-<子番号>` から `issue-<親番号>` またはユーザーが指定した先祖 Issue ブランチへ作成する
-- 子 Issue ブランチが前の子 Issue ブランチから派生していても、PR base は親 Issue または先祖 Issue のままでよい
-- PR 本文には親 Issue 番号、必要なら先祖 Issue 番号、対応した子 Issue 番号を明記する
-
-6. 次の子 Issue へ進む
-- 親ブランチへ戻る
-- リモートの親ブランチを基準に次の子 Issue ブランチへ切り替える
-- 子 Issue が残っていれば同じ流れを繰り返す
-
-## 重要な判断基準
-
-- 各 PR は必ず親 Issue またはユーザーが指定した先祖 Issue ブランチ向けに作る
-- 次の子 Issue が前の子 Issue の未マージ差分に依存する場合は、必要に応じて前の子 Issue ブランチから次の子 Issue ブランチを切る
-- その場合でも PR base を勝手に前の子 Issue へ変えない
-- 既存の未コミット変更があるブランチへは、そのまま切り替えない
-- 子 Issue の順序は親 Issue の記述順ではなく、子 Issue 名に含まれる順序数を優先する
-
-## 禁止事項
-
-- 親 Issue を探す時に、親の親まで辿らない
-- 親 Issue 本文中の上位 Issue、epic、meta issue を新しい親 Issue として扱わない
-- 子 Issue の実装順を、親 Issue に記載された順番だけで決めない
-- 後続の子 Issue のために、前の子 Issue の未反映差分を親ブランチへ取り込んだ前提で作業しない
-- 子 Issue ブランチの作成元が前の子 Issue ブランチであることを理由に、PR base まで前の子 Issue ブランチへ変えない
-- 既存の未コミット変更がある状態で別の子 Issue ブランチへ切り替えない
-
-## 完了条件
-
-- 親 Issue に列挙された子 Issue を順番に処理している
-- 各子 Issue で実装、検証、コミット、push、PR 作成まで完了している
-- 各 PR が親 Issue または指定された先祖 Issue ブランチを base にしている
-- 途中で止めた場合は、止めた子 Issue と理由が明確になっている
-
-## 出力スタイル
-
-- まず親 Issue と処理順を短く共有する
-- 各子 Issue では、実装、検証、commit、push、PR 作成まで可能な限り最後までやる
-- 回答は簡潔にする
-- 最後に、処理した子 Issue、作成したコミット、作成した PR、止まった理由があればそれをまとめる
+# 出力
+- 親Issue番号
+- 子Issue分類（並列 / 直列）
+- 処理順
+- 各子Issue:
+  - 実装結果
+  - commit
+  - PR URL
+- 中断理由（ある場合）

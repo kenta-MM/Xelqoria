@@ -16,6 +16,18 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/ソリューション項目/.codex/skills/" />
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-feature-issue-generate/">
+    <File Path=".codex/skills/xelqoria-feature-issue-generate/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-feature-issue-generate/agents/">
+    <File Path=".codex/skills/xelqoria-feature-issue-generate/agents/openai.yaml" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-feature-requirement-refine/">
+    <File Path=".codex/skills/xelqoria-feature-requirement-refine/SKILL.md" />
+  </Folder>
+  <Folder Name="/ソリューション項目/.codex/skills/xelqoria-feature-requirement-refine/agents/">
+    <File Path=".codex/skills/xelqoria-feature-requirement-refine/agents/openai.yaml" />
+  </Folder>
   <Folder Name="/ソリューション項目/.codex/skills/xelqoria-issue-implementation/">
     <File Path=".codex/skills/xelqoria-issue-implementation/SKILL.md" />
   </Folder>
@@ -48,7 +60,6 @@
   </Folder>
   <Folder Name="/ソリューション項目/.github/" />
   <Folder Name="/ソリューション項目/.github/workflows/">
-    <File Path=".github/workflows/auto-create-issue-branch.yml" />
     <File Path=".github/workflows/runtime-artifact-validation.yml" />
   </Folder>
   <Folder Name="/ソリューション項目/docs/" />
