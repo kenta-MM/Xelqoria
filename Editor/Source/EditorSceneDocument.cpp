@@ -105,6 +105,11 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        if (m_project.HasProject())
+        {
+            return m_project.Save(*m_scene);
+        }
+
         const std::filesystem::path sceneDocumentPath = GetSceneDocumentPath();
         std::error_code errorCode;
         std::filesystem::create_directories(sceneDocumentPath.parent_path(), errorCode);
@@ -121,6 +126,50 @@ namespace Xelqoria::Editor
 
         output << Game::SceneSerializer::SaveToText(*m_scene);
         return output.good();
+    }
+
+    bool EditorSceneDocument::CreateProject(
+        const std::wstring& projectName,
+        const std::filesystem::path& parentDirectory)
+    {
+        if (nullptr == m_scene)
+        {
+            return false;
+        }
+
+        return m_project.Create(projectName, parentDirectory, *m_scene);
+    }
+
+    bool EditorSceneDocument::OpenProject(const std::filesystem::path& projectFilePath)
+    {
+        if (false == m_project.Open(projectFilePath) || false == m_project.GetInfo().has_value())
+        {
+            return false;
+        }
+
+        return LoadSceneFromPath(m_project.GetInfo()->activeScenePath);
+    }
+
+    bool EditorSceneDocument::SaveProjectAs(
+        const std::wstring& projectName,
+        const std::filesystem::path& parentDirectory)
+    {
+        if (nullptr == m_scene)
+        {
+            return false;
+        }
+
+        return m_project.SaveAs(projectName, parentDirectory, *m_scene);
+    }
+
+    const std::optional<EditorProjectInfo>& EditorSceneDocument::GetProjectInfo() const
+    {
+        return m_project.GetInfo();
+    }
+
+    std::vector<std::filesystem::path> EditorSceneDocument::EnumerateProjectSceneFiles() const
+    {
+        return m_project.EnumerateSceneFiles();
     }
 
     Game::Assets::SpriteAssetRegistry& EditorSceneDocument::GetSpriteAssetRegistry()
@@ -150,13 +199,17 @@ namespace Xelqoria::Editor
 
     bool EditorSceneDocument::LoadSceneDocument()
     {
-        const std::filesystem::path sceneDocumentPath = GetSceneDocumentPath();
-        if (false == std::filesystem::exists(sceneDocumentPath))
+        return LoadSceneFromPath(GetSceneDocumentPath());
+    }
+
+    bool EditorSceneDocument::LoadSceneFromPath(const std::filesystem::path& scenePath)
+    {
+        if (false == std::filesystem::exists(scenePath))
         {
             return false;
         }
 
-        std::ifstream input(sceneDocumentPath, std::ios::binary);
+        std::ifstream input(scenePath, std::ios::binary);
         if (false == input.is_open())
         {
             return false;
