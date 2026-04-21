@@ -41,6 +41,8 @@ namespace Xelqoria::Editor
         int spriteSectionTop = 0;
         int spriteRefTop = 0;
         int sceneInnerWidth = 0;
+        int projectSceneListTop = 0;
+        int projectSceneListHeight = 0;
         int sceneHostHeight = 0;
     };
 
@@ -89,7 +91,16 @@ namespace Xelqoria::Editor
             metrics.transformSectionTop + metrics.labelHeight + 4 + 3 * (metrics.inspectorRowHeight + metrics.inspectorRowSpacing) + metrics.inspectorSectionSpacing;
         metrics.spriteRefTop = metrics.spriteSectionTop + metrics.labelHeight + 4;
         metrics.sceneInnerWidth = (std::max)(120, metrics.centerWidth - (metrics.outerPadding * 2));
-        metrics.sceneHostHeight = (std::max)(160, metrics.scenePanelHeight - metrics.groupHeaderHeight - metrics.labelHeight - (metrics.outerPadding * 3));
+        metrics.projectSceneListTop = metrics.outerPadding + metrics.groupHeaderHeight + (metrics.labelHeight * 2) + 8;
+        metrics.projectSceneListHeight = 96;
+        metrics.sceneHostHeight = (std::max)(
+            160,
+            metrics.scenePanelHeight
+                - metrics.groupHeaderHeight
+                - (metrics.labelHeight * 4)
+                - metrics.projectSceneListHeight
+                - (metrics.outerPadding * 3)
+                - metrics.panelSpacing);
 
         LayoutHierarchyPanel(metrics);
         LayoutAssetsPanel(metrics);
@@ -310,6 +321,39 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        m_projectSummaryLabel = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"Project: pending",
+            WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_projectSummaryLabel)
+        {
+            return false;
+        }
+
+        m_projectSceneListBox = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"ListBox",
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
+        if (nullptr == m_projectSceneListBox)
+        {
+            return false;
+        }
+
+        m_projectSceneDetailLabel = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"Scene: pending",
+            WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_projectSceneDetailLabel)
+        {
+            return false;
+        }
+
         m_sceneViewHost = CreateChildWindow(
             parentWindow,
             hInstance,
@@ -482,16 +526,37 @@ namespace Xelqoria::Editor
             metrics.labelHeight,
             TRUE);
         MoveWindow(
+            m_projectSummaryLabel,
+            metrics.centerX + metrics.outerPadding,
+            metrics.outerPadding + metrics.groupHeaderHeight + metrics.labelHeight + 4,
+            metrics.sceneInnerWidth,
+            metrics.labelHeight,
+            TRUE);
+        MoveWindow(
+            m_projectSceneListBox,
+            metrics.centerX + metrics.outerPadding,
+            metrics.projectSceneListTop,
+            metrics.sceneInnerWidth,
+            metrics.projectSceneListHeight,
+            TRUE);
+        MoveWindow(
+            m_projectSceneDetailLabel,
+            metrics.centerX + metrics.outerPadding,
+            metrics.projectSceneListTop + metrics.projectSceneListHeight + 6,
+            metrics.sceneInnerWidth,
+            metrics.labelHeight,
+            TRUE);
+        MoveWindow(
             m_sceneViewHost,
             metrics.centerX + metrics.outerPadding,
-            metrics.outerPadding + metrics.groupHeaderHeight + metrics.labelHeight + metrics.panelSpacing,
+            metrics.projectSceneListTop + metrics.projectSceneListHeight + metrics.labelHeight + metrics.panelSpacing,
             metrics.sceneInnerWidth,
             metrics.sceneHostHeight,
             TRUE);
         MoveWindow(
             m_sceneViewSizeLabel,
             metrics.centerX + metrics.outerPadding,
-            metrics.outerPadding + metrics.groupHeaderHeight + metrics.labelHeight + metrics.panelSpacing + metrics.sceneHostHeight + 6,
+            metrics.projectSceneListTop + metrics.projectSceneListHeight + metrics.labelHeight + metrics.panelSpacing + metrics.sceneHostHeight + 6,
             metrics.sceneInnerWidth,
             metrics.labelHeight,
             TRUE);
@@ -611,6 +676,21 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetSceneViewPlanLabel() const
     {
         return m_sceneViewPlanLabel;
+    }
+
+    HWND EditorShell::GetProjectSummaryLabel() const
+    {
+        return m_projectSummaryLabel;
+    }
+
+    HWND EditorShell::GetProjectSceneListBox() const
+    {
+        return m_projectSceneListBox;
+    }
+
+    HWND EditorShell::GetProjectSceneDetailLabel() const
+    {
+        return m_projectSceneDetailLabel;
     }
 
     HWND EditorShell::GetSceneViewHost() const

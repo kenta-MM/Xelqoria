@@ -85,6 +85,13 @@ namespace Xelqoria::Editor
             const Game::Scene& scene);
 
         /// <summary>
+        /// 現在のプロジェクトで開く Scene ファイルを選択する。
+        /// </summary>
+        /// <param name="scenePath">選択する Scene ファイルパス。</param>
+        /// <returns>選択に成功した場合は true。</returns>
+        [[nodiscard]] bool SelectSceneFile(const std::filesystem::path& scenePath);
+
+        /// <summary>
         /// 現在のプロジェクトで管理している Scene ファイルを列挙する。
         /// </summary>
         /// <returns>Scene ファイルパス一覧。</returns>

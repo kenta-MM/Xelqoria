@@ -9,6 +9,7 @@
 #include "EditorShell.h"
 #include "HierarchyPanelController.h"
 #include "InspectorPanelController.h"
+#include "ProjectPanelController.h"
 #include "SceneViewController.h"
 #include "SceneViewRenderer.h"
 #include "StartupScreenController.h"
@@ -139,6 +140,7 @@ namespace Xelqoria::Editor
         AssetsPanelController m_assetsPanelController{};
         HierarchyPanelController m_hierarchyPanelController{};
         InspectorPanelController m_inspectorPanelController{};
+        ProjectPanelController m_projectPanelController{};
         SceneViewController m_sceneViewController{};
         SceneViewRenderer m_sceneViewRenderer{};
         EditorCommandController m_editorCommandController{};
