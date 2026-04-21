@@ -22,6 +22,7 @@
     <ClCompile Include="Source\Application.cpp" />
     <ClCompile Include="Source\AssetsPanelController.cpp" />
     <ClCompile Include="Source\EditorCommandController.cpp" />
+    <ClCompile Include="Source\EditorProject.cpp" />
     <ClCompile Include="Source\EditorSceneDocument.cpp" />
     <ClCompile Include="Source\EditorShell.cpp" />
     <ClCompile Include="Source\Entry.cpp" />
@@ -40,6 +41,7 @@
     <ClInclude Include="Source\Application.h" />
     <ClInclude Include="Source\AssetsPanelController.h" />
     <ClInclude Include="Source\EditorCommandController.h" />
+    <ClInclude Include="Source\EditorProject.h" />
     <ClInclude Include="Source\EditorSceneDocument.h" />
     <ClInclude Include="Source\EditorShell.h" />
     <ClInclude Include="Source\EditorStringUtils.h" />
@@ -207,7 +209,7 @@
     <LayerDependencyCheckerExe>$(RepoRootDir)tools\LayerDependencyChecker\bin\$(Configuration)\net8.0\LayerDependencyChecker.exe</LayerDependencyCheckerExe>
   </PropertyGroup>
   <Target Name="ValidateLayerDependencies" BeforeTargets="ClCompile">
-    <Error Condition="!Exists('$(LayerDependencyCheckerExe)')" Text="LayerDependencyChecker.exe が見つかりません。tools\LayerDependencyChecker をビルドしてください。期待パス: $(LayerDependencyCheckerExe)" />
+    <Error Condition="!Exists('$(LayerDependencyCheckerExe')" Text="LayerDependencyChecker.exe が見つかりません。tools\LayerDependencyChecker をビルドしてください。期待パス: $(LayerDependencyCheckerExe)" />
     <Exec Command="&quot;$(LayerDependencyCheckerExe)&quot; &quot;$(RepoRootDir)&quot;" />
   </Target>
   <ImportGroup Label="ExtensionTargets" />
