@@ -2,10 +2,13 @@
 
 #include <filesystem>
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include "AssetId.h"
 #include "Assets/SpriteAssetRegistry.h"
+#include "EditorProject.h"
 #include "IGraphicsContext.h"
 #include "Scene.h"
 #include "TextureAssetRegistry.h"
@@ -50,6 +53,45 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool Save() const;
 
         /// <summary>
+        /// 新規プロジェクトを作成し、現在の Scene を初期 Scene として保存する。
+        /// </summary>
+        /// <param name="projectName">作成するプロジェクト名。</param>
+        /// <param name="parentDirectory">保存先親フォルダ。</param>
+        /// <returns>作成に成功した場合は true。</returns>
+        [[nodiscard]] bool CreateProject(
+            const std::wstring& projectName,
+            const std::filesystem::path& parentDirectory);
+
+        /// <summary>
+        /// 既存プロジェクトを開き、アクティブ Scene を読み込む。
+        /// </summary>
+        /// <param name="projectFilePath">開く `.proj` ファイル。</param>
+        /// <returns>読込に成功した場合は true。</returns>
+        [[nodiscard]] bool OpenProject(const std::filesystem::path& projectFilePath);
+
+        /// <summary>
+        /// 現在の Scene を別名プロジェクトとして保存する。
+        /// </summary>
+        /// <param name="projectName">新しいプロジェクト名。</param>
+        /// <param name="parentDirectory">保存先親フォルダ。</param>
+        /// <returns>保存に成功した場合は true。</returns>
+        [[nodiscard]] bool SaveProjectAs(
+            const std::wstring& projectName,
+            const std::filesystem::path& parentDirectory);
+
+        /// <summary>
+        /// 現在のプロジェクト情報を取得する。
+        /// </summary>
+        /// <returns>プロジェクト情報。未オープン時は空。</returns>
+        [[nodiscard]] const std::optional<EditorProjectInfo>& GetProjectInfo() const;
+
+        /// <summary>
+        /// 現在のプロジェクトで管理している Scene ファイルを列挙する。
+        /// </summary>
+        /// <returns>Scene ファイルパス一覧。</returns>
+        [[nodiscard]] std::vector<std::filesystem::path> EnumerateProjectSceneFiles() const;
+
+        /// <summary>
         /// SpriteAsset レジストリを取得する。
         /// </summary>
         /// <returns>SpriteAsset レジストリ。</returns>
@@ -87,6 +129,13 @@ namespace Xelqoria::Editor
         bool LoadSceneDocument();
 
         /// <summary>
+        /// 指定パスから Scene を読み込む。
+        /// </summary>
+        /// <param name="scenePath">読込対象 Scene ファイルパス。</param>
+        /// <returns>読込に成功した場合は true。</returns>
+        bool LoadSceneFromPath(const std::filesystem::path& scenePath);
+
+        /// <summary>
         /// 保存先 Scene ファイルパスを取得する。
         /// </summary>
         /// <returns>Scene ファイルパス。</returns>
@@ -97,5 +146,6 @@ namespace Xelqoria::Editor
         Game::Assets::SpriteAssetRegistry m_spriteAssetRegistry{};
         Graphics::TextureAssetRegistry m_textureAssetRegistry{};
         std::vector<Core::AssetId> m_registeredSpriteAssetIds{};
+        EditorProject m_project{};
     };
 }
