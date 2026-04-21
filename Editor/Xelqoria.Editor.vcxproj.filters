@@ -33,7 +33,13 @@
     <ClCompile Include="Source\InspectorPanelController.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\RecentProjectsStore.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\RenderBackendBootstrap.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\StartupScreenController.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\SceneDropPlacementService.cpp">
@@ -89,7 +95,13 @@
     <ClInclude Include="Source\InspectorPanelController.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\RecentProjectsStore.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\RenderBackendBootstrap.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\StartupScreenController.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\SceneDropPlacementService.h">

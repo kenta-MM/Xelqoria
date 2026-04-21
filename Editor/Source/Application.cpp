@@ -50,14 +50,31 @@ namespace Xelqoria::Editor
     {
         constexpr auto clientWidth = 1600u;
         constexpr auto clientHeight = 900u;
-        constexpr RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D11;
 
-        std::wstring title = L"Xelqoria Editor - ";
-        title += RHI::GraphicsAPIToString(api);
+        const std::wstring title = L"Xelqoria Editor";
         if (false == m_window.Create(m_hInstance, title.c_str(), clientWidth, clientHeight))
         {
             return false;
         }
+
+        if (false == m_startupScreenController.Initialize(m_window.GetHwnd(), m_hInstance))
+        {
+            return false;
+        }
+
+        m_startupScreenController.UpdateLayout(m_window.GetHwnd());
+        m_window.Show();
+        return true;
+    }
+
+    bool Application::InitializeEditorWorkspace()
+    {
+        if (m_editorInitialized)
+        {
+            return true;
+        }
+
+        constexpr RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D11;
 
         if (false == m_editorShell.Initialize(m_window.GetHwnd(), m_hInstance))
         {
@@ -76,8 +93,6 @@ namespace Xelqoria::Editor
                 m_editorShell.GetSceneViewWidth(),
                 m_editorShell.GetSceneViewHeight());
         }
-
-        m_window.Show();
 
         if (false == m_sceneViewRenderer.Initialize(
                 m_hInstance,
@@ -102,6 +117,47 @@ namespace Xelqoria::Editor
         RefreshEditorPanels(canAddSpriteComponent, false);
         RefreshSceneViewSelectionStatus();
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+        m_editorInitialized = true;
+        return true;
+    }
+
+    bool Application::EnterEditorWithNewProject()
+    {
+        if (false == InitializeEditorWorkspace())
+        {
+            return false;
+        }
+
+        if (false == m_sceneDocument.CreateProject(
+                m_startupScreenController.GetProjectName(),
+                m_startupScreenController.GetProjectParentDirectory()))
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクト作成に失敗しました。");
+            return false;
+        }
+
+        RecordCurrentProject();
+        m_startupScreenController.Hide();
+        return true;
+    }
+
+    bool Application::EnterEditorWithExistingProject()
+    {
+        if (false == InitializeEditorWorkspace())
+        {
+            return false;
+        }
+
+        if (false == m_sceneDocument.OpenProject(m_startupScreenController.GetOpenProjectFilePath()))
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを開けませんでした。");
+            return false;
+        }
+
+        RecordCurrentProject();
+        const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
+        ApplySelectionChange(std::nullopt, canAddSpriteComponent, true, true);
+        m_startupScreenController.Hide();
         return true;
     }
 
@@ -113,6 +169,28 @@ namespace Xelqoria::Editor
     void Application::Update(float deltaTime)
     {
         (void)deltaTime;
+
+        if (false == m_editorInitialized)
+        {
+            m_startupScreenController.UpdateLayout(m_window.GetHwnd());
+            m_startupScreenController.Update();
+            if (m_startupScreenController.HasCreateRequest())
+            {
+                if (EnterEditorWithNewProject())
+                {
+                    m_startupScreenController.ClearRequests();
+                }
+            }
+            else if (m_startupScreenController.HasOpenRequest())
+            {
+                if (EnterEditorWithExistingProject())
+                {
+                    m_startupScreenController.ClearRequests();
+                }
+            }
+
+            return;
+        }
 
         const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
         if (true == sceneViewSizeChanged)
@@ -216,6 +294,11 @@ namespace Xelqoria::Editor
 
     void Application::Render()
     {
+        if (false == m_editorInitialized)
+        {
+            return;
+        }
+
         m_sceneViewRenderer.RenderFrame(
             m_sceneDocument.GetScene(),
             m_sceneDocument.GetSpriteAssetRegistry(),
@@ -278,5 +361,13 @@ namespace Xelqoria::Editor
 
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), failureMessage);
         return false;
+    }
+
+    void Application::RecordCurrentProject()
+    {
+        if (m_sceneDocument.GetProjectInfo().has_value())
+        {
+            m_recentProjectsStore.Record(*m_sceneDocument.GetProjectInfo());
+        }
     }
 }

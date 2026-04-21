@@ -11,6 +11,8 @@
 #include "InspectorPanelController.h"
 #include "SceneViewController.h"
 #include "SceneViewRenderer.h"
+#include "StartupScreenController.h"
+#include "RecentProjectsStore.h"
 
 namespace Xelqoria::Editor
 {
@@ -48,6 +50,24 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>初期化に成功した場合は true。</returns>
         bool Initialize();
+
+        /// <summary>
+        /// Editor 本体画面を初期化する。
+        /// </summary>
+        /// <returns>初期化に成功した場合は true。</returns>
+        bool InitializeEditorWorkspace();
+
+        /// <summary>
+        /// 起動画面から新規プロジェクトを作成して Editor へ遷移する。
+        /// </summary>
+        /// <returns>遷移に成功した場合は true。</returns>
+        bool EnterEditorWithNewProject();
+
+        /// <summary>
+        /// 起動画面から既存プロジェクトを開いて Editor へ遷移する。
+        /// </summary>
+        /// <returns>遷移に成功した場合は true。</returns>
+        bool EnterEditorWithExistingProject();
 
         /// <summary>
         /// 終了時のクリーンアップを行う。
@@ -102,11 +122,19 @@ namespace Xelqoria::Editor
             const wchar_t* failureMessage,
             bool pushHistory);
 
+        /// <summary>
+        /// 現在のプロジェクトを最近使った一覧へ記録する。
+        /// </summary>
+        void RecordCurrentProject();
+
     private:
         HINSTANCE m_hInstance = nullptr;
         Core::Window m_window{};
         bool m_running = true;
+        bool m_editorInitialized = false;
         EditorShell m_editorShell{};
+        StartupScreenController m_startupScreenController{};
+        RecentProjectsStore m_recentProjectsStore{};
         EditorSceneDocument m_sceneDocument{};
         AssetsPanelController m_assetsPanelController{};
         HierarchyPanelController m_hierarchyPanelController{};
