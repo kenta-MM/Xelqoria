@@ -209,7 +209,7 @@
     <LayerDependencyCheckerExe>$(RepoRootDir)tools\LayerDependencyChecker\bin\$(Configuration)\net8.0\LayerDependencyChecker.exe</LayerDependencyCheckerExe>
   </PropertyGroup>
   <Target Name="ValidateLayerDependencies" BeforeTargets="ClCompile">
-    <Error Condition="!Exists('$(LayerDependencyCheckerExe')" Text="LayerDependencyChecker.exe が見つかりません。tools\LayerDependencyChecker をビルドしてください。期待パス: $(LayerDependencyCheckerExe)" />
+    <Error Condition="!Exists('$(LayerDependencyCheckerExe)')" Text="LayerDependencyChecker.exe が見つかりません。tools\LayerDependencyChecker をビルドしてください。期待パス: $(LayerDependencyCheckerExe)" />
     <Exec Command="&quot;$(LayerDependencyCheckerExe)&quot; &quot;$(RepoRootDir)&quot;" />
   </Target>
   <ImportGroup Label="ExtensionTargets" />
