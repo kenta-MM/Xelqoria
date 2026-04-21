@@ -15,6 +15,9 @@
     <ClCompile Include="Source\EditorCommandController.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\EditorProject.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\EditorSceneDocument.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -63,6 +66,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\EditorCommandController.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\EditorProject.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\EditorSceneDocument.h">
