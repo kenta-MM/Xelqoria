@@ -1,12 +1,78 @@
 #include "Application.h"
 
+#include <array>
 #include <chrono>
+#include <commdlg.h>
+#include <filesystem>
+#include <shlobj.h>
 #include <string>
 
 #include "GraphicsAPI.h"
 
 namespace Xelqoria::Editor
 {
+    namespace
+    {
+        constexpr unsigned ProjectMenuCreateCommandId = 5101;
+        constexpr unsigned ProjectMenuSaveCommandId = 5102;
+        constexpr unsigned ProjectMenuSaveAsCommandId = 5103;
+        constexpr unsigned ProjectMenuOpenCommandId = 5104;
+        constexpr unsigned ProjectMenuSettingsCommandId = 5105;
+
+        [[nodiscard]] std::filesystem::path SelectProjectFile(HWND ownerWindow)
+        {
+            std::array<wchar_t, MAX_PATH> filePath{};
+            OPENFILENAMEW openFileName{};
+            openFileName.lStructSize = sizeof(openFileName);
+            openFileName.hwndOwner = ownerWindow;
+            openFileName.lpstrFilter = L"Xelqoria Project (*.proj)\0*.proj\0All Files (*.*)\0*.*\0";
+            openFileName.lpstrFile = filePath.data();
+            openFileName.nMaxFile = static_cast<DWORD>(filePath.size());
+            openFileName.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+            if (GetOpenFileNameW(&openFileName))
+            {
+                return filePath.data();
+            }
+
+            return {};
+        }
+
+        [[nodiscard]] std::filesystem::path SelectFolder(HWND ownerWindow, const wchar_t* title)
+        {
+            BROWSEINFOW browseInfo{};
+            browseInfo.hwndOwner = ownerWindow;
+            browseInfo.lpszTitle = title;
+            browseInfo.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+
+            PIDLIST_ABSOLUTE itemList = SHBrowseForFolderW(&browseInfo);
+            if (nullptr == itemList)
+            {
+                return {};
+            }
+
+            std::filesystem::path folderPath{};
+            std::array<wchar_t, MAX_PATH> selectedPath{};
+            if (SHGetPathFromIDListW(itemList, selectedPath.data()))
+            {
+                folderPath = selectedPath.data();
+            }
+
+            CoTaskMemFree(itemList);
+            return folderPath;
+        }
+
+        [[nodiscard]] std::wstring BuildNewProjectName(const std::filesystem::path& parentDirectory)
+        {
+            std::wstring projectName = L"NewProject";
+            for (int index = 1; std::filesystem::exists(parentDirectory / projectName); ++index)
+            {
+                projectName = L"NewProject" + std::to_wstring(index);
+            }
+
+            return projectName;
+        }
+    }
+
     Application::Application(HINSTANCE hInstance)
         : m_hInstance(hInstance)
     {
@@ -56,6 +122,18 @@ namespace Xelqoria::Editor
         {
             return false;
         }
+
+        InitializeProjectMenu();
+        m_window.SetCommandHandler(
+            [this](unsigned commandId)
+            {
+                HandleProjectMenuCommand(commandId);
+            });
+        m_window.SetCloseRequestHandler(
+            [this]()
+            {
+                return HandleCloseRequest();
+            });
 
         if (false == m_startupScreenController.Initialize(m_window.GetHwnd(), m_hInstance))
         {
@@ -122,6 +200,52 @@ namespace Xelqoria::Editor
         return true;
     }
 
+    void Application::InitializeProjectMenu()
+    {
+        m_projectMenu = CreatePopupMenu();
+        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuCreateCommandId, L"プロジェクトを作成する");
+        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSaveCommandId, L"プロジェクトを保存する");
+        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSaveAsCommandId, L"プロジェクトを別名で保存する");
+        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuOpenCommandId, L"プロジェクトを開く");
+        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSettingsCommandId, L"プロジェクトの設定を開く");
+
+        HMENU menuBar = CreateMenu();
+        AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_projectMenu), L"プロジェクト");
+        SetMenu(m_window.GetHwnd(), menuBar);
+    }
+
+    void Application::HandleProjectMenuCommand(unsigned commandId)
+    {
+        switch (commandId)
+        {
+        case ProjectMenuCreateCommandId:
+            CreateProjectFromMenu();
+            break;
+        case ProjectMenuSaveCommandId:
+            SaveProjectFromMenu();
+            break;
+        case ProjectMenuSaveAsCommandId:
+            SaveProjectAsFromMenu();
+            break;
+        case ProjectMenuOpenCommandId:
+            OpenProjectFromMenu();
+            break;
+        case ProjectMenuSettingsCommandId:
+            if (m_editorInitialized)
+            {
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクト設定画面は未実装です。");
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    bool Application::HandleCloseRequest()
+    {
+        return ConfirmSaveIfDirty();
+    }
+
     bool Application::EnterEditorWithNewProject()
     {
         if (false == InitializeEditorWorkspace())
@@ -139,6 +263,7 @@ namespace Xelqoria::Editor
 
         RecordCurrentProject();
         m_projectPanelController.Refresh(m_sceneDocument);
+        ClearProjectDirty();
         m_startupScreenController.Hide();
         return true;
     }
@@ -160,8 +285,157 @@ namespace Xelqoria::Editor
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
         m_projectPanelController.Refresh(m_sceneDocument);
         ApplySelectionChange(std::nullopt, canAddSpriteComponent, true, true);
+        ClearProjectDirty();
         m_startupScreenController.Hide();
         return true;
+    }
+
+    void Application::CreateProjectFromMenu()
+    {
+        if (false == ConfirmSaveIfDirty())
+        {
+            return;
+        }
+
+        if (false == InitializeEditorWorkspace())
+        {
+            return;
+        }
+
+        const std::filesystem::path parentDirectory = SelectFolder(m_window.GetHwnd(), L"プロジェクトの保存先フォルダを選択");
+        if (parentDirectory.empty())
+        {
+            return;
+        }
+
+        const std::wstring projectName = BuildNewProjectName(parentDirectory);
+        if (false == m_sceneDocument.CreateProject(projectName, parentDirectory))
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクト作成に失敗しました。");
+            return;
+        }
+
+        RecordCurrentProject();
+        m_projectPanelController.Refresh(m_sceneDocument);
+        ApplySelectionChange(std::nullopt, m_assetsPanelController.HasVisibleSpriteAssets(), true, true);
+        m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+        m_startupScreenController.Hide();
+        ClearProjectDirty();
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを作成しました。");
+    }
+
+    void Application::OpenProjectFromMenu()
+    {
+        if (false == ConfirmSaveIfDirty())
+        {
+            return;
+        }
+
+        if (false == InitializeEditorWorkspace())
+        {
+            return;
+        }
+
+        const std::filesystem::path projectFilePath = SelectProjectFile(m_window.GetHwnd());
+        if (projectFilePath.empty())
+        {
+            return;
+        }
+
+        if (false == m_sceneDocument.OpenProject(projectFilePath))
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを開けませんでした。");
+            return;
+        }
+
+        RecordCurrentProject();
+        m_projectPanelController.Refresh(m_sceneDocument);
+        ApplySelectionChange(std::nullopt, m_assetsPanelController.HasVisibleSpriteAssets(), true, true);
+        m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+        m_startupScreenController.Hide();
+        ClearProjectDirty();
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを開きました。");
+    }
+
+    bool Application::SaveProjectFromMenu()
+    {
+        if (false == m_editorInitialized)
+        {
+            return false;
+        }
+
+        if (false == m_sceneDocument.Save())
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトの保存に失敗しました。");
+            return false;
+        }
+
+        m_editorCommandController.PushSnapshot(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+        m_projectPanelController.Refresh(m_sceneDocument);
+        ClearProjectDirty();
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを保存しました。");
+        return true;
+    }
+
+    void Application::SaveProjectAsFromMenu()
+    {
+        if (false == m_editorInitialized)
+        {
+            return;
+        }
+
+        const std::filesystem::path parentDirectory = SelectFolder(m_window.GetHwnd(), L"別名保存先フォルダを選択");
+        if (parentDirectory.empty())
+        {
+            return;
+        }
+
+        std::wstring projectName = L"NewProject";
+        if (m_sceneDocument.GetProjectInfo().has_value())
+        {
+            projectName = m_sceneDocument.GetProjectInfo()->name + L"_Copy";
+        }
+
+        if (false == m_sceneDocument.SaveProjectAs(projectName, parentDirectory))
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトの別名保存に失敗しました。");
+            return;
+        }
+
+        RecordCurrentProject();
+        m_projectPanelController.Refresh(m_sceneDocument);
+        ClearProjectDirty();
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを別名で保存しました。");
+    }
+
+    bool Application::ConfirmSaveIfDirty()
+    {
+        if (false == m_projectDirty)
+        {
+            return true;
+        }
+
+        const int result = MessageBoxW(
+            m_window.GetHwnd(),
+            L"プロジェクトを保存しますか？",
+            L"保存確認",
+            MB_YESNO | MB_ICONQUESTION);
+        if (result == IDYES)
+        {
+            SaveProjectFromMenu();
+        }
+
+        return true;
+    }
+
+    void Application::MarkProjectDirty()
+    {
+        m_projectDirty = true;
+    }
+
+    void Application::ClearProjectDirty()
+    {
+        m_projectDirty = false;
     }
 
     void Application::Shutdown()
@@ -212,6 +486,7 @@ namespace Xelqoria::Editor
             const bool canAddSpriteComponentAfterSceneLoad = m_assetsPanelController.HasVisibleSpriteAssets();
             ApplySelectionChange(std::nullopt, canAddSpriteComponentAfterSceneLoad, true, true);
             m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+            MarkProjectDirty();
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"選択した Scene を読み込みました。");
         }
 
@@ -260,6 +535,7 @@ namespace Xelqoria::Editor
 
         if (true == interactionResult.sceneChanged)
         {
+            MarkProjectDirty();
             RefreshEditorPanels(canAddSpriteComponent, false);
             RefreshSceneViewSelectionStatus();
         }
@@ -299,6 +575,7 @@ namespace Xelqoria::Editor
             m_editorShell.GetSceneViewPlanLabel());
         if (true == commandResult.changed)
         {
+            MarkProjectDirty();
             ApplySelectionChange(commandResult.selectedEntityId, canAddSpriteComponent, true, true);
         }
     }
@@ -368,10 +645,12 @@ namespace Xelqoria::Editor
 
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), successMessage);
             m_projectPanelController.Refresh(m_sceneDocument);
+            ClearProjectDirty();
             return true;
         }
 
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), failureMessage);
+        MarkProjectDirty();
         return false;
     }
 

@@ -1,5 +1,6 @@
 #include "Window.h"
 #include <Windows.h>
+#include <utility>
 
 namespace Xelqoria::Core
 {
@@ -87,6 +88,17 @@ namespace Xelqoria::Core
     { 
         return m_hWnd; 
     }
+
+    void Window::SetCommandHandler(std::function<void(unsigned)> handler)
+    {
+        m_commandHandler = std::move(handler);
+    }
+
+    void Window::SetCloseRequestHandler(std::function<bool()> handler)
+    {
+        m_closeRequestHandler = std::move(handler);
+    }
+
     uint32_t Window::GetWidth() const 
     { 
         return m_width;
@@ -123,7 +135,20 @@ namespace Xelqoria::Core
     {
         switch (msg) 
         {
+        case WM_COMMAND:
+            if (m_commandHandler)
+            {
+                m_commandHandler(LOWORD(wp));
+                return 0;
+            }
+            break;
+
         case WM_CLOSE:
+            if (m_closeRequestHandler && false == m_closeRequestHandler())
+            {
+                return 0;
+            }
+
             DestroyWindow(hWnd);
             return 0;
         
@@ -136,6 +161,11 @@ namespace Xelqoria::Core
         case WM_KEYDOWN:
             if (wp == VK_ESCAPE) 
             {
+                if (m_closeRequestHandler && false == m_closeRequestHandler())
+                {
+                    return 0;
+                }
+
                 DestroyWindow(hWnd);
                 return 0;
             }
