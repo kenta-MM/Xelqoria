@@ -84,6 +84,7 @@ namespace Xelqoria::Editor
         m_assetsPanelController.Bind(m_editorShell);
         m_hierarchyPanelController.Bind(m_editorShell);
         m_inspectorPanelController.Bind(m_editorShell);
+        m_projectPanelController.Bind(m_editorShell);
         m_sceneViewController.Bind(m_editorShell);
 
         const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
@@ -137,6 +138,7 @@ namespace Xelqoria::Editor
         }
 
         RecordCurrentProject();
+        m_projectPanelController.Refresh(m_sceneDocument);
         m_startupScreenController.Hide();
         return true;
     }
@@ -156,6 +158,7 @@ namespace Xelqoria::Editor
 
         RecordCurrentProject();
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
+        m_projectPanelController.Refresh(m_sceneDocument);
         ApplySelectionChange(std::nullopt, canAddSpriteComponent, true, true);
         m_startupScreenController.Hide();
         return true;
@@ -204,6 +207,14 @@ namespace Xelqoria::Editor
         }
 
         m_assetsPanelController.SyncSelection();
+        if (true == m_projectPanelController.Update(m_sceneDocument))
+        {
+            const bool canAddSpriteComponentAfterSceneLoad = m_assetsPanelController.HasVisibleSpriteAssets();
+            ApplySelectionChange(std::nullopt, canAddSpriteComponentAfterSceneLoad, true, true);
+            m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"選択した Scene を読み込みました。");
+        }
+
         m_assetsPanelController.UpdateDragState();
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
 
@@ -356,6 +367,7 @@ namespace Xelqoria::Editor
             }
 
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), successMessage);
+            m_projectPanelController.Refresh(m_sceneDocument);
             return true;
         }
 

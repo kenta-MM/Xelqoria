@@ -80,6 +80,13 @@ namespace Xelqoria::Editor
             const std::filesystem::path& parentDirectory);
 
         /// <summary>
+        /// 現在のプロジェクト内 Scene を開く。
+        /// </summary>
+        /// <param name="scenePath">開く Scene ファイルパス。</param>
+        /// <returns>読込に成功した場合は true。</returns>
+        [[nodiscard]] bool OpenProjectScene(const std::filesystem::path& scenePath);
+
+        /// <summary>
         /// 現在のプロジェクト情報を取得する。
         /// </summary>
         /// <returns>プロジェクト情報。未オープン時は空。</returns>

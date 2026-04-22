@@ -143,6 +143,29 @@ namespace Xelqoria::Editor
         return Create(projectName, parentDirectory, scene);
     }
 
+    bool EditorProject::SelectSceneFile(const std::filesystem::path& scenePath)
+    {
+        if (false == m_info.has_value())
+        {
+            return false;
+        }
+
+        std::filesystem::path selectedScenePath = scenePath;
+        if (false == selectedScenePath.is_absolute())
+        {
+            selectedScenePath = m_info->rootDirectory / selectedScenePath;
+        }
+
+        if (false == std::filesystem::is_regular_file(selectedScenePath)
+            || selectedScenePath.extension() != ".scene")
+        {
+            return false;
+        }
+
+        m_info->activeScenePath = selectedScenePath;
+        return true;
+    }
+
     std::vector<std::filesystem::path> EditorProject::EnumerateSceneFiles() const
     {
         std::vector<std::filesystem::path> sceneFiles{};

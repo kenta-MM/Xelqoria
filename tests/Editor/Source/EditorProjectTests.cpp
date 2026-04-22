@@ -70,3 +70,20 @@ TEST(EditorProjectTests, OpenReadsProjectAndEnumeratesScenes)
 
     std::filesystem::remove_all(parentDirectory);
 }
+
+TEST(EditorProjectTests, SelectSceneFileUpdatesActiveScene)
+{
+    const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_SelectScene");
+    Xelqoria::Editor::EditorProject project{};
+    ASSERT_TRUE(project.Create(L"SceneProject", parentDirectory, MakeScene()));
+
+    const std::filesystem::path mainScenePath = project.GetInfo()->activeScenePath;
+    const std::filesystem::path secondScenePath = project.GetInfo()->scenesDirectory / L"Second.xelqoria.scene";
+    std::filesystem::copy_file(mainScenePath, secondScenePath);
+
+    EXPECT_TRUE(project.SelectSceneFile(secondScenePath));
+    ASSERT_TRUE(project.GetInfo().has_value());
+    EXPECT_EQ(secondScenePath, project.GetInfo()->activeScenePath);
+
+    std::filesystem::remove_all(parentDirectory);
+}

@@ -162,6 +162,16 @@ namespace Xelqoria::Editor
         return m_project.SaveAs(projectName, parentDirectory, *m_scene);
     }
 
+    bool EditorSceneDocument::OpenProjectScene(const std::filesystem::path& scenePath)
+    {
+        if (false == m_project.SelectSceneFile(scenePath))
+        {
+            return false;
+        }
+
+        return LoadSceneFromPath(scenePath);
+    }
+
     const std::optional<EditorProjectInfo>& EditorSceneDocument::GetProjectInfo() const
     {
         return m_project.GetInfo();
