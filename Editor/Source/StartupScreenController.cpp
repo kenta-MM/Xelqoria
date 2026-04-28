@@ -14,22 +14,46 @@ namespace Xelqoria::Editor
         constexpr int CreateProjectButtonId = 4301;
         constexpr int OpenProjectButtonId = 4302;
         constexpr int BrowseFolderButtonId = 4303;
+        constexpr int CreateConfirmButtonId = 4304;
+        constexpr int CreateCancelButtonId = 4305;
+        constexpr const wchar_t* CreateProjectWindowClassName = L"XelqoriaCreateProjectWindow";
+
+        LRESULT CALLBACK CreateProjectWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+        {
+            if (message == WM_CLOSE)
+            {
+                ShowWindow(window, SW_HIDE);
+                return 0;
+            }
+
+            return DefWindowProcW(window, message, wParam, lParam);
+        }
 
         [[nodiscard]] std::wstring BuildRecentProjectLabel(const EditorProjectInfo& project)
         {
             return project.name + L" - " + project.projectFilePath.parent_path().wstring();
+        }
+
+        bool RegisterCreateProjectWindowClass(HINSTANCE hInstance)
+        {
+            WNDCLASSW windowClass{};
+            if (GetClassInfoW(hInstance, CreateProjectWindowClassName, &windowClass))
+            {
+                return true;
+            }
+
+            windowClass.lpfnWndProc = CreateProjectWindowProc;
+            windowClass.hInstance = hInstance;
+            windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+            windowClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+            windowClass.lpszClassName = CreateProjectWindowClassName;
+            return 0 != RegisterClassW(&windowClass);
         }
     }
 
     bool StartupScreenController::Initialize(HWND parentWindow, HINSTANCE hInstance)
     {
         m_defaultFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-        m_titleLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Xelqoria Editor", WS_CHILD | WS_VISIBLE);
-        m_nameLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"プロジェクト名", WS_CHILD | WS_VISIBLE);
-        m_projectNameEdit = CreateChildWindow(parentWindow, hInstance, L"Edit", L"NewProject", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
-        m_folderLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"保存先フォルダ", WS_CHILD | WS_VISIBLE);
-        m_projectFolderEdit = CreateChildWindow(parentWindow, hInstance, L"Edit", L".", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
-        m_browseFolderButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"参照", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_createButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクト作成", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_openButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクトオープン", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_recentLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"最近使ったプロジェクト一覧", WS_CHILD | WS_VISIBLE);
@@ -40,16 +64,49 @@ namespace Xelqoria::Editor
             L"",
             WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
 
-        if (nullptr == m_titleLabel
+        if (false == RegisterCreateProjectWindowClass(hInstance))
+        {
+            return false;
+        }
+
+        m_createProjectWindow = CreateWindowExW(
+            WS_EX_DLGMODALFRAME,
+            CreateProjectWindowClassName,
+            L"プロジェクト作成",
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            560,
+            180,
+            parentWindow,
+            nullptr,
+            hInstance,
+            nullptr);
+
+        if (nullptr == m_createProjectWindow)
+        {
+            return false;
+        }
+
+        m_nameLabel = CreateChildWindow(m_createProjectWindow, hInstance, L"Static", L"プロジェクト名", WS_CHILD | WS_VISIBLE);
+        m_projectNameEdit = CreateChildWindow(m_createProjectWindow, hInstance, L"Edit", L"NewProject", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+        m_folderLabel = CreateChildWindow(m_createProjectWindow, hInstance, L"Static", L"保存先フォルダ", WS_CHILD | WS_VISIBLE);
+        m_projectFolderEdit = CreateChildWindow(m_createProjectWindow, hInstance, L"Edit", L".", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+        m_browseFolderButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"参照", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_createConfirmButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"作成", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON);
+        m_createCancelButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"キャンセル", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+
+        if (nullptr == m_createButton
+            || nullptr == m_openButton
+            || nullptr == m_recentLabel
+            || nullptr == m_recentListBox
             || nullptr == m_nameLabel
             || nullptr == m_projectNameEdit
             || nullptr == m_folderLabel
             || nullptr == m_projectFolderEdit
             || nullptr == m_browseFolderButton
-            || nullptr == m_createButton
-            || nullptr == m_openButton
-            || nullptr == m_recentLabel
-            || nullptr == m_recentListBox)
+            || nullptr == m_createConfirmButton
+            || nullptr == m_createCancelButton)
         {
             return false;
         }
@@ -57,6 +114,9 @@ namespace Xelqoria::Editor
         SetWindowLongPtrW(m_createButton, GWLP_ID, CreateProjectButtonId);
         SetWindowLongPtrW(m_openButton, GWLP_ID, OpenProjectButtonId);
         SetWindowLongPtrW(m_browseFolderButton, GWLP_ID, BrowseFolderButtonId);
+        SetWindowLongPtrW(m_createConfirmButton, GWLP_ID, CreateConfirmButtonId);
+        SetWindowLongPtrW(m_createCancelButton, GWLP_ID, CreateCancelButtonId);
+        UpdateCreateProjectWindowLayout();
         RefreshRecentProjects();
         return true;
     }
@@ -69,18 +129,12 @@ namespace Xelqoria::Editor
         const int clientHeight = clientRect.bottom - clientRect.top;
         const int panelWidth = 520;
         const int panelLeft = (std::max)(24, (clientWidth - panelWidth) / 2);
-        const int top = (std::max)(24, (clientHeight - 420) / 2);
+        const int top = (std::max)(24, (clientHeight - 264) / 2);
 
-        MoveWindow(m_titleLabel, panelLeft, top, panelWidth, 36, TRUE);
-        MoveWindow(m_nameLabel, panelLeft, top + 56, 160, 24, TRUE);
-        MoveWindow(m_projectNameEdit, panelLeft + 160, top + 52, panelWidth - 160, 28, TRUE);
-        MoveWindow(m_folderLabel, panelLeft, top + 96, 160, 24, TRUE);
-        MoveWindow(m_projectFolderEdit, panelLeft + 160, top + 92, panelWidth - 238, 28, TRUE);
-        MoveWindow(m_browseFolderButton, panelLeft + panelWidth - 72, top + 92, 72, 28, TRUE);
-        MoveWindow(m_createButton, panelLeft, top + 140, 250, 32, TRUE);
-        MoveWindow(m_openButton, panelLeft + 270, top + 140, 250, 32, TRUE);
-        MoveWindow(m_recentLabel, panelLeft, top + 196, panelWidth, 24, TRUE);
-        MoveWindow(m_recentListBox, panelLeft, top + 224, panelWidth, 180, TRUE);
+        MoveWindow(m_createButton, panelLeft, top, 250, 32, TRUE);
+        MoveWindow(m_openButton, panelLeft + 270, top, 250, 32, TRUE);
+        MoveWindow(m_recentLabel, panelLeft, top + 56, panelWidth, 24, TRUE);
+        MoveWindow(m_recentListBox, panelLeft, top + 84, panelWidth, 180, TRUE);
     }
 
     void StartupScreenController::Update()
@@ -99,7 +153,7 @@ namespace Xelqoria::Editor
         const HWND clickedWindow = WindowFromPoint(cursorPosition);
         if (clickedWindow == m_createButton)
         {
-            m_createRequested = true;
+            ShowCreateProjectWindow();
             return;
         }
 
@@ -122,6 +176,24 @@ namespace Xelqoria::Editor
                 CoTaskMemFree(itemList);
             }
 
+            return;
+        }
+
+        if (clickedWindow == m_createConfirmButton)
+        {
+            HideCreateProjectWindow();
+            m_createRequested = true;
+            return;
+        }
+
+        if (clickedWindow == m_createCancelButton)
+        {
+            HideCreateProjectWindow();
+            return;
+        }
+
+        if (clickedWindow == m_recentListBox && HandleRecentProjectDoubleClick(cursorPosition))
+        {
             return;
         }
 
@@ -151,13 +223,7 @@ namespace Xelqoria::Editor
 
     void StartupScreenController::Hide()
     {
-        std::array<HWND, 10> controls{
-            m_titleLabel,
-            m_nameLabel,
-            m_projectNameEdit,
-            m_folderLabel,
-            m_projectFolderEdit,
-            m_browseFolderButton,
+        std::array<HWND, 4> controls{
             m_createButton,
             m_openButton,
             m_recentLabel,
@@ -168,6 +234,8 @@ namespace Xelqoria::Editor
         {
             ShowWindow(control, SW_HIDE);
         }
+
+        HideCreateProjectWindow();
     }
 
     bool StartupScreenController::HasCreateRequest() const
@@ -210,6 +278,84 @@ namespace Xelqoria::Editor
             const std::wstring label = BuildRecentProjectLabel(project);
             SendMessageW(m_recentListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
         }
+    }
+
+    void StartupScreenController::ShowCreateProjectWindow()
+    {
+        if (nullptr == m_createProjectWindow)
+        {
+            return;
+        }
+
+        HWND parentWindow = GetParent(m_createButton);
+        RECT parentRect{};
+        RECT windowRect{};
+        GetWindowRect(parentWindow, &parentRect);
+        GetWindowRect(m_createProjectWindow, &windowRect);
+
+        const int width = windowRect.right - windowRect.left;
+        const int height = windowRect.bottom - windowRect.top;
+        const int left = parentRect.left + ((parentRect.right - parentRect.left) - width) / 2;
+        const int top = parentRect.top + ((parentRect.bottom - parentRect.top) - height) / 2;
+
+        SetWindowPos(m_createProjectWindow, HWND_TOP, left, top, width, height, SWP_SHOWWINDOW);
+        SetFocus(m_projectNameEdit);
+    }
+
+    void StartupScreenController::HideCreateProjectWindow()
+    {
+        if (nullptr != m_createProjectWindow)
+        {
+            ShowWindow(m_createProjectWindow, SW_HIDE);
+        }
+    }
+
+    void StartupScreenController::UpdateCreateProjectWindowLayout()
+    {
+        MoveWindow(m_nameLabel, 16, 18, 140, 24, TRUE);
+        MoveWindow(m_projectNameEdit, 156, 14, 360, 28, TRUE);
+        MoveWindow(m_folderLabel, 16, 58, 140, 24, TRUE);
+        MoveWindow(m_projectFolderEdit, 156, 54, 276, 28, TRUE);
+        MoveWindow(m_browseFolderButton, 444, 54, 72, 28, TRUE);
+        MoveWindow(m_createConfirmButton, 316, 100, 96, 30, TRUE);
+        MoveWindow(m_createCancelButton, 420, 100, 96, 30, TRUE);
+    }
+
+    bool StartupScreenController::HandleRecentProjectDoubleClick(POINT cursorPosition)
+    {
+        POINT listBoxPosition = cursorPosition;
+        ScreenToClient(m_recentListBox, &listBoxPosition);
+
+        const LPARAM positionParameter = MAKELPARAM(listBoxPosition.x, listBoxPosition.y);
+        const LRESULT itemResult = SendMessageW(m_recentListBox, LB_ITEMFROMPOINT, 0, positionParameter);
+        if (HIWORD(itemResult) != 0)
+        {
+            m_lastRecentClickIndex = -1;
+            return false;
+        }
+
+        const int clickedIndex = LOWORD(itemResult);
+        const DWORD currentTime = GetTickCount();
+        const bool isDoubleClick =
+            clickedIndex == m_lastRecentClickIndex
+            && currentTime - m_lastRecentClickTime <= GetDoubleClickTime();
+
+        m_lastRecentClickIndex = clickedIndex;
+        m_lastRecentClickTime = currentTime;
+
+        if (false == isDoubleClick)
+        {
+            return false;
+        }
+
+        const auto projectIndex = static_cast<std::size_t>(clickedIndex);
+        if (projectIndex >= m_recentProjects.size())
+        {
+            return false;
+        }
+
+        m_openProjectFilePath = m_recentProjects[projectIndex].projectFilePath;
+        return true;
     }
 
     std::optional<EditorProjectInfo> StartupScreenController::GetSelectedRecentProject() const

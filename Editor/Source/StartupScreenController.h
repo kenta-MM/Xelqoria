@@ -82,6 +82,28 @@ namespace Xelqoria::Editor
         void RefreshRecentProjects();
 
         /// <summary>
+        /// プロジェクト作成ウィンドウを表示する。
+        /// </summary>
+        void ShowCreateProjectWindow();
+
+        /// <summary>
+        /// プロジェクト作成ウィンドウを閉じる。
+        /// </summary>
+        void HideCreateProjectWindow();
+
+        /// <summary>
+        /// プロジェクト作成ウィンドウのレイアウトを更新する。
+        /// </summary>
+        void UpdateCreateProjectWindowLayout();
+
+        /// <summary>
+        /// 最近使ったプロジェクト一覧のダブルクリックを処理する。
+        /// </summary>
+        /// <param name="cursorPosition">スクリーン座標のカーソル位置。</param>
+        /// <returns>ダブルクリックでプロジェクトを開く要求を設定した場合は true。</returns>
+        bool HandleRecentProjectDoubleClick(POINT cursorPosition);
+
+        /// <summary>
         /// ListBox の選択行に対応するプロジェクトを取得する。
         /// </summary>
         /// <returns>選択中プロジェクト。未選択時は空。</returns>
@@ -105,12 +127,14 @@ namespace Xelqoria::Editor
 
     private:
         HFONT m_defaultFont = nullptr;
-        HWND m_titleLabel = nullptr;
         HWND m_nameLabel = nullptr;
         HWND m_projectNameEdit = nullptr;
         HWND m_folderLabel = nullptr;
         HWND m_projectFolderEdit = nullptr;
         HWND m_browseFolderButton = nullptr;
+        HWND m_createProjectWindow = nullptr;
+        HWND m_createConfirmButton = nullptr;
+        HWND m_createCancelButton = nullptr;
         HWND m_createButton = nullptr;
         HWND m_openButton = nullptr;
         HWND m_recentLabel = nullptr;
@@ -119,6 +143,8 @@ namespace Xelqoria::Editor
         std::vector<EditorProjectInfo> m_recentProjects{};
         bool m_createRequested = false;
         bool m_wasLeftMouseDown = false;
+        DWORD m_lastRecentClickTime = 0;
+        int m_lastRecentClickIndex = -1;
         std::filesystem::path m_openProjectFilePath{};
     };
 }
