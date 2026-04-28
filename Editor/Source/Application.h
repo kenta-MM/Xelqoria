@@ -9,8 +9,11 @@
 #include "EditorShell.h"
 #include "HierarchyPanelController.h"
 #include "InspectorPanelController.h"
+#include "ProjectPanelController.h"
 #include "SceneViewController.h"
 #include "SceneViewRenderer.h"
+#include "StartupScreenController.h"
+#include "RecentProjectsStore.h"
 
 namespace Xelqoria::Editor
 {
@@ -48,6 +51,78 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>初期化に成功した場合は true。</returns>
         bool Initialize();
+
+        /// <summary>
+        /// Editor 本体画面を初期化する。
+        /// </summary>
+        /// <returns>初期化に成功した場合は true。</returns>
+        bool InitializeEditorWorkspace();
+
+        /// <summary>
+        /// ヘッダーのプロジェクトメニューを初期化する。
+        /// </summary>
+        void InitializeProjectMenu();
+
+        /// <summary>
+        /// プロジェクトメニューのコマンドを処理する。
+        /// </summary>
+        /// <param name="commandId">選択されたコマンド ID。</param>
+        void HandleProjectMenuCommand(unsigned commandId);
+
+        /// <summary>
+        /// 終了要求を処理する。
+        /// </summary>
+        /// <returns>終了を継続してよい場合は true。</returns>
+        bool HandleCloseRequest();
+
+        /// <summary>
+        /// 起動画面から新規プロジェクトを作成して Editor へ遷移する。
+        /// </summary>
+        /// <returns>遷移に成功した場合は true。</returns>
+        bool EnterEditorWithNewProject();
+
+        /// <summary>
+        /// 起動画面から既存プロジェクトを開いて Editor へ遷移する。
+        /// </summary>
+        /// <returns>遷移に成功した場合は true。</returns>
+        bool EnterEditorWithExistingProject();
+
+        /// <summary>
+        /// ヘッダー操作から新規プロジェクトを作成する。
+        /// </summary>
+        void CreateProjectFromMenu();
+
+        /// <summary>
+        /// ヘッダー操作から既存プロジェクトを開く。
+        /// </summary>
+        void OpenProjectFromMenu();
+
+        /// <summary>
+        /// 現在のプロジェクトを保存する。
+        /// </summary>
+        /// <returns>保存に成功した場合は true。</returns>
+        bool SaveProjectFromMenu();
+
+        /// <summary>
+        /// 現在のプロジェクトを別名で保存する。
+        /// </summary>
+        void SaveProjectAsFromMenu();
+
+        /// <summary>
+        /// 未保存変更があれば保存確認を表示する。
+        /// </summary>
+        /// <returns>後続操作を継続してよい場合は true。</returns>
+        bool ConfirmSaveIfDirty();
+
+        /// <summary>
+        /// Scene に未保存変更があることを記録する。
+        /// </summary>
+        void MarkProjectDirty();
+
+        /// <summary>
+        /// Scene の未保存変更が保存されたことを記録する。
+        /// </summary>
+        void ClearProjectDirty();
 
         /// <summary>
         /// 終了時のクリーンアップを行う。
@@ -102,15 +177,26 @@ namespace Xelqoria::Editor
             const wchar_t* failureMessage,
             bool pushHistory);
 
+        /// <summary>
+        /// 現在のプロジェクトを最近使った一覧へ記録する。
+        /// </summary>
+        void RecordCurrentProject();
+
     private:
         HINSTANCE m_hInstance = nullptr;
         Core::Window m_window{};
         bool m_running = true;
+        bool m_editorInitialized = false;
+        bool m_projectDirty = false;
+        HMENU m_projectMenu = nullptr;
         EditorShell m_editorShell{};
+        StartupScreenController m_startupScreenController{};
+        RecentProjectsStore m_recentProjectsStore{};
         EditorSceneDocument m_sceneDocument{};
         AssetsPanelController m_assetsPanelController{};
         HierarchyPanelController m_hierarchyPanelController{};
         InspectorPanelController m_inspectorPanelController{};
+        ProjectPanelController m_projectPanelController{};
         SceneViewController m_sceneViewController{};
         SceneViewRenderer m_sceneViewRenderer{};
         EditorCommandController m_editorCommandController{};

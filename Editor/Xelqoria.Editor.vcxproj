@@ -22,11 +22,14 @@
     <ClCompile Include="Source\Application.cpp" />
     <ClCompile Include="Source\AssetsPanelController.cpp" />
     <ClCompile Include="Source\EditorCommandController.cpp" />
+    <ClCompile Include="Source\EditorProject.cpp" />
     <ClCompile Include="Source\EditorSceneDocument.cpp" />
     <ClCompile Include="Source\EditorShell.cpp" />
     <ClCompile Include="Source\Entry.cpp" />
     <ClCompile Include="Source\HierarchyPanelController.cpp" />
     <ClCompile Include="Source\InspectorPanelController.cpp" />
+    <ClCompile Include="Source\ProjectPanelController.cpp" />
+    <ClCompile Include="Source\RecentProjectsStore.cpp" />
     <ClCompile Include="Source\RenderBackendBootstrap.cpp" />
     <ClCompile Include="Source\SceneDropPlacementService.cpp" />
     <ClCompile Include="Source\SceneCommandHistory.cpp" />
@@ -35,18 +38,23 @@
     <ClCompile Include="Source\SceneViewInputTracker.cpp" />
     <ClCompile Include="Source\SceneViewRenderer.cpp" />
     <ClCompile Include="Source\SceneViewStatusPresenter.cpp" />
+    <ClCompile Include="Source\StartupScreenController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.h" />
     <ClInclude Include="Source\AssetsPanelController.h" />
     <ClInclude Include="Source\EditorCommandController.h" />
+    <ClInclude Include="Source\EditorProject.h" />
     <ClInclude Include="Source\EditorSceneDocument.h" />
     <ClInclude Include="Source\EditorShell.h" />
     <ClInclude Include="Source\EditorStringUtils.h" />
     <ClInclude Include="Source\EditorCamera2D.h" />
     <ClInclude Include="Source\HierarchyPanelController.h" />
     <ClInclude Include="Source\InspectorPanelController.h" />
+    <ClInclude Include="Source\ProjectPanelController.h" />
+    <ClInclude Include="Source\RecentProjectsStore.h" />
     <ClInclude Include="Source\RenderBackendBootstrap.h" />
+    <ClInclude Include="Source\StartupScreenController.h" />
     <ClInclude Include="Source\SceneDropPlacementService.h" />
     <ClInclude Include="Source\SceneCommandHistory.h" />
     <ClInclude Include="Source\SceneEditingOperations.h" />
@@ -147,7 +155,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;comdlg32.lib;shell32.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -165,7 +173,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;comdlg32.lib;shell32.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -181,7 +189,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;comdlg32.lib;shell32.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -199,7 +207,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;comdlg32.lib;shell32.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

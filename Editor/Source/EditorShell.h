@@ -136,6 +136,24 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSceneViewPlanLabel() const;
 
         /// <summary>
+        /// プロジェクト概要ラベルを取得する。
+        /// </summary>
+        /// <returns>プロジェクト概要ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetProjectSummaryLabel() const;
+
+        /// <summary>
+        /// プロジェクト内 Scene 一覧 ListBox を取得する。
+        /// </summary>
+        /// <returns>Scene 一覧 ListBox の HWND。</returns>
+        [[nodiscard]] HWND GetProjectSceneListBox() const;
+
+        /// <summary>
+        /// 選択 Scene 詳細ラベルを取得する。
+        /// </summary>
+        /// <returns>選択 Scene 詳細ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetProjectSceneDetailLabel() const;
+
+        /// <summary>
         /// SceneView 描画先 child window を取得する。
         /// </summary>
         /// <returns>SceneView host の HWND。</returns>
@@ -231,6 +249,9 @@ namespace Xelqoria::Editor
         HWND m_inspectorPanel = nullptr;
         HWND m_sceneViewPanel = nullptr;
         HWND m_sceneViewPlanLabel = nullptr;
+        HWND m_projectSummaryLabel = nullptr;
+        HWND m_projectSceneListBox = nullptr;
+        HWND m_projectSceneDetailLabel = nullptr;
         HWND m_sceneViewHost = nullptr;
         HWND m_sceneViewSizeLabel = nullptr;
         HWND m_assetsListBox = nullptr;
