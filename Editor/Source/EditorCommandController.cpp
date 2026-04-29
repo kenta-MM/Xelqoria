@@ -25,17 +25,18 @@ namespace Xelqoria::Editor
     EditorCommandUpdateResult EditorCommandController::Update(
         EditorSceneDocument& document,
         std::optional<Game::EntityId> selectedEntityId,
-        HWND sceneViewPlanLabel)
+        HWND sceneViewPlanLabel,
+        const Core::InputSnapshot& inputSnapshot)
     {
         EditorCommandUpdateResult result{};
 
-        const bool isControlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
-        const bool isUndoDown = isControlDown && (GetAsyncKeyState('Z') & 0x8000) != 0;
-        const bool isRedoDown = isControlDown && (GetAsyncKeyState('Y') & 0x8000) != 0;
-        const bool isDuplicateDown = isControlDown && (GetAsyncKeyState('D') & 0x8000) != 0;
-        const bool isDeleteDown = (GetAsyncKeyState(VK_DELETE) & 0x8000) != 0;
+        const bool isControlDown = inputSnapshot.IsKeyDown(VK_CONTROL);
+        const bool isUndoPressed = isControlDown && inputSnapshot.WasKeyPressed('Z');
+        const bool isRedoPressed = isControlDown && inputSnapshot.WasKeyPressed('Y');
+        const bool isDuplicatePressed = isControlDown && inputSnapshot.WasKeyPressed('D');
+        const bool isDeletePressed = inputSnapshot.WasKeyPressed(VK_DELETE);
 
-        if (isUndoDown && false == m_wasUndoShortcutDown)
+        if (isUndoPressed)
         {
             const auto entry = m_sceneCommandHistory.Undo();
             if (entry.has_value())
@@ -48,7 +49,7 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (isRedoDown && false == m_wasRedoShortcutDown)
+        if (isRedoPressed)
         {
             const auto entry = m_sceneCommandHistory.Redo();
             if (entry.has_value())
@@ -62,7 +63,7 @@ namespace Xelqoria::Editor
         }
 
         Game::Scene* scene = document.GetScene();
-        if (scene && isDuplicateDown && false == m_wasDuplicateShortcutDown)
+        if (scene && isDuplicatePressed)
         {
             const SceneEditResult duplicateResult =
                 SceneEditingOperations::DuplicateSelectedEntity(*scene, selectedEntityId);
@@ -84,7 +85,7 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (scene && isDeleteDown && false == m_wasDeleteShortcutDown)
+        if (scene && isDeletePressed)
         {
             const SceneEditResult deleteResult =
                 SceneEditingOperations::DeleteSelectedEntity(*scene, selectedEntityId);
@@ -106,10 +107,6 @@ namespace Xelqoria::Editor
             }
         }
 
-        m_wasUndoShortcutDown = isUndoDown;
-        m_wasRedoShortcutDown = isRedoDown;
-        m_wasDeleteShortcutDown = isDeleteDown;
-        m_wasDuplicateShortcutDown = isDuplicateDown;
         return result;
     }
 

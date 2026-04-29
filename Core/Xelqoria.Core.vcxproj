@@ -19,10 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\InputSystem.cpp" />
     <ClCompile Include="Source\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\AssetId.h" />
+    <ClInclude Include="Source\InputSystem.h" />
     <ClInclude Include="Source\Window.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

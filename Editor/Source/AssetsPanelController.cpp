@@ -120,7 +120,7 @@ namespace Xelqoria::Editor
         m_selectedSpriteAssetId = m_visibleSpriteAssetIds[index];
     }
 
-    void AssetsPanelController::UpdateDragState()
+    void AssetsPanelController::UpdateDragState(const Core::InputSnapshot& inputSnapshot)
     {
         if (nullptr == m_assetsListBox)
         {
@@ -129,8 +129,7 @@ namespace Xelqoria::Editor
 
         m_assetDragReleasedThisFrame = false;
 
-        POINT screenPoint{};
-        GetCursorPos(&screenPoint);
+        const POINT screenPoint = inputSnapshot.GetCursorScreenPoint();
 
         RECT assetsRect{};
         GetWindowRect(m_assetsListBox, &assetsRect);
@@ -139,7 +138,7 @@ namespace Xelqoria::Editor
             && screenPoint.x < assetsRect.right
             && screenPoint.y >= assetsRect.top
             && screenPoint.y < assetsRect.bottom;
-        const bool isLeftButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+        const bool isLeftButtonDown = inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left);
 
         if (isCursorInside && isLeftButtonDown && false == m_assetsListLeftButtonDown)
         {

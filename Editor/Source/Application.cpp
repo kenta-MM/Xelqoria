@@ -8,6 +8,16 @@
 #include <string>
 
 #include "GraphicsAPI.h"
+#include <ShlObj_core.h>
+#include <shtypes.h>
+#include <Windows.h>
+#include <optional>
+#include <InputSystem.h>
+#include "EditorCommandController.h"
+#include "InspectorPanelController.h"
+#include "SceneEditingOperations.h"
+#include "SceneViewInteractionTypes.h"
+#include <Entity.h>
 
 namespace Xelqoria::Editor
 {
@@ -447,10 +457,13 @@ namespace Xelqoria::Editor
     {
         (void)deltaTime;
 
+        m_inputSystem.Update();
+        const Core::InputSnapshot& inputSnapshot = m_inputSystem.GetSnapshot();
+
         if (false == m_editorInitialized)
         {
             m_startupScreenController.UpdateLayout(m_window.GetHwnd());
-            m_startupScreenController.Update();
+            m_startupScreenController.Update(inputSnapshot);
             if (m_startupScreenController.HasCreateRequest())
             {
                 if (EnterEditorWithNewProject())
@@ -490,7 +503,7 @@ namespace Xelqoria::Editor
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"選択した Scene を読み込みました。");
         }
 
-        m_assetsPanelController.UpdateDragState();
+        m_assetsPanelController.UpdateDragState(inputSnapshot);
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
 
         if (true == m_hierarchyPanelController.SyncSelection())
@@ -498,7 +511,8 @@ namespace Xelqoria::Editor
             RefreshEditorPanels(canAddSpriteComponent, true);
         }
 
-        const SceneEditResult hierarchyEditResult = m_hierarchyPanelController.ApplyEdits(m_sceneDocument.GetScene());
+        const SceneEditResult hierarchyEditResult =
+            m_hierarchyPanelController.ApplyEdits(m_sceneDocument.GetScene(), inputSnapshot);
         if (true == hierarchyEditResult.changed)
         {
             ApplySelectionChange(hierarchyEditResult.selectedEntityId, canAddSpriteComponent, true, true);
@@ -511,7 +525,8 @@ namespace Xelqoria::Editor
         const InspectorApplyResult inspectorResult = m_inspectorPanelController.ApplyEdits(
             m_sceneDocument.GetScene(),
             m_hierarchyPanelController.GetSelectedEntityId(),
-            canAddSpriteComponent);
+            canAddSpriteComponent,
+            inputSnapshot);
         if (true == inspectorResult.changed)
         {
             PersistSceneChanges(
@@ -527,7 +542,8 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetSpriteAssetRegistry(),
             m_sceneDocument.GetTextureAssetRegistry(),
             m_assetsPanelController,
-            m_hierarchyPanelController.GetSelectedEntityId());
+            m_hierarchyPanelController.GetSelectedEntityId(),
+            inputSnapshot);
         if (true == interactionResult.selectionChanged)
         {
             ApplySelectionChange(interactionResult.selectedEntityId, canAddSpriteComponent, true, false);
@@ -572,7 +588,8 @@ namespace Xelqoria::Editor
         const EditorCommandUpdateResult commandResult = m_editorCommandController.Update(
             m_sceneDocument,
             m_hierarchyPanelController.GetSelectedEntityId(),
-            m_editorShell.GetSceneViewPlanLabel());
+            m_editorShell.GetSceneViewPlanLabel(),
+            inputSnapshot);
         if (true == commandResult.changed)
         {
             MarkProjectDirty();

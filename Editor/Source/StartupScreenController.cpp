@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <optional>
 #include "EditorProject.h"
+#include <InputSystem.h>
 
 namespace Xelqoria::Editor
 {
@@ -97,19 +98,19 @@ namespace Xelqoria::Editor
         if (nullptr == (m_projectNameEdit = CreateChildWindow(m_createProjectWindow, hInstance, L"Edit", L"NewProject", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL))) {
             return false;
         }
-        if (false == (m_folderLabel = CreateChildWindow(m_createProjectWindow, hInstance, L"Static", L"保存先フォルダ", WS_CHILD | WS_VISIBLE))) {
+        if (nullptr == (m_folderLabel = CreateChildWindow(m_createProjectWindow, hInstance, L"Static", L"保存先フォルダ", WS_CHILD | WS_VISIBLE))) {
             return false;
         }
-        if (false == (m_projectFolderEdit = CreateChildWindow(m_createProjectWindow, hInstance, L"Edit", L".", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL))) {
+        if (nullptr == (m_projectFolderEdit = CreateChildWindow(m_createProjectWindow, hInstance, L"Edit", L".", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL))) {
             return false;
         }
-        if (false == (m_browseFolderButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"参照", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON))) {
+        if (nullptr == (m_browseFolderButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"参照", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON))) {
             return false;
         }
-        if (false == (m_createConfirmButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"作成", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON))) {
+        if (nullptr == (m_createConfirmButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"作成", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON))) {
             return false;
         }
-        if (false == (m_createCancelButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"キャンセル", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON))) {
+        if (nullptr == (m_createCancelButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"キャンセル", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON))) {
             return false;
         }
 
@@ -139,9 +140,9 @@ namespace Xelqoria::Editor
         MoveWindow(m_recentListBox, panelLeft, top + 84, panelWidth, 180, TRUE);
     }
 
-    void StartupScreenController::Update()
+    void StartupScreenController::Update(const Core::InputSnapshot& inputSnapshot)
     {
-        const bool isLeftMouseDown = 0 != (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+        const bool isLeftMouseDown = inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left);
         if (false == m_wasLeftMouseDown || isLeftMouseDown)
         {
             m_wasLeftMouseDown = isLeftMouseDown;
@@ -150,8 +151,7 @@ namespace Xelqoria::Editor
 
         m_wasLeftMouseDown = false;
 
-        POINT cursorPosition{};
-        GetCursorPos(&cursorPosition);
+        const POINT cursorPosition = inputSnapshot.GetCursorScreenPoint();
         const HWND clickedWindow = WindowFromPoint(cursorPosition);
         if (clickedWindow == m_createButton)
         {

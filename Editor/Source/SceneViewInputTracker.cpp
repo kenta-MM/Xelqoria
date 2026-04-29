@@ -35,7 +35,8 @@ namespace Xelqoria::Editor
         const EditorCamera2D& camera,
         std::uint32_t sceneViewWidth,
         std::uint32_t sceneViewHeight,
-        std::optional<Game::EntityId> currentSelectedEntityId)
+        std::optional<Game::EntityId> currentSelectedEntityId,
+        const Core::InputSnapshot& inputSnapshot)
     {
         SceneViewInteractionResult result{};
 
@@ -45,8 +46,7 @@ namespace Xelqoria::Editor
             return result;
         }
 
-        POINT screenPoint{};
-        GetCursorPos(&screenPoint);
+        const POINT screenPoint = inputSnapshot.GetCursorScreenPoint();
 
         RECT sceneHostRect{};
         GetWindowRect(m_sceneViewHost, &sceneHostRect);
@@ -56,7 +56,7 @@ namespace Xelqoria::Editor
             && screenPoint.y >= sceneHostRect.top
             && screenPoint.y < sceneHostRect.bottom;
 
-        const bool isLeftButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+        const bool isLeftButtonDown = inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left);
         if (isCursorInside && isLeftButtonDown && false == m_sceneViewLeftButtonDown)
         {
             POINT clientPoint = screenPoint;

@@ -8,6 +8,7 @@
 #include "Assets/SpriteAssetRegistry.h"
 #include "AssetsPanelController.h"
 #include "EditorCamera2D.h"
+#include "InputSystem.h"
 #include "Scene.h"
 #include "SceneViewInteractionTypes.h"
 #include "SceneViewOverlay.h"
@@ -38,6 +39,7 @@ namespace Xelqoria::Editor
         /// <param name="sceneViewWidth">SceneView 幅。</param>
         /// <param name="sceneViewHeight">SceneView 高さ。</param>
         /// <param name="currentSelectedEntityId">現在選択中の EntityId。</param>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
         /// <returns>入力更新結果。</returns>
         SceneViewInteractionResult UpdateInteraction(
             Game::Scene* scene,
@@ -47,7 +49,8 @@ namespace Xelqoria::Editor
             const EditorCamera2D& camera,
             std::uint32_t sceneViewWidth,
             std::uint32_t sceneViewHeight,
-            std::optional<Game::EntityId> currentSelectedEntityId);
+            std::optional<Game::EntityId> currentSelectedEntityId,
+            const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
         /// 現在のドラッグプレビュー状態を取得する。

@@ -3,6 +3,7 @@
 #include <Windows.h>
 
 #include "AssetsPanelController.h"
+#include "InputSystem.h"
 #include "Window.h"
 #include "EditorCommandController.h"
 #include "EditorSceneDocument.h"
@@ -185,6 +186,7 @@ namespace Xelqoria::Editor
     private:
         HINSTANCE m_hInstance = nullptr;
         Core::Window m_window{};
+        Core::InputSystem m_inputSystem{};
         bool m_running = true;
         bool m_editorInitialized = false;
         bool m_projectDirty = false;

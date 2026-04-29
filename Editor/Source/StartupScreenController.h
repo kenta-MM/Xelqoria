@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "EditorProject.h"
+#include "InputSystem.h"
 #include "RecentProjectsStore.h"
 
 namespace Xelqoria::Editor
@@ -33,7 +34,8 @@ namespace Xelqoria::Editor
         /// <summary>
         /// 入力状態を更新し、プロジェクト操作要求を検出する。
         /// </summary>
-        void Update();
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
+        void Update(const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
         /// 起動画面を非表示にする。

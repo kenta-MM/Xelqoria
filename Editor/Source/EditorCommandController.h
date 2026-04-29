@@ -4,6 +4,7 @@
 #include <optional>
 
 #include "EditorSceneDocument.h"
+#include "InputSystem.h"
 #include "SceneCommandHistory.h"
 #include <Entity.h>
 
@@ -51,11 +52,13 @@ namespace Xelqoria::Editor
         /// <param name="document">更新対象ドキュメント。</param>
         /// <param name="selectedEntityId">現在選択中の EntityId。</param>
         /// <param name="sceneViewPlanLabel">状態表示に使うラベル。</param>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
         /// <returns>コマンド適用結果。</returns>
         EditorCommandUpdateResult Update(
             EditorSceneDocument& document,
             std::optional<Game::EntityId> selectedEntityId,
-            HWND sceneViewPlanLabel);
+            HWND sceneViewPlanLabel,
+            const Core::InputSnapshot& inputSnapshot);
 
     private:
         /// <summary>
@@ -82,9 +85,5 @@ namespace Xelqoria::Editor
 
     private:
         SceneCommandHistory m_sceneCommandHistory{};
-        bool m_wasUndoShortcutDown = false;
-        bool m_wasRedoShortcutDown = false;
-        bool m_wasDeleteShortcutDown = false;
-        bool m_wasDuplicateShortcutDown = false;
     };
 }
