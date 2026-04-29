@@ -18,6 +18,7 @@
 #include "SceneEditingOperations.h"
 #include "SceneViewInteractionTypes.h"
 #include <Entity.h>
+#include <cstdint>
 
 namespace Xelqoria::Editor
 {
@@ -144,6 +145,11 @@ namespace Xelqoria::Editor
             {
                 return HandleCloseRequest();
             });
+        m_window.SetResizeHandler(
+            [this](std::uint32_t width, std::uint32_t height)
+            {
+                HandleWindowResized(width, height);
+            });
 
         if (false == m_startupScreenController.Initialize(m_window.GetHwnd(), m_hInstance))
         {
@@ -207,6 +213,7 @@ namespace Xelqoria::Editor
         RefreshSceneViewSelectionStatus();
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         m_editorInitialized = true;
+        RedrawWindow(m_window.GetHwnd(), nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
         return true;
     }
 
@@ -254,6 +261,31 @@ namespace Xelqoria::Editor
     bool Application::HandleCloseRequest()
     {
         return ConfirmSaveIfDirty();
+    }
+
+    void Application::HandleWindowResized(std::uint32_t width, std::uint32_t height)
+    {
+        if (0 == width || 0 == height)
+        {
+            return;
+        }
+
+        if (false == m_editorInitialized)
+        {
+            m_startupScreenController.UpdateLayout(m_window.GetHwnd());
+            return;
+        }
+
+        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
+        if (sceneViewSizeChanged)
+        {
+            m_sceneViewController.OnViewportChanged(
+                m_editorShell.GetSceneViewWidth(),
+                m_editorShell.GetSceneViewHeight());
+            m_sceneViewRenderer.Resize(
+                m_editorShell.GetSceneViewWidth(),
+                m_editorShell.GetSceneViewHeight());
+        }
     }
 
     bool Application::EnterEditorWithNewProject()

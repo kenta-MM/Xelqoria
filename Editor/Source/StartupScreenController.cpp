@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cwchar>
 #include <string>
 #include <ShlObj_core.h>
 #include <shtypes.h>
@@ -21,6 +22,35 @@ namespace Xelqoria::Editor
         constexpr int CreateConfirmButtonId = 4304;
         constexpr int CreateCancelButtonId = 4305;
         constexpr const wchar_t* CreateProjectWindowClassName = L"XelqoriaCreateProjectWindow";
+
+        UINT GetWindowDpi(HWND window)
+        {
+            HMODULE user32 = GetModuleHandleW(L"user32.dll");
+            if (nullptr != user32)
+            {
+                using GetDpiForWindowFunction = UINT(WINAPI*)(HWND);
+                auto getDpiForWindow =
+                    reinterpret_cast<GetDpiForWindowFunction>(GetProcAddress(user32, "GetDpiForWindow"));
+                if (nullptr != getDpiForWindow)
+                {
+                    const UINT dpi = getDpiForWindow(window);
+                    if (0 != dpi)
+                    {
+                        return dpi;
+                    }
+                }
+            }
+
+            HDC screenDc = GetDC(nullptr);
+            if (nullptr == screenDc)
+            {
+                return 96;
+            }
+
+            const int dpi = GetDeviceCaps(screenDc, LOGPIXELSX);
+            ReleaseDC(nullptr, screenDc);
+            return dpi > 0 ? static_cast<UINT>(dpi) : 96u;
+        }
 
         LRESULT CALLBACK CreateProjectWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         {
@@ -57,7 +87,7 @@ namespace Xelqoria::Editor
 
     bool StartupScreenController::Initialize(HWND parentWindow, HINSTANCE hInstance)
     {
-        m_defaultFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+        (void)RefreshDpiResources(parentWindow);
         m_createButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクト作成", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_openButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクトを開く", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_recentLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"最近使ったプロジェクト一覧", WS_CHILD | WS_VISIBLE);
@@ -77,11 +107,11 @@ namespace Xelqoria::Editor
             WS_EX_DLGMODALFRAME,
             CreateProjectWindowClassName,
             L"プロジェクト作成",
-            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_CLIPCHILDREN,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
-            560,
-            180,
+            ScaleMetric(560),
+            ScaleMetric(180),
             parentWindow,
             nullptr,
             hInstance,
@@ -124,20 +154,68 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    void StartupScreenController::UpdateLayout(HWND parentWindow) const
+    StartupScreenController::~StartupScreenController()
     {
+        if (m_ownsDefaultFont && nullptr != m_defaultFont)
+        {
+            HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+            const std::array<HWND, 12> controls{
+                m_nameLabel,
+                m_projectNameEdit,
+                m_folderLabel,
+                m_projectFolderEdit,
+                m_browseFolderButton,
+                m_createProjectWindow,
+                m_createConfirmButton,
+                m_createCancelButton,
+                m_createButton,
+                m_openButton,
+                m_recentLabel,
+                m_recentListBox
+            };
+            for (HWND control : controls)
+            {
+                if (nullptr != control)
+                {
+                    SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(stockFont), FALSE);
+                }
+            }
+
+            DeleteObject(m_defaultFont);
+            m_defaultFont = nullptr;
+            m_ownsDefaultFont = false;
+        }
+    }
+
+    void StartupScreenController::UpdateLayout(HWND parentWindow)
+    {
+        const bool dpiChanged = RefreshDpiResources(parentWindow);
+
         RECT clientRect{};
         GetClientRect(parentWindow, &clientRect);
         const int clientWidth = clientRect.right - clientRect.left;
         const int clientHeight = clientRect.bottom - clientRect.top;
-        const int panelWidth = 520;
-        const int panelLeft = (std::max)(24, (clientWidth - panelWidth) / 2);
-        const int top = (std::max)(24, (clientHeight - 264) / 2);
+        if (m_layoutInitialized
+            && false == dpiChanged
+            && m_lastLayoutClientWidth == clientWidth
+            && m_lastLayoutClientHeight == clientHeight
+            && m_lastLayoutDpi == m_currentDpi)
+        {
+            return;
+        }
 
-        MoveWindow(m_createButton, panelLeft, top, 250, 32, TRUE);
-        MoveWindow(m_openButton, panelLeft + 270, top, 250, 32, TRUE);
-        MoveWindow(m_recentLabel, panelLeft, top + 56, panelWidth, 24, TRUE);
-        MoveWindow(m_recentListBox, panelLeft, top + 84, panelWidth, 180, TRUE);
+        const int panelWidth = ScaleMetric(520);
+        const int panelLeft = (std::max)(ScaleMetric(24), (clientWidth - panelWidth) / 2);
+        const int top = (std::max)(ScaleMetric(24), (clientHeight - ScaleMetric(264)) / 2);
+
+        MoveWindow(m_createButton, panelLeft, top, ScaleMetric(250), ScaleMetric(32), TRUE);
+        MoveWindow(m_openButton, panelLeft + ScaleMetric(270), top, ScaleMetric(250), ScaleMetric(32), TRUE);
+        MoveWindow(m_recentLabel, panelLeft, top + ScaleMetric(56), panelWidth, ScaleMetric(24), TRUE);
+        MoveWindow(m_recentListBox, panelLeft, top + ScaleMetric(84), panelWidth, ScaleMetric(180), TRUE);
+        m_layoutInitialized = true;
+        m_lastLayoutClientWidth = clientWidth;
+        m_lastLayoutClientHeight = clientHeight;
+        m_lastLayoutDpi = m_currentDpi;
     }
 
     void StartupScreenController::Update(const Core::InputSnapshot& inputSnapshot)
@@ -327,17 +405,17 @@ namespace Xelqoria::Editor
         }
 
         HWND parentWindow = GetParent(m_createButton);
+        RefreshDpiResources(parentWindow);
         RECT parentRect{};
-        RECT windowRect{};
         GetWindowRect(parentWindow, &parentRect);
-        GetWindowRect(m_createProjectWindow, &windowRect);
 
-        const int width = windowRect.right - windowRect.left;
-        const int height = windowRect.bottom - windowRect.top;
+        const int width = ScaleMetric(560);
+        const int height = ScaleMetric(180);
         const int left = parentRect.left + ((parentRect.right - parentRect.left) - width) / 2;
         const int top = parentRect.top + ((parentRect.bottom - parentRect.top) - height) / 2;
 
         SetWindowPos(m_createProjectWindow, HWND_TOP, left, top, width, height, SWP_SHOWWINDOW);
+        UpdateCreateProjectWindowLayout();
         SetFocus(m_projectNameEdit);
     }
 
@@ -362,13 +440,13 @@ namespace Xelqoria::Editor
 
     void StartupScreenController::UpdateCreateProjectWindowLayout()
     {
-        MoveWindow(m_nameLabel, 16, 18, 140, 24, TRUE);
-        MoveWindow(m_projectNameEdit, 156, 14, 360, 28, TRUE);
-        MoveWindow(m_folderLabel, 16, 58, 140, 24, TRUE);
-        MoveWindow(m_projectFolderEdit, 156, 54, 276, 28, TRUE);
-        MoveWindow(m_browseFolderButton, 444, 54, 72, 28, TRUE);
-        MoveWindow(m_createConfirmButton, 316, 100, 96, 30, TRUE);
-        MoveWindow(m_createCancelButton, 420, 100, 96, 30, TRUE);
+        MoveWindow(m_nameLabel, ScaleMetric(16), ScaleMetric(18), ScaleMetric(140), ScaleMetric(24), TRUE);
+        MoveWindow(m_projectNameEdit, ScaleMetric(156), ScaleMetric(14), ScaleMetric(360), ScaleMetric(28), TRUE);
+        MoveWindow(m_folderLabel, ScaleMetric(16), ScaleMetric(58), ScaleMetric(140), ScaleMetric(24), TRUE);
+        MoveWindow(m_projectFolderEdit, ScaleMetric(156), ScaleMetric(54), ScaleMetric(276), ScaleMetric(28), TRUE);
+        MoveWindow(m_browseFolderButton, ScaleMetric(444), ScaleMetric(54), ScaleMetric(72), ScaleMetric(28), TRUE);
+        MoveWindow(m_createConfirmButton, ScaleMetric(316), ScaleMetric(100), ScaleMetric(96), ScaleMetric(30), TRUE);
+        MoveWindow(m_createCancelButton, ScaleMetric(420), ScaleMetric(100), ScaleMetric(96), ScaleMetric(30), TRUE);
     }
 
     bool StartupScreenController::HandleRecentProjectDoubleClick(POINT cursorPosition)
@@ -453,6 +531,71 @@ namespace Xelqoria::Editor
         }
 
         return handle;
+    }
+
+    bool StartupScreenController::RefreshDpiResources(HWND parentWindow)
+    {
+        UINT dpi = GetWindowDpi(parentWindow);
+        if (0 == dpi)
+        {
+            dpi = 96;
+        }
+
+        if (nullptr != m_defaultFont && m_currentDpi == dpi)
+        {
+            return false;
+        }
+
+        HFONT previousFont = m_defaultFont;
+        const bool ownedPreviousFont = m_ownsDefaultFont;
+        m_currentDpi = dpi;
+
+        LOGFONTW fontDesc{};
+        fontDesc.lfHeight = -MulDiv(9, static_cast<int>(m_currentDpi), 72);
+        fontDesc.lfWeight = FW_NORMAL;
+        wcscpy_s(fontDesc.lfFaceName, L"Segoe UI");
+        m_defaultFont = CreateFontIndirectW(&fontDesc);
+        m_ownsDefaultFont = nullptr != m_defaultFont;
+        if (nullptr == m_defaultFont)
+        {
+            m_defaultFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+            m_ownsDefaultFont = false;
+        }
+
+        const std::array<HWND, 12> controls{
+            m_nameLabel,
+            m_projectNameEdit,
+            m_folderLabel,
+            m_projectFolderEdit,
+            m_browseFolderButton,
+            m_createProjectWindow,
+            m_createConfirmButton,
+            m_createCancelButton,
+            m_createButton,
+            m_openButton,
+            m_recentLabel,
+            m_recentListBox
+        };
+
+        for (HWND control : controls)
+        {
+            if (nullptr != control)
+            {
+                SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(m_defaultFont), TRUE);
+            }
+        }
+
+        if (ownedPreviousFont && nullptr != previousFont)
+        {
+            DeleteObject(previousFont);
+        }
+
+        return true;
+    }
+
+    int StartupScreenController::ScaleMetric(int value) const
+    {
+        return MulDiv(value, static_cast<int>(m_currentDpi), 96);
     }
 
     std::wstring StartupScreenController::GetText(HWND control) const

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include <cstdint>
 
 #include "AssetsPanelController.h"
 #include "InputSystem.h"
@@ -75,6 +76,13 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>終了を継続してよい場合は true。</returns>
         bool HandleCloseRequest();
+
+        /// <summary>
+        /// メインウィンドウのクライアント領域サイズ変更を Editor UI へ反映する。
+        /// </summary>
+        /// <param name="width">新しいクライアント領域の幅。</param>
+        /// <param name="height">新しいクライアント領域の高さ。</param>
+        void HandleWindowResized(std::uint32_t width, std::uint32_t height);
 
         /// <summary>
         /// 起動画面から新規プロジェクトを作成して Editor へ遷移する。

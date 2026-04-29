@@ -26,10 +26,15 @@ namespace Xelqoria::Editor
         bool Initialize(HWND parentWindow, HINSTANCE hInstance);
 
         /// <summary>
+        /// StartupScreenController が所有する UI リソースを破棄する。
+        /// </summary>
+        ~StartupScreenController();
+
+        /// <summary>
         /// 起動画面を現在のウィンドウサイズへ合わせる。
         /// </summary>
         /// <param name="parentWindow">親ウィンドウ。</param>
-        void UpdateLayout(HWND parentWindow) const;
+        void UpdateLayout(HWND parentWindow);
 
         /// <summary>
         /// 入力状態を更新し、プロジェクト操作要求を検出する。
@@ -110,6 +115,20 @@ namespace Xelqoria::Editor
         void UpdateCreateProjectWindowLayout();
 
         /// <summary>
+        /// DPI に合わせた UI フォントを作成して各 child window へ適用する。
+        /// </summary>
+        /// <param name="parentWindow">DPI の基準にする親ウィンドウ。</param>
+        /// <returns>DPI リソースを更新した場合は true。</returns>
+        bool RefreshDpiResources(HWND parentWindow);
+
+        /// <summary>
+        /// 指定値を現在 DPI に合わせて拡大縮小する。
+        /// </summary>
+        /// <param name="value">96 DPI 基準の値。</param>
+        /// <returns>DPI 適用後の値。</returns>
+        [[nodiscard]] int ScaleMetric(int value) const;
+
+        /// <summary>
         /// 最近使ったプロジェクト一覧のダブルクリックを処理する。
         /// </summary>
         /// <param name="cursorPosition">スクリーン座標のカーソル位置。</param>
@@ -140,6 +159,8 @@ namespace Xelqoria::Editor
 
     private:
         HFONT m_defaultFont = nullptr;
+        UINT m_currentDpi = 96;
+        bool m_ownsDefaultFont = false;
         HWND m_nameLabel = nullptr;
         HWND m_projectNameEdit = nullptr;
         HWND m_folderLabel = nullptr;
@@ -158,6 +179,10 @@ namespace Xelqoria::Editor
         bool m_wasLeftMouseDown = false;
         DWORD m_lastRecentClickTime = 0;
         int m_lastRecentClickIndex = -1;
+        bool m_layoutInitialized = false;
+        int m_lastLayoutClientWidth = 0;
+        int m_lastLayoutClientHeight = 0;
+        UINT m_lastLayoutDpi = 0;
         std::filesystem::path m_openProjectFilePath{};
     };
 }
