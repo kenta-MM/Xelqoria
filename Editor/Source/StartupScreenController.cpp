@@ -240,6 +240,43 @@ namespace Xelqoria::Editor
         HideCreateProjectWindow();
     }
 
+    void StartupScreenController::Destroy()
+    {
+        HWND parentWindow = nullptr;
+        if (nullptr != m_createButton)
+        {
+            parentWindow = GetParent(m_createButton);
+        }
+
+        std::array<HWND*, 4> startupControls{
+            &m_createButton,
+            &m_openButton,
+            &m_recentLabel,
+            &m_recentListBox
+        };
+
+        for (HWND* control : startupControls)
+        {
+            DestroyWindowHandle(*control);
+        }
+
+        DestroyWindowHandle(m_createProjectWindow);
+        m_nameLabel = nullptr;
+        m_projectNameEdit = nullptr;
+        m_folderLabel = nullptr;
+        m_projectFolderEdit = nullptr;
+        m_browseFolderButton = nullptr;
+        m_createConfirmButton = nullptr;
+        m_createCancelButton = nullptr;
+        m_createRequested = false;
+        m_openProjectFilePath.clear();
+
+        if (nullptr != parentWindow)
+        {
+            RedrawWindow(parentWindow, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+        }
+    }
+
     bool StartupScreenController::HasCreateRequest() const
     {
         return m_createRequested;
@@ -310,6 +347,17 @@ namespace Xelqoria::Editor
         {
             ShowWindow(m_createProjectWindow, SW_HIDE);
         }
+    }
+
+    void StartupScreenController::DestroyWindowHandle(HWND& window)
+    {
+        if (nullptr == window)
+        {
+            return;
+        }
+
+        DestroyWindow(window);
+        window = nullptr;
     }
 
     void StartupScreenController::UpdateCreateProjectWindowLayout()

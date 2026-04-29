@@ -43,6 +43,11 @@ namespace Xelqoria::Editor
         void Hide();
 
         /// <summary>
+        /// 起動画面のウィンドウ群を破棄する。
+        /// </summary>
+        void Destroy();
+
+        /// <summary>
         /// 新規作成要求があるかを取得する。
         /// </summary>
         /// <returns>新規作成要求がある場合は true。</returns>
@@ -92,6 +97,12 @@ namespace Xelqoria::Editor
         /// プロジェクト作成ウィンドウを閉じる。
         /// </summary>
         void HideCreateProjectWindow();
+
+        /// <summary>
+        /// ウィンドウを破棄し、保持ハンドルを空にする。
+        /// </summary>
+        /// <param name="window">破棄対象のウィンドウハンドル。</param>
+        void DestroyWindowHandle(HWND& window);
 
         /// <summary>
         /// プロジェクト作成ウィンドウのレイアウトを更新する。

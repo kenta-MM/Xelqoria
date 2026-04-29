@@ -1,1 +1,2 @@
+NewProject2|D:/github/Xelqoria/Editor/NewProject2/NewProject2.proj
 NewProject|./NewProject/NewProject.proj
