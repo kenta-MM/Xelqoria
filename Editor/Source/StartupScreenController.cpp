@@ -2,10 +2,13 @@
 
 #include <algorithm>
 #include <array>
-#include <commdlg.h>
-#include <cwchar>
-#include <shlobj.h>
 #include <string>
+#include <ShlObj_core.h>
+#include <shtypes.h>
+#include <Windows.h>
+#include <filesystem>
+#include <optional>
+#include "EditorProject.h"
 
 namespace Xelqoria::Editor
 {
@@ -55,7 +58,7 @@ namespace Xelqoria::Editor
     {
         m_defaultFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
         m_createButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクト作成", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
-        m_openButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクトオープン", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_openButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクトを開く", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_recentLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"最近使ったプロジェクト一覧", WS_CHILD | WS_VISIBLE);
         m_recentListBox = CreateChildWindow(
             parentWindow,
@@ -88,26 +91,25 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        m_nameLabel = CreateChildWindow(m_createProjectWindow, hInstance, L"Static", L"プロジェクト名", WS_CHILD | WS_VISIBLE);
-        m_projectNameEdit = CreateChildWindow(m_createProjectWindow, hInstance, L"Edit", L"NewProject", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
-        m_folderLabel = CreateChildWindow(m_createProjectWindow, hInstance, L"Static", L"保存先フォルダ", WS_CHILD | WS_VISIBLE);
-        m_projectFolderEdit = CreateChildWindow(m_createProjectWindow, hInstance, L"Edit", L".", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
-        m_browseFolderButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"参照", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
-        m_createConfirmButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"作成", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON);
-        m_createCancelButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"キャンセル", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
-
-        if (nullptr == m_createButton
-            || nullptr == m_openButton
-            || nullptr == m_recentLabel
-            || nullptr == m_recentListBox
-            || nullptr == m_nameLabel
-            || nullptr == m_projectNameEdit
-            || nullptr == m_folderLabel
-            || nullptr == m_projectFolderEdit
-            || nullptr == m_browseFolderButton
-            || nullptr == m_createConfirmButton
-            || nullptr == m_createCancelButton)
-        {
+        if (nullptr == (m_nameLabel = CreateChildWindow(m_createProjectWindow, hInstance, L"Static", L"プロジェクト名", WS_CHILD | WS_VISIBLE))) {
+            return false;
+        }
+        if (nullptr == (m_projectNameEdit = CreateChildWindow(m_createProjectWindow, hInstance, L"Edit", L"NewProject", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL))) {
+            return false;
+        }
+        if (false == (m_folderLabel = CreateChildWindow(m_createProjectWindow, hInstance, L"Static", L"保存先フォルダ", WS_CHILD | WS_VISIBLE))) {
+            return false;
+        }
+        if (false == (m_projectFolderEdit = CreateChildWindow(m_createProjectWindow, hInstance, L"Edit", L".", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL))) {
+            return false;
+        }
+        if (false == (m_browseFolderButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"参照", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON))) {
+            return false;
+        }
+        if (false == (m_createConfirmButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"作成", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON))) {
+            return false;
+        }
+        if (false == (m_createCancelButton = CreateChildWindow(m_createProjectWindow, hInstance, L"Button", L"キャンセル", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON))) {
             return false;
         }
 
@@ -121,7 +123,7 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    void StartupScreenController::UpdateLayout(HWND parentWindow)
+    void StartupScreenController::UpdateLayout(HWND parentWindow) const
     {
         RECT clientRect{};
         GetClientRect(parentWindow, &clientRect);

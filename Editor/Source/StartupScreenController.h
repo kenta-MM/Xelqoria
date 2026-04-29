@@ -28,7 +28,7 @@ namespace Xelqoria::Editor
         /// 起動画面を現在のウィンドウサイズへ合わせる。
         /// </summary>
         /// <param name="parentWindow">親ウィンドウ。</param>
-        void UpdateLayout(HWND parentWindow);
+        void UpdateLayout(HWND parentWindow) const;
 
         /// <summary>
         /// 入力状態を更新し、プロジェクト操作要求を検出する。
