@@ -6,6 +6,7 @@
 
 #include "SceneEditingOperations.h"
 #include "EditorShell.h"
+#include "InputSystem.h"
 #include "Scene.h"
 #include <Entity.h>
 
@@ -105,8 +106,9 @@ namespace Xelqoria::Editor
         /// Hierarchy パネル上の編集操作を現在の Scene へ反映する。
         /// </summary>
         /// <param name="scene">更新対象の Scene。</param>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
         /// <returns>適用結果。</returns>
-        SceneEditResult ApplyEdits(Game::Scene* scene);
+        SceneEditResult ApplyEdits(Game::Scene* scene, const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
         /// 現在選択中の EntityId を設定する。
@@ -130,7 +132,6 @@ namespace Xelqoria::Editor
         std::vector<Game::EntityId> m_visibleEntityIds{};
         std::optional<Game::EntityId> m_selectedEntityId{};
         std::optional<Game::EntityId> m_lastEditedEntityId{};
-        bool m_wasEnterKeyDown = false;
         HierarchyButtonInputState m_buttonInputState{};
     };
 }

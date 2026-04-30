@@ -6,6 +6,7 @@
 #include "AssetId.h"
 #include "Assets/SpriteAssetRegistry.h"
 #include "EditorShell.h"
+#include "InputSystem.h"
 #include "TextureAssetRegistry.h"
 
 namespace Xelqoria::Editor
@@ -41,7 +42,8 @@ namespace Xelqoria::Editor
         /// <summary>
         /// Assets パネル由来のドラッグ状態を更新する。
         /// </summary>
-        void UpdateDragState();
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
+        void UpdateDragState(const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
         /// ドラッグ解放を SceneView 側で処理した後に状態を確定する。

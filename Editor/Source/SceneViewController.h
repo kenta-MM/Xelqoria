@@ -6,6 +6,7 @@
 
 #include "EditorCamera2D.h"
 #include "EditorShell.h"
+#include "InputSystem.h"
 #include "SceneDropPlacementService.h"
 #include "SceneViewInputTracker.h"
 #include "SceneViewInteractionTypes.h"
@@ -46,13 +47,15 @@ namespace Xelqoria::Editor
         /// <param name="textureAssetRegistry">Texture レジストリ。</param>
         /// <param name="assetsPanelController">Assets パネル状態。</param>
         /// <param name="currentSelectedEntityId">現在選択中の EntityId。</param>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
         /// <returns>入力更新結果。</returns>
         SceneViewInteractionResult UpdateInteraction(
             Game::Scene* scene,
             const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
             const Graphics::TextureAssetRegistry& textureAssetRegistry,
             const AssetsPanelController& assetsPanelController,
-            std::optional<Game::EntityId> currentSelectedEntityId);
+            std::optional<Game::EntityId> currentSelectedEntityId,
+            const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
         /// 保留中の SceneView ドロップを Scene へ反映する。

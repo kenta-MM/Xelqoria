@@ -2,6 +2,29 @@
 
 #include "Application.h"
 
+namespace
+{
+    void EnablePerMonitorDpiAwareness()
+    {
+        HMODULE user32 = GetModuleHandleW(L"user32.dll");
+        if (nullptr == user32)
+        {
+            return;
+        }
+
+        using SetProcessDpiAwarenessContextFunction = BOOL(WINAPI*)(HANDLE);
+        auto setProcessDpiAwarenessContext =
+            reinterpret_cast<SetProcessDpiAwarenessContextFunction>(GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
+        if (nullptr == setProcessDpiAwarenessContext)
+        {
+            return;
+        }
+
+        constexpr LONG_PTR PerMonitorAwareV2 = -4;
+        setProcessDpiAwarenessContext(reinterpret_cast<HANDLE>(PerMonitorAwareV2));
+    }
+}
+
 /// <summary>
 /// エディタアプリケーションのエントリーポイントを提供する。
 /// </summary>
@@ -19,6 +42,8 @@ int APIENTRY wWinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(pCmdLine);
     UNREFERENCED_PARAMETER(nCmdShow);
+
+    EnablePerMonitorDpiAwareness();
 
     Xelqoria::Editor::Application app(hInstance);
     return app.Run();

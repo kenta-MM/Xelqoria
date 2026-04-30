@@ -34,7 +34,8 @@ namespace Xelqoria::Editor
         const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
         const Graphics::TextureAssetRegistry& textureAssetRegistry,
         const AssetsPanelController& assetsPanelController,
-        std::optional<Game::EntityId> currentSelectedEntityId)
+        std::optional<Game::EntityId> currentSelectedEntityId,
+        const Core::InputSnapshot& inputSnapshot)
     {
         const SceneViewInteractionResult result = m_inputTracker.UpdateInteraction(
             scene,
@@ -44,7 +45,8 @@ namespace Xelqoria::Editor
             m_sceneViewCamera,
             m_sceneViewWidth,
             m_sceneViewHeight,
-            currentSelectedEntityId);
+            currentSelectedEntityId,
+            inputSnapshot);
         const std::optional<Game::EntityId> nextSelectedEntityId =
             true == result.selectionChanged ? result.selectedEntityId : currentSelectedEntityId;
         m_statusPresenter.PresentInteractionStatus(
