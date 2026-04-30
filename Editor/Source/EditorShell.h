@@ -21,6 +21,11 @@ namespace Xelqoria::Editor
         bool Initialize(HWND parentWindow, HINSTANCE hInstance);
 
         /// <summary>
+        /// EditorShell が所有する UI リソースを破棄する。
+        /// </summary>
+        ~EditorShell();
+
+        /// <summary>
         /// 現在の親ウィンドウサイズに合わせてレイアウトを更新する。
         /// </summary>
         /// <param name="parentWindow">親となる Editor メインウィンドウ。</param>
@@ -218,10 +223,45 @@ namespace Xelqoria::Editor
         void LayoutSceneViewPanel(const LayoutMetrics& metrics);
 
         /// <summary>
+        /// GroupBox を背面へ配置し、同じ親を持つ中身コントロールを前面に保つ。
+        /// </summary>
+        void SendGroupBoxesToBack();
+
+        /// <summary>
+        /// 中間再描画を抑制して child window を配置する。
+        /// </summary>
+        /// <param name="window">配置対象の child window。</param>
+        /// <param name="x">親クライアント座標 X。</param>
+        /// <param name="y">親クライアント座標 Y。</param>
+        /// <param name="width">幅。</param>
+        /// <param name="height">高さ。</param>
+        void MoveChildWindowNoRedraw(HWND window, int x, int y, int width, int height) const;
+
+        /// <summary>
+        /// 配置更新後に親と child window 群を同期再描画する。
+        /// </summary>
+        /// <param name="parentWindow">親となる Editor メインウィンドウ。</param>
+        void RedrawLayout(HWND parentWindow) const;
+
+        /// <summary>
         /// SceneView host の現在サイズを反映する。
         /// </summary>
         /// <returns>サイズが変化した場合は true。</returns>
         bool UpdateSceneViewHostSize();
+
+        /// <summary>
+        /// DPI に合わせた UI フォントを作成して各 child window へ適用する。
+        /// </summary>
+        /// <param name="parentWindow">DPI の基準にする親ウィンドウ。</param>
+        /// <returns>DPI リソースを更新した場合は true。</returns>
+        bool RefreshDpiResources(HWND parentWindow);
+
+        /// <summary>
+        /// 指定値を現在 DPI に合わせて拡大縮小する。
+        /// </summary>
+        /// <param name="value">96 DPI 基準の値。</param>
+        /// <returns>DPI 適用後の値。</returns>
+        [[nodiscard]] int ScaleMetric(int value) const;
 
     private:
         /// <summary>
@@ -244,6 +284,8 @@ namespace Xelqoria::Editor
 
     private:
         HFONT m_defaultFont = nullptr;
+        UINT m_currentDpi = 96;
+        bool m_ownsDefaultFont = false;
         HWND m_hierarchyPanel = nullptr;
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;
@@ -272,5 +314,9 @@ namespace Xelqoria::Editor
         HWND m_spriteComponentActionButton = nullptr;
         std::uint32_t m_sceneViewWidth = 0;
         std::uint32_t m_sceneViewHeight = 0;
+        bool m_layoutInitialized = false;
+        int m_lastLayoutClientWidth = 0;
+        int m_lastLayoutClientHeight = 0;
+        UINT m_lastLayoutDpi = 0;
     };
 }

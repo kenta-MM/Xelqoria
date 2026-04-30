@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\AssetIdTests.cpp" />
+    <ClCompile Include="Source\InputSystemTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\third_party\googletest\Xelqoria.GoogleTest.vcxproj">

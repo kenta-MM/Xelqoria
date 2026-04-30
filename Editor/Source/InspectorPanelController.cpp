@@ -97,7 +97,8 @@ namespace Xelqoria::Editor
     InspectorApplyResult InspectorPanelController::ApplyEdits(
         Game::Scene* scene,
         std::optional<Game::EntityId> selectedEntityId,
-        bool canAddSpriteComponent)
+        bool canAddSpriteComponent,
+        const Core::InputSnapshot& inputSnapshot)
     {
         InspectorApplyResult result{};
         if (false == selectedEntityId.has_value() || nullptr == scene)
@@ -145,7 +146,7 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (true == ConsumeButtonClick(m_spriteComponentActionButton))
+        if (true == ConsumeButtonClick(m_spriteComponentActionButton, inputSnapshot))
         {
             result.changed = ApplySpriteComponentAction(entity->get(), canAddSpriteComponent) || result.changed;
             if (false == entity->get().HasSpriteComponent())
@@ -181,20 +182,21 @@ namespace Xelqoria::Editor
         m_lastInspectorEntityId.reset();
     }
 
-    bool InspectorPanelController::ConsumeButtonClick(HWND buttonHandle)
+    bool InspectorPanelController::ConsumeButtonClick(
+        HWND buttonHandle,
+        const Core::InputSnapshot& inputSnapshot)
     {
         if (nullptr == buttonHandle || false == IsWindowVisible(buttonHandle) || false == IsWindowEnabled(buttonHandle))
         {
             return false;
         }
 
-        POINT cursorScreenPoint{};
-        GetCursorPos(&cursorScreenPoint);
+        const POINT cursorScreenPoint = inputSnapshot.GetCursorScreenPoint();
 
         RECT buttonRect{};
         GetWindowRect(buttonHandle, &buttonRect);
         const bool isCursorInsideButton = PtInRect(&buttonRect, cursorScreenPoint) != FALSE;
-        const bool isLeftMouseButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+        const bool isLeftMouseButtonDown = inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left);
 
         if (isLeftMouseButtonDown && false == m_wasLeftMouseButtonDown && true == isCursorInsideButton)
         {

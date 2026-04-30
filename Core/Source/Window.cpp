@@ -2,6 +2,12 @@
 #include <Windows.h>
 #include <utility>
 
+#ifndef WM_DPICHANGED
+#define WM_DPICHANGED 0x02E0
+#endif
+#include <cstdint>
+#include <functional>
+
 namespace Xelqoria::Core
 {
 
@@ -31,6 +37,7 @@ namespace Xelqoria::Core
         wc.lpfnWndProc = &Window::StaticWndProc;
         wc.hInstance = m_hInstance;
         wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
         wc.lpszClassName = m_className.c_str();
 
         if (!RegisterClassW(&wc))
@@ -41,7 +48,11 @@ namespace Xelqoria::Core
         const DWORD style = WS_OVERLAPPEDWINDOW;
 
         RECT rc{ 0, 0, static_cast<LONG>(m_width), static_cast<LONG>(m_height )};
-        AdjustWindowRect(&rc, style, FALSE);
+        if(!AdjustWindowRect(&rc, style, FALSE))
+        {
+            UnregisterClassW(wc.lpszClassName, m_hInstance);
+            return false;
+        }
 
         m_hWnd = CreateWindowW(
             m_className.c_str(),
@@ -97,6 +108,11 @@ namespace Xelqoria::Core
     void Window::SetCloseRequestHandler(std::function<bool()> handler)
     {
         m_closeRequestHandler = std::move(handler);
+    }
+
+    void Window::SetResizeHandler(std::function<void(uint32_t, uint32_t)> handler)
+    {
+        m_resizeHandler = std::move(handler);
     }
 
     uint32_t Window::GetWidth() const 
@@ -156,8 +172,37 @@ namespace Xelqoria::Core
             PostQuitMessage(0);
             return 0;
 
-        // 将来ここで Resize を拾って DX_System::BufferResize を呼ぶ
-        // case WM_SIZE: ...
+        case WM_SIZE:
+            if (wp != SIZE_MINIMIZED)
+            {
+                m_width = static_cast<uint32_t>(LOWORD(lp));
+                m_height = static_cast<uint32_t>(HIWORD(lp));
+                if (m_resizeHandler)
+                {
+                    m_resizeHandler(m_width, m_height);
+                }
+
+                InvalidateRect(hWnd, nullptr, TRUE);
+            }
+            return 0;
+
+        case WM_DPICHANGED:
+            if (0 != lp)
+            {
+                const RECT* suggestedRect = reinterpret_cast<RECT*>(lp);
+                SetWindowPos(
+                    hWnd,
+                    nullptr,
+                    suggestedRect->left,
+                    suggestedRect->top,
+                    suggestedRect->right - suggestedRect->left,
+                    suggestedRect->bottom - suggestedRect->top,
+                    SWP_NOZORDER | SWP_NOACTIVATE);
+            }
+
+            InvalidateRect(hWnd, nullptr, TRUE);
+            return 0;
+
         case WM_KEYDOWN:
             if (wp == VK_ESCAPE) 
             {

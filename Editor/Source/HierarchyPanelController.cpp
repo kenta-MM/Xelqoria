@@ -134,7 +134,9 @@ namespace Xelqoria::Editor
         return false;
     }
 
-    SceneEditResult HierarchyPanelController::ApplyEdits(Game::Scene* scene)
+    SceneEditResult HierarchyPanelController::ApplyEdits(
+        Game::Scene* scene,
+        const Core::InputSnapshot& inputSnapshot)
     {
         SceneEditResult result{};
         if (nullptr == scene)
@@ -146,12 +148,10 @@ namespace Xelqoria::Editor
             ? scene->FindEntity(*m_selectedEntityId)
             : std::optional<std::reference_wrapper<Game::Entity>>{};
         const bool isNameEditFocused = GetFocus() == m_hierarchyNameEdit;
-        const bool isEnterKeyDown = (GetAsyncKeyState(VK_RETURN) & 0x8000) != 0;
-        POINT cursorScreenPoint{};
-        GetCursorPos(&cursorScreenPoint);
+        const bool isEnterPressed = inputSnapshot.WasKeyPressed(VK_RETURN);
         const HierarchyButtonFrameInput frameInput{
-            (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0,
-            cursorScreenPoint
+            inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
+            inputSnapshot.GetCursorScreenPoint()
         };
 
         if (selectedEntity.has_value())
@@ -159,7 +159,7 @@ namespace Xelqoria::Editor
             wchar_t nameBuffer[256]{};
             GetWindowTextW(m_hierarchyNameEdit, nameBuffer, static_cast<int>(std::size(nameBuffer)));
 
-            if ((false == isNameEditFocused || (true == isEnterKeyDown && false == m_wasEnterKeyDown))
+            if ((false == isNameEditFocused || true == isEnterPressed)
                 && true == SceneEditingOperations::RenameEntity(selectedEntity->get(), ToNarrowString(nameBuffer)))
             {
                 result.changed = true;
@@ -188,7 +188,6 @@ namespace Xelqoria::Editor
             m_buttonInputState.pressedButtonHandle = nullptr;
         }
 
-        m_wasEnterKeyDown = isEnterKeyDown;
         m_buttonInputState.wasLeftMouseButtonDown = frameInput.isLeftMouseButtonDown;
         return result;
     }

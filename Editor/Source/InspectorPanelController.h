@@ -5,6 +5,7 @@
 #include <optional>
 
 #include "EditorShell.h"
+#include "InputSystem.h"
 #include "SceneEditingOperations.h"
 #include "Scene.h"
 
@@ -76,11 +77,13 @@ namespace Xelqoria::Editor
         /// <param name="scene">更新対象の Scene。</param>
         /// <param name="selectedEntityId">現在選択中の EntityId。</param>
         /// <param name="canAddSpriteComponent">SpriteComponent を追加できる SpriteAsset があるか。</param>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
         /// <returns>適用結果。</returns>
         InspectorApplyResult ApplyEdits(
             Game::Scene* scene,
             std::optional<Game::EntityId> selectedEntityId,
-            bool canAddSpriteComponent);
+            bool canAddSpriteComponent,
+            const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
         /// 直前反映 Entity の追跡状態を破棄する。
@@ -141,8 +144,9 @@ namespace Xelqoria::Editor
         /// ボタン押下の完了を検出してクリックとして消費する。
         /// </summary>
         /// <param name="buttonHandle">監視対象のボタン HWND。</param>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
         /// <returns>今回のフレームでクリックが成立した場合は true。</returns>
-        bool ConsumeButtonClick(HWND buttonHandle);
+        bool ConsumeButtonClick(HWND buttonHandle, const Core::InputSnapshot& inputSnapshot);
 
         HWND m_inspectorSummaryLabel = nullptr;
         HWND m_transformSectionLabel = nullptr;
