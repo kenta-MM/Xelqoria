@@ -1,172 +1,365 @@
 #include "AssetsPanelController.h"
 
 #include <algorithm>
-#include <cstdlib>
-#include "EditorStringUtils.h"
-#include <Windows.h>
+#include <array>
+#include <CommCtrl.h>
 #include <cstdio>
 #include <iterator>
-#include <string>
-#include <vector>
-#include <AssetId.h>
-#include "EditorShell.h"
-#include <Assets/SpriteAssetRegistry.h>
-#include <TextureAssetRegistry.h>
+#include <Shellapi.h>
+#include <system_error>
+#include <utility>
+#include <Windows.h>
 
 namespace Xelqoria::Editor
 {
     namespace
     {
-        constexpr int AssetDragStartThresholdPixels = 6;
+        constexpr int NameColumnIndex = 0;
+        constexpr int ModifiedTimeColumnIndex = 1;
+        constexpr int TypeColumnIndex = 2;
+        constexpr int SizeColumnIndex = 3;
 
         /// <summary>
-        /// 2 点間のドラッグ開始判定に使う距離を取得する。
+        /// ディレクトリエントリをフォルダ優先、名前順で並べる。
         /// </summary>
-        /// <param name="lhs">始点座標。</param>
-        /// <param name="rhs">終点座標。</param>
-        /// <returns>各軸の絶対差分のうち大きい方。</returns>
-        const int GetMaxAxisDragDelta(POINT lhs, POINT rhs)
+        /// <param name="lhs">比較する左辺。</param>
+        /// <param name="rhs">比較する右辺。</param>
+        /// <returns>左辺を先に表示する場合は true。</returns>
+        [[nodiscard]] bool CompareDirectoryEntry(
+            const std::filesystem::directory_entry& lhs,
+            const std::filesystem::directory_entry& rhs)
         {
-            const int dx = std::abs(lhs.x - rhs.x);
-            const int dy = std::abs(lhs.y - rhs.y);
-            return (std::max)(dx, dy);
+            std::error_code lhsErrorCode;
+            std::error_code rhsErrorCode;
+            const bool lhsIsDirectory = lhs.is_directory(lhsErrorCode);
+            const bool rhsIsDirectory = rhs.is_directory(rhsErrorCode);
+            if (lhsIsDirectory != rhsIsDirectory)
+            {
+                return lhsIsDirectory;
+            }
+
+            return lhs.path().filename().wstring() < rhs.path().filename().wstring();
+        }
+
+        /// <summary>
+        /// ファイルパスの表示名を取得する。
+        /// </summary>
+        /// <param name="path">表示対象パス。</param>
+        /// <returns>ファイル名。空の場合はパス文字列。</returns>
+        [[nodiscard]] std::wstring GetDisplayName(const std::filesystem::path& path)
+        {
+            const std::wstring fileName = path.filename().wstring();
+            if (false == fileName.empty())
+            {
+                return fileName;
+            }
+
+            return path.wstring();
+        }
+
+        /// <summary>
+        /// FILETIME を表示用のローカル日時へ変換する。
+        /// </summary>
+        /// <param name="fileTime">変換する FILETIME。</param>
+        /// <returns>日時表示文字列。</returns>
+        [[nodiscard]] std::wstring FormatFileTime(const FILETIME& fileTime)
+        {
+            FILETIME localFileTime{};
+            if (FALSE == FileTimeToLocalFileTime(&fileTime, &localFileTime))
+            {
+                return {};
+            }
+
+            SYSTEMTIME systemTime{};
+            if (FALSE == FileTimeToSystemTime(&localFileTime, &systemTime))
+            {
+                return {};
+            }
+
+            wchar_t text[64]{};
+            std::swprintf(
+                text,
+                std::size(text),
+                L"%04u/%02u/%02u %02u:%02u",
+                static_cast<unsigned>(systemTime.wYear),
+                static_cast<unsigned>(systemTime.wMonth),
+                static_cast<unsigned>(systemTime.wDay),
+                static_cast<unsigned>(systemTime.wHour),
+                static_cast<unsigned>(systemTime.wMinute));
+            return text;
+        }
+
+        /// <summary>
+        /// ファイルサイズを表示文字列へ変換する。
+        /// </summary>
+        /// <param name="fileSize">バイト単位のサイズ。</param>
+        /// <returns>サイズ表示文字列。</returns>
+        [[nodiscard]] std::wstring FormatFileSize(unsigned long long fileSize)
+        {
+            wchar_t text[64]{};
+            if (fileSize < 1024ull)
+            {
+                std::swprintf(text, std::size(text), L"%llu B", fileSize);
+                return text;
+            }
+
+            const unsigned long long kibibytes = (fileSize + 1023ull) / 1024ull;
+            if (kibibytes < 1024ull)
+            {
+                std::swprintf(text, std::size(text), L"%llu KB", kibibytes);
+                return text;
+            }
+
+            const unsigned long long mebibytes = (kibibytes + 1023ull) / 1024ull;
+            std::swprintf(text, std::size(text), L"%llu MB", mebibytes);
+            return text;
+        }
+
+        /// <summary>
+        /// システムアイコン番号を取得する。
+        /// </summary>
+        /// <param name="path">対象パス。</param>
+        /// <param name="fileAttributes">ファイル属性。</param>
+        /// <param name="useFileAttributes">属性のみで判定する場合は true。</param>
+        /// <returns>システムイメージリスト上のアイコン番号。</returns>
+        [[nodiscard]] int GetSystemIconIndex(
+            const std::filesystem::path& path,
+            DWORD fileAttributes,
+            bool useFileAttributes)
+        {
+            SHFILEINFOW fileInfo{};
+            UINT flags = SHGFI_SYSICONINDEX | SHGFI_SMALLICON;
+            if (useFileAttributes)
+            {
+                flags |= SHGFI_USEFILEATTRIBUTES;
+            }
+
+            SHGetFileInfoW(
+                path.c_str(),
+                fileAttributes,
+                &fileInfo,
+                sizeof(fileInfo),
+                flags);
+            return fileInfo.iIcon;
+        }
+
+        /// <summary>
+        /// フォルダ用のシステムアイコン番号を取得する。
+        /// </summary>
+        /// <returns>システムイメージリスト上のフォルダアイコン番号。</returns>
+        [[nodiscard]] int GetFolderIconIndex()
+        {
+            return GetSystemIconIndex(
+                std::filesystem::path(L"folder"),
+                FILE_ATTRIBUTE_DIRECTORY,
+                true);
+        }
+
+        /// <summary>
+        /// Windows の種類表示名を取得する。
+        /// </summary>
+        /// <param name="path">対象パス。</param>
+        /// <param name="fileAttributes">ファイル属性。</param>
+        /// <param name="useFileAttributes">属性のみで判定する場合は true。</param>
+        /// <returns>種類表示名。</returns>
+        [[nodiscard]] std::wstring GetTypeName(
+            const std::filesystem::path& path,
+            DWORD fileAttributes,
+            bool useFileAttributes)
+        {
+            SHFILEINFOW fileInfo{};
+            UINT flags = SHGFI_TYPENAME;
+            if (useFileAttributes)
+            {
+                flags |= SHGFI_USEFILEATTRIBUTES;
+            }
+
+            if (0 == SHGetFileInfoW(
+                    path.c_str(),
+                    fileAttributes,
+                    &fileInfo,
+                    sizeof(fileInfo),
+                    flags))
+            {
+                return {};
+            }
+
+            return fileInfo.szTypeName;
+        }
+
+        /// <summary>
+        /// ファイルシステム項目から表示データを構築する。
+        /// </summary>
+        /// <param name="entry">対象ディレクトリエントリ。</param>
+        /// <returns>表示データ。</returns>
+        [[nodiscard]] AssetListEntry BuildEntry(const std::filesystem::directory_entry& entry)
+        {
+            AssetListEntry result{};
+            result.path = entry.path();
+            result.displayName = GetDisplayName(entry.path());
+
+            WIN32_FILE_ATTRIBUTE_DATA attributeData{};
+            if (FALSE == GetFileAttributesExW(entry.path().c_str(), GetFileExInfoStandard, &attributeData))
+            {
+                result.typeName = L"Unknown";
+                return result;
+            }
+
+            result.isDirectory = 0 != (attributeData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+            result.modifiedTimeText = FormatFileTime(attributeData.ftLastWriteTime);
+            result.iconIndex = result.isDirectory
+                ? GetFolderIconIndex()
+                : GetSystemIconIndex(entry.path(), attributeData.dwFileAttributes, false);
+            result.typeName = result.isDirectory
+                ? L"ファイル フォルダー"
+                : GetTypeName(entry.path(), attributeData.dwFileAttributes, false);
+            if (false == result.isDirectory)
+            {
+                const unsigned long long fileSize =
+                    (static_cast<unsigned long long>(attributeData.nFileSizeHigh) << 32)
+                    | static_cast<unsigned long long>(attributeData.nFileSizeLow);
+                result.sizeText = FormatFileSize(fileSize);
+            }
+
+            return result;
         }
     }
 
     void AssetsPanelController::Bind(const EditorShell& shell)
     {
-        m_assetsListBox = shell.GetAssetsListBox();
+        m_assetsListView = shell.GetAssetsListView();
         m_assetsSummaryLabel = shell.GetAssetsSummaryLabel();
+        InitializeListView();
     }
 
-    void AssetsPanelController::Refresh(
-        const std::vector<Core::AssetId>& registeredSpriteAssetIds,
-        const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
-        const Graphics::TextureAssetRegistry& textureAssetRegistry)
+    void AssetsPanelController::Refresh(const std::optional<EditorProjectInfo>& projectInfo)
     {
-        m_registeredSpriteAssetCount = registeredSpriteAssetIds.size();
-        m_visibleSpriteAssetIds.clear();
-
-        for (const Core::AssetId& assetId : registeredSpriteAssetIds)
+        if (false == projectInfo.has_value())
         {
-            if (assetId.IsEmpty())
-            {
-                continue;
-            }
-
-            const auto spriteAsset = spriteAssetRegistry.ResolveSpriteAsset(assetId);
-            if (false == spriteAsset.has_value())
-            {
-                continue;
-            }
-
-            if (false == static_cast<bool>(textureAssetRegistry.ResolveTexture(spriteAsset->textureAssetId)))
-            {
-                continue;
-            }
-
-            m_visibleSpriteAssetIds.push_back(assetId);
+            m_assetsRootDirectory.clear();
+            m_currentDirectory.clear();
+            m_visibleEntries.clear();
+            m_selectedFilePath.clear();
+            m_selectedSpriteAssetId = {};
+            m_draggingSpriteAssetId = {};
+            RefreshListView();
+            RefreshSummaryLabel();
+            return;
         }
 
-        SendMessageW(m_assetsListBox, LB_RESETCONTENT, 0, 0);
-        for (const Core::AssetId& assetId : m_visibleSpriteAssetIds)
+        const std::filesystem::path rootDirectory = projectInfo->projectFilePath.parent_path();
+        if (rootDirectory != m_assetsRootDirectory)
         {
-            const std::wstring text = ToWideString(assetId.GetValue());
-            SendMessageW(m_assetsListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text.c_str()));
+            m_assetsRootDirectory = rootDirectory;
+            m_currentDirectory = rootDirectory;
+            m_selectedFilePath.clear();
+            m_lastClickTick = 0;
+            m_lastClickedIndex = -1;
         }
 
-        if (m_selectedSpriteAssetId.IsEmpty() && false == m_visibleSpriteAssetIds.empty())
-        {
-            m_selectedSpriteAssetId = m_visibleSpriteAssetIds.front();
-        }
-
-        int selectedIndex = LB_ERR;
-        for (std::size_t index = 0; index < m_visibleSpriteAssetIds.size(); ++index)
-        {
-            if (m_visibleSpriteAssetIds[index] == m_selectedSpriteAssetId)
-            {
-                selectedIndex = static_cast<int>(index);
-                break;
-            }
-        }
-
-        if (selectedIndex != LB_ERR)
-        {
-            SendMessageW(m_assetsListBox, LB_SETCURSEL, static_cast<WPARAM>(selectedIndex), 0);
-        }
-
+        RebuildVisibleEntries();
+        RefreshListView();
         RefreshSummaryLabel();
     }
 
     void AssetsPanelController::SyncSelection()
     {
-        if (nullptr == m_assetsListBox)
+        SyncSelectedPathFromListView();
+    }
+
+    bool AssetsPanelController::HandleNotify(LPARAM notifyParameter)
+    {
+        if (0 == notifyParameter || nullptr == m_assetsListView)
         {
-            return;
+            return false;
         }
 
-        const LRESULT selectedIndex = SendMessageW(m_assetsListBox, LB_GETCURSEL, 0, 0);
-        if (selectedIndex == LB_ERR)
+        const NMHDR* notifyHeader = reinterpret_cast<NMHDR*>(notifyParameter);
+        if (notifyHeader->hwndFrom != m_assetsListView)
         {
-            return;
+            return false;
         }
 
-        const auto index = static_cast<std::size_t>(selectedIndex);
-        if (index >= m_visibleSpriteAssetIds.size())
+        if (notifyHeader->code == NM_DBLCLK)
         {
-            return;
+            const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
+            if (0 <= itemActivate->iItem)
+            {
+                return TryOpenEntry(static_cast<std::size_t>(itemActivate->iItem));
+            }
+
+            return false;
         }
 
-        m_selectedSpriteAssetId = m_visibleSpriteAssetIds[index];
+        if (notifyHeader->code == LVN_KEYDOWN)
+        {
+            const NMLVKEYDOWN* keyDown = reinterpret_cast<NMLVKEYDOWN*>(notifyParameter);
+            if (keyDown->wVKey == VK_RETURN)
+            {
+                return TryOpenSelectedEntry();
+            }
+        }
+
+        if (notifyHeader->code == LVN_ITEMCHANGED)
+        {
+            const NMLISTVIEW* listView = reinterpret_cast<NMLISTVIEW*>(notifyParameter);
+            const bool becameSelected = 0 != (listView->uChanged & LVIF_STATE)
+                && 0 == (listView->uOldState & LVIS_SELECTED)
+                && 0 != (listView->uNewState & LVIS_SELECTED);
+            if (becameSelected)
+            {
+                SyncSelectedPathFromListView();
+            }
+        }
+
+        return false;
     }
 
     void AssetsPanelController::UpdateDragState(const Core::InputSnapshot& inputSnapshot)
     {
-        if (nullptr == m_assetsListBox)
+        if (nullptr == m_assetsListView)
         {
             return;
         }
 
         m_assetDragReleasedThisFrame = false;
+        m_isAssetDragActive = false;
+        m_draggingSpriteAssetId = {};
 
-        const POINT screenPoint = inputSnapshot.GetCursorScreenPoint();
-
-        RECT assetsRect{};
-        GetWindowRect(m_assetsListBox, &assetsRect);
-
-        const bool isCursorInside = screenPoint.x >= assetsRect.left
-            && screenPoint.x < assetsRect.right
-            && screenPoint.y >= assetsRect.top
-            && screenPoint.y < assetsRect.bottom;
-        const bool isLeftButtonDown = inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left);
-
-        if (isCursorInside && isLeftButtonDown && false == m_assetsListLeftButtonDown)
+        if (inputSnapshot.WasKeyPressed(VK_RETURN) && GetFocus() == m_assetsListView)
         {
-            m_assetsListLeftButtonDown = true;
-            m_assetDragStartScreenPoint = screenPoint;
+            (void)TryOpenSelectedEntry();
+            return;
         }
 
-        if (m_assetsListLeftButtonDown
-            && false == m_isAssetDragActive
-            && isLeftButtonDown
-            && false == m_selectedSpriteAssetId.IsEmpty()
-            && GetMaxAxisDragDelta(m_assetDragStartScreenPoint, screenPoint) >= AssetDragStartThresholdPixels)
+        if (false == inputSnapshot.WasMouseButtonPressed(Core::MouseButton::Left))
         {
-            m_isAssetDragActive = true;
-            m_draggingSpriteAssetId = m_selectedSpriteAssetId;
-
-            const std::string debugLine =
-                "Editor::AssetsPanelController began dragging Sprite AssetId '" + m_draggingSpriteAssetId.GetValue() + "'.\n";
-            ::OutputDebugStringA(debugLine.c_str());
-            RefreshSummaryLabel();
+            return;
         }
 
-        if (false == isLeftButtonDown)
+        const int hitIndex = HitTestListView(inputSnapshot.GetCursorScreenPoint());
+        if (hitIndex < 0)
         {
-            const bool wasDragging = m_isAssetDragActive;
-            m_assetsListLeftButtonDown = false;
-            m_isAssetDragActive = false;
-            m_assetDragReleasedThisFrame = wasDragging;
+            return;
+        }
+
+        ListView_SetItemState(
+            m_assetsListView,
+            hitIndex,
+            LVIS_SELECTED | LVIS_FOCUSED,
+            LVIS_SELECTED | LVIS_FOCUSED);
+        SetFocus(m_assetsListView);
+        SyncSelectedPathFromListView();
+
+        const ULONGLONG currentTick = GetTickCount64();
+        const bool isDoubleClick = hitIndex == m_lastClickedIndex
+            && currentTick - m_lastClickTick <= static_cast<ULONGLONG>(GetDoubleClickTime());
+        m_lastClickedIndex = hitIndex;
+        m_lastClickTick = currentTick;
+
+        if (isDoubleClick)
+        {
+            (void)TryOpenEntry(static_cast<std::size_t>(hitIndex));
         }
     }
 
@@ -198,31 +391,303 @@ namespace Xelqoria::Editor
 
     bool AssetsPanelController::HasVisibleSpriteAssets() const
     {
-        return false == m_visibleSpriteAssetIds.empty();
+        return false;
+    }
+
+    void AssetsPanelController::InitializeListView()
+    {
+        if (nullptr == m_assetsListView || m_listViewInitialized)
+        {
+            return;
+        }
+
+        SHFILEINFOW fileInfo{};
+        const HIMAGELIST imageList = reinterpret_cast<HIMAGELIST>(SHGetFileInfoW(
+            L"C:\\",
+            FILE_ATTRIBUTE_DIRECTORY,
+            &fileInfo,
+            sizeof(fileInfo),
+            SHGFI_SYSICONINDEX | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES));
+        if (nullptr != imageList)
+        {
+            ListView_SetImageList(m_assetsListView, imageList, LVSIL_SMALL);
+        }
+
+        const std::array<std::pair<const wchar_t*, int>, 4> columns{
+            std::pair<const wchar_t*, int>{ L"名前", 140 },
+            std::pair<const wchar_t*, int>{ L"更新日時", 120 },
+            std::pair<const wchar_t*, int>{ L"種類", 120 },
+            std::pair<const wchar_t*, int>{ L"サイズ", 72 }
+        };
+
+        for (std::size_t index = 0; index < columns.size(); ++index)
+        {
+            LVCOLUMNW column{};
+            column.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+            column.pszText = const_cast<wchar_t*>(columns[index].first);
+            column.cx = columns[index].second;
+            column.iSubItem = static_cast<int>(index);
+            ListView_InsertColumn(m_assetsListView, static_cast<int>(index), &column);
+        }
+
+        m_listViewInitialized = true;
+    }
+
+    void AssetsPanelController::RebuildVisibleEntries()
+    {
+        m_visibleEntries.clear();
+        if (m_currentDirectory.empty())
+        {
+            return;
+        }
+
+        std::error_code errorCode;
+        if (false == std::filesystem::is_directory(m_currentDirectory, errorCode) || errorCode)
+        {
+            return;
+        }
+
+        AppendParentEntry();
+        AppendCurrentDirectoryEntries();
+    }
+
+    void AssetsPanelController::AppendParentEntry()
+    {
+        if (m_currentDirectory.empty() || m_currentDirectory == m_assetsRootDirectory)
+        {
+            return;
+        }
+
+        AssetListEntry parentEntry{};
+        parentEntry.path = m_currentDirectory.parent_path();
+        parentEntry.displayName = L"..";
+        parentEntry.typeName = L"親フォルダー";
+        parentEntry.iconIndex = GetFolderIconIndex();
+        parentEntry.isDirectory = true;
+        parentEntry.isParentLink = true;
+        m_visibleEntries.push_back(parentEntry);
+    }
+
+    void AssetsPanelController::AppendCurrentDirectoryEntries()
+    {
+        std::error_code errorCode;
+        std::vector<std::filesystem::directory_entry> entries{};
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(m_currentDirectory, errorCode))
+        {
+            if (errorCode)
+            {
+                return;
+            }
+
+            entries.push_back(entry);
+        }
+
+        std::sort(entries.begin(), entries.end(), CompareDirectoryEntry);
+        for (const std::filesystem::directory_entry& entry : entries)
+        {
+            m_visibleEntries.push_back(BuildEntry(entry));
+        }
+    }
+
+    void AssetsPanelController::RefreshListView()
+    {
+        if (nullptr == m_assetsListView)
+        {
+            return;
+        }
+
+        ListView_DeleteAllItems(m_assetsListView);
+        int selectedIndex = -1;
+        for (std::size_t index = 0; index < m_visibleEntries.size(); ++index)
+        {
+            const AssetListEntry& entry = m_visibleEntries[index];
+
+            LVITEMW item{};
+            item.mask = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM;
+            item.iItem = static_cast<int>(index);
+            item.iSubItem = NameColumnIndex;
+            item.pszText = const_cast<wchar_t*>(entry.displayName.c_str());
+            item.iImage = entry.iconIndex;
+            item.lParam = static_cast<LPARAM>(index);
+            ListView_InsertItem(m_assetsListView, &item);
+
+            ListView_SetItemText(
+                m_assetsListView,
+                static_cast<int>(index),
+                ModifiedTimeColumnIndex,
+                const_cast<wchar_t*>(entry.modifiedTimeText.c_str()));
+            ListView_SetItemText(
+                m_assetsListView,
+                static_cast<int>(index),
+                TypeColumnIndex,
+                const_cast<wchar_t*>(entry.typeName.c_str()));
+            ListView_SetItemText(
+                m_assetsListView,
+                static_cast<int>(index),
+                SizeColumnIndex,
+                const_cast<wchar_t*>(entry.sizeText.c_str()));
+
+            if (false == m_selectedFilePath.empty() && entry.path == m_selectedFilePath)
+            {
+                selectedIndex = static_cast<int>(index);
+            }
+        }
+
+        if (0 <= selectedIndex)
+        {
+            ListView_SetItemState(
+                m_assetsListView,
+                selectedIndex,
+                LVIS_SELECTED | LVIS_FOCUSED,
+                LVIS_SELECTED | LVIS_FOCUSED);
+        }
+    }
+
+    void AssetsPanelController::SyncSelectedPathFromListView()
+    {
+        const int selectedIndex = GetSelectedListViewIndex();
+        if (selectedIndex < 0 || static_cast<std::size_t>(selectedIndex) >= m_visibleEntries.size())
+        {
+            return;
+        }
+
+        const AssetListEntry& entry = m_visibleEntries[static_cast<std::size_t>(selectedIndex)];
+        if (entry.isParentLink)
+        {
+            m_selectedFilePath.clear();
+        }
+        else
+        {
+            m_selectedFilePath = entry.path;
+        }
+
+        RefreshSummaryLabel();
+    }
+
+    bool AssetsPanelController::TryOpenEntry(std::size_t entryIndex)
+    {
+        if (entryIndex >= m_visibleEntries.size())
+        {
+            return false;
+        }
+
+        const AssetListEntry entry = m_visibleEntries[entryIndex];
+        if (false == entry.isDirectory)
+        {
+            return false;
+        }
+
+        if (entry.isParentLink && m_currentDirectory == m_assetsRootDirectory)
+        {
+            return false;
+        }
+
+        m_currentDirectory = entry.path;
+        if (m_currentDirectory.empty())
+        {
+            m_currentDirectory = m_assetsRootDirectory;
+        }
+
+        m_selectedFilePath.clear();
+        m_lastClickedIndex = -1;
+        m_lastClickTick = 0;
+        RebuildVisibleEntries();
+        RefreshListView();
+        RefreshSummaryLabel();
+        return true;
+    }
+
+    bool AssetsPanelController::TryOpenSelectedEntry()
+    {
+        const int selectedIndex = GetSelectedListViewIndex();
+        if (selectedIndex < 0)
+        {
+            return false;
+        }
+
+        return TryOpenEntry(static_cast<std::size_t>(selectedIndex));
+    }
+
+    int AssetsPanelController::GetSelectedListViewIndex() const
+    {
+        if (nullptr == m_assetsListView)
+        {
+            return -1;
+        }
+
+        return ListView_GetNextItem(m_assetsListView, -1, LVNI_SELECTED);
+    }
+
+    int AssetsPanelController::HitTestListView(POINT screenPoint) const
+    {
+        if (nullptr == m_assetsListView)
+        {
+            return -1;
+        }
+
+        POINT clientPoint = screenPoint;
+        ScreenToClient(m_assetsListView, &clientPoint);
+
+        LVHITTESTINFO hitTest{};
+        hitTest.pt = clientPoint;
+        const int hitIndex = ListView_HitTest(m_assetsListView, &hitTest);
+        if (hitIndex < 0 || 0 == (hitTest.flags & LVHT_ONITEM))
+        {
+            return -1;
+        }
+
+        return hitIndex;
     }
 
     void AssetsPanelController::RefreshSummaryLabel()
     {
-        wchar_t summaryText[256]{};
-        if (m_isAssetDragActive && false == m_draggingSpriteAssetId.IsEmpty())
+        if (nullptr == m_assetsSummaryLabel)
         {
-            const std::wstring draggingAssetId = ToWideString(m_draggingSpriteAssetId.GetValue());
+            return;
+        }
+
+        if (m_assetsRootDirectory.empty() || m_currentDirectory.empty())
+        {
+            SetWindowTextW(m_assetsSummaryLabel, L"Assets: project not opened");
+            return;
+        }
+
+        std::error_code errorCode;
+        const std::filesystem::path relativeCurrentPath = std::filesystem::relative(
+            m_currentDirectory,
+            m_assetsRootDirectory,
+            errorCode);
+        const std::wstring currentPathText = errorCode || relativeCurrentPath.empty() || relativeCurrentPath.wstring() == L"."
+            ? std::wstring(L".")
+            : relativeCurrentPath.wstring();
+
+        wchar_t summaryText[512]{};
+        if (false == m_selectedFilePath.empty())
+        {
+            errorCode.clear();
+            const std::filesystem::path relativeSelectedPath = std::filesystem::relative(
+                m_selectedFilePath,
+                m_assetsRootDirectory,
+                errorCode);
+            const std::wstring selectedPath = errorCode
+                ? m_selectedFilePath.wstring()
+                : relativeSelectedPath.wstring();
             std::swprintf(
                 summaryText,
                 std::size(summaryText),
-                L"Sprite assets: dragging %ls / %u visible / %u registered",
-                draggingAssetId.c_str(),
-                static_cast<unsigned>(m_visibleSpriteAssetIds.size()),
-                static_cast<unsigned>(m_registeredSpriteAssetCount));
+                L"Assets: %ls / %u items / selected %ls",
+                currentPathText.c_str(),
+                static_cast<unsigned>(m_visibleEntries.size()),
+                selectedPath.c_str());
         }
         else
         {
             std::swprintf(
                 summaryText,
                 std::size(summaryText),
-                L"Sprite assets: %u visible / %u registered",
-                static_cast<unsigned>(m_visibleSpriteAssetIds.size()),
-                static_cast<unsigned>(m_registeredSpriteAssetCount));
+                L"Assets: %ls / %u items",
+                currentPathText.c_str(),
+                static_cast<unsigned>(m_visibleEntries.size()));
         }
 
         SetWindowTextW(m_assetsSummaryLabel, summaryText);

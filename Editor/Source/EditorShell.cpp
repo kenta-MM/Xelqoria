@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <Windows.h>
 #include <array>
+#include <CommCtrl.h>
 #include <cstdint>
 #include <cstdio>
 #include <cwchar>
@@ -82,6 +83,14 @@ namespace Xelqoria::Editor
 
     bool EditorShell::Initialize(HWND parentWindow, HINSTANCE hInstance)
     {
+        INITCOMMONCONTROLSEX commonControls{};
+        commonControls.dwSize = sizeof(commonControls);
+        commonControls.dwICC = ICC_LISTVIEW_CLASSES;
+        if (FALSE == InitCommonControlsEx(&commonControls))
+        {
+            return false;
+        }
+
         (void)RefreshDpiResources(parentWindow);
 
         return InitializeHierarchyPanel(parentWindow, hInstance)
@@ -106,7 +115,7 @@ namespace Xelqoria::Editor
                 m_projectSceneDetailLabel,
                 m_sceneViewHost,
                 m_sceneViewSizeLabel,
-                m_assetsListBox,
+                m_assetsListView,
                 m_assetsSummaryLabel,
                 m_hierarchySummaryLabel,
                 m_hierarchyListBox,
@@ -354,20 +363,27 @@ namespace Xelqoria::Editor
             parentWindow,
             hInstance,
             L"Static",
-            L"Sprite assets: pending",
+            L"Assets: pending",
             WS_CHILD | WS_VISIBLE);
         if (nullptr == m_assetsSummaryLabel)
         {
             return false;
         }
 
-        m_assetsListBox = CreateChildWindow(
+        m_assetsListView = CreateChildWindow(
             parentWindow,
             hInstance,
-            L"ListBox",
+            WC_LISTVIEWW,
             L"",
-            WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
-        return nullptr != m_assetsListBox;
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_BORDER | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS);
+        if (nullptr != m_assetsListView)
+        {
+            ListView_SetExtendedListViewStyle(
+                m_assetsListView,
+                LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+        }
+
+        return nullptr != m_assetsListView;
     }
 
     bool EditorShell::InitializeInspectorPanel(HWND parentWindow, HINSTANCE hInstance)
@@ -589,7 +605,7 @@ namespace Xelqoria::Editor
             metrics.sideInnerWidth,
             metrics.labelHeight);
         MoveChildWindowNoRedraw(
-            m_assetsListBox,
+            m_assetsListView,
             metrics.outerPadding + metrics.outerPadding,
             metrics.assetsPanelY + metrics.groupHeaderHeight + metrics.labelHeight + ScaleMetric(6),
             metrics.sideInnerWidth,
@@ -767,7 +783,7 @@ namespace Xelqoria::Editor
             m_projectSceneDetailLabel,
             m_sceneViewHost,
             m_sceneViewSizeLabel,
-            m_assetsListBox,
+            m_assetsListView,
             m_assetsSummaryLabel,
             m_hierarchySummaryLabel,
             m_hierarchyListBox,
@@ -874,7 +890,7 @@ namespace Xelqoria::Editor
             m_projectSceneDetailLabel,
             m_sceneViewHost,
             m_sceneViewSizeLabel,
-            m_assetsListBox,
+            m_assetsListView,
             m_assetsSummaryLabel,
             m_hierarchySummaryLabel,
             m_hierarchyListBox,
@@ -953,9 +969,9 @@ namespace Xelqoria::Editor
         return m_hierarchyDeleteButton;
     }
 
-    HWND EditorShell::GetAssetsListBox() const
+    HWND EditorShell::GetAssetsListView() const
     {
-        return m_assetsListBox;
+        return m_assetsListView;
     }
 
     HWND EditorShell::GetAssetsSummaryLabel() const

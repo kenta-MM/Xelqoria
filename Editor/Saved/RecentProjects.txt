@@ -1,2 +1,1 @@
-NewProject3|C:/Users/mkrcn/github/Xelqoria/Editor/NewProject3/NewProject3.proj
 NewProject|./NewProject/NewProject.proj

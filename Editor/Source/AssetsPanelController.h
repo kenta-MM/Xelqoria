@@ -1,18 +1,66 @@
 #pragma once
 
 #include <Windows.h>
+#include <filesystem>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include "AssetId.h"
-#include "Assets/SpriteAssetRegistry.h"
+#include "EditorProject.h"
 #include "EditorShell.h"
 #include "InputSystem.h"
-#include "TextureAssetRegistry.h"
 
 namespace Xelqoria::Editor
 {
     /// <summary>
-    /// Assets パネルの表示状態とドラッグ状態を管理する。
+    /// Assets 詳細リストに表示するファイルシステム項目を表す。
+    /// </summary>
+    struct AssetListEntry
+    {
+        /// <summary>
+        /// 項目の絶対パスを表す。
+        /// </summary>
+        std::filesystem::path path{};
+
+        /// <summary>
+        /// 名前列の表示文字列を表す。
+        /// </summary>
+        std::wstring displayName{};
+
+        /// <summary>
+        /// 更新日時列の表示文字列を表す。
+        /// </summary>
+        std::wstring modifiedTimeText{};
+
+        /// <summary>
+        /// 種類列の表示文字列を表す。
+        /// </summary>
+        std::wstring typeName{};
+
+        /// <summary>
+        /// サイズ列の表示文字列を表す。
+        /// </summary>
+        std::wstring sizeText{};
+
+        /// <summary>
+        /// システムイメージリスト上のアイコン番号を表す。
+        /// </summary>
+        int iconIndex = 0;
+
+        /// <summary>
+        /// フォルダ項目かを表す。
+        /// </summary>
+        bool isDirectory = false;
+
+        /// <summary>
+        /// 親フォルダへ戻るための項目かを表す。
+        /// </summary>
+        bool isParentLink = false;
+    };
+
+    /// <summary>
+    /// Assets パネルのファイル詳細リスト表示と選択状態を管理する。
     /// </summary>
     class AssetsPanelController
     {
@@ -24,23 +72,25 @@ namespace Xelqoria::Editor
         void Bind(const EditorShell& shell);
 
         /// <summary>
-        /// Assets パネルの一覧表示と選択表示を更新する。
+        /// Assets パネルのファイル詳細リスト表示を更新する。
         /// </summary>
-        /// <param name="registeredSpriteAssetIds">登録済み SpriteAssetId 一覧。</param>
-        /// <param name="spriteAssetRegistry">SpriteAsset レジストリ。</param>
-        /// <param name="textureAssetRegistry">Texture レジストリ。</param>
-        void Refresh(
-            const std::vector<Core::AssetId>& registeredSpriteAssetIds,
-            const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
-            const Graphics::TextureAssetRegistry& textureAssetRegistry);
+        /// <param name="projectInfo">開いている Editor プロジェクト情報。</param>
+        void Refresh(const std::optional<EditorProjectInfo>& projectInfo);
 
         /// <summary>
-        /// ListBox 選択状態を内部選択状態へ同期する。
+        /// ListView 選択状態をファイル選択状態へ同期する。
         /// </summary>
         void SyncSelection();
 
         /// <summary>
-        /// Assets パネル由来のドラッグ状態を更新する。
+        /// Assets ListView からの Win32 通知を処理する。
+        /// </summary>
+        /// <param name="notifyParameter">WM_NOTIFY の LPARAM。</param>
+        /// <returns>通知を処理した場合は true。</returns>
+        [[nodiscard]] bool HandleNotify(LPARAM notifyParameter);
+
+        /// <summary>
+        /// Assets パネル由来の入力状態を更新する。
         /// </summary>
         /// <param name="inputSnapshot">現在フレームの入力状態。</param>
         void UpdateDragState(const Core::InputSnapshot& inputSnapshot);
@@ -82,20 +132,79 @@ namespace Xelqoria::Editor
 
     private:
         /// <summary>
+        /// ListView の列とシステムアイコンを初期化する。
+        /// </summary>
+        void InitializeListView();
+
+        /// <summary>
+        /// 現在フォルダから表示項目を再構築する。
+        /// </summary>
+        void RebuildVisibleEntries();
+
+        /// <summary>
+        /// 親フォルダへ戻る項目を追加する。
+        /// </summary>
+        void AppendParentEntry();
+
+        /// <summary>
+        /// 現在フォルダ配下の項目を追加する。
+        /// </summary>
+        void AppendCurrentDirectoryEntries();
+
+        /// <summary>
+        /// ListView の表示内容を現在の表示項目へ同期する。
+        /// </summary>
+        void RefreshListView();
+
+        /// <summary>
+        /// ListView の現在選択を内部選択状態へ同期する。
+        /// </summary>
+        void SyncSelectedPathFromListView();
+
+        /// <summary>
+        /// 指定項目を開ける場合は現在フォルダを移動する。
+        /// </summary>
+        /// <param name="entryIndex">開く表示項目のインデックス。</param>
+        /// <returns>フォルダ移動した場合は true。</returns>
+        [[nodiscard]] bool TryOpenEntry(std::size_t entryIndex);
+
+        /// <summary>
+        /// 現在選択しているフォルダ項目を開く。
+        /// </summary>
+        /// <returns>フォルダ移動した場合は true。</returns>
+        [[nodiscard]] bool TryOpenSelectedEntry();
+
+        /// <summary>
+        /// ListView の選択インデックスを取得する。
+        /// </summary>
+        /// <returns>選択インデックス。未選択時は -1。</returns>
+        [[nodiscard]] int GetSelectedListViewIndex() const;
+
+        /// <summary>
+        /// スクリーン座標から ListView 項目を取得する。
+        /// </summary>
+        /// <param name="screenPoint">スクリーン座標。</param>
+        /// <returns>項目インデックス。項目外の場合は -1。</returns>
+        [[nodiscard]] int HitTestListView(POINT screenPoint) const;
+
+        /// <summary>
         /// Assets パネルの要約ラベルを更新する。
         /// </summary>
         void RefreshSummaryLabel();
 
     private:
-        HWND m_assetsListBox = nullptr;
+        HWND m_assetsListView = nullptr;
         HWND m_assetsSummaryLabel = nullptr;
-        std::vector<Core::AssetId> m_visibleSpriteAssetIds{};
+        std::filesystem::path m_assetsRootDirectory{};
+        std::filesystem::path m_currentDirectory{};
+        std::vector<AssetListEntry> m_visibleEntries{};
+        std::filesystem::path m_selectedFilePath{};
         Core::AssetId m_selectedSpriteAssetId{};
         Core::AssetId m_draggingSpriteAssetId{};
+        ULONGLONG m_lastClickTick = 0;
+        int m_lastClickedIndex = -1;
         bool m_isAssetDragActive = false;
-        bool m_assetsListLeftButtonDown = false;
         bool m_assetDragReleasedThisFrame = false;
-        POINT m_assetDragStartScreenPoint{};
-        std::size_t m_registeredSpriteAssetCount = 0;
+        bool m_listViewInitialized = false;
     };
 }
