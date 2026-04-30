@@ -69,10 +69,10 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetHierarchyDeleteButton() const;
 
         /// <summary>
-        /// Assets パネルの ListBox を取得する。
+        /// Assets パネルの ListView を取得する。
         /// </summary>
-        /// <returns>Assets ListBox の HWND。</returns>
-        [[nodiscard]] HWND GetAssetsListBox() const;
+        /// <returns>Assets ListView の HWND。</returns>
+        [[nodiscard]] HWND GetAssetsListView() const;
 
         /// <summary>
         /// Assets パネルの要約ラベルを取得する。
@@ -296,7 +296,7 @@ namespace Xelqoria::Editor
         HWND m_projectSceneDetailLabel = nullptr;
         HWND m_sceneViewHost = nullptr;
         HWND m_sceneViewSizeLabel = nullptr;
-        HWND m_assetsListBox = nullptr;
+        HWND m_assetsListView = nullptr;
         HWND m_assetsSummaryLabel = nullptr;
         HWND m_hierarchySummaryLabel = nullptr;
         HWND m_hierarchyListBox = nullptr;

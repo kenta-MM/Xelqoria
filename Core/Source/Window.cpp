@@ -105,6 +105,11 @@ namespace Xelqoria::Core
         m_commandHandler = std::move(handler);
     }
 
+    void Window::SetNotifyHandler(std::function<bool(LPARAM)> handler)
+    {
+        m_notifyHandler = std::move(handler);
+    }
+
     void Window::SetCloseRequestHandler(std::function<bool()> handler)
     {
         m_closeRequestHandler = std::move(handler);
@@ -155,6 +160,13 @@ namespace Xelqoria::Core
             if (m_commandHandler)
             {
                 m_commandHandler(LOWORD(wp));
+                return 0;
+            }
+            break;
+
+        case WM_NOTIFY:
+            if (m_notifyHandler && m_notifyHandler(lp))
+            {
                 return 0;
             }
             break;

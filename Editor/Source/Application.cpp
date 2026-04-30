@@ -140,6 +140,11 @@ namespace Xelqoria::Editor
             {
                 HandleProjectMenuCommand(commandId);
             });
+        m_window.SetNotifyHandler(
+            [this](LPARAM notifyParameter)
+            {
+                return m_assetsPanelController.HandleNotify(notifyParameter);
+            });
         m_window.SetCloseRequestHandler(
             [this]()
             {
@@ -204,10 +209,7 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        m_assetsPanelController.Refresh(
-            m_sceneDocument.GetRegisteredSpriteAssetIds(),
-            m_sceneDocument.GetSpriteAssetRegistry(),
-            m_sceneDocument.GetTextureAssetRegistry());
+        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
         RefreshEditorPanels(canAddSpriteComponent, false);
         RefreshSceneViewSelectionStatus();
@@ -306,6 +308,7 @@ namespace Xelqoria::Editor
         }
 
         RecordCurrentProject();
+        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_projectPanelController.Refresh(m_sceneDocument);
         ClearProjectDirty();
         return true;
@@ -328,6 +331,7 @@ namespace Xelqoria::Editor
         }
 
         RecordCurrentProject();
+        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
         m_projectPanelController.Refresh(m_sceneDocument);
         ApplySelectionChange(std::nullopt, canAddSpriteComponent, true, true);
@@ -363,6 +367,7 @@ namespace Xelqoria::Editor
         }
 
         RecordCurrentProject();
+        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_projectPanelController.Refresh(m_sceneDocument);
         ApplySelectionChange(std::nullopt, m_assetsPanelController.HasVisibleSpriteAssets(), true, true);
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
@@ -397,6 +402,7 @@ namespace Xelqoria::Editor
         }
 
         RecordCurrentProject();
+        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_projectPanelController.Refresh(m_sceneDocument);
         ApplySelectionChange(std::nullopt, m_assetsPanelController.HasVisibleSpriteAssets(), true, true);
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
@@ -450,6 +456,7 @@ namespace Xelqoria::Editor
         }
 
         RecordCurrentProject();
+        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_projectPanelController.Refresh(m_sceneDocument);
         ClearProjectDirty();
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを別名で保存しました。");

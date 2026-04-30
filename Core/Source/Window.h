@@ -55,6 +55,12 @@ namespace Xelqoria::Core
 		void SetCommandHandler(std::function<void(unsigned)> handler);
 
 		/// <summary>
+		/// WM_NOTIFY を受け取るハンドラを設定する。
+		/// </summary>
+		/// <param name="handler">通知 LPARAM を処理し、消費した場合は true を返すハンドラ。</param>
+		void SetNotifyHandler(std::function<bool(LPARAM)> handler);
+
+		/// <summary>
 		/// ウィンドウを閉じる前に呼ばれるハンドラを設定する。
 		/// </summary>
 		/// <param name="handler">閉じてよい場合は true を返すハンドラ。</param>
@@ -87,6 +93,7 @@ namespace Xelqoria::Core
 		HINSTANCE m_hInstance = nullptr;
 		HWND m_hWnd = nullptr;
 		std::function<void(unsigned)> m_commandHandler{};
+		std::function<bool(LPARAM)> m_notifyHandler{};
 		std::function<bool()> m_closeRequestHandler{};
 		std::function<void(uint32_t, uint32_t)> m_resizeHandler{};
 
