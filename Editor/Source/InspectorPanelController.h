@@ -11,6 +11,8 @@
 
 namespace Xelqoria::Editor
 {
+    class AssetsPanelController;
+
     /// <summary>
     /// Inspector で行われた編集適用結果を表す。
     /// </summary>
@@ -84,6 +86,18 @@ namespace Xelqoria::Editor
             std::optional<Game::EntityId> selectedEntityId,
             bool canAddSpriteComponent,
             const Core::InputSnapshot& inputSnapshot);
+
+        /// <summary>
+        /// Assets から Texture 欄へドロップされた画像を SpriteComponent へ反映する。
+        /// </summary>
+        /// <param name="scene">更新対象の Scene。</param>
+        /// <param name="selectedEntityId">現在選択中の EntityId。</param>
+        /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
+        /// <returns>適用結果。</returns>
+        InspectorApplyResult ApplyTextureDrop(
+            Game::Scene* scene,
+            std::optional<Game::EntityId> selectedEntityId,
+            const AssetsPanelController& assetsPanelController);
 
         /// <summary>
         /// 直前反映 Entity の追跡状態を破棄する。

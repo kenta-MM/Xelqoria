@@ -89,13 +89,15 @@ namespace Xelqoria::Editor
 
     private:
         /// <summary>
-        /// 解決済み Sprite 一覧からヒットターゲットを構築する。
+        /// Scene 内 Sprite 一覧からヒットターゲットを構築する。
         /// </summary>
-        /// <param name="resolvedSprites">解決済み Sprite 一覧。</param>
+        /// <param name="resolvedSprites">Texture 解決済み Sprite 一覧。</param>
+        /// <param name="renderItems">Scene 内 Sprite 描画候補一覧。</param>
         /// <param name="selectedEntityId">現在選択中の EntityId。</param>
         /// <returns>ヒットターゲット一覧。</returns>
         std::vector<SceneViewHitTarget> BuildSceneHitTargets(
             const std::vector<Game::ResolvedSceneSprite>& resolvedSprites,
+            const std::vector<Game::SceneSpriteRenderItem>& renderItems,
             std::optional<Game::EntityId> selectedEntityId) const;
 
         /// <summary>

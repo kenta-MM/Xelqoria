@@ -450,7 +450,7 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        m_spriteRefLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"SpriteRef", WS_CHILD | WS_VISIBLE);
+        m_spriteRefLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Texture", WS_CHILD | WS_VISIBLE);
         if (nullptr == m_spriteRefLabel)
         {
             return false;

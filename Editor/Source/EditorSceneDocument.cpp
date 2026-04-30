@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <system_error>
@@ -18,10 +19,14 @@
 #include <TextureAssetRegistry.h>
 #include <IGraphicsContext.h>    
 
+#include "EditorStringUtils.h"
+
 namespace Xelqoria::Editor
 {
     bool EditorSceneDocument::Initialize(RHI::IGraphicsContext& graphicsContext)
     {
+        m_graphicsContext = &graphicsContext;
+
         auto spriteTexture = std::make_shared<Graphics::Texture2D>();
         if (false == spriteTexture->LoadFromFile(L"../Resource\\mapchip.png", graphicsContext))
         {
@@ -172,6 +177,70 @@ namespace Xelqoria::Editor
         return LoadSceneFromPath(scenePath);
     }
 
+    void EditorSceneDocument::RefreshProjectAssetRegistries()
+    {
+        if (false == m_project.GetInfo().has_value())
+        {
+            return;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        std::error_code errorCode;
+        for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(rootDirectory, errorCode))
+        {
+            if (errorCode)
+            {
+                return;
+            }
+
+            if (entry.is_regular_file(errorCode) && false == static_cast<bool>(errorCode) && IsTextureImageFile(entry.path()))
+            {
+                (void)RegisterImageAsset(entry.path());
+            }
+        }
+    }
+
+    bool EditorSceneDocument::RegisterImageAsset(const std::filesystem::path& imagePath)
+    {
+        if (nullptr == m_graphicsContext || false == IsTextureImageFile(imagePath))
+        {
+            return false;
+        }
+
+        const Core::AssetId textureAssetId = BuildTextureAssetId(imagePath);
+        const Core::AssetId spriteAssetId = BuildSpriteAssetId(imagePath);
+        if (textureAssetId.IsEmpty() || spriteAssetId.IsEmpty())
+        {
+            return false;
+        }
+
+        if (false == static_cast<bool>(m_textureAssetRegistry.ResolveTexture(textureAssetId)))
+        {
+            auto texture = std::make_shared<Graphics::Texture2D>();
+            if (false == texture->LoadFromFile(imagePath.wstring(), *m_graphicsContext))
+            {
+                return false;
+            }
+
+            m_textureAssetRegistry.RegisterTexture(textureAssetId, texture);
+        }
+
+        m_spriteAssetRegistry.RegisterSpriteAsset(
+            spriteAssetId,
+            Game::Assets::SpriteAsset{ textureAssetId });
+
+        const auto alreadyRegistered = std::find(
+            m_registeredSpriteAssetIds.begin(),
+            m_registeredSpriteAssetIds.end(),
+            spriteAssetId);
+        if (alreadyRegistered == m_registeredSpriteAssetIds.end())
+        {
+            m_registeredSpriteAssetIds.push_back(spriteAssetId);
+        }
+
+        return true;
+    }
+
     const std::optional<EditorProjectInfo>& EditorSceneDocument::GetProjectInfo() const
     {
         return m_project.GetInfo();
@@ -241,5 +310,54 @@ namespace Xelqoria::Editor
     std::filesystem::path EditorSceneDocument::GetSceneDocumentPath() const
     {
         return std::filesystem::path("Saved") / "EditorScene.xelqoria.scene";
+    }
+
+    bool EditorSceneDocument::IsTextureImageFile(const std::filesystem::path& path)
+    {
+        const std::wstring extension = path.extension().wstring();
+        return extension == L".png"
+            || extension == L".jpg"
+            || extension == L".jpeg"
+            || extension == L".bmp";
+    }
+
+    Core::AssetId EditorSceneDocument::BuildTextureAssetId(const std::filesystem::path& path) const
+    {
+        if (false == m_project.GetInfo().has_value())
+        {
+            return {};
+        }
+
+        std::error_code errorCode;
+        const std::filesystem::path relativePath = std::filesystem::relative(
+            path,
+            m_project.GetInfo()->projectFilePath.parent_path(),
+            errorCode);
+        if (errorCode)
+        {
+            return {};
+        }
+
+        return Core::AssetId("textures/" + ToNarrowString(relativePath.generic_wstring()));
+    }
+
+    Core::AssetId EditorSceneDocument::BuildSpriteAssetId(const std::filesystem::path& path) const
+    {
+        if (false == m_project.GetInfo().has_value())
+        {
+            return {};
+        }
+
+        std::error_code errorCode;
+        const std::filesystem::path relativePath = std::filesystem::relative(
+            path,
+            m_project.GetInfo()->projectFilePath.parent_path(),
+            errorCode);
+        if (errorCode)
+        {
+            return {};
+        }
+
+        return Core::AssetId("sprites/" + ToNarrowString(relativePath.generic_wstring()));
     }
 }

@@ -64,6 +64,36 @@ TEST(SceneEditingOperationsTests, CreateEntityAssignsDefaultNameAndSelectsCreate
     EXPECT_EQ("Entity 1", createdEntity->get().GetName());
 }
 
+TEST(SceneEditingOperationsTests, CreateUntexturedSpriteAddsEmptySpriteComponentAtRequestedPosition)
+{
+    Xelqoria::Game::Scene scene;
+
+    const auto result = Xelqoria::Editor::SceneEditingOperations::CreateUntexturedSprite(scene, 10.0f, -20.0f);
+
+    ASSERT_TRUE(result.changed);
+    ASSERT_TRUE(result.selectedEntityId.has_value());
+
+    const auto createdEntity = scene.FindEntity(*result.selectedEntityId);
+    ASSERT_TRUE(createdEntity.has_value());
+    EXPECT_EQ("Sprite 1", createdEntity->get().GetName());
+    EXPECT_FLOAT_EQ(10.0f, createdEntity->get().GetTransform().position.x);
+    EXPECT_FLOAT_EQ(-20.0f, createdEntity->get().GetTransform().position.y);
+
+    const auto spriteComponent = createdEntity->get().GetSpriteComponent();
+    ASSERT_TRUE(spriteComponent.has_value());
+    EXPECT_TRUE(spriteComponent->get().spriteAssetRef.IsEmpty());
+
+    const auto loadResult = Xelqoria::Game::SceneSerializer::LoadFromText(
+        Xelqoria::Game::SceneSerializer::SaveToText(scene));
+    ASSERT_TRUE(loadResult.IsSuccess());
+    ASSERT_TRUE(loadResult.scene.has_value());
+
+    const auto loadedEntity = loadResult.scene->FindEntity(*result.selectedEntityId);
+    ASSERT_TRUE(loadedEntity.has_value());
+    ASSERT_TRUE(loadedEntity->get().HasSpriteComponent());
+    EXPECT_TRUE(loadedEntity->get().GetSpriteComponent()->get().spriteAssetRef.IsEmpty());
+}
+
 TEST(SceneEditingOperationsTests, MoveEntityUpdatesPositionAndPreservesZ)
 {
     Xelqoria::Game::Scene scene;

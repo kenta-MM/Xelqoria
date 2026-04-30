@@ -38,6 +38,15 @@ namespace Xelqoria::Editor
         static SceneEditResult CreateEntity(Game::Scene& scene);
 
         /// <summary>
+        /// テクスチャ未設定の Sprite Entity を指定位置に作成する。
+        /// </summary>
+        /// <param name="scene">編集対象の Scene。</param>
+        /// <param name="x">作成位置の X 座標。</param>
+        /// <param name="y">作成位置の Y 座標。</param>
+        /// <returns>作成結果と更新後の選択状態。</returns>
+        static SceneEditResult CreateUntexturedSprite(Game::Scene& scene, float x, float y);
+
+        /// <summary>
         /// 現在選択中の Entity を削除する。
         /// </summary>
         /// <param name="scene">編集対象の Scene。</param>

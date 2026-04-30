@@ -10,6 +10,8 @@
 #include <utility>
 #include <Windows.h>
 
+#include "EditorStringUtils.h"
+
 namespace Xelqoria::Editor
 {
     namespace
@@ -223,6 +225,11 @@ namespace Xelqoria::Editor
 
             return result;
         }
+
+        /// <summary>
+        /// Assets の右クリックメニューから実行されたコマンド ID を表す。
+        /// </summary>
+        constexpr UINT_PTR CreateSpriteMenuCommandId = 1;
     }
 
     void AssetsPanelController::Bind(const EditorShell& shell)
@@ -242,6 +249,10 @@ namespace Xelqoria::Editor
             m_selectedFilePath.clear();
             m_selectedSpriteAssetId = {};
             m_draggingSpriteAssetId = {};
+            m_draggingTextureAssetId = {};
+            m_draggingImagePath.clear();
+            m_canPlaceDraggingAssetInScene = false;
+            m_createSpriteRequested = false;
             RefreshListView();
             RefreshSummaryLabel();
             return;
@@ -291,6 +302,41 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        if (notifyHeader->code == NM_RCLICK)
+        {
+            const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
+            if (0 <= itemActivate->iItem)
+            {
+                return false;
+            }
+
+            HMENU popupMenu = CreatePopupMenu();
+            if (nullptr == popupMenu)
+            {
+                return false;
+            }
+
+            AppendMenuW(popupMenu, MF_STRING, CreateSpriteMenuCommandId, L"Spriteを作成");
+
+            POINT menuPoint{};
+            GetCursorPos(&menuPoint);
+            const UINT command = TrackPopupMenu(
+                popupMenu,
+                TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                menuPoint.x,
+                menuPoint.y,
+                0,
+                m_assetsListView,
+                nullptr);
+            DestroyMenu(popupMenu);
+
+            if (CreateSpriteMenuCommandId == command)
+            {
+                m_createSpriteRequested = true;
+                return true;
+            }
+        }
+
         if (notifyHeader->code == LVN_KEYDOWN)
         {
             const NMLVKEYDOWN* keyDown = reinterpret_cast<NMLVKEYDOWN*>(notifyParameter);
@@ -322,13 +368,21 @@ namespace Xelqoria::Editor
             return;
         }
 
-        m_assetDragReleasedThisFrame = false;
-        m_isAssetDragActive = false;
-        m_draggingSpriteAssetId = {};
-
         if (inputSnapshot.WasKeyPressed(VK_RETURN) && GetFocus() == m_assetsListView)
         {
             (void)TryOpenSelectedEntry();
+            return;
+        }
+
+        m_assetDragReleasedThisFrame = false;
+        if (false == inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left))
+        {
+            if (m_isAssetDragActive)
+            {
+                m_assetDragReleasedThisFrame = true;
+            }
+
+            m_isAssetDragActive = false;
             return;
         }
 
@@ -351,6 +405,24 @@ namespace Xelqoria::Editor
         SetFocus(m_assetsListView);
         SyncSelectedPathFromListView();
 
+        const AssetListEntry& hitEntry = m_visibleEntries[static_cast<std::size_t>(hitIndex)];
+        if (false == hitEntry.isDirectory && IsTextureImageFile(hitEntry.path))
+        {
+            m_draggingImagePath = hitEntry.path;
+            m_draggingTextureAssetId = BuildTextureAssetId(hitEntry.path);
+            m_draggingSpriteAssetId = BuildSpriteAssetId(hitEntry.path);
+            m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
+            m_canPlaceDraggingAssetInScene = false;
+        }
+        else
+        {
+            m_draggingImagePath.clear();
+            m_draggingTextureAssetId = {};
+            m_draggingSpriteAssetId = {};
+            m_isAssetDragActive = false;
+            m_canPlaceDraggingAssetInScene = false;
+        }
+
         const ULONGLONG currentTick = GetTickCount64();
         const bool isDoubleClick = hitIndex == m_lastClickedIndex
             && currentTick - m_lastClickTick <= static_cast<ULONGLONG>(GetDoubleClickTime());
@@ -366,6 +438,9 @@ namespace Xelqoria::Editor
     void AssetsPanelController::CompleteReleasedDrag()
     {
         m_draggingSpriteAssetId = {};
+        m_draggingTextureAssetId = {};
+        m_draggingImagePath.clear();
+        m_canPlaceDraggingAssetInScene = false;
         RefreshSummaryLabel();
     }
 
@@ -379,9 +454,24 @@ namespace Xelqoria::Editor
         return m_draggingSpriteAssetId;
     }
 
+    const Core::AssetId& AssetsPanelController::GetDraggingTextureAssetId() const
+    {
+        return m_draggingTextureAssetId;
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetDraggingImagePath() const
+    {
+        return m_draggingImagePath;
+    }
+
     bool AssetsPanelController::IsDragActive() const
     {
         return m_isAssetDragActive;
+    }
+
+    bool AssetsPanelController::CanPlaceDraggingAssetInScene() const
+    {
+        return m_canPlaceDraggingAssetInScene;
     }
 
     bool AssetsPanelController::WasDragReleasedThisFrame() const
@@ -391,7 +481,25 @@ namespace Xelqoria::Editor
 
     bool AssetsPanelController::HasVisibleSpriteAssets() const
     {
+        for (const AssetListEntry& entry : m_visibleEntries)
+        {
+            if (false == entry.isDirectory && IsTextureImageFile(entry.path))
+            {
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    bool AssetsPanelController::HasCreateSpriteRequest() const
+    {
+        return m_createSpriteRequested;
+    }
+
+    void AssetsPanelController::ClearCreateSpriteRequest()
+    {
+        m_createSpriteRequested = false;
     }
 
     void AssetsPanelController::InitializeListView()
@@ -555,10 +663,14 @@ namespace Xelqoria::Editor
         if (entry.isParentLink)
         {
             m_selectedFilePath.clear();
+            m_selectedSpriteAssetId = {};
         }
         else
         {
             m_selectedFilePath = entry.path;
+            m_selectedSpriteAssetId = IsTextureImageFile(entry.path)
+                ? BuildSpriteAssetId(entry.path)
+                : Core::AssetId{};
         }
 
         RefreshSummaryLabel();
@@ -691,5 +803,38 @@ namespace Xelqoria::Editor
         }
 
         SetWindowTextW(m_assetsSummaryLabel, summaryText);
+    }
+
+    bool AssetsPanelController::IsTextureImageFile(const std::filesystem::path& path)
+    {
+        const std::wstring extension = path.extension().wstring();
+        return extension == L".png"
+            || extension == L".jpg"
+            || extension == L".jpeg"
+            || extension == L".bmp";
+    }
+
+    Core::AssetId AssetsPanelController::BuildTextureAssetId(const std::filesystem::path& path) const
+    {
+        std::error_code errorCode;
+        const std::filesystem::path relativePath = std::filesystem::relative(path, m_assetsRootDirectory, errorCode);
+        if (errorCode)
+        {
+            return {};
+        }
+
+        return Core::AssetId("textures/" + ToNarrowString(relativePath.generic_wstring()));
+    }
+
+    Core::AssetId AssetsPanelController::BuildSpriteAssetId(const std::filesystem::path& path) const
+    {
+        std::error_code errorCode;
+        const std::filesystem::path relativePath = std::filesystem::relative(path, m_assetsRootDirectory, errorCode);
+        if (errorCode)
+        {
+            return {};
+        }
+
+        return Core::AssetId("sprites/" + ToNarrowString(relativePath.generic_wstring()));
     }
 }

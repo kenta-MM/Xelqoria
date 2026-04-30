@@ -113,10 +113,28 @@ namespace Xelqoria::Editor
         [[nodiscard]] const Core::AssetId& GetDraggingSpriteAssetId() const;
 
         /// <summary>
+        /// 現在ドラッグ中の TextureAssetId を取得する。
+        /// </summary>
+        /// <returns>ドラッグ中 TextureAssetId。</returns>
+        [[nodiscard]] const Core::AssetId& GetDraggingTextureAssetId() const;
+
+        /// <summary>
+        /// 現在ドラッグ中の画像ファイルパスを取得する。
+        /// </summary>
+        /// <returns>ドラッグ中画像ファイルパス。</returns>
+        [[nodiscard]] const std::filesystem::path& GetDraggingImagePath() const;
+
+        /// <summary>
         /// ドラッグ中かを取得する。
         /// </summary>
         /// <returns>ドラッグ中の場合は true。</returns>
         [[nodiscard]] bool IsDragActive() const;
+
+        /// <summary>
+        /// 現在ドラッグ中のアセットを SceneView へ配置できるかを取得する。
+        /// </summary>
+        /// <returns>SceneView へ配置できる場合は true。</returns>
+        [[nodiscard]] bool CanPlaceDraggingAssetInScene() const;
 
         /// <summary>
         /// 今フレームでドラッグ解放を検出したかを取得する。
@@ -129,6 +147,17 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>表示可能な SpriteAsset が 1 件以上ある場合は true。</returns>
         [[nodiscard]] bool HasVisibleSpriteAssets() const;
+
+        /// <summary>
+        /// Assets 空白右クリックから Sprite 作成が要求されたかを取得する。
+        /// </summary>
+        /// <returns>Sprite 作成要求がある場合は true。</returns>
+        [[nodiscard]] bool HasCreateSpriteRequest() const;
+
+        /// <summary>
+        /// Sprite 作成要求を消費する。
+        /// </summary>
+        void ClearCreateSpriteRequest();
 
     private:
         /// <summary>
@@ -192,6 +221,27 @@ namespace Xelqoria::Editor
         /// </summary>
         void RefreshSummaryLabel();
 
+        /// <summary>
+        /// 指定パスが Texture として扱える画像ファイルかを判定する。
+        /// </summary>
+        /// <param name="path">判定対象パス。</param>
+        /// <returns>画像ファイルの場合は true。</returns>
+        [[nodiscard]] static bool IsTextureImageFile(const std::filesystem::path& path);
+
+        /// <summary>
+        /// 画像ファイルから TextureAssetId を生成する。
+        /// </summary>
+        /// <param name="path">画像ファイルパス。</param>
+        /// <returns>TextureAssetId。</returns>
+        [[nodiscard]] Core::AssetId BuildTextureAssetId(const std::filesystem::path& path) const;
+
+        /// <summary>
+        /// 画像ファイルから SpriteAssetId を生成する。
+        /// </summary>
+        /// <param name="path">画像ファイルパス。</param>
+        /// <returns>SpriteAssetId。</returns>
+        [[nodiscard]] Core::AssetId BuildSpriteAssetId(const std::filesystem::path& path) const;
+
     private:
         HWND m_assetsListView = nullptr;
         HWND m_assetsSummaryLabel = nullptr;
@@ -201,10 +251,14 @@ namespace Xelqoria::Editor
         std::filesystem::path m_selectedFilePath{};
         Core::AssetId m_selectedSpriteAssetId{};
         Core::AssetId m_draggingSpriteAssetId{};
+        Core::AssetId m_draggingTextureAssetId{};
+        std::filesystem::path m_draggingImagePath{};
         ULONGLONG m_lastClickTick = 0;
         int m_lastClickedIndex = -1;
         bool m_isAssetDragActive = false;
+        bool m_canPlaceDraggingAssetInScene = false;
         bool m_assetDragReleasedThisFrame = false;
+        bool m_createSpriteRequested = false;
         bool m_listViewInitialized = false;
     };
 }

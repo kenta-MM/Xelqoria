@@ -1,6 +1,7 @@
 #include "SceneViewInputTracker.h"
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 
 #include "SceneEditingOperations.h"
@@ -22,6 +23,11 @@
 
 namespace Xelqoria::Editor
 {
+    namespace
+    {
+        constexpr float UntexturedSpriteSizeWorldUnits = 64.0f;
+    }
+
     void SceneViewInputTracker::Bind(HWND sceneViewHost)
     {
         m_sceneViewHost = sceneViewHost;
@@ -57,6 +63,9 @@ namespace Xelqoria::Editor
             && screenPoint.y < sceneHostRect.bottom;
 
         const bool isLeftButtonDown = inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left);
+        const bool isAssetDragActive = assetsPanelController.IsDragActive();
+        const bool isScenePlacementDrag = isAssetDragActive
+            && assetsPanelController.CanPlaceDraggingAssetInScene();
         if (isCursorInside && isLeftButtonDown && false == m_sceneViewLeftButtonDown)
         {
             POINT clientPoint = screenPoint;
@@ -70,10 +79,11 @@ namespace Xelqoria::Editor
             m_lastSceneClickY = worldPoint.y;
             m_hasSceneClick = true;
 
-            if (false == assetsPanelController.IsDragActive() && nullptr != scene)
+            if (false == isAssetDragActive && nullptr != scene)
             {
                 const auto resolvedSprites = scene->ResolveSceneSprites(spriteAssetRegistry, textureAssetRegistry);
-                const auto hitTargets = BuildSceneHitTargets(resolvedSprites, currentSelectedEntityId);
+                const auto renderItems = scene->CollectSpriteRenderItems();
+                const auto hitTargets = BuildSceneHitTargets(resolvedSprites, renderItems, currentSelectedEntityId);
                 const auto selectedEntityId = PickTopmostEntityAtWorldPoint(hitTargets, worldPoint.x, worldPoint.y);
                 if (selectedEntityId != currentSelectedEntityId)
                 {
@@ -102,7 +112,7 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (false == assetsPanelController.IsDragActive()
+        if (false == isAssetDragActive
             && true == isLeftButtonDown
             && true == m_entityDragState.entityId.has_value()
             && nullptr != scene)
@@ -123,7 +133,7 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (assetsPanelController.IsDragActive() && false == assetsPanelController.GetDraggingSpriteAssetId().IsEmpty())
+        if (isScenePlacementDrag && false == assetsPanelController.GetDraggingSpriteAssetId().IsEmpty())
         {
             if (isCursorInside)
             {
@@ -155,7 +165,9 @@ namespace Xelqoria::Editor
             ClearSceneDragPreview();
         }
 
-        if (assetsPanelController.WasDragReleasedThisFrame() && false == assetsPanelController.GetDraggingSpriteAssetId().IsEmpty())
+        if (assetsPanelController.WasDragReleasedThisFrame()
+            && true == assetsPanelController.CanPlaceDraggingAssetInScene()
+            && false == assetsPanelController.GetDraggingSpriteAssetId().IsEmpty())
         {
             if (isCursorInside)
             {
@@ -242,10 +254,11 @@ namespace Xelqoria::Editor
 
     std::vector<SceneViewHitTarget> SceneViewInputTracker::BuildSceneHitTargets(
         const std::vector<Game::ResolvedSceneSprite>& resolvedSprites,
+        const std::vector<Game::SceneSpriteRenderItem>& renderItems,
         std::optional<Game::EntityId> selectedEntityId) const
     {
         std::vector<SceneViewHitTarget> hitTargets;
-        hitTargets.reserve(resolvedSprites.size());
+        hitTargets.reserve(resolvedSprites.size() + renderItems.size());
 
         std::optional<SceneViewHitTarget> selectedTarget{};
         for (const Game::ResolvedSceneSprite& resolvedSprite : resolvedSprites)
@@ -269,6 +282,34 @@ namespace Xelqoria::Editor
             };
 
             if (true == selectedEntityId.has_value() && resolvedSprite.entityId == *selectedEntityId)
+            {
+                selectedTarget = target;
+                continue;
+            }
+
+            hitTargets.push_back(target);
+        }
+
+        for (const Game::SceneSpriteRenderItem& renderItem : renderItems)
+        {
+            if (nullptr == renderItem.transform
+                || nullptr == renderItem.spriteComponent
+                || false == renderItem.spriteComponent->spriteAssetRef.IsEmpty())
+            {
+                continue;
+            }
+
+            const float width = UntexturedSpriteSizeWorldUnits * std::abs(renderItem.transform->scale.x);
+            const float height = UntexturedSpriteSizeWorldUnits * std::abs(renderItem.transform->scale.y);
+            SceneViewHitTarget target{
+                renderItem.entityId,
+                renderItem.transform->position.x,
+                renderItem.transform->position.y,
+                (std::max)(width, 1.0f),
+                (std::max)(height, 1.0f)
+            };
+
+            if (true == selectedEntityId.has_value() && renderItem.entityId == *selectedEntityId)
             {
                 selectedTarget = target;
                 continue;

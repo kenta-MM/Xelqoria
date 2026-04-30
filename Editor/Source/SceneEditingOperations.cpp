@@ -136,6 +136,19 @@ namespace Xelqoria::Editor
         };
     }
 
+    SceneEditResult SceneEditingOperations::CreateUntexturedSprite(Game::Scene& scene, float x, float y)
+    {
+        auto& entity = scene.CreateEntity();
+        entity.SetName("Sprite " + std::to_string(entity.GetId()));
+        entity.SetPosition(x, y, 0.0f);
+        entity.SetSpriteComponent(Game::SpriteComponent{});
+
+        return SceneEditResult{
+            true,
+            entity.GetId()
+        };
+    }
+
     SceneEditResult SceneEditingOperations::DeleteSelectedEntity(
         Game::Scene& scene,
         std::optional<Game::EntityId> selectedEntityId)

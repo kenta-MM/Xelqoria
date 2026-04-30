@@ -1,6 +1,7 @@
 #include "InspectorPanelController.h"
 
 #include <string>
+#include <string_view>
 
 #include "EditorStringUtils.h"
 #include <Windows.h>
@@ -10,6 +11,7 @@
 #include <iterator>
 #include <optional>
 #include <AssetId.h>
+#include "AssetsPanelController.h"
 #include "EditorShell.h"
 #include <Entity.h>
 #include <Scene.h>
@@ -76,7 +78,14 @@ namespace Xelqoria::Editor
         SetWindowTextW(m_spriteComponentActionButton, actionState.buttonLabel);
         if (true == hasSpriteComponent)
         {
-            const std::wstring spriteRef = ToWideString(spriteComponent->get().spriteAssetRef.GetValue());
+            std::string spriteRefValue = spriteComponent->get().spriteAssetRef.GetValue();
+            constexpr std::string_view SpriteAssetPrefix = "sprites/";
+            if (spriteRefValue.starts_with(SpriteAssetPrefix))
+            {
+                spriteRefValue = spriteRefValue.substr(SpriteAssetPrefix.size());
+            }
+
+            const std::wstring spriteRef = ToWideString(spriteRefValue);
             SetWindowTextW(m_spriteRefEdit, spriteRef.c_str());
         }
         else
@@ -160,7 +169,12 @@ namespace Xelqoria::Editor
         {
             GetWindowTextW(m_spriteRefEdit, spriteRefBuffer, static_cast<int>(std::size(spriteRefBuffer)));
             const std::wstring spriteRefValue(spriteRefBuffer);
-            const std::string spriteRef = ToNarrowString(spriteRefValue);
+            std::string spriteRef = ToNarrowString(spriteRefValue);
+            if (false == spriteRef.empty() && false == spriteRef.starts_with("sprites/"))
+            {
+                spriteRef = "sprites/" + spriteRef;
+            }
+
             const Core::AssetId currentSpriteRef = spriteComponent->get().spriteAssetRef;
             if (currentSpriteRef.GetValue() != spriteRef)
             {
@@ -174,6 +188,56 @@ namespace Xelqoria::Editor
             Refresh(scene, selectedEntityId, canAddSpriteComponent);
         }
 
+        return result;
+    }
+
+    InspectorApplyResult InspectorPanelController::ApplyTextureDrop(
+        Game::Scene* scene,
+        std::optional<Game::EntityId> selectedEntityId,
+        const AssetsPanelController& assetsPanelController)
+    {
+        InspectorApplyResult result{};
+        if (nullptr == scene
+            || false == selectedEntityId.has_value()
+            || false == assetsPanelController.WasDragReleasedThisFrame()
+            || true == assetsPanelController.GetDraggingSpriteAssetId().IsEmpty()
+            || nullptr == m_spriteRefEdit
+            || false == IsWindowVisible(m_spriteRefEdit))
+        {
+            return result;
+        }
+
+        POINT cursorPoint{};
+        GetCursorPos(&cursorPoint);
+
+        RECT textureRect{};
+        GetWindowRect(m_spriteRefEdit, &textureRect);
+        if (FALSE == PtInRect(&textureRect, cursorPoint))
+        {
+            return result;
+        }
+
+        const auto entity = scene->FindEntity(*selectedEntityId);
+        if (false == entity.has_value())
+        {
+            return result;
+        }
+
+        auto spriteComponent = entity->get().GetSpriteComponent();
+        if (false == spriteComponent.has_value())
+        {
+            return result;
+        }
+
+        const Core::AssetId droppedSpriteAssetId = assetsPanelController.GetDraggingSpriteAssetId();
+        if (spriteComponent->get().spriteAssetRef == droppedSpriteAssetId)
+        {
+            return result;
+        }
+
+        spriteComponent->get().spriteAssetRef = droppedSpriteAssetId;
+        result.changed = true;
+        Refresh(scene, selectedEntityId, true);
         return result;
     }
 
