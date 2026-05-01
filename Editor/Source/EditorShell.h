@@ -123,6 +123,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSpriteRefEdit() const;
 
         /// <summary>
+        /// SpriteRef ドロップ先ハイライトを取得する。
+        /// </summary>
+        /// <returns>SpriteRef ドロップ先ハイライトの HWND。</returns>
+        [[nodiscard]] HWND GetSpriteRefDropHighlight() const;
+
+        /// <summary>
         /// SpriteComponent 操作ボタンを取得する。
         /// </summary>
         /// <returns>SpriteComponent 操作用ボタンの HWND。</returns>
@@ -310,6 +316,7 @@ namespace Xelqoria::Editor
         std::array<HWND, 9> m_transformEditControls{};
         HWND m_spriteComponentSectionLabel = nullptr;
         HWND m_spriteRefLabel = nullptr;
+        HWND m_spriteRefDropHighlight = nullptr;
         HWND m_spriteRefEdit = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
         std::uint32_t m_sceneViewWidth = 0;

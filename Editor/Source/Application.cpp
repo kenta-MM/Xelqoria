@@ -553,6 +553,7 @@ namespace Xelqoria::Editor
         }
 
         m_assetsPanelController.UpdateDragState(inputSnapshot);
+        m_inspectorPanelController.UpdateTextureDropHighlight(m_assetsPanelController);
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
 
         if (true == m_assetsPanelController.HasCreateSpriteRequest())

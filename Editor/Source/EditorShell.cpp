@@ -13,6 +13,60 @@ namespace Xelqoria::Editor
 {
     namespace
     {
+        constexpr UINT_PTR SpriteRefEditSubclassId = 1;
+
+        /// <summary>
+        /// Texture 欄の直接テキスト編集だけを抑止する。
+        /// </summary>
+        /// <param name="window">対象 Edit HWND。</param>
+        /// <param name="message">Win32 メッセージ。</param>
+        /// <param name="wParam">メッセージ WPARAM。</param>
+        /// <param name="lParam">メッセージ LPARAM。</param>
+        /// <param name="subclassId">サブクラス ID。</param>
+        /// <param name="referenceData">未使用。</param>
+        /// <returns>メッセージ処理結果。</returns>
+        LRESULT CALLBACK SpriteRefEditSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData)
+        {
+            (void)subclassId;
+            (void)referenceData;
+
+            if (WM_NCDESTROY == message)
+            {
+                RemoveWindowSubclass(window, SpriteRefEditSubclassProc, SpriteRefEditSubclassId);
+                return DefSubclassProc(window, message, wParam, lParam);
+            }
+
+            if (WM_CHAR == message
+                || WM_UNICHAR == message
+                || WM_IME_CHAR == message
+                || WM_PASTE == message
+                || WM_CUT == message
+                || WM_CLEAR == message
+                || EM_UNDO == message)
+            {
+                return 0;
+            }
+
+            if (WM_KEYDOWN == message)
+            {
+                const bool isControlDown = 0 != (GetKeyState(VK_CONTROL) & 0x8000);
+                const bool isEditingShortcut = isControlDown
+                    && (wParam == 'V' || wParam == 'X' || wParam == 'Z' || wParam == 'Y');
+                if (VK_BACK == wParam || VK_DELETE == wParam || isEditingShortcut)
+                {
+                    return 0;
+                }
+            }
+
+            return DefSubclassProc(window, message, wParam, lParam);
+        }
+
         UINT GetWindowDpi(HWND window)
         {
             HMODULE user32 = GetModuleHandleW(L"user32.dll");
@@ -104,7 +158,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 36> controls{
+            const std::array<HWND, 37> controls{
                 m_hierarchyPanel,
                 m_assetsPanel,
                 m_inspectorPanel,
@@ -139,6 +193,7 @@ namespace Xelqoria::Editor
                 m_transformEditControls[8],
                 m_spriteComponentSectionLabel,
                 m_spriteRefLabel,
+                m_spriteRefDropHighlight,
                 m_spriteRefEdit,
                 m_spriteComponentActionButton
             };
@@ -456,6 +511,17 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        m_spriteRefDropHighlight = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"",
+            WS_CHILD | SS_BLACKFRAME);
+        if (nullptr == m_spriteRefDropHighlight)
+        {
+            return false;
+        }
+
         m_spriteRefEdit = CreateChildWindow(
             parentWindow,
             hInstance,
@@ -463,6 +529,10 @@ namespace Xelqoria::Editor
             L"",
             WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
         if (nullptr == m_spriteRefEdit)
+        {
+            return false;
+        }
+        if (FALSE == SetWindowSubclass(m_spriteRefEdit, SpriteRefEditSubclassProc, SpriteRefEditSubclassId, 0))
         {
             return false;
         }
@@ -665,6 +735,12 @@ namespace Xelqoria::Editor
             metrics.inspectorLabelWidth,
             metrics.inspectorRowHeight);
         MoveChildWindowNoRedraw(
+            m_spriteRefDropHighlight,
+            metrics.inspectorInnerX + metrics.inspectorLabelWidth - ScaleMetric(2),
+            metrics.spriteRefTop - ScaleMetric(2),
+            (std::max)(0, metrics.inspectorInnerWidth - metrics.inspectorLabelWidth + ScaleMetric(4)),
+            metrics.inspectorRowHeight + ScaleMetric(4));
+        MoveChildWindowNoRedraw(
             m_spriteRefEdit,
             metrics.inspectorInnerX + metrics.inspectorLabelWidth,
             metrics.spriteRefTop,
@@ -772,7 +848,7 @@ namespace Xelqoria::Editor
                 RDW_INVALIDATE | RDW_ERASE | RDW_ERASENOW | RDW_UPDATENOW | RDW_ALLCHILDREN | RDW_FRAME);
         }
 
-        const std::array<HWND, 36> controls{
+        const std::array<HWND, 37> controls{
             m_hierarchyPanel,
             m_assetsPanel,
             m_inspectorPanel,
@@ -807,6 +883,7 @@ namespace Xelqoria::Editor
             m_transformEditControls[8],
             m_spriteComponentSectionLabel,
             m_spriteRefLabel,
+            m_spriteRefDropHighlight,
             m_spriteRefEdit,
             m_spriteComponentActionButton
         };
@@ -879,7 +956,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 36> controls{
+        const std::array<HWND, 37> controls{
             m_hierarchyPanel,
             m_assetsPanel,
             m_inspectorPanel,
@@ -914,6 +991,7 @@ namespace Xelqoria::Editor
             m_transformEditControls[8],
             m_spriteComponentSectionLabel,
             m_spriteRefLabel,
+            m_spriteRefDropHighlight,
             m_spriteRefEdit,
             m_spriteComponentActionButton
         };
@@ -1012,6 +1090,11 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetSpriteRefEdit() const
     {
         return m_spriteRefEdit;
+    }
+
+    HWND EditorShell::GetSpriteRefDropHighlight() const
+    {
+        return m_spriteRefDropHighlight;
     }
 
     HWND EditorShell::GetSpriteComponentActionButton() const

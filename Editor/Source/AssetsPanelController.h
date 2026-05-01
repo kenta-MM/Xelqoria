@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include <CommCtrl.h>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -222,6 +223,38 @@ namespace Xelqoria::Editor
         void RefreshSummaryLabel();
 
         /// <summary>
+        /// ドラッグ中の画像表示を開始する。
+        /// </summary>
+        /// <param name="imagePath">ドラッグ対象画像パス。</param>
+        /// <param name="fallbackIconIndex">サムネイル取得失敗時に使うシステムアイコン番号。</param>
+        /// <param name="screenPoint">開始時のスクリーン座標。</param>
+        void BeginDragImage(
+            const std::filesystem::path& imagePath,
+            int fallbackIconIndex,
+            POINT screenPoint);
+
+        /// <summary>
+        /// ドラッグ中の画像表示を現在カーソル位置へ移動する。
+        /// </summary>
+        /// <param name="screenPoint">スクリーン座標。</param>
+        void MoveDragImage(POINT screenPoint);
+
+        /// <summary>
+        /// ドラッグ中の画像表示を終了してリソースを解放する。
+        /// </summary>
+        void EndDragImage();
+
+        /// <summary>
+        /// 画像ファイル用のドラッグ表示 ImageList を作成する。
+        /// </summary>
+        /// <param name="imagePath">対象画像パス。</param>
+        /// <param name="fallbackIconIndex">サムネイル取得失敗時に使うシステムアイコン番号。</param>
+        /// <returns>作成した ImageList。失敗時は nullptr。</returns>
+        [[nodiscard]] HIMAGELIST CreateDragImageList(
+            const std::filesystem::path& imagePath,
+            int fallbackIconIndex) const;
+
+        /// <summary>
         /// 指定パスが Texture として扱える画像ファイルかを判定する。
         /// </summary>
         /// <param name="path">判定対象パス。</param>
@@ -260,5 +293,7 @@ namespace Xelqoria::Editor
         bool m_assetDragReleasedThisFrame = false;
         bool m_createSpriteRequested = false;
         bool m_listViewInitialized = false;
+        HIMAGELIST m_dragImageList = nullptr;
+        bool m_isDragImageVisible = false;
     };
 }

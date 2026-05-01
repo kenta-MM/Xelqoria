@@ -5,10 +5,13 @@
 #include <CommCtrl.h>
 #include <cstdio>
 #include <iterator>
+#include <objbase.h>
+#include <ShObjIdl.h>
 #include <Shellapi.h>
 #include <system_error>
 #include <utility>
 #include <Windows.h>
+#include <wrl/client.h>
 
 #include "EditorStringUtils.h"
 
@@ -253,6 +256,7 @@ namespace Xelqoria::Editor
             m_draggingImagePath.clear();
             m_canPlaceDraggingAssetInScene = false;
             m_createSpriteRequested = false;
+            EndDragImage();
             RefreshListView();
             RefreshSummaryLabel();
             return;
@@ -382,8 +386,14 @@ namespace Xelqoria::Editor
                 m_assetDragReleasedThisFrame = true;
             }
 
+            EndDragImage();
             m_isAssetDragActive = false;
             return;
+        }
+
+        if (m_isAssetDragActive)
+        {
+            MoveDragImage(inputSnapshot.GetCursorScreenPoint());
         }
 
         if (false == inputSnapshot.WasMouseButtonPressed(Core::MouseButton::Left))
@@ -413,6 +423,10 @@ namespace Xelqoria::Editor
             m_draggingSpriteAssetId = BuildSpriteAssetId(hitEntry.path);
             m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
             m_canPlaceDraggingAssetInScene = false;
+            if (m_isAssetDragActive)
+            {
+                BeginDragImage(hitEntry.path, hitEntry.iconIndex, inputSnapshot.GetCursorScreenPoint());
+            }
         }
         else
         {
@@ -421,6 +435,7 @@ namespace Xelqoria::Editor
             m_draggingSpriteAssetId = {};
             m_isAssetDragActive = false;
             m_canPlaceDraggingAssetInScene = false;
+            EndDragImage();
         }
 
         const ULONGLONG currentTick = GetTickCount64();
@@ -441,6 +456,7 @@ namespace Xelqoria::Editor
         m_draggingTextureAssetId = {};
         m_draggingImagePath.clear();
         m_canPlaceDraggingAssetInScene = false;
+        EndDragImage();
         RefreshSummaryLabel();
     }
 
@@ -803,6 +819,151 @@ namespace Xelqoria::Editor
         }
 
         SetWindowTextW(m_assetsSummaryLabel, summaryText);
+    }
+
+    void AssetsPanelController::BeginDragImage(
+        const std::filesystem::path& imagePath,
+        int fallbackIconIndex,
+        POINT screenPoint)
+    {
+        EndDragImage();
+
+        m_dragImageList = CreateDragImageList(imagePath, fallbackIconIndex);
+        if (nullptr == m_dragImageList)
+        {
+            return;
+        }
+
+        if (FALSE == ImageList_BeginDrag(m_dragImageList, 0, 24, 24))
+        {
+            ImageList_Destroy(m_dragImageList);
+            m_dragImageList = nullptr;
+            return;
+        }
+
+        if (FALSE == ImageList_DragEnter(GetDesktopWindow(), screenPoint.x, screenPoint.y))
+        {
+            ImageList_EndDrag();
+            ImageList_Destroy(m_dragImageList);
+            m_dragImageList = nullptr;
+            return;
+        }
+
+        m_isDragImageVisible = true;
+    }
+
+    void AssetsPanelController::MoveDragImage(POINT screenPoint)
+    {
+        if (false == m_isDragImageVisible)
+        {
+            return;
+        }
+
+        ImageList_DragMove(screenPoint.x, screenPoint.y);
+    }
+
+    void AssetsPanelController::EndDragImage()
+    {
+        if (m_isDragImageVisible)
+        {
+            ImageList_DragLeave(GetDesktopWindow());
+            ImageList_EndDrag();
+            m_isDragImageVisible = false;
+        }
+
+        if (nullptr != m_dragImageList)
+        {
+            ImageList_Destroy(m_dragImageList);
+            m_dragImageList = nullptr;
+        }
+    }
+
+    HIMAGELIST AssetsPanelController::CreateDragImageList(
+        const std::filesystem::path& imagePath,
+        int fallbackIconIndex) const
+    {
+        constexpr int DragImageSize = 48;
+        const HRESULT coInitializeResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        const bool shouldUninitializeCom = SUCCEEDED(coInitializeResult);
+
+        HIMAGELIST imageList = ImageList_Create(
+            DragImageSize,
+            DragImageSize,
+            ILC_COLOR32 | ILC_MASK,
+            1,
+            1);
+        if (nullptr == imageList)
+        {
+            if (shouldUninitializeCom)
+            {
+                CoUninitialize();
+            }
+
+            return nullptr;
+        }
+
+        Microsoft::WRL::ComPtr<IShellItemImageFactory> imageFactory;
+        const HRESULT itemHr = SHCreateItemFromParsingName(
+            imagePath.c_str(),
+            nullptr,
+            IID_PPV_ARGS(imageFactory.GetAddressOf()));
+        if (SUCCEEDED(itemHr) && imageFactory)
+        {
+            HBITMAP thumbnail = nullptr;
+            SIZE thumbnailSize{ DragImageSize, DragImageSize };
+            const HRESULT thumbnailHr = imageFactory->GetImage(
+                thumbnailSize,
+                SIIGBF_BIGGERSIZEOK,
+                &thumbnail);
+            if (SUCCEEDED(thumbnailHr) && nullptr != thumbnail)
+            {
+                ImageList_Add(imageList, thumbnail, nullptr);
+                DeleteObject(thumbnail);
+                if (0 < ImageList_GetImageCount(imageList))
+                {
+                    if (shouldUninitializeCom)
+                    {
+                        CoUninitialize();
+                    }
+
+                    return imageList;
+                }
+            }
+        }
+
+        SHFILEINFOW fileInfo{};
+        HIMAGELIST systemImageList = reinterpret_cast<HIMAGELIST>(SHGetFileInfoW(
+            imagePath.c_str(),
+            FILE_ATTRIBUTE_NORMAL,
+            &fileInfo,
+            sizeof(fileInfo),
+            SHGFI_SYSICONINDEX | SHGFI_LARGEICON));
+        if (nullptr != systemImageList)
+        {
+            HICON icon = ImageList_GetIcon(systemImageList, fallbackIconIndex, ILD_NORMAL);
+            if (nullptr != icon)
+            {
+                ImageList_AddIcon(imageList, icon);
+                DestroyIcon(icon);
+                if (0 < ImageList_GetImageCount(imageList))
+                {
+                    if (shouldUninitializeCom)
+                    {
+                        CoUninitialize();
+                    }
+
+                    return imageList;
+                }
+            }
+        }
+
+        ImageList_Destroy(imageList);
+        if (shouldUninitializeCom)
+        {
+            CoUninitialize();
+        }
+
+        return nullptr;
     }
 
     bool AssetsPanelController::IsTextureImageFile(const std::filesystem::path& path)
