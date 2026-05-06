@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <fstream>
 #include <algorithm>
+#include <cstdint>
+#include <iomanip>
 #include <memory>
 #include <sstream>
 #include <system_error>
@@ -18,11 +20,25 @@
 #include <Scene.h>
 #include <TextureAssetRegistry.h>
 #include <IGraphicsContext.h>    
+#include <Vector3.h>
 
 #include "EditorStringUtils.h"
 
 namespace Xelqoria::Editor
 {
+    namespace
+    {
+        /// <summary>
+        /// Vector3 を `x,y,z` 形式で出力する。
+        /// </summary>
+        /// <param name="stream">出力先ストリーム。</param>
+        /// <param name="value">出力する Vector3。</param>
+        void AppendVector3(std::ostringstream& stream, const Math::Vector3& value)
+        {
+            stream << value.x << "," << value.y << "," << value.z;
+        }
+    }
+
     bool EditorSceneDocument::Initialize(RHI::IGraphicsContext& graphicsContext)
     {
         m_graphicsContext = &graphicsContext;
@@ -239,6 +255,97 @@ namespace Xelqoria::Editor
         }
 
         return true;
+    }
+
+    bool EditorSceneDocument::CreateSpriteAssetFile(
+        const Game::Entity& entity,
+        const std::filesystem::path& targetDirectory)
+    {
+        if (false == m_project.GetInfo().has_value() || true == entity.GetName().empty())
+        {
+            return false;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        std::filesystem::path outputDirectory = rootDirectory;
+        std::error_code errorCode;
+        if (false == targetDirectory.empty()
+            && std::filesystem::is_directory(targetDirectory, errorCode)
+            && false == static_cast<bool>(errorCode))
+        {
+            const std::filesystem::path relativeTargetDirectory =
+                std::filesystem::relative(targetDirectory, rootDirectory, errorCode);
+            if (false == static_cast<bool>(errorCode)
+                && false == relativeTargetDirectory.empty()
+                && relativeTargetDirectory.native().find(L"..") != 0)
+            {
+                outputDirectory = targetDirectory;
+            }
+        }
+
+        std::filesystem::create_directories(outputDirectory, errorCode);
+        if (errorCode)
+        {
+            return false;
+        }
+
+        const std::filesystem::path spriteAssetPath = outputDirectory / (ToWideString(entity.GetName()) + L".sprite");
+        std::ofstream output(spriteAssetPath, std::ios::binary | std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return false;
+        }
+
+        const Game::Transform& transform = entity.GetTransform();
+        const auto spriteComponent = entity.GetSpriteComponent();
+        Core::AssetId spriteAssetRef{};
+        Core::AssetId textureAssetId{};
+        std::uint32_t textureWidth = 0;
+        std::uint32_t textureHeight = 0;
+        Game::SpriteRenderSettings renderSettings{};
+
+        if (spriteComponent.has_value())
+        {
+            spriteAssetRef = spriteComponent->get().spriteAssetRef;
+            renderSettings = spriteComponent->get().renderSettings;
+
+            const auto spriteAsset = m_spriteAssetRegistry.ResolveSpriteAsset(spriteAssetRef);
+            if (spriteAsset.has_value())
+            {
+                textureAssetId = spriteAsset->textureAssetId;
+                const auto texture = m_textureAssetRegistry.ResolveTexture(textureAssetId);
+                if (static_cast<bool>(texture))
+                {
+                    textureWidth = texture->GetWidth();
+                    textureHeight = texture->GetHeight();
+                }
+            }
+        }
+
+        std::ostringstream text;
+        text << std::fixed << std::setprecision(6);
+        text << "magic=XelqoriaSpriteAsset\n";
+        text << "version=1\n";
+        text << "name=" << std::quoted(entity.GetName()) << "\n";
+        text << "transform.position=";
+        AppendVector3(text, transform.position);
+        text << "\n";
+        text << "transform.rotation=";
+        AppendVector3(text, transform.rotation);
+        text << "\n";
+        text << "transform.scale=";
+        AppendVector3(text, transform.scale);
+        text << "\n";
+        text << "hasSpriteComponent=" << (spriteComponent.has_value() ? "true" : "false") << "\n";
+        text << "spriteAssetRef=" << spriteAssetRef.GetValue() << "\n";
+        text << "textureAssetId=" << textureAssetId.GetValue() << "\n";
+        text << "texture.size=" << textureWidth << "," << textureHeight << "\n";
+        text << "render.visible=" << (renderSettings.visible ? "true" : "false") << "\n";
+        text << "render.sortOrder=" << renderSettings.sortOrder << "\n";
+        text << "render.opacity=" << renderSettings.opacity << "\n";
+
+        output << text.str();
+        return static_cast<bool>(output);
     }
 
     const std::optional<EditorProjectInfo>& EditorSceneDocument::GetProjectInfo() const

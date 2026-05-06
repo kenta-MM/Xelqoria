@@ -261,6 +261,7 @@ namespace Xelqoria::Editor
             m_draggingImagePath.clear();
             m_canPlaceDraggingAssetInScene = false;
             m_createSpriteRequested = false;
+            m_createSpriteTargetDirectory.clear();
             EndDragImage();
             RefreshListView();
             RefreshSummaryLabel();
@@ -314,7 +315,25 @@ namespace Xelqoria::Editor
         if (notifyHeader->code == NM_RCLICK)
         {
             const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
+            std::filesystem::path createSpriteTargetDirectory = m_assetsRootDirectory;
             if (0 <= itemActivate->iItem)
+            {
+                const std::size_t entryIndex = static_cast<std::size_t>(itemActivate->iItem);
+                if (entryIndex >= m_visibleEntries.size())
+                {
+                    return false;
+                }
+
+                const AssetListEntry& entry = m_visibleEntries[entryIndex];
+                if (false == entry.isDirectory || entry.isParentLink)
+                {
+                    return false;
+                }
+
+                createSpriteTargetDirectory = entry.path;
+            }
+
+            if (true == createSpriteTargetDirectory.empty())
             {
                 return false;
             }
@@ -342,6 +361,7 @@ namespace Xelqoria::Editor
             if (CreateSpriteMenuCommandId == command)
             {
                 m_createSpriteRequested = true;
+                m_createSpriteTargetDirectory = createSpriteTargetDirectory;
                 return true;
             }
         }
@@ -521,6 +541,12 @@ namespace Xelqoria::Editor
     void AssetsPanelController::ClearCreateSpriteRequest()
     {
         m_createSpriteRequested = false;
+        m_createSpriteTargetDirectory.clear();
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetCreateSpriteTargetDirectory() const
+    {
+        return m_createSpriteTargetDirectory;
     }
 
     void AssetsPanelController::InitializeListView()

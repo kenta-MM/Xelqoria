@@ -160,6 +160,12 @@ namespace Xelqoria::Editor
         /// </summary>
         void ClearCreateSpriteRequest();
 
+        /// <summary>
+        /// Sprite アセットファイルの作成先フォルダを取得する。
+        /// </summary>
+        /// <returns>作成先フォルダ。未指定時は空。</returns>
+        [[nodiscard]] const std::filesystem::path& GetCreateSpriteTargetDirectory() const;
+
     private:
         /// <summary>
         /// ListView の列とシステムアイコンを初期化する。
@@ -317,6 +323,7 @@ namespace Xelqoria::Editor
         bool m_canPlaceDraggingAssetInScene = false;
         bool m_assetDragReleasedThisFrame = false;
         bool m_createSpriteRequested = false;
+        std::filesystem::path m_createSpriteTargetDirectory{};
         bool m_listViewInitialized = false;
         HIMAGELIST m_dragImageList = nullptr;
         bool m_isDragImageVisible = false;

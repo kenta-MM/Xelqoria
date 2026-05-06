@@ -169,7 +169,7 @@ namespace Xelqoria::Editor
 
         if (true == TryConsumeHierarchyButtonClick(m_hierarchyCreateButton, frameInput, m_buttonInputState))
         {
-            result = SceneEditingOperations::CreateEntity(*scene);
+            result = SceneEditingOperations::CreateUntexturedSprite(*scene, 0.0f, 0.0f);
             m_buttonInputState.pressedButtonHandle = nullptr;
         }
         else if (true == TryConsumeHierarchyButtonClick(m_hierarchyDuplicateButton, frameInput, m_buttonInputState))

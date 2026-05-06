@@ -22,6 +22,11 @@ namespace Xelqoria::Editor
         /// 編集後に選択すべき EntityId を表す。
         /// </summary>
         std::optional<Game::EntityId> selectedEntityId{};
+
+        /// <summary>
+        /// Sprite Entity の新規作成が行われたかを表す。
+        /// </summary>
+        bool createdSpriteEntity = false;
     };
 
     /// <summary>
