@@ -5,10 +5,15 @@
 #include <CommCtrl.h>
 #include <cstdio>
 #include <iterator>
+#include <objbase.h>
+#include <ShObjIdl.h>
 #include <Shellapi.h>
 #include <system_error>
 #include <utility>
 #include <Windows.h>
+#include <wrl/client.h>
+
+#include "EditorStringUtils.h"
 
 namespace Xelqoria::Editor
 {
@@ -18,6 +23,11 @@ namespace Xelqoria::Editor
         constexpr int ModifiedTimeColumnIndex = 1;
         constexpr int TypeColumnIndex = 2;
         constexpr int SizeColumnIndex = 3;
+        constexpr int DragPreviewWidth = 220;
+        constexpr int DragPreviewHeight = 64;
+        constexpr int DragPreviewImageSize = 48;
+        constexpr int DragPreviewCursorOffsetX = 14;
+        constexpr int DragPreviewCursorOffsetY = 18;
 
         /// <summary>
         /// ディレクトリエントリをフォルダ優先、名前順で並べる。
@@ -223,6 +233,11 @@ namespace Xelqoria::Editor
 
             return result;
         }
+
+        /// <summary>
+        /// Assets の右クリックメニューから実行されたコマンド ID を表す。
+        /// </summary>
+        constexpr UINT_PTR CreateSpriteMenuCommandId = 1;
     }
 
     void AssetsPanelController::Bind(const EditorShell& shell)
@@ -242,6 +257,11 @@ namespace Xelqoria::Editor
             m_selectedFilePath.clear();
             m_selectedSpriteAssetId = {};
             m_draggingSpriteAssetId = {};
+            m_draggingTextureAssetId = {};
+            m_draggingImagePath.clear();
+            m_canPlaceDraggingAssetInScene = false;
+            m_createSpriteRequested = false;
+            EndDragImage();
             RefreshListView();
             RefreshSummaryLabel();
             return;
@@ -291,6 +311,41 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        if (notifyHeader->code == NM_RCLICK)
+        {
+            const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
+            if (0 <= itemActivate->iItem)
+            {
+                return false;
+            }
+
+            HMENU popupMenu = CreatePopupMenu();
+            if (nullptr == popupMenu)
+            {
+                return false;
+            }
+
+            AppendMenuW(popupMenu, MF_STRING, CreateSpriteMenuCommandId, L"Spriteを作成");
+
+            POINT menuPoint{};
+            GetCursorPos(&menuPoint);
+            const UINT command = TrackPopupMenu(
+                popupMenu,
+                TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                menuPoint.x,
+                menuPoint.y,
+                0,
+                m_assetsListView,
+                nullptr);
+            DestroyMenu(popupMenu);
+
+            if (CreateSpriteMenuCommandId == command)
+            {
+                m_createSpriteRequested = true;
+                return true;
+            }
+        }
+
         if (notifyHeader->code == LVN_KEYDOWN)
         {
             const NMLVKEYDOWN* keyDown = reinterpret_cast<NMLVKEYDOWN*>(notifyParameter);
@@ -322,14 +377,28 @@ namespace Xelqoria::Editor
             return;
         }
 
-        m_assetDragReleasedThisFrame = false;
-        m_isAssetDragActive = false;
-        m_draggingSpriteAssetId = {};
-
         if (inputSnapshot.WasKeyPressed(VK_RETURN) && GetFocus() == m_assetsListView)
         {
             (void)TryOpenSelectedEntry();
             return;
+        }
+
+        m_assetDragReleasedThisFrame = false;
+        if (false == inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left))
+        {
+            if (m_isAssetDragActive)
+            {
+                m_assetDragReleasedThisFrame = true;
+            }
+
+            EndDragImage();
+            m_isAssetDragActive = false;
+            return;
+        }
+
+        if (m_isAssetDragActive)
+        {
+            MoveDragImage(inputSnapshot.GetCursorScreenPoint());
         }
 
         if (false == inputSnapshot.WasMouseButtonPressed(Core::MouseButton::Left))
@@ -351,6 +420,29 @@ namespace Xelqoria::Editor
         SetFocus(m_assetsListView);
         SyncSelectedPathFromListView();
 
+        const AssetListEntry& hitEntry = m_visibleEntries[static_cast<std::size_t>(hitIndex)];
+        if (false == hitEntry.isDirectory && IsTextureImageFile(hitEntry.path))
+        {
+            m_draggingImagePath = hitEntry.path;
+            m_draggingTextureAssetId = BuildTextureAssetId(hitEntry.path);
+            m_draggingSpriteAssetId = BuildSpriteAssetId(hitEntry.path);
+            m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
+            m_canPlaceDraggingAssetInScene = false;
+            if (m_isAssetDragActive)
+            {
+                BeginDragImage(hitEntry.path, hitEntry.iconIndex, inputSnapshot.GetCursorScreenPoint());
+            }
+        }
+        else
+        {
+            m_draggingImagePath.clear();
+            m_draggingTextureAssetId = {};
+            m_draggingSpriteAssetId = {};
+            m_isAssetDragActive = false;
+            m_canPlaceDraggingAssetInScene = false;
+            EndDragImage();
+        }
+
         const ULONGLONG currentTick = GetTickCount64();
         const bool isDoubleClick = hitIndex == m_lastClickedIndex
             && currentTick - m_lastClickTick <= static_cast<ULONGLONG>(GetDoubleClickTime());
@@ -366,6 +458,10 @@ namespace Xelqoria::Editor
     void AssetsPanelController::CompleteReleasedDrag()
     {
         m_draggingSpriteAssetId = {};
+        m_draggingTextureAssetId = {};
+        m_draggingImagePath.clear();
+        m_canPlaceDraggingAssetInScene = false;
+        EndDragImage();
         RefreshSummaryLabel();
     }
 
@@ -379,9 +475,24 @@ namespace Xelqoria::Editor
         return m_draggingSpriteAssetId;
     }
 
+    const Core::AssetId& AssetsPanelController::GetDraggingTextureAssetId() const
+    {
+        return m_draggingTextureAssetId;
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetDraggingImagePath() const
+    {
+        return m_draggingImagePath;
+    }
+
     bool AssetsPanelController::IsDragActive() const
     {
         return m_isAssetDragActive;
+    }
+
+    bool AssetsPanelController::CanPlaceDraggingAssetInScene() const
+    {
+        return m_canPlaceDraggingAssetInScene;
     }
 
     bool AssetsPanelController::WasDragReleasedThisFrame() const
@@ -391,7 +502,25 @@ namespace Xelqoria::Editor
 
     bool AssetsPanelController::HasVisibleSpriteAssets() const
     {
+        for (const AssetListEntry& entry : m_visibleEntries)
+        {
+            if (false == entry.isDirectory && IsTextureImageFile(entry.path))
+            {
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    bool AssetsPanelController::HasCreateSpriteRequest() const
+    {
+        return m_createSpriteRequested;
+    }
+
+    void AssetsPanelController::ClearCreateSpriteRequest()
+    {
+        m_createSpriteRequested = false;
     }
 
     void AssetsPanelController::InitializeListView()
@@ -555,10 +684,14 @@ namespace Xelqoria::Editor
         if (entry.isParentLink)
         {
             m_selectedFilePath.clear();
+            m_selectedSpriteAssetId = {};
         }
         else
         {
             m_selectedFilePath = entry.path;
+            m_selectedSpriteAssetId = IsTextureImageFile(entry.path)
+                ? BuildSpriteAssetId(entry.path)
+                : Core::AssetId{};
         }
 
         RefreshSummaryLabel();
@@ -691,5 +824,355 @@ namespace Xelqoria::Editor
         }
 
         SetWindowTextW(m_assetsSummaryLabel, summaryText);
+    }
+
+    void AssetsPanelController::BeginDragImage(
+        const std::filesystem::path& imagePath,
+        int fallbackIconIndex,
+        POINT screenPoint)
+    {
+        EndDragImage();
+
+        m_dragImageList = CreateDragImageList(imagePath, fallbackIconIndex);
+        BeginDragPreview(imagePath, screenPoint);
+        if (nullptr == m_dragImageList)
+        {
+            return;
+        }
+
+        if (FALSE == ImageList_BeginDrag(m_dragImageList, 0, 24, 24))
+        {
+            ImageList_Destroy(m_dragImageList);
+            m_dragImageList = nullptr;
+            return;
+        }
+
+        if (FALSE == ImageList_DragEnter(GetDesktopWindow(), screenPoint.x, screenPoint.y))
+        {
+            ImageList_EndDrag();
+            ImageList_Destroy(m_dragImageList);
+            m_dragImageList = nullptr;
+            return;
+        }
+
+        m_isDragImageVisible = true;
+    }
+
+    void AssetsPanelController::MoveDragImage(POINT screenPoint)
+    {
+        if (false == m_isDragImageVisible)
+        {
+            MoveDragPreview(screenPoint);
+            return;
+        }
+
+        ImageList_DragMove(screenPoint.x, screenPoint.y);
+        MoveDragPreview(screenPoint);
+    }
+
+    void AssetsPanelController::EndDragImage()
+    {
+        if (m_isDragImageVisible)
+        {
+            ImageList_DragLeave(GetDesktopWindow());
+            ImageList_EndDrag();
+            m_isDragImageVisible = false;
+        }
+
+        if (nullptr != m_dragImageList)
+        {
+            ImageList_Destroy(m_dragImageList);
+            m_dragImageList = nullptr;
+        }
+
+        EndDragPreview();
+    }
+
+    void AssetsPanelController::BeginDragPreview(const std::filesystem::path& imagePath, POINT screenPoint)
+    {
+        EndDragPreview();
+
+        m_dragPreviewWindow = CreateWindowExW(
+            WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
+            L"Static",
+            L"",
+            WS_POPUP | WS_BORDER,
+            screenPoint.x + DragPreviewCursorOffsetX,
+            screenPoint.y + DragPreviewCursorOffsetY,
+            DragPreviewWidth,
+            DragPreviewHeight,
+            nullptr,
+            nullptr,
+            GetModuleHandleW(nullptr),
+            nullptr);
+        if (nullptr == m_dragPreviewWindow)
+        {
+            return;
+        }
+
+        m_dragPreviewBitmap = CreateDragPreviewBitmap(imagePath);
+        if (nullptr != m_dragPreviewBitmap)
+        {
+            m_dragPreviewImage = CreateWindowExW(
+                0,
+                L"Static",
+                L"",
+                WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_CENTERIMAGE,
+                6,
+                6,
+                DragPreviewImageSize,
+                DragPreviewImageSize,
+                m_dragPreviewWindow,
+                nullptr,
+                GetModuleHandleW(nullptr),
+                nullptr);
+            if (nullptr != m_dragPreviewImage)
+            {
+                SendMessageW(m_dragPreviewImage, STM_SETIMAGE, IMAGE_BITMAP, reinterpret_cast<LPARAM>(m_dragPreviewBitmap));
+            }
+        }
+
+        if (nullptr == m_dragPreviewImage)
+        {
+            SHFILEINFOW fileInfo{};
+            if (0 != SHGetFileInfoW(
+                    imagePath.c_str(),
+                    FILE_ATTRIBUTE_NORMAL,
+                    &fileInfo,
+                    sizeof(fileInfo),
+                    SHGFI_ICON | SHGFI_LARGEICON))
+            {
+                m_dragPreviewIcon = fileInfo.hIcon;
+                m_dragPreviewImage = CreateWindowExW(
+                    0,
+                    L"Static",
+                    L"",
+                    WS_CHILD | WS_VISIBLE | SS_ICON | SS_CENTERIMAGE,
+                    6,
+                    6,
+                    DragPreviewImageSize,
+                    DragPreviewImageSize,
+                    m_dragPreviewWindow,
+                    nullptr,
+                    GetModuleHandleW(nullptr),
+                    nullptr);
+                if (nullptr != m_dragPreviewImage)
+                {
+                    SendMessageW(m_dragPreviewImage, STM_SETICON, reinterpret_cast<WPARAM>(m_dragPreviewIcon), 0);
+                }
+            }
+        }
+
+        const std::wstring fileName = imagePath.filename().wstring();
+        m_dragPreviewText = CreateWindowExW(
+            0,
+            L"Static",
+            fileName.c_str(),
+            WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE | SS_ENDELLIPSIS,
+            60,
+            8,
+            DragPreviewWidth - 68,
+            DragPreviewHeight - 16,
+            m_dragPreviewWindow,
+            nullptr,
+            GetModuleHandleW(nullptr),
+            nullptr);
+        if (nullptr != m_dragPreviewText)
+        {
+            HFONT font = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+            SendMessageW(m_dragPreviewText, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+        }
+
+        ShowWindow(m_dragPreviewWindow, SW_SHOWNOACTIVATE);
+        MoveDragPreview(screenPoint);
+    }
+
+    void AssetsPanelController::MoveDragPreview(POINT screenPoint)
+    {
+        if (nullptr == m_dragPreviewWindow)
+        {
+            return;
+        }
+
+        SetWindowPos(
+            m_dragPreviewWindow,
+            HWND_TOPMOST,
+            screenPoint.x + DragPreviewCursorOffsetX,
+            screenPoint.y + DragPreviewCursorOffsetY,
+            0,
+            0,
+            SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    }
+
+    void AssetsPanelController::EndDragPreview()
+    {
+        if (nullptr != m_dragPreviewWindow)
+        {
+            DestroyWindow(m_dragPreviewWindow);
+            m_dragPreviewWindow = nullptr;
+            m_dragPreviewImage = nullptr;
+            m_dragPreviewText = nullptr;
+        }
+
+        if (nullptr != m_dragPreviewBitmap)
+        {
+            DeleteObject(m_dragPreviewBitmap);
+            m_dragPreviewBitmap = nullptr;
+        }
+
+        if (nullptr != m_dragPreviewIcon)
+        {
+            DestroyIcon(m_dragPreviewIcon);
+            m_dragPreviewIcon = nullptr;
+        }
+    }
+
+    HBITMAP AssetsPanelController::CreateDragPreviewBitmap(const std::filesystem::path& imagePath) const
+    {
+        const HRESULT coInitializeResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        const bool shouldUninitializeCom = SUCCEEDED(coInitializeResult);
+
+        Microsoft::WRL::ComPtr<IShellItemImageFactory> imageFactory;
+        const HRESULT itemHr = SHCreateItemFromParsingName(
+            imagePath.c_str(),
+            nullptr,
+            IID_PPV_ARGS(imageFactory.GetAddressOf()));
+        HBITMAP thumbnail = nullptr;
+        if (SUCCEEDED(itemHr) && imageFactory)
+        {
+            SIZE thumbnailSize{ DragPreviewImageSize, DragPreviewImageSize };
+            (void)imageFactory->GetImage(
+                thumbnailSize,
+                SIIGBF_BIGGERSIZEOK,
+                &thumbnail);
+        }
+
+        if (shouldUninitializeCom)
+        {
+            CoUninitialize();
+        }
+
+        return thumbnail;
+    }
+
+    HIMAGELIST AssetsPanelController::CreateDragImageList(
+        const std::filesystem::path& imagePath,
+        int fallbackIconIndex) const
+    {
+        constexpr int DragImageSize = 48;
+        const HRESULT coInitializeResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        const bool shouldUninitializeCom = SUCCEEDED(coInitializeResult);
+
+        HIMAGELIST imageList = ImageList_Create(
+            DragImageSize,
+            DragImageSize,
+            ILC_COLOR32 | ILC_MASK,
+            1,
+            1);
+        if (nullptr == imageList)
+        {
+            if (shouldUninitializeCom)
+            {
+                CoUninitialize();
+            }
+
+            return nullptr;
+        }
+
+        Microsoft::WRL::ComPtr<IShellItemImageFactory> imageFactory;
+        const HRESULT itemHr = SHCreateItemFromParsingName(
+            imagePath.c_str(),
+            nullptr,
+            IID_PPV_ARGS(imageFactory.GetAddressOf()));
+        if (SUCCEEDED(itemHr) && imageFactory)
+        {
+            HBITMAP thumbnail = nullptr;
+            SIZE thumbnailSize{ DragImageSize, DragImageSize };
+            const HRESULT thumbnailHr = imageFactory->GetImage(
+                thumbnailSize,
+                SIIGBF_BIGGERSIZEOK,
+                &thumbnail);
+            if (SUCCEEDED(thumbnailHr) && nullptr != thumbnail)
+            {
+                ImageList_Add(imageList, thumbnail, nullptr);
+                DeleteObject(thumbnail);
+                if (0 < ImageList_GetImageCount(imageList))
+                {
+                    if (shouldUninitializeCom)
+                    {
+                        CoUninitialize();
+                    }
+
+                    return imageList;
+                }
+            }
+        }
+
+        SHFILEINFOW fileInfo{};
+        HIMAGELIST systemImageList = reinterpret_cast<HIMAGELIST>(SHGetFileInfoW(
+            imagePath.c_str(),
+            FILE_ATTRIBUTE_NORMAL,
+            &fileInfo,
+            sizeof(fileInfo),
+            SHGFI_SYSICONINDEX | SHGFI_LARGEICON));
+        if (nullptr != systemImageList)
+        {
+            HICON icon = ImageList_GetIcon(systemImageList, fallbackIconIndex, ILD_NORMAL);
+            if (nullptr != icon)
+            {
+                ImageList_AddIcon(imageList, icon);
+                DestroyIcon(icon);
+                if (0 < ImageList_GetImageCount(imageList))
+                {
+                    if (shouldUninitializeCom)
+                    {
+                        CoUninitialize();
+                    }
+
+                    return imageList;
+                }
+            }
+        }
+
+        ImageList_Destroy(imageList);
+        if (shouldUninitializeCom)
+        {
+            CoUninitialize();
+        }
+
+        return nullptr;
+    }
+
+    bool AssetsPanelController::IsTextureImageFile(const std::filesystem::path& path)
+    {
+        const std::wstring extension = path.extension().wstring();
+        return extension == L".png"
+            || extension == L".jpg"
+            || extension == L".jpeg"
+            || extension == L".bmp";
+    }
+
+    Core::AssetId AssetsPanelController::BuildTextureAssetId(const std::filesystem::path& path) const
+    {
+        std::error_code errorCode;
+        const std::filesystem::path relativePath = std::filesystem::relative(path, m_assetsRootDirectory, errorCode);
+        if (errorCode)
+        {
+            return {};
+        }
+
+        return Core::AssetId("textures/" + ToNarrowString(relativePath.generic_wstring()));
+    }
+
+    Core::AssetId AssetsPanelController::BuildSpriteAssetId(const std::filesystem::path& path) const
+    {
+        std::error_code errorCode;
+        const std::filesystem::path relativePath = std::filesystem::relative(path, m_assetsRootDirectory, errorCode);
+        if (errorCode)
+        {
+            return {};
+        }
+
+        return Core::AssetId("sprites/" + ToNarrowString(relativePath.generic_wstring()));
     }
 }

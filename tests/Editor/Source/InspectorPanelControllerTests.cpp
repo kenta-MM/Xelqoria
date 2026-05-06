@@ -1,6 +1,36 @@
 #include <gtest/gtest.h>
 
+#include <string>
+
+#include "EditorStringUtils.h"
 #include "InspectorPanelController.h"
+
+TEST(EditorStringUtilsTests, Utf8ConversionRoundTripsJapaneseFileName)
+{
+    const std::wstring fileName = L"タイトルなし.png";
+    const std::string utf8FileName = Xelqoria::Editor::ToNarrowString(fileName);
+
+    EXPECT_FALSE(utf8FileName.empty());
+    EXPECT_EQ(fileName, Xelqoria::Editor::ToWideString(utf8FileName));
+}
+
+TEST(InspectorPanelControllerTests, FormatTextureDisplayTextShowsFileNameOnly)
+{
+    const std::wstring displayText =
+        Xelqoria::Editor::InspectorPanelController::FormatTextureDisplayText(
+            Xelqoria::Core::AssetId("sprites/タイトルなし.png"));
+
+    EXPECT_EQ(L"タイトルなし.png", displayText);
+}
+
+TEST(InspectorPanelControllerTests, FormatTextureDisplayTextShowsNestedFileNameOnly)
+{
+    const std::wstring displayText =
+        Xelqoria::Editor::InspectorPanelController::FormatTextureDisplayText(
+            Xelqoria::Core::AssetId("sprites/Images/タイトルなし.png"));
+
+    EXPECT_EQ(L"タイトルなし.png", displayText);
+}
 
 TEST(InspectorPanelControllerTests, ComputeActionStateShowsEnabledRemoveWhenSpriteComponentAttached)
 {

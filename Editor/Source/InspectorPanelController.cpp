@@ -10,6 +10,7 @@
 #include <iterator>
 #include <optional>
 #include <AssetId.h>
+#include "AssetsPanelController.h"
 #include "EditorShell.h"
 #include <Entity.h>
 #include <Scene.h>
@@ -23,6 +24,7 @@ namespace Xelqoria::Editor
         m_transformEditControls = shell.GetTransformEditControls();
         m_spriteComponentSectionLabel = shell.GetSpriteComponentSectionLabel();
         m_spriteRefLabel = shell.GetSpriteRefLabel();
+        m_spriteRefDropHighlight = shell.GetSpriteRefDropHighlight();
         m_spriteRefEdit = shell.GetSpriteRefEdit();
         m_spriteComponentActionButton = shell.GetSpriteComponentActionButton();
     }
@@ -35,6 +37,9 @@ namespace Xelqoria::Editor
         if (false == selectedEntityId.has_value() || nullptr == scene)
         {
             SetWindowTextW(m_inspectorSummaryLabel, L"Inspector: no entity selected");
+            SetWindowTextW(m_spriteRefEdit, L"");
+            m_lastSpriteRefAssetId = {};
+            m_lastSpriteRefDisplayText.clear();
             return;
         }
 
@@ -42,6 +47,9 @@ namespace Xelqoria::Editor
         if (false == entity.has_value())
         {
             SetWindowTextW(m_inspectorSummaryLabel, L"Inspector: selected entity not found");
+            SetWindowTextW(m_spriteRefEdit, L"");
+            m_lastSpriteRefAssetId = {};
+            m_lastSpriteRefDisplayText.clear();
             return;
         }
 
@@ -76,12 +84,15 @@ namespace Xelqoria::Editor
         SetWindowTextW(m_spriteComponentActionButton, actionState.buttonLabel);
         if (true == hasSpriteComponent)
         {
-            const std::wstring spriteRef = ToWideString(spriteComponent->get().spriteAssetRef.GetValue());
-            SetWindowTextW(m_spriteRefEdit, spriteRef.c_str());
+            m_lastSpriteRefAssetId = spriteComponent->get().spriteAssetRef;
+            m_lastSpriteRefDisplayText = FormatTextureDisplayText(m_lastSpriteRefAssetId);
+            SetWindowTextW(m_spriteRefEdit, m_lastSpriteRefDisplayText.c_str());
         }
         else
         {
             SetWindowTextW(m_spriteRefEdit, L"");
+            m_lastSpriteRefAssetId = {};
+            m_lastSpriteRefDisplayText.clear();
         }
 
         wchar_t summaryText[128]{};
@@ -155,26 +166,80 @@ namespace Xelqoria::Editor
             }
         }
 
-        wchar_t spriteRefBuffer[256]{};
-        if (auto spriteComponent = entity->get().GetSpriteComponent(); true == spriteComponent.has_value())
-        {
-            GetWindowTextW(m_spriteRefEdit, spriteRefBuffer, static_cast<int>(std::size(spriteRefBuffer)));
-            const std::wstring spriteRefValue(spriteRefBuffer);
-            const std::string spriteRef = ToNarrowString(spriteRefValue);
-            const Core::AssetId currentSpriteRef = spriteComponent->get().spriteAssetRef;
-            if (currentSpriteRef.GetValue() != spriteRef)
-            {
-                spriteComponent->get().spriteAssetRef = Core::AssetId(spriteRef);
-                result.changed = true;
-            }
-        }
-
         if (result.changed)
         {
             Refresh(scene, selectedEntityId, canAddSpriteComponent);
         }
 
         return result;
+    }
+
+    InspectorApplyResult InspectorPanelController::ApplyTextureDrop(
+        Game::Scene* scene,
+        std::optional<Game::EntityId> selectedEntityId,
+        const AssetsPanelController& assetsPanelController)
+    {
+        InspectorApplyResult result{};
+        if (nullptr == scene
+            || false == selectedEntityId.has_value()
+            || true == assetsPanelController.GetDraggingSpriteAssetId().IsEmpty()
+            || false == assetsPanelController.WasDragReleasedThisFrame()
+            || false == IsTextureDropTargetHovered(assetsPanelController))
+        {
+            return result;
+        }
+
+        const auto entity = scene->FindEntity(*selectedEntityId);
+        if (false == entity.has_value())
+        {
+            return result;
+        }
+
+        auto spriteComponent = entity->get().GetSpriteComponent();
+        if (false == spriteComponent.has_value())
+        {
+            return result;
+        }
+
+        const Core::AssetId droppedSpriteAssetId = assetsPanelController.GetDraggingSpriteAssetId();
+        if (spriteComponent->get().spriteAssetRef == droppedSpriteAssetId)
+        {
+            return result;
+        }
+
+        spriteComponent->get().spriteAssetRef = droppedSpriteAssetId;
+        result.changed = true;
+        Refresh(scene, selectedEntityId, true);
+        return result;
+    }
+
+    void InspectorPanelController::UpdateTextureDropHighlight(const AssetsPanelController& assetsPanelController)
+    {
+        const bool shouldShow = IsTextureDropTargetHovered(assetsPanelController);
+        if (shouldShow == m_isTextureDropHighlightVisible)
+        {
+            return;
+        }
+
+        m_isTextureDropHighlightVisible = shouldShow;
+        if (nullptr == m_spriteRefDropHighlight)
+        {
+            return;
+        }
+
+        ShowWindow(m_spriteRefDropHighlight, shouldShow ? SW_SHOW : SW_HIDE);
+        if (shouldShow)
+        {
+            SetWindowPos(
+                m_spriteRefDropHighlight,
+                m_spriteRefEdit,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            InvalidateRect(m_spriteRefDropHighlight, nullptr, TRUE);
+        }
     }
 
     void InspectorPanelController::ResetTrackedEntity()
@@ -212,5 +277,25 @@ namespace Xelqoria::Editor
 
         m_wasLeftMouseButtonDown = isLeftMouseButtonDown;
         return clicked;
+    }
+
+    bool InspectorPanelController::IsTextureDropTargetHovered(const AssetsPanelController& assetsPanelController) const
+    {
+        const bool hasTextureDrag = assetsPanelController.IsDragActive()
+            || assetsPanelController.WasDragReleasedThisFrame();
+        if (false == hasTextureDrag
+            || true == assetsPanelController.GetDraggingSpriteAssetId().IsEmpty()
+            || nullptr == m_spriteRefEdit
+            || false == IsWindowVisible(m_spriteRefEdit))
+        {
+            return false;
+        }
+
+        POINT cursorPoint{};
+        GetCursorPos(&cursorPoint);
+
+        RECT textureRect{};
+        GetWindowRect(m_spriteRefEdit, &textureRect);
+        return PtInRect(&textureRect, cursorPoint) != FALSE;
     }
 }

@@ -87,6 +87,18 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool OpenProjectScene(const std::filesystem::path& scenePath);
 
         /// <summary>
+        /// プロジェクト配下の画像ファイルを Texture/SpriteAsset として登録する。
+        /// </summary>
+        void RefreshProjectAssetRegistries();
+
+        /// <summary>
+        /// 指定画像ファイルを Texture/SpriteAsset として登録する。
+        /// </summary>
+        /// <param name="imagePath">登録対象の画像ファイルパス。</param>
+        /// <returns>登録に成功した場合は true。</returns>
+        [[nodiscard]] bool RegisterImageAsset(const std::filesystem::path& imagePath);
+
+        /// <summary>
         /// 現在のプロジェクト情報を取得する。
         /// </summary>
         /// <returns>プロジェクト情報。未オープン時は空。</returns>
@@ -148,8 +160,30 @@ namespace Xelqoria::Editor
         /// <returns>Scene ファイルパス。</returns>
         [[nodiscard]] std::filesystem::path GetSceneDocumentPath() const;
 
+        /// <summary>
+        /// 指定パスが Texture として扱える画像ファイルかを判定する。
+        /// </summary>
+        /// <param name="path">判定対象パス。</param>
+        /// <returns>画像ファイルの場合は true。</returns>
+        [[nodiscard]] static bool IsTextureImageFile(const std::filesystem::path& path);
+
+        /// <summary>
+        /// 画像ファイルから TextureAssetId を生成する。
+        /// </summary>
+        /// <param name="path">画像ファイルパス。</param>
+        /// <returns>TextureAssetId。</returns>
+        [[nodiscard]] Core::AssetId BuildTextureAssetId(const std::filesystem::path& path) const;
+
+        /// <summary>
+        /// 画像ファイルから SpriteAssetId を生成する。
+        /// </summary>
+        /// <param name="path">画像ファイルパス。</param>
+        /// <returns>SpriteAssetId。</returns>
+        [[nodiscard]] Core::AssetId BuildSpriteAssetId(const std::filesystem::path& path) const;
+
     private:
         std::unique_ptr<Game::Scene> m_scene;
+        RHI::IGraphicsContext* m_graphicsContext = nullptr;
         Game::Assets::SpriteAssetRegistry m_spriteAssetRegistry{};
         Graphics::TextureAssetRegistry m_textureAssetRegistry{};
         std::vector<Core::AssetId> m_registeredSpriteAssetIds{};

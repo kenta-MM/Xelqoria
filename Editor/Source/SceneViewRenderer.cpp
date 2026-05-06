@@ -35,6 +35,7 @@ namespace Xelqoria::Editor
         constexpr float SceneAxisLineThicknessPixels = 2.0f;
         constexpr float SelectionOutlineThicknessPixels = 2.0f;
         constexpr float SelectionPivotSizePixels = 8.0f;
+        constexpr float UntexturedSpriteSizePixels = 64.0f;
 
         /// <summary>
         /// SceneView オーバーレイ描画に使う色定義を返す。
@@ -243,6 +244,77 @@ namespace Xelqoria::Editor
                     camera.TransformWorldScale(scale.y));
 
                 m_spriteRenderer->Draw(sprite);
+            }
+
+            if (nullptr != m_solidQuadRenderer && nullptr != scene)
+            {
+                const auto renderItems = scene->CollectSpriteRenderItems();
+                for (const Game::SceneSpriteRenderItem& renderItem : renderItems)
+                {
+                    if (nullptr == renderItem.transform
+                        || nullptr == renderItem.spriteComponent
+                        || false == renderItem.spriteComponent->spriteAssetRef.IsEmpty())
+                    {
+                        continue;
+                    }
+
+                    const float viewX = camera.TransformWorldToViewX(renderItem.transform->position.x);
+                    const float viewY = camera.TransformWorldToViewY(renderItem.transform->position.y);
+                    const float widthPixels =
+                        camera.TransformWorldScale(UntexturedSpriteSizePixels * std::abs(renderItem.transform->scale.x));
+                    const float heightPixels =
+                        camera.TransformWorldScale(UntexturedSpriteSizePixels * std::abs(renderItem.transform->scale.y));
+                    m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+                        viewX,
+                        viewY,
+                        (std::max)(widthPixels, 1.0f),
+                        (std::max)(heightPixels, 1.0f),
+                        MakeColor(0.48f, 0.50f, 0.54f, 1.0f)
+                    });
+
+                    if (true == selectedEntityId.has_value() && renderItem.entityId == *selectedEntityId)
+                    {
+                        const float horizontalBorderY = (heightPixels * 0.5f) + (SelectionOutlineThicknessPixels * 0.5f);
+                        const float verticalBorderX = (widthPixels * 0.5f) + (SelectionOutlineThicknessPixels * 0.5f);
+                        const std::array<float, 4> outlineColor = MakeColor(0.98f, 0.86f, 0.18f, 0.95f);
+
+                        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+                            viewX,
+                            viewY - horizontalBorderY,
+                            widthPixels + SelectionOutlineThicknessPixels * 2.0f,
+                            SelectionOutlineThicknessPixels,
+                            outlineColor
+                        });
+                        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+                            viewX,
+                            viewY + horizontalBorderY,
+                            widthPixels + SelectionOutlineThicknessPixels * 2.0f,
+                            SelectionOutlineThicknessPixels,
+                            outlineColor
+                        });
+                        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+                            viewX - verticalBorderX,
+                            viewY,
+                            SelectionOutlineThicknessPixels,
+                            heightPixels + SelectionOutlineThicknessPixels * 2.0f,
+                            outlineColor
+                        });
+                        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+                            viewX + verticalBorderX,
+                            viewY,
+                            SelectionOutlineThicknessPixels,
+                            heightPixels + SelectionOutlineThicknessPixels * 2.0f,
+                            outlineColor
+                        });
+                        m_solidQuadRenderer->Draw(Graphics::SolidQuad{
+                            viewX,
+                            viewY,
+                            SelectionPivotSizePixels,
+                            SelectionPivotSizePixels,
+                            MakeColor(1.0f, 0.94f, 0.45f, 1.0f)
+                        });
+                    }
+                }
             }
 
             if (nullptr != m_solidQuadRenderer && true == selectedEntityId.has_value())

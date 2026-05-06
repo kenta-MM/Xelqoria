@@ -2,8 +2,13 @@
 
 #include <Windows.h>
 #include <array>
+#include <filesystem>
 #include <optional>
+#include <string>
+#include <string_view>
 
+#include "AssetId.h"
+#include "EditorStringUtils.h"
 #include "EditorShell.h"
 #include "InputSystem.h"
 #include "SceneEditingOperations.h"
@@ -11,6 +16,8 @@
 
 namespace Xelqoria::Editor
 {
+    class AssetsPanelController;
+
     /// <summary>
     /// Inspector で行われた編集適用結果を表す。
     /// </summary>
@@ -86,9 +93,52 @@ namespace Xelqoria::Editor
             const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
+        /// Assets から Texture 欄へドロップされた画像を SpriteComponent へ反映する。
+        /// </summary>
+        /// <param name="scene">更新対象の Scene。</param>
+        /// <param name="selectedEntityId">現在選択中の EntityId。</param>
+        /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
+        /// <returns>適用結果。</returns>
+        InspectorApplyResult ApplyTextureDrop(
+            Game::Scene* scene,
+            std::optional<Game::EntityId> selectedEntityId,
+            const AssetsPanelController& assetsPanelController);
+
+        /// <summary>
+        /// Texture 欄のドロップ先ハイライトを現在のドラッグ状態へ同期する。
+        /// </summary>
+        /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
+        void UpdateTextureDropHighlight(const AssetsPanelController& assetsPanelController);
+
+        /// <summary>
         /// 直前反映 Entity の追跡状態を破棄する。
         /// </summary>
         void ResetTrackedEntity();
+
+        /// <summary>
+        /// SpriteAssetId から Texture 欄に表示するファイル名を取得する。
+        /// </summary>
+        /// <param name="spriteAssetId">表示対象の SpriteAssetId。</param>
+        /// <returns>Texture 欄表示文字列。</returns>
+        [[nodiscard]] static std::wstring FormatTextureDisplayText(const Core::AssetId& spriteAssetId)
+        {
+            std::string spriteRefValue = spriteAssetId.GetValue();
+            constexpr std::string_view spriteAssetPrefix = "sprites/";
+            if (spriteRefValue.starts_with(spriteAssetPrefix))
+            {
+                spriteRefValue = spriteRefValue.substr(spriteAssetPrefix.size());
+            }
+
+            const std::wstring relativePath = ToWideString(spriteRefValue);
+            const std::filesystem::path displayPath(relativePath);
+            const std::wstring fileName = displayPath.filename().wstring();
+            if (false == fileName.empty())
+            {
+                return fileName;
+            }
+
+            return relativePath;
+        }
 
         /// <summary>
         /// SpriteComponent 操作 UI の表示状態を計算する。
@@ -148,15 +198,26 @@ namespace Xelqoria::Editor
         /// <returns>今回のフレームでクリックが成立した場合は true。</returns>
         bool ConsumeButtonClick(HWND buttonHandle, const Core::InputSnapshot& inputSnapshot);
 
+        /// <summary>
+        /// 現在のカーソル位置が Texture ドロップ対象内かを取得する。
+        /// </summary>
+        /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
+        /// <returns>ドロップ対象内の場合は true。</returns>
+        [[nodiscard]] bool IsTextureDropTargetHovered(const AssetsPanelController& assetsPanelController) const;
+
         HWND m_inspectorSummaryLabel = nullptr;
         HWND m_transformSectionLabel = nullptr;
         std::array<HWND, 9> m_transformEditControls{};
         HWND m_spriteComponentSectionLabel = nullptr;
         HWND m_spriteRefLabel = nullptr;
+        HWND m_spriteRefDropHighlight = nullptr;
         HWND m_spriteRefEdit = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
         std::optional<Game::EntityId> m_lastInspectorEntityId{};
+        Core::AssetId m_lastSpriteRefAssetId{};
+        std::wstring m_lastSpriteRefDisplayText{};
         bool m_wasLeftMouseButtonDown = false;
         HWND m_pressedButtonHandle = nullptr;
+        bool m_isTextureDropHighlightVisible = false;
     };
 }
