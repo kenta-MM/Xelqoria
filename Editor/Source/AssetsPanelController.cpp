@@ -23,6 +23,11 @@ namespace Xelqoria::Editor
         constexpr int ModifiedTimeColumnIndex = 1;
         constexpr int TypeColumnIndex = 2;
         constexpr int SizeColumnIndex = 3;
+        constexpr int DragPreviewWidth = 220;
+        constexpr int DragPreviewHeight = 64;
+        constexpr int DragPreviewImageSize = 48;
+        constexpr int DragPreviewCursorOffsetX = 14;
+        constexpr int DragPreviewCursorOffsetY = 18;
 
         /// <summary>
         /// ディレクトリエントリをフォルダ優先、名前順で並べる。
@@ -829,6 +834,7 @@ namespace Xelqoria::Editor
         EndDragImage();
 
         m_dragImageList = CreateDragImageList(imagePath, fallbackIconIndex);
+        BeginDragPreview(imagePath, screenPoint);
         if (nullptr == m_dragImageList)
         {
             return;
@@ -856,10 +862,12 @@ namespace Xelqoria::Editor
     {
         if (false == m_isDragImageVisible)
         {
+            MoveDragPreview(screenPoint);
             return;
         }
 
         ImageList_DragMove(screenPoint.x, screenPoint.y);
+        MoveDragPreview(screenPoint);
     }
 
     void AssetsPanelController::EndDragImage()
@@ -876,6 +884,175 @@ namespace Xelqoria::Editor
             ImageList_Destroy(m_dragImageList);
             m_dragImageList = nullptr;
         }
+
+        EndDragPreview();
+    }
+
+    void AssetsPanelController::BeginDragPreview(const std::filesystem::path& imagePath, POINT screenPoint)
+    {
+        EndDragPreview();
+
+        m_dragPreviewWindow = CreateWindowExW(
+            WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
+            L"Static",
+            L"",
+            WS_POPUP | WS_BORDER,
+            screenPoint.x + DragPreviewCursorOffsetX,
+            screenPoint.y + DragPreviewCursorOffsetY,
+            DragPreviewWidth,
+            DragPreviewHeight,
+            nullptr,
+            nullptr,
+            GetModuleHandleW(nullptr),
+            nullptr);
+        if (nullptr == m_dragPreviewWindow)
+        {
+            return;
+        }
+
+        m_dragPreviewBitmap = CreateDragPreviewBitmap(imagePath);
+        if (nullptr != m_dragPreviewBitmap)
+        {
+            m_dragPreviewImage = CreateWindowExW(
+                0,
+                L"Static",
+                L"",
+                WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_CENTERIMAGE,
+                6,
+                6,
+                DragPreviewImageSize,
+                DragPreviewImageSize,
+                m_dragPreviewWindow,
+                nullptr,
+                GetModuleHandleW(nullptr),
+                nullptr);
+            if (nullptr != m_dragPreviewImage)
+            {
+                SendMessageW(m_dragPreviewImage, STM_SETIMAGE, IMAGE_BITMAP, reinterpret_cast<LPARAM>(m_dragPreviewBitmap));
+            }
+        }
+
+        if (nullptr == m_dragPreviewImage)
+        {
+            SHFILEINFOW fileInfo{};
+            if (0 != SHGetFileInfoW(
+                    imagePath.c_str(),
+                    FILE_ATTRIBUTE_NORMAL,
+                    &fileInfo,
+                    sizeof(fileInfo),
+                    SHGFI_ICON | SHGFI_LARGEICON))
+            {
+                m_dragPreviewIcon = fileInfo.hIcon;
+                m_dragPreviewImage = CreateWindowExW(
+                    0,
+                    L"Static",
+                    L"",
+                    WS_CHILD | WS_VISIBLE | SS_ICON | SS_CENTERIMAGE,
+                    6,
+                    6,
+                    DragPreviewImageSize,
+                    DragPreviewImageSize,
+                    m_dragPreviewWindow,
+                    nullptr,
+                    GetModuleHandleW(nullptr),
+                    nullptr);
+                if (nullptr != m_dragPreviewImage)
+                {
+                    SendMessageW(m_dragPreviewImage, STM_SETICON, reinterpret_cast<WPARAM>(m_dragPreviewIcon), 0);
+                }
+            }
+        }
+
+        const std::wstring fileName = imagePath.filename().wstring();
+        m_dragPreviewText = CreateWindowExW(
+            0,
+            L"Static",
+            fileName.c_str(),
+            WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE | SS_ENDELLIPSIS,
+            60,
+            8,
+            DragPreviewWidth - 68,
+            DragPreviewHeight - 16,
+            m_dragPreviewWindow,
+            nullptr,
+            GetModuleHandleW(nullptr),
+            nullptr);
+        if (nullptr != m_dragPreviewText)
+        {
+            HFONT font = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+            SendMessageW(m_dragPreviewText, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+        }
+
+        ShowWindow(m_dragPreviewWindow, SW_SHOWNOACTIVATE);
+        MoveDragPreview(screenPoint);
+    }
+
+    void AssetsPanelController::MoveDragPreview(POINT screenPoint)
+    {
+        if (nullptr == m_dragPreviewWindow)
+        {
+            return;
+        }
+
+        SetWindowPos(
+            m_dragPreviewWindow,
+            HWND_TOPMOST,
+            screenPoint.x + DragPreviewCursorOffsetX,
+            screenPoint.y + DragPreviewCursorOffsetY,
+            0,
+            0,
+            SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    }
+
+    void AssetsPanelController::EndDragPreview()
+    {
+        if (nullptr != m_dragPreviewWindow)
+        {
+            DestroyWindow(m_dragPreviewWindow);
+            m_dragPreviewWindow = nullptr;
+            m_dragPreviewImage = nullptr;
+            m_dragPreviewText = nullptr;
+        }
+
+        if (nullptr != m_dragPreviewBitmap)
+        {
+            DeleteObject(m_dragPreviewBitmap);
+            m_dragPreviewBitmap = nullptr;
+        }
+
+        if (nullptr != m_dragPreviewIcon)
+        {
+            DestroyIcon(m_dragPreviewIcon);
+            m_dragPreviewIcon = nullptr;
+        }
+    }
+
+    HBITMAP AssetsPanelController::CreateDragPreviewBitmap(const std::filesystem::path& imagePath) const
+    {
+        const HRESULT coInitializeResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        const bool shouldUninitializeCom = SUCCEEDED(coInitializeResult);
+
+        Microsoft::WRL::ComPtr<IShellItemImageFactory> imageFactory;
+        const HRESULT itemHr = SHCreateItemFromParsingName(
+            imagePath.c_str(),
+            nullptr,
+            IID_PPV_ARGS(imageFactory.GetAddressOf()));
+        HBITMAP thumbnail = nullptr;
+        if (SUCCEEDED(itemHr) && imageFactory)
+        {
+            SIZE thumbnailSize{ DragPreviewImageSize, DragPreviewImageSize };
+            (void)imageFactory->GetImage(
+                thumbnailSize,
+                SIIGBF_BIGGERSIZEOK,
+                &thumbnail);
+        }
+
+        if (shouldUninitializeCom)
+        {
+            CoUninitialize();
+        }
+
+        return thumbnail;
     }
 
     HIMAGELIST AssetsPanelController::CreateDragImageList(

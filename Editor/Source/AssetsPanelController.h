@@ -245,6 +245,31 @@ namespace Xelqoria::Editor
         void EndDragImage();
 
         /// <summary>
+        /// ドラッグ中ファイルの追従プレビューを開始する。
+        /// </summary>
+        /// <param name="imagePath">ドラッグ対象画像パス。</param>
+        /// <param name="screenPoint">開始時のスクリーン座標。</param>
+        void BeginDragPreview(const std::filesystem::path& imagePath, POINT screenPoint);
+
+        /// <summary>
+        /// ドラッグ中ファイルの追従プレビューを移動する。
+        /// </summary>
+        /// <param name="screenPoint">スクリーン座標。</param>
+        void MoveDragPreview(POINT screenPoint);
+
+        /// <summary>
+        /// ドラッグ中ファイルの追従プレビューを破棄する。
+        /// </summary>
+        void EndDragPreview();
+
+        /// <summary>
+        /// ドラッグプレビュー用サムネイル画像を取得する。
+        /// </summary>
+        /// <param name="imagePath">対象画像パス。</param>
+        /// <returns>取得した HBITMAP。失敗時は nullptr。</returns>
+        [[nodiscard]] HBITMAP CreateDragPreviewBitmap(const std::filesystem::path& imagePath) const;
+
+        /// <summary>
         /// 画像ファイル用のドラッグ表示 ImageList を作成する。
         /// </summary>
         /// <param name="imagePath">対象画像パス。</param>
@@ -295,5 +320,10 @@ namespace Xelqoria::Editor
         bool m_listViewInitialized = false;
         HIMAGELIST m_dragImageList = nullptr;
         bool m_isDragImageVisible = false;
+        HWND m_dragPreviewWindow = nullptr;
+        HWND m_dragPreviewImage = nullptr;
+        HWND m_dragPreviewText = nullptr;
+        HBITMAP m_dragPreviewBitmap = nullptr;
+        HICON m_dragPreviewIcon = nullptr;
     };
 }
