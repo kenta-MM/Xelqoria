@@ -224,6 +224,38 @@ namespace Xelqoria::Editor
         [[nodiscard]] int HitTestListView(POINT screenPoint) const;
 
         /// <summary>
+        /// スクリーン座標から名前列の表示名上にある ListView 項目を取得する。
+        /// </summary>
+        /// <param name="screenPoint">スクリーン座標。</param>
+        /// <returns>名前列の表示名上にある項目インデックス。対象外の場合は -1。</returns>
+        [[nodiscard]] int HitTestListViewNameLabel(POINT screenPoint) const;
+
+        /// <summary>
+        /// Assets 項目用の右クリックメニューを表示して操作を適用する。
+        /// </summary>
+        /// <param name="entryIndex">対象項目のインデックス。</param>
+        /// <param name="screenPoint">メニュー表示位置のスクリーン座標。</param>
+        /// <returns>操作を処理した場合は true。</returns>
+        [[nodiscard]] bool ShowEntryContextMenu(std::size_t entryIndex, POINT screenPoint);
+
+        /// <summary>
+        /// Assets 空白またはフォルダ用の作成メニューを表示する。
+        /// </summary>
+        /// <param name="targetDirectory">Sprite 作成先フォルダ。</param>
+        /// <param name="screenPoint">メニュー表示位置のスクリーン座標。</param>
+        /// <returns>操作を処理した場合は true。</returns>
+        [[nodiscard]] bool ShowCreateSpriteContextMenu(
+            const std::filesystem::path& targetDirectory,
+            POINT screenPoint);
+
+        /// <summary>
+        /// 指定した Assets 項目をファイルシステムから削除する。
+        /// </summary>
+        /// <param name="entryIndex">削除対象項目のインデックス。</param>
+        /// <returns>削除に成功した場合は true。</returns>
+        [[nodiscard]] bool DeleteEntry(std::size_t entryIndex);
+
+        /// <summary>
         /// Assets パネルの要約ラベルを更新する。
         /// </summary>
         void RefreshSummaryLabel();
