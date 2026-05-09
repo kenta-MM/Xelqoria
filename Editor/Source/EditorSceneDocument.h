@@ -8,6 +8,7 @@
 
 #include "AssetId.h"
 #include "Assets/SpriteAssetRegistry.h"
+#include "Entity.h"
 #include "EditorProject.h"
 #include "IGraphicsContext.h"
 #include "Scene.h"
@@ -97,6 +98,16 @@ namespace Xelqoria::Editor
         /// <param name="imagePath">登録対象の画像ファイルパス。</param>
         /// <returns>登録に成功した場合は true。</returns>
         [[nodiscard]] bool RegisterImageAsset(const std::filesystem::path& imagePath);
+
+        /// <summary>
+        /// Entity の Sprite 情報に対応する Sprite アセットファイルをプロジェクト配下へ作成する。
+        /// </summary>
+        /// <param name="entity">保存元の Sprite Entity。</param>
+        /// <param name="targetDirectory">作成先フォルダ。空またはプロジェクト外の場合は Assets 直下。</param>
+        /// <returns>作成または既存ファイル確認に成功した場合は true。</returns>
+        [[nodiscard]] bool CreateSpriteAssetFile(
+            const Game::Entity& entity,
+            const std::filesystem::path& targetDirectory);
 
         /// <summary>
         /// 現在のプロジェクト情報を取得する。

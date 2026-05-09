@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <string>
+
 #include "SceneEditingOperations.h"
 #include "SceneSerializer.h"
 
@@ -83,8 +85,11 @@ TEST(SceneEditingOperationsTests, CreateUntexturedSpriteAddsEmptySpriteComponent
     ASSERT_TRUE(spriteComponent.has_value());
     EXPECT_TRUE(spriteComponent->get().spriteAssetRef.IsEmpty());
 
+    const std::string serializedScene = Xelqoria::Game::SceneSerializer::SaveToText(scene);
+    EXPECT_NE(std::string::npos, serializedScene.find("entity.0.spriteRef=\n"));
+
     const auto loadResult = Xelqoria::Game::SceneSerializer::LoadFromText(
-        Xelqoria::Game::SceneSerializer::SaveToText(scene));
+        serializedScene);
     ASSERT_TRUE(loadResult.IsSuccess());
     ASSERT_TRUE(loadResult.scene.has_value());
 

@@ -238,6 +238,11 @@ namespace Xelqoria::Editor
         /// Assets の右クリックメニューから実行されたコマンド ID を表す。
         /// </summary>
         constexpr UINT_PTR CreateSpriteMenuCommandId = 1;
+
+        /// <summary>
+        /// Assets 項目の削除メニューから実行されたコマンド ID を表す。
+        /// </summary>
+        constexpr UINT_PTR DeleteEntryMenuCommandId = 2;
     }
 
     void AssetsPanelController::Bind(const EditorShell& shell)
@@ -261,6 +266,7 @@ namespace Xelqoria::Editor
             m_draggingImagePath.clear();
             m_canPlaceDraggingAssetInScene = false;
             m_createSpriteRequested = false;
+            m_createSpriteTargetDirectory.clear();
             EndDragImage();
             RefreshListView();
             RefreshSummaryLabel();
@@ -314,36 +320,39 @@ namespace Xelqoria::Editor
         if (notifyHeader->code == NM_RCLICK)
         {
             const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
-            if (0 <= itemActivate->iItem)
-            {
-                return false;
-            }
-
-            HMENU popupMenu = CreatePopupMenu();
-            if (nullptr == popupMenu)
-            {
-                return false;
-            }
-
-            AppendMenuW(popupMenu, MF_STRING, CreateSpriteMenuCommandId, L"Spriteを作成");
-
             POINT menuPoint{};
             GetCursorPos(&menuPoint);
-            const UINT command = TrackPopupMenu(
-                popupMenu,
-                TPM_RETURNCMD | TPM_RIGHTBUTTON,
-                menuPoint.x,
-                menuPoint.y,
-                0,
-                m_assetsListView,
-                nullptr);
-            DestroyMenu(popupMenu);
 
-            if (CreateSpriteMenuCommandId == command)
+            const int nameLabelIndex = HitTestListViewNameLabel(menuPoint);
+            if (0 <= nameLabelIndex)
             {
-                m_createSpriteRequested = true;
-                return true;
+                return ShowEntryContextMenu(static_cast<std::size_t>(nameLabelIndex), menuPoint);
             }
+
+            std::filesystem::path createSpriteTargetDirectory = m_assetsRootDirectory;
+            if (0 <= itemActivate->iItem)
+            {
+                const std::size_t entryIndex = static_cast<std::size_t>(itemActivate->iItem);
+                if (entryIndex >= m_visibleEntries.size())
+                {
+                    return false;
+                }
+
+                const AssetListEntry& entry = m_visibleEntries[entryIndex];
+                if (false == entry.isDirectory || entry.isParentLink)
+                {
+                    return false;
+                }
+
+                createSpriteTargetDirectory = entry.path;
+            }
+
+            if (true == createSpriteTargetDirectory.empty())
+            {
+                return false;
+            }
+
+            return ShowCreateSpriteContextMenu(createSpriteTargetDirectory, menuPoint);
         }
 
         if (notifyHeader->code == LVN_KEYDOWN)
@@ -521,6 +530,12 @@ namespace Xelqoria::Editor
     void AssetsPanelController::ClearCreateSpriteRequest()
     {
         m_createSpriteRequested = false;
+        m_createSpriteTargetDirectory.clear();
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetCreateSpriteTargetDirectory() const
+    {
+        return m_createSpriteTargetDirectory;
     }
 
     void AssetsPanelController::InitializeListView()
@@ -770,6 +785,167 @@ namespace Xelqoria::Editor
         }
 
         return hitIndex;
+    }
+
+    int AssetsPanelController::HitTestListViewNameLabel(POINT screenPoint) const
+    {
+        if (nullptr == m_assetsListView)
+        {
+            return -1;
+        }
+
+        POINT clientPoint = screenPoint;
+        ScreenToClient(m_assetsListView, &clientPoint);
+
+        LVHITTESTINFO hitTest{};
+        hitTest.pt = clientPoint;
+        const int hitIndex = ListView_SubItemHitTest(m_assetsListView, &hitTest);
+        if (hitIndex < 0
+            || hitTest.iSubItem != NameColumnIndex
+            || 0 == (hitTest.flags & LVHT_ONITEMLABEL))
+        {
+            return -1;
+        }
+
+        return hitIndex;
+    }
+
+    bool AssetsPanelController::ShowEntryContextMenu(std::size_t entryIndex, POINT screenPoint)
+    {
+        if (nullptr == m_assetsListView || entryIndex >= m_visibleEntries.size())
+        {
+            return false;
+        }
+
+        const AssetListEntry& entry = m_visibleEntries[entryIndex];
+        if (entry.isParentLink)
+        {
+            return false;
+        }
+
+        ListView_SetItemState(
+            m_assetsListView,
+            static_cast<int>(entryIndex),
+            LVIS_SELECTED | LVIS_FOCUSED,
+            LVIS_SELECTED | LVIS_FOCUSED);
+        SetFocus(m_assetsListView);
+        SyncSelectedPathFromListView();
+
+        HMENU popupMenu = CreatePopupMenu();
+        if (nullptr == popupMenu)
+        {
+            return false;
+        }
+
+        AppendMenuW(
+            popupMenu,
+            MF_STRING,
+            DeleteEntryMenuCommandId,
+            entry.isDirectory ? L"フォルダを削除する" : L"ファイルを削除する");
+
+        const UINT command = TrackPopupMenu(
+            popupMenu,
+            TPM_RETURNCMD | TPM_RIGHTBUTTON,
+            screenPoint.x,
+            screenPoint.y,
+            0,
+            m_assetsListView,
+            nullptr);
+        DestroyMenu(popupMenu);
+
+        if (DeleteEntryMenuCommandId != command)
+        {
+            return false;
+        }
+
+        return DeleteEntry(entryIndex);
+    }
+
+    bool AssetsPanelController::ShowCreateSpriteContextMenu(
+        const std::filesystem::path& targetDirectory,
+        POINT screenPoint)
+    {
+        if (nullptr == m_assetsListView || true == targetDirectory.empty())
+        {
+            return false;
+        }
+
+        HMENU popupMenu = CreatePopupMenu();
+        if (nullptr == popupMenu)
+        {
+            return false;
+        }
+
+        AppendMenuW(popupMenu, MF_STRING, CreateSpriteMenuCommandId, L"Spriteを作成");
+
+        const UINT command = TrackPopupMenu(
+            popupMenu,
+            TPM_RETURNCMD | TPM_RIGHTBUTTON,
+            screenPoint.x,
+            screenPoint.y,
+            0,
+            m_assetsListView,
+            nullptr);
+        DestroyMenu(popupMenu);
+
+        if (CreateSpriteMenuCommandId != command)
+        {
+            return false;
+        }
+
+        m_createSpriteRequested = true;
+        m_createSpriteTargetDirectory = targetDirectory;
+        return true;
+    }
+
+    bool AssetsPanelController::DeleteEntry(std::size_t entryIndex)
+    {
+        if (entryIndex >= m_visibleEntries.size())
+        {
+            return false;
+        }
+
+        const AssetListEntry entry = m_visibleEntries[entryIndex];
+        if (entry.isParentLink || true == entry.path.empty())
+        {
+            return false;
+        }
+
+        std::error_code errorCode;
+        if (entry.isDirectory)
+        {
+            std::filesystem::remove_all(entry.path, errorCode);
+        }
+        else
+        {
+            std::filesystem::remove(entry.path, errorCode);
+        }
+
+        if (errorCode)
+        {
+            MessageBoxW(
+                m_assetsListView,
+                L"削除に失敗しました。",
+                L"Assets",
+                MB_OK | MB_ICONERROR);
+            return false;
+        }
+
+        if (m_selectedFilePath == entry.path)
+        {
+            m_selectedFilePath.clear();
+            m_selectedSpriteAssetId = {};
+        }
+
+        if (m_draggingImagePath == entry.path)
+        {
+            CompleteReleasedDrag();
+        }
+
+        RebuildVisibleEntries();
+        RefreshListView();
+        RefreshSummaryLabel();
+        return true;
     }
 
     void AssetsPanelController::RefreshSummaryLabel()

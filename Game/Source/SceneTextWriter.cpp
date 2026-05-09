@@ -65,7 +65,7 @@ namespace Xelqoria::Game
 
 			const auto spriteComponent = entity.GetSpriteComponent();
 			stream << prefix << ".hasSpriteComponent=" << (spriteComponent.has_value() ? "true" : "false") << "\n";
-			if (spriteComponent.has_value() && false == spriteComponent->get().spriteAssetRef.IsEmpty())
+			if (spriteComponent.has_value())
 			{
 				stream << prefix << ".spriteRef=" << spriteComponent->get().spriteAssetRef.GetValue() << "\n";
 			}

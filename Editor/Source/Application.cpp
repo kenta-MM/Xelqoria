@@ -4,6 +4,7 @@
 #include <chrono>
 #include <commdlg.h>
 #include <filesystem>
+#include <functional>
 #include <shlobj.h>
 #include <string>
 
@@ -558,6 +559,8 @@ namespace Xelqoria::Editor
 
         if (true == m_assetsPanelController.HasCreateSpriteRequest())
         {
+            const std::filesystem::path createSpriteTargetDirectory =
+                m_assetsPanelController.GetCreateSpriteTargetDirectory();
             m_assetsPanelController.ClearCreateSpriteRequest();
 
             if (nullptr != m_sceneDocument.GetScene())
@@ -570,6 +573,17 @@ namespace Xelqoria::Editor
                         sceneViewCamera.GetCenterY());
                 if (true == createSpriteResult.changed)
                 {
+                    const auto createdEntity = createSpriteResult.selectedEntityId.has_value()
+                        ? m_sceneDocument.GetScene()->FindEntity(*createSpriteResult.selectedEntityId)
+                        : std::optional<std::reference_wrapper<Game::Entity>>{};
+                    if (true == createdEntity.has_value()
+                        && true == m_sceneDocument.CreateSpriteAssetFile(
+                            createdEntity->get(),
+                            createSpriteTargetDirectory))
+                    {
+                        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                    }
+
                     ApplySelectionChange(createSpriteResult.selectedEntityId, canAddSpriteComponent, true, true);
                     PersistSceneChanges(
                         L"Assets から Sprite を作成しました。",
@@ -588,6 +602,18 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.ApplyEdits(m_sceneDocument.GetScene(), inputSnapshot);
         if (true == hierarchyEditResult.changed)
         {
+            if (true == hierarchyEditResult.createdSpriteEntity)
+            {
+                const auto createdEntity = hierarchyEditResult.selectedEntityId.has_value()
+                    ? m_sceneDocument.GetScene()->FindEntity(*hierarchyEditResult.selectedEntityId)
+                    : std::optional<std::reference_wrapper<Game::Entity>>{};
+                if (true == createdEntity.has_value()
+                    && true == m_sceneDocument.CreateSpriteAssetFile(createdEntity->get(), {}))
+                {
+                    m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                }
+            }
+
             ApplySelectionChange(hierarchyEditResult.selectedEntityId, canAddSpriteComponent, true, true);
             PersistSceneChanges(
                 L"Hierarchy の編集内容を Scene へ保存しました。",
