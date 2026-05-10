@@ -210,11 +210,11 @@ namespace Xelqoria::Editor
             && true == currentSelectedEntityId.has_value()
             && nullptr != scene)
         {
-            const bool isControlDown = inputSnapshot.IsKeyDown(VK_CONTROL);
-            const float editStep = true == isControlDown ? 1.0f : 10.0f;
             if (SceneViewEditMode::Scale == m_editMode)
             {
-                if (SceneEditingOperations::AdjustEntityUniformScale(*scene, *currentSelectedEntityId, wheelDirection * editStep))
+                const bool isControlDown = inputSnapshot.IsKeyDown(VK_CONTROL);
+                const float scaleStep = true == isControlDown ? 0.05f : 0.1f;
+                if (SceneEditingOperations::AdjustEntityUniformScale(*scene, *currentSelectedEntityId, wheelDirection * scaleStep))
                 {
                     result.sceneChanged = true;
                     result.shouldPersistScene = true;
@@ -223,7 +223,9 @@ namespace Xelqoria::Editor
             }
             else if (SceneViewEditMode::Rotate == m_editMode)
             {
-                if (SceneEditingOperations::AdjustEntityRotationZ(*scene, *currentSelectedEntityId, wheelDirection * editStep))
+                const bool isControlDown = inputSnapshot.IsKeyDown(VK_CONTROL);
+                const float rotateStep = true == isControlDown ? 1.0f : 10.0f;
+                if (SceneEditingOperations::AdjustEntityRotationZ(*scene, *currentSelectedEntityId, wheelDirection * rotateStep))
                 {
                     result.sceneChanged = true;
                     result.shouldPersistScene = true;
