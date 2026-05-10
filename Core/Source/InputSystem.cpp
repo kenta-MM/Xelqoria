@@ -11,12 +11,14 @@ namespace Xelqoria::Core
         const std::array<bool, KeyStateCount>& previousKeyDownStates,
         bool isLeftMouseButtonDown,
         bool wasLeftMouseButtonDown,
-        POINT cursorScreenPoint)
+        POINT cursorScreenPoint,
+        int mouseWheelDelta)
         : m_keyDownStates(keyDownStates)
         , m_previousKeyDownStates(previousKeyDownStates)
         , m_isLeftMouseButtonDown(isLeftMouseButtonDown)
         , m_wasLeftMouseButtonDown(wasLeftMouseButtonDown)
         , m_cursorScreenPoint(cursorScreenPoint)
+        , m_mouseWheelDelta(mouseWheelDelta)
     {
     }
 
@@ -87,6 +89,11 @@ namespace Xelqoria::Core
         return m_cursorScreenPoint;
     }
 
+    int InputSnapshot::GetMouseWheelDelta() const
+    {
+        return m_mouseWheelDelta;
+    }
+
     bool InputSnapshot::IsValidVirtualKeyCode(int virtualKeyCode)
     {
         return 0 <= virtualKeyCode && virtualKeyCode < static_cast<int>(KeyStateCount);
@@ -103,14 +110,32 @@ namespace Xelqoria::Core
                 POINT cursorScreenPoint{};
                 ::GetCursorPos(&cursorScreenPoint);
                 return cursorScreenPoint;
+            },
+            []
+            {
+                return 0;
             })
     {
     }
 
     InputSystem::InputSystem(KeyStateReader keyStateReader, CursorPositionReader cursorPositionReader)
+        : InputSystem(std::move(keyStateReader), std::move(cursorPositionReader), [] { return 0; })
+    {
+    }
+
+    InputSystem::InputSystem(
+        KeyStateReader keyStateReader,
+        CursorPositionReader cursorPositionReader,
+        MouseWheelDeltaReader mouseWheelDeltaReader)
         : m_keyStateReader(std::move(keyStateReader))
         , m_cursorPositionReader(std::move(cursorPositionReader))
+        , m_mouseWheelDeltaReader(std::move(mouseWheelDeltaReader))
     {
+    }
+
+    void InputSystem::SetMouseWheelDeltaReader(MouseWheelDeltaReader mouseWheelDeltaReader)
+    {
+        m_mouseWheelDeltaReader = std::move(mouseWheelDeltaReader);
     }
 
     void InputSystem::Update()
@@ -130,7 +155,8 @@ namespace Xelqoria::Core
             previousKeyDownStates,
             isLeftMouseButtonDown,
             wasLeftMouseButtonDown,
-            m_cursorPositionReader());
+            m_cursorPositionReader(),
+            m_mouseWheelDeltaReader());
     }
 
     const InputSnapshot& InputSystem::GetSnapshot() const

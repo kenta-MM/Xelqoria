@@ -83,6 +83,12 @@ namespace Xelqoria::Editor
         /// <returns>ドラッグプレビュー状態。</returns>
         [[nodiscard]] const SceneDragPreviewState& GetDragPreviewState() const;
 
+        /// <summary>
+        /// 現在の SceneView 編集モードを取得する。
+        /// </summary>
+        /// <returns>現在の編集モード。</returns>
+        [[nodiscard]] SceneViewEditMode GetEditMode() const;
+
     private:
         /// <summary>
         /// SceneView に関連付く HWND 群と責務分離済みサービス群を保持する。

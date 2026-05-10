@@ -89,3 +89,30 @@ TEST(InputSystemTests, MouseLeftButtonTracksTransitionsAndCursorPosition)
     EXPECT_FALSE(inputSystem.GetSnapshot().IsMouseButtonDown(Xelqoria::Core::MouseButton::Left));
     EXPECT_TRUE(inputSystem.GetSnapshot().WasMouseButtonReleased(Xelqoria::Core::MouseButton::Left));
 }
+
+TEST(InputSystemTests, MouseWheelDeltaIsCapturedPerUpdate)
+{
+    int mouseWheelDelta = 0;
+    Xelqoria::Core::InputSystem inputSystem(
+        [](int)
+        {
+            return false;
+        },
+        []
+        {
+            return POINT{};
+        },
+        [&mouseWheelDelta]
+        {
+            const int currentDelta = mouseWheelDelta;
+            mouseWheelDelta = 0;
+            return currentDelta;
+        });
+
+    mouseWheelDelta = 120;
+    inputSystem.Update();
+    EXPECT_EQ(120, inputSystem.GetSnapshot().GetMouseWheelDelta());
+
+    inputSystem.Update();
+    EXPECT_EQ(0, inputSystem.GetSnapshot().GetMouseWheelDelta());
+}

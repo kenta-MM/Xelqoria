@@ -171,27 +171,6 @@ namespace Xelqoria::Editor
         /// <returns>Scene ファイルパス。</returns>
         [[nodiscard]] std::filesystem::path GetSceneDocumentPath() const;
 
-        /// <summary>
-        /// 指定パスが Texture として扱える画像ファイルかを判定する。
-        /// </summary>
-        /// <param name="path">判定対象パス。</param>
-        /// <returns>画像ファイルの場合は true。</returns>
-        [[nodiscard]] static bool IsTextureImageFile(const std::filesystem::path& path);
-
-        /// <summary>
-        /// 画像ファイルから TextureAssetId を生成する。
-        /// </summary>
-        /// <param name="path">画像ファイルパス。</param>
-        /// <returns>TextureAssetId。</returns>
-        [[nodiscard]] Core::AssetId BuildTextureAssetId(const std::filesystem::path& path) const;
-
-        /// <summary>
-        /// 画像ファイルから SpriteAssetId を生成する。
-        /// </summary>
-        /// <param name="path">画像ファイルパス。</param>
-        /// <returns>SpriteAssetId。</returns>
-        [[nodiscard]] Core::AssetId BuildSpriteAssetId(const std::filesystem::path& path) const;
-
     private:
         std::unique_ptr<Game::Scene> m_scene;
         RHI::IGraphicsContext* m_graphicsContext = nullptr;

@@ -10,6 +10,17 @@
 namespace Xelqoria::Editor
 {
     /// <summary>
+    /// SceneView で選択 Sprite に適用する編集モードを表す。
+    /// </summary>
+    enum class SceneViewEditMode
+    {
+        None,
+        Move,
+        Scale,
+        Rotate
+    };
+
+    /// <summary>
     /// SceneView ドラッグプレビューの現在状態を表す。
     /// </summary>
     struct SceneDragPreviewState

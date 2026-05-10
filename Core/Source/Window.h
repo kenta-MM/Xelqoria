@@ -78,6 +78,12 @@ namespace Xelqoria::Core
 		/// クライアント領域の高さを取得する
 		[[nodiscard]] uint32_t GetHeight() const;
 
+		/// <summary>
+		/// 前回取得以降に蓄積されたマウスホイール差分を取得して消費する。
+		/// </summary>
+		/// <returns>蓄積されたマウスホイール差分。</returns>
+		[[nodiscard]] int ConsumeMouseWheelDelta();
+
 	private:
 		/// <summary>
 		/// Win32 API から呼び出される静的ウィンドウプロシージャ。
@@ -96,6 +102,7 @@ namespace Xelqoria::Core
 		std::function<bool(LPARAM)> m_notifyHandler{};
 		std::function<bool()> m_closeRequestHandler{};
 		std::function<void(uint32_t, uint32_t)> m_resizeHandler{};
+		int m_pendingMouseWheelDelta = 0;
 
 		std::wstring m_className = L"XelqoriaWindowClass";
 		std::wstring m_title = L"Xelqoria";

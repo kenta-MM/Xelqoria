@@ -128,6 +128,40 @@ TEST(SceneEditingOperationsTests, MoveEntitySkipsWhenPositionIsUnchanged)
     EXPECT_FALSE(changed);
 }
 
+TEST(SceneEditingOperationsTests, AdjustEntityUniformScaleUpdatesXYAndPreservesZ)
+{
+    Xelqoria::Game::Scene scene;
+    auto& entity = scene.CreateEntity();
+    entity.SetScale(2.0f, 3.0f, 4.0f);
+
+    const bool changed =
+        Xelqoria::Editor::SceneEditingOperations::AdjustEntityUniformScale(scene, entity.GetId(), 10.0f);
+
+    ASSERT_TRUE(changed);
+    const auto scaledEntity = scene.FindEntity(entity.GetId());
+    ASSERT_TRUE(scaledEntity.has_value());
+    EXPECT_FLOAT_EQ(12.0f, scaledEntity->get().GetTransform().scale.x);
+    EXPECT_FLOAT_EQ(13.0f, scaledEntity->get().GetTransform().scale.y);
+    EXPECT_FLOAT_EQ(4.0f, scaledEntity->get().GetTransform().scale.z);
+}
+
+TEST(SceneEditingOperationsTests, AdjustEntityRotationZUpdatesZAndPreservesXY)
+{
+    Xelqoria::Game::Scene scene;
+    auto& entity = scene.CreateEntity();
+    entity.SetRotation(2.0f, 3.0f, 4.0f);
+
+    const bool changed =
+        Xelqoria::Editor::SceneEditingOperations::AdjustEntityRotationZ(scene, entity.GetId(), -10.0f);
+
+    ASSERT_TRUE(changed);
+    const auto rotatedEntity = scene.FindEntity(entity.GetId());
+    ASSERT_TRUE(rotatedEntity.has_value());
+    EXPECT_FLOAT_EQ(2.0f, rotatedEntity->get().GetTransform().rotation.x);
+    EXPECT_FLOAT_EQ(3.0f, rotatedEntity->get().GetTransform().rotation.y);
+    EXPECT_FLOAT_EQ(-6.0f, rotatedEntity->get().GetTransform().rotation.z);
+}
+
 TEST(SceneEditingOperationsTests, DeleteSelectedEntityChoosesRemainingNeighbor)
 {
     Xelqoria::Game::Scene scene;

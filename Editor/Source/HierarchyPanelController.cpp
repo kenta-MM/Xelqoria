@@ -40,11 +40,6 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (false == m_selectedEntityId.has_value() && false == m_visibleEntityIds.empty())
-        {
-            m_selectedEntityId = m_visibleEntityIds.front();
-        }
-
         int selectedIndex = LB_ERR;
         for (std::size_t index = 0; index < m_visibleEntityIds.size(); ++index)
         {
@@ -57,20 +52,21 @@ namespace Xelqoria::Editor
 
         if (selectedIndex == LB_ERR)
         {
-            if (false == m_visibleEntityIds.empty())
+            m_selectedEntityId.reset();
+            if (false == m_preserveNoSelection && false == m_visibleEntityIds.empty())
             {
                 m_selectedEntityId = m_visibleEntityIds.front();
                 selectedIndex = 0;
-            }
-            else
-            {
-                m_selectedEntityId.reset();
             }
         }
 
         if (selectedIndex != LB_ERR)
         {
             SendMessageW(m_hierarchyListBox, LB_SETCURSEL, static_cast<WPARAM>(selectedIndex), 0);
+        }
+        else
+        {
+            SendMessageW(m_hierarchyListBox, LB_SETCURSEL, static_cast<WPARAM>(-1), 0);
         }
 
         const bool hasSelection = selectedIndex != LB_ERR;
@@ -128,6 +124,7 @@ namespace Xelqoria::Editor
         if (false == m_selectedEntityId.has_value() || *m_selectedEntityId != entityId)
         {
             m_selectedEntityId = entityId;
+            m_preserveNoSelection = false;
             return true;
         }
 
@@ -195,6 +192,7 @@ namespace Xelqoria::Editor
     void HierarchyPanelController::SetSelectedEntityId(std::optional<Game::EntityId> selectedEntityId)
     {
         m_selectedEntityId = selectedEntityId;
+        m_preserveNoSelection = false == selectedEntityId.has_value();
     }
 
     std::optional<Game::EntityId> HierarchyPanelController::GetSelectedEntityId() const

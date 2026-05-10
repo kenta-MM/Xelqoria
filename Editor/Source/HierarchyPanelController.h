@@ -133,5 +133,6 @@ namespace Xelqoria::Editor
         std::optional<Game::EntityId> m_selectedEntityId{};
         std::optional<Game::EntityId> m_lastEditedEntityId{};
         HierarchyButtonInputState m_buttonInputState{};
+        bool m_preserveNoSelection = false;
     };
 }

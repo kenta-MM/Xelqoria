@@ -158,45 +158,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 37> controls{
-                m_hierarchyPanel,
-                m_assetsPanel,
-                m_inspectorPanel,
-                m_sceneViewPanel,
-                m_sceneViewPlanLabel,
-                m_projectSummaryLabel,
-                m_projectSceneListBox,
-                m_projectSceneDetailLabel,
-                m_sceneViewHost,
-                m_sceneViewSizeLabel,
-                m_assetsListView,
-                m_assetsSummaryLabel,
-                m_hierarchySummaryLabel,
-                m_hierarchyListBox,
-                m_hierarchyNameEdit,
-                m_hierarchyCreateButton,
-                m_hierarchyDuplicateButton,
-                m_hierarchyDeleteButton,
-                m_inspectorSummaryLabel,
-                m_transformSectionLabel,
-                m_transformLabels[0],
-                m_transformLabels[1],
-                m_transformLabels[2],
-                m_transformEditControls[0],
-                m_transformEditControls[1],
-                m_transformEditControls[2],
-                m_transformEditControls[3],
-                m_transformEditControls[4],
-                m_transformEditControls[5],
-                m_transformEditControls[6],
-                m_transformEditControls[7],
-                m_transformEditControls[8],
-                m_spriteComponentSectionLabel,
-                m_spriteRefLabel,
-                m_spriteRefDropHighlight,
-                m_spriteRefEdit,
-                m_spriteComponentActionButton
-            };
+            const std::array<HWND, 37> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -848,45 +810,7 @@ namespace Xelqoria::Editor
                 RDW_INVALIDATE | RDW_ERASE | RDW_ERASENOW | RDW_UPDATENOW | RDW_ALLCHILDREN | RDW_FRAME);
         }
 
-        const std::array<HWND, 37> controls{
-            m_hierarchyPanel,
-            m_assetsPanel,
-            m_inspectorPanel,
-            m_sceneViewPanel,
-            m_sceneViewPlanLabel,
-            m_projectSummaryLabel,
-            m_projectSceneListBox,
-            m_projectSceneDetailLabel,
-            m_sceneViewHost,
-            m_sceneViewSizeLabel,
-            m_assetsListView,
-            m_assetsSummaryLabel,
-            m_hierarchySummaryLabel,
-            m_hierarchyListBox,
-            m_hierarchyNameEdit,
-            m_hierarchyCreateButton,
-            m_hierarchyDuplicateButton,
-            m_hierarchyDeleteButton,
-            m_inspectorSummaryLabel,
-            m_transformSectionLabel,
-            m_transformLabels[0],
-            m_transformLabels[1],
-            m_transformLabels[2],
-            m_transformEditControls[0],
-            m_transformEditControls[1],
-            m_transformEditControls[2],
-            m_transformEditControls[3],
-            m_transformEditControls[4],
-            m_transformEditControls[5],
-            m_transformEditControls[6],
-            m_transformEditControls[7],
-            m_transformEditControls[8],
-            m_spriteComponentSectionLabel,
-            m_spriteRefLabel,
-            m_spriteRefDropHighlight,
-            m_spriteRefEdit,
-            m_spriteComponentActionButton
-        };
+        const std::array<HWND, 37> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -956,7 +880,27 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 37> controls{
+        const std::array<HWND, 37> controls = CollectControls();
+
+        for (HWND control : controls)
+        {
+            if (nullptr != control)
+            {
+                SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(m_defaultFont), TRUE);
+            }
+        }
+
+        if (ownedPreviousFont && nullptr != previousFont)
+        {
+            DeleteObject(previousFont);
+        }
+
+        return true;
+    }
+
+    std::array<HWND, 37> EditorShell::CollectControls() const
+    {
+        return {
             m_hierarchyPanel,
             m_assetsPanel,
             m_inspectorPanel,
@@ -995,21 +939,6 @@ namespace Xelqoria::Editor
             m_spriteRefEdit,
             m_spriteComponentActionButton
         };
-
-        for (HWND control : controls)
-        {
-            if (nullptr != control)
-            {
-                SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(m_defaultFont), TRUE);
-            }
-        }
-
-        if (ownedPreviousFont && nullptr != previousFont)
-        {
-            DeleteObject(previousFont);
-        }
-
-        return true;
     }
 
     int EditorShell::ScaleMetric(int value) const

@@ -26,6 +26,51 @@ namespace Xelqoria::Editor
     namespace
     {
         constexpr float UntexturedSpriteSizeWorldUnits = 64.0f;
+
+        /// <summary>
+        /// 指定編集モードキーの押下から次の編集モードを決定する。
+        /// </summary>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
+        /// <returns>押下された編集モード。未押下の場合は空。</returns>
+        std::optional<SceneViewEditMode> ReadPressedEditModeKey(const Core::InputSnapshot& inputSnapshot)
+        {
+            if (inputSnapshot.WasKeyPressed('V'))
+            {
+                return SceneViewEditMode::Move;
+            }
+
+            if (inputSnapshot.WasKeyPressed('S'))
+            {
+                return SceneViewEditMode::Scale;
+            }
+
+            if (inputSnapshot.WasKeyPressed('R'))
+            {
+                return SceneViewEditMode::Rotate;
+            }
+
+            return std::nullopt;
+        }
+
+        /// <summary>
+        /// ホイール差分から編集量の符号を取得する。
+        /// </summary>
+        /// <param name="mouseWheelDelta">マウスホイール差分。</param>
+        /// <returns>上回転は 1、下回転は -1、差分なしは 0。</returns>
+        float GetMouseWheelDirection(int mouseWheelDelta)
+        {
+            if (mouseWheelDelta > 0)
+            {
+                return 1.0f;
+            }
+
+            if (mouseWheelDelta < 0)
+            {
+                return -1.0f;
+            }
+
+            return 0.0f;
+        }
     }
 
     void SceneViewInputTracker::Bind(HWND sceneViewHost)
@@ -46,9 +91,26 @@ namespace Xelqoria::Editor
     {
         SceneViewInteractionResult result{};
 
+        if (true == m_lastObservedSelectedEntityId.has_value()
+            && m_lastObservedSelectedEntityId != currentSelectedEntityId)
+        {
+            m_editMode = SceneViewEditMode::None;
+            ClearEntityDrag();
+        }
+
+        if (const std::optional<SceneViewEditMode> pressedEditMode = ReadPressedEditModeKey(inputSnapshot);
+            pressedEditMode.has_value())
+        {
+            m_editMode = (m_editMode == *pressedEditMode)
+                ? SceneViewEditMode::None
+                : *pressedEditMode;
+            ClearEntityDrag();
+        }
+
         if (nullptr == m_sceneViewHost || 0 == sceneViewWidth || 0 == sceneViewHeight)
         {
             ClearSceneDragPreview();
+            m_lastObservedSelectedEntityId = currentSelectedEntityId;
             return result;
         }
 
@@ -89,6 +151,14 @@ namespace Xelqoria::Editor
                 {
                     result.selectionChanged = true;
                     result.selectedEntityId = selectedEntityId;
+                    if (true == currentSelectedEntityId.has_value())
+                    {
+                        m_editMode = SceneViewEditMode::None;
+                    }
+                }
+                else if (false == selectedEntityId.has_value())
+                {
+                    m_editMode = SceneViewEditMode::None;
                 }
 
                 if (selectedEntityId.has_value())
@@ -115,6 +185,7 @@ namespace Xelqoria::Editor
         if (false == isAssetDragActive
             && true == isLeftButtonDown
             && true == m_entityDragState.entityId.has_value()
+            && (SceneViewEditMode::None == m_editMode || SceneViewEditMode::Move == m_editMode)
             && nullptr != scene)
         {
             POINT clientPoint = screenPoint;
@@ -130,6 +201,36 @@ namespace Xelqoria::Editor
             {
                 result.sceneChanged = true;
                 m_entityDragState.hasMoved = true;
+            }
+        }
+
+        const float wheelDirection = GetMouseWheelDirection(inputSnapshot.GetMouseWheelDelta());
+        if (0.0f != wheelDirection
+            && false == isAssetDragActive
+            && true == currentSelectedEntityId.has_value()
+            && nullptr != scene)
+        {
+            if (SceneViewEditMode::Scale == m_editMode)
+            {
+                const bool isControlDown = inputSnapshot.IsKeyDown(VK_CONTROL);
+                const float scaleStep = true == isControlDown ? 0.05f : 0.1f;
+                if (SceneEditingOperations::AdjustEntityUniformScale(*scene, *currentSelectedEntityId, wheelDirection * scaleStep))
+                {
+                    result.sceneChanged = true;
+                    result.shouldPersistScene = true;
+                    result.shouldPushHistory = true;
+                }
+            }
+            else if (SceneViewEditMode::Rotate == m_editMode)
+            {
+                const bool isControlDown = inputSnapshot.IsKeyDown(VK_CONTROL);
+                const float rotateStep = true == isControlDown ? 1.0f : 10.0f;
+                if (SceneEditingOperations::AdjustEntityRotationZ(*scene, *currentSelectedEntityId, wheelDirection * rotateStep))
+                {
+                    result.sceneChanged = true;
+                    result.shouldPersistScene = true;
+                    result.shouldPushHistory = true;
+                }
             }
         }
 
@@ -219,12 +320,19 @@ namespace Xelqoria::Editor
         }
 
         m_sceneViewLeftButtonDown = isLeftButtonDown;
+        m_lastObservedSelectedEntityId =
+            true == result.selectionChanged ? result.selectedEntityId : currentSelectedEntityId;
         return result;
     }
 
     const SceneDragPreviewState& SceneViewInputTracker::GetDragPreviewState() const
     {
         return m_dragPreviewState;
+    }
+
+    SceneViewEditMode SceneViewInputTracker::GetEditMode() const
+    {
+        return m_editMode;
     }
 
     const ScenePendingDropState& SceneViewInputTracker::GetPendingDropState() const

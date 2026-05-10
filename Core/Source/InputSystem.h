@@ -35,12 +35,14 @@ namespace Xelqoria::Core
         /// <param name="isLeftMouseButtonDown">現在フレームで左マウスボタンが押下中か。</param>
         /// <param name="wasLeftMouseButtonDown">前フレームで左マウスボタンが押下中だったか。</param>
         /// <param name="cursorScreenPoint">スクリーン座標のカーソル位置。</param>
+        /// <param name="mouseWheelDelta">現在フレームのマウスホイール差分。</param>
         InputSnapshot(
             const std::array<bool, KeyStateCount>& keyDownStates,
             const std::array<bool, KeyStateCount>& previousKeyDownStates,
             bool isLeftMouseButtonDown,
             bool wasLeftMouseButtonDown,
-            POINT cursorScreenPoint);
+            POINT cursorScreenPoint,
+            int mouseWheelDelta);
 
         /// <summary>
         /// 指定した仮想キーが現在押下中かを取得する。
@@ -90,6 +92,12 @@ namespace Xelqoria::Core
         /// <returns>スクリーン座標のカーソル位置。</returns>
         [[nodiscard]] POINT GetCursorScreenPoint() const;
 
+        /// <summary>
+        /// 現在フレームのマウスホイール差分を取得する。
+        /// </summary>
+        /// <returns>マウスホイール差分。</returns>
+        [[nodiscard]] int GetMouseWheelDelta() const;
+
     private:
         [[nodiscard]] static bool IsValidVirtualKeyCode(int virtualKeyCode);
 
@@ -98,6 +106,7 @@ namespace Xelqoria::Core
         bool m_isLeftMouseButtonDown = false;
         bool m_wasLeftMouseButtonDown = false;
         POINT m_cursorScreenPoint{};
+        int m_mouseWheelDelta = 0;
     };
 
     /// <summary>
@@ -117,6 +126,11 @@ namespace Xelqoria::Core
         using CursorPositionReader = std::function<POINT()>;
 
         /// <summary>
+        /// マウスホイール差分を読み取る関数型を表す。
+        /// </summary>
+        using MouseWheelDeltaReader = std::function<int()>;
+
+        /// <summary>
         /// Win32 API を入力元として InputSystem を生成する。
         /// </summary>
         InputSystem();
@@ -127,6 +141,23 @@ namespace Xelqoria::Core
         /// <param name="keyStateReader">仮想キー押下状態の読み取り関数。</param>
         /// <param name="cursorPositionReader">カーソル位置の読み取り関数。</param>
         InputSystem(KeyStateReader keyStateReader, CursorPositionReader cursorPositionReader);
+
+        /// <summary>
+        /// 任意の入力読み取り関数を使って InputSystem を生成する。
+        /// </summary>
+        /// <param name="keyStateReader">仮想キー押下状態の読み取り関数。</param>
+        /// <param name="cursorPositionReader">カーソル位置の読み取り関数。</param>
+        /// <param name="mouseWheelDeltaReader">マウスホイール差分の読み取り関数。</param>
+        InputSystem(
+            KeyStateReader keyStateReader,
+            CursorPositionReader cursorPositionReader,
+            MouseWheelDeltaReader mouseWheelDeltaReader);
+
+        /// <summary>
+        /// マウスホイール差分を読み取る関数を設定する。
+        /// </summary>
+        /// <param name="mouseWheelDeltaReader">マウスホイール差分の読み取り関数。</param>
+        void SetMouseWheelDeltaReader(MouseWheelDeltaReader mouseWheelDeltaReader);
 
         /// <summary>
         /// 現在フレームの入力状態を収集する。
@@ -142,6 +173,7 @@ namespace Xelqoria::Core
     private:
         KeyStateReader m_keyStateReader{};
         CursorPositionReader m_cursorPositionReader{};
+        MouseWheelDeltaReader m_mouseWheelDeltaReader{};
         InputSnapshot m_snapshot{};
     };
 }
