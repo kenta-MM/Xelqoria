@@ -58,6 +58,7 @@ namespace Xelqoria::Editor
         /// <param name="textureAssetRegistry">Texture レジストリ。</param>
         /// <param name="camera">SceneView 用カメラ。</param>
         /// <param name="selectedEntityId">現在選択中の EntityId。</param>
+        /// <param name="editMode">現在の SceneView 編集モード。</param>
         /// <param name="dragPreviewState">現在のドラッグプレビュー状態。</param>
         void RenderFrame(
             Game::Scene* scene,
@@ -65,6 +66,7 @@ namespace Xelqoria::Editor
             Graphics::TextureAssetRegistry& textureAssetRegistry,
             const EditorCamera2D& camera,
             std::optional<Game::EntityId> selectedEntityId,
+            SceneViewEditMode editMode,
             const SceneDragPreviewState& dragPreviewState);
 
     private:

@@ -134,6 +134,11 @@ namespace Xelqoria::Editor
         {
             return false;
         }
+        m_inputSystem.SetMouseWheelDeltaReader(
+            [this]()
+            {
+                return m_window.ConsumeMouseWheelDelta();
+            });
 
         InitializeProjectMenu();
         m_window.SetCommandHandler(
@@ -678,8 +683,8 @@ namespace Xelqoria::Editor
         if (true == interactionResult.shouldPersistScene)
         {
             PersistSceneChanges(
-                L"SceneView で Sprite の位置を保存しました。",
-                L"SceneView で Sprite は移動しましたが、Scene の保存に失敗しました。",
+                L"SceneView で Sprite の編集内容を保存しました。",
+                L"SceneView で Sprite は編集されましたが、Scene の保存に失敗しました。",
                 interactionResult.shouldPushHistory);
         }
 
@@ -729,6 +734,7 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetTextureAssetRegistry(),
             m_sceneViewController.GetCamera(),
             m_hierarchyPanelController.GetSelectedEntityId(),
+            m_sceneViewController.GetEditMode(),
             m_sceneViewController.GetDragPreviewState());
     }
 

@@ -86,6 +86,30 @@ namespace Xelqoria::Editor
             float y);
 
         /// <summary>
+        /// 指定 Entity の XY 拡大率を均等に増減する。
+        /// </summary>
+        /// <param name="scene">編集対象の Scene。</param>
+        /// <param name="entityId">更新対象の EntityId。</param>
+        /// <param name="delta">加算する拡大率。</param>
+        /// <returns>拡大率変更で更新が発生した場合は true。</returns>
+        static bool AdjustEntityUniformScale(
+            Game::Scene& scene,
+            Game::EntityId entityId,
+            float delta);
+
+        /// <summary>
+        /// 指定 Entity の Z 軸回転量を増減する。
+        /// </summary>
+        /// <param name="scene">編集対象の Scene。</param>
+        /// <param name="entityId">更新対象の EntityId。</param>
+        /// <param name="deltaDegrees">加算する Z 軸回転量。</param>
+        /// <returns>回転量変更で更新が発生した場合は true。</returns>
+        static bool AdjustEntityRotationZ(
+            Game::Scene& scene,
+            Game::EntityId entityId,
+            float deltaDegrees);
+
+        /// <summary>
         /// Entity 名を更新する。
         /// </summary>
         /// <param name="entity">更新対象の Entity。</param>

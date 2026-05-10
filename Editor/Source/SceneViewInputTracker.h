@@ -59,6 +59,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] const SceneDragPreviewState& GetDragPreviewState() const;
 
         /// <summary>
+        /// 現在の SceneView 編集モードを取得する。
+        /// </summary>
+        /// <returns>現在の編集モード。</returns>
+        [[nodiscard]] SceneViewEditMode GetEditMode() const;
+
+        /// <summary>
         /// 現在の保留中ドロップ状態を取得する。
         /// </summary>
         /// <returns>保留中ドロップ状態。</returns>
@@ -176,5 +182,7 @@ namespace Xelqoria::Editor
         ScenePendingDropState m_pendingDropState{};
         SceneDragPreviewState m_dragPreviewState{};
         SceneEntityDragState m_entityDragState{};
+        std::optional<Game::EntityId> m_lastObservedSelectedEntityId{};
+        SceneViewEditMode m_editMode = SceneViewEditMode::None;
     };
 }

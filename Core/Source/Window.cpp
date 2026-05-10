@@ -129,6 +129,13 @@ namespace Xelqoria::Core
         return m_height; 
     }
 
+    int Window::ConsumeMouseWheelDelta()
+    {
+        const int mouseWheelDelta = m_pendingMouseWheelDelta;
+        m_pendingMouseWheelDelta = 0;
+        return mouseWheelDelta;
+    }
+
     LRESULT CALLBACK Window::StaticWndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) 
     {
         Window* self = nullptr;
@@ -213,6 +220,10 @@ namespace Xelqoria::Core
             }
 
             InvalidateRect(hWnd, nullptr, TRUE);
+            return 0;
+
+        case WM_MOUSEWHEEL:
+            m_pendingMouseWheelDelta += GET_WHEEL_DELTA_WPARAM(wp);
             return 0;
 
         case WM_KEYDOWN:

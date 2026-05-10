@@ -98,4 +98,9 @@ namespace Xelqoria::Editor
     {
         return m_inputTracker.GetDragPreviewState();
     }
+
+    SceneViewEditMode SceneViewController::GetEditMode() const
+    {
+        return m_inputTracker.GetEditMode();
+    }
 }
