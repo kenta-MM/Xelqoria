@@ -13,7 +13,7 @@
 #include <Windows.h>
 #include <wrl/client.h>
 
-#include "EditorStringUtils.h"
+#include "EditorAssetPathUtils.h"
 
 namespace Xelqoria::Editor
 {
@@ -430,11 +430,11 @@ namespace Xelqoria::Editor
         SyncSelectedPathFromListView();
 
         const AssetListEntry& hitEntry = m_visibleEntries[static_cast<std::size_t>(hitIndex)];
-        if (false == hitEntry.isDirectory && IsTextureImageFile(hitEntry.path))
+        if (false == hitEntry.isDirectory && EditorAssetPathUtils::IsTextureImageFile(hitEntry.path))
         {
             m_draggingImagePath = hitEntry.path;
-            m_draggingTextureAssetId = BuildTextureAssetId(hitEntry.path);
-            m_draggingSpriteAssetId = BuildSpriteAssetId(hitEntry.path);
+            m_draggingTextureAssetId = EditorAssetPathUtils::BuildTextureAssetId(hitEntry.path, m_assetsRootDirectory);
+            m_draggingSpriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(hitEntry.path, m_assetsRootDirectory);
             m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
             m_canPlaceDraggingAssetInScene = false;
             if (m_isAssetDragActive)
@@ -513,7 +513,7 @@ namespace Xelqoria::Editor
     {
         for (const AssetListEntry& entry : m_visibleEntries)
         {
-            if (false == entry.isDirectory && IsTextureImageFile(entry.path))
+            if (false == entry.isDirectory && EditorAssetPathUtils::IsTextureImageFile(entry.path))
             {
                 return true;
             }
@@ -704,8 +704,8 @@ namespace Xelqoria::Editor
         else
         {
             m_selectedFilePath = entry.path;
-            m_selectedSpriteAssetId = IsTextureImageFile(entry.path)
-                ? BuildSpriteAssetId(entry.path)
+            m_selectedSpriteAssetId = EditorAssetPathUtils::IsTextureImageFile(entry.path)
+                ? EditorAssetPathUtils::BuildSpriteAssetId(entry.path, m_assetsRootDirectory)
                 : Core::AssetId{};
         }
 
@@ -1319,36 +1319,4 @@ namespace Xelqoria::Editor
         return nullptr;
     }
 
-    bool AssetsPanelController::IsTextureImageFile(const std::filesystem::path& path)
-    {
-        const std::wstring extension = path.extension().wstring();
-        return extension == L".png"
-            || extension == L".jpg"
-            || extension == L".jpeg"
-            || extension == L".bmp";
-    }
-
-    Core::AssetId AssetsPanelController::BuildTextureAssetId(const std::filesystem::path& path) const
-    {
-        std::error_code errorCode;
-        const std::filesystem::path relativePath = std::filesystem::relative(path, m_assetsRootDirectory, errorCode);
-        if (errorCode)
-        {
-            return {};
-        }
-
-        return Core::AssetId("textures/" + ToNarrowString(relativePath.generic_wstring()));
-    }
-
-    Core::AssetId AssetsPanelController::BuildSpriteAssetId(const std::filesystem::path& path) const
-    {
-        std::error_code errorCode;
-        const std::filesystem::path relativePath = std::filesystem::relative(path, m_assetsRootDirectory, errorCode);
-        if (errorCode)
-        {
-            return {};
-        }
-
-        return Core::AssetId("sprites/" + ToNarrowString(relativePath.generic_wstring()));
-    }
 }

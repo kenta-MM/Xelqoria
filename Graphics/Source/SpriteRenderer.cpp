@@ -1,6 +1,7 @@
 #include "SpriteRenderer.h"
 
 #include "SpriteRenderMath.h"
+#include "QuadTransformFactory.h"
 #include "Sprite.h"
 #include "Texture2D.h"
 #include "IGraphicsContext.h"
@@ -41,22 +42,12 @@ namespace Xelqoria::Graphics
             sprite,
             m_context->GetViewportWidth(),
             m_context->GetViewportHeight());
-        m_context->SetQuadTransform(RHI::QuadTransform2D{
-            quadTransform.scaleX,
-            quadTransform.scaleY,
-            quadTransform.rotationCos,
-            quadTransform.rotationSin,
-            quadTransform.translateX,
-            quadTransform.translateY,
-            sprite.IsOutlineEnabled() ? 1.0f : 0.0f,
+        const RHI::QuadTransform2D rhiTransform = MakeTexturedQuadTransform(
+            quadTransform,
+            sprite.IsOutlineEnabled(),
             sprite.GetOutlineThickness(),
-            0.0f,
-            0.0f,
-            sprite.GetOutlineColor()[0],
-            sprite.GetOutlineColor()[1],
-            sprite.GetOutlineColor()[2],
-            sprite.GetOutlineColor()[3]
-        });
+            sprite.GetOutlineColor());
+        m_context->SetQuadTransform(rhiTransform);
 
         // 1スプライトを2三角形(6頂点)で描画する前提。
         m_context->Draw(6, 0);

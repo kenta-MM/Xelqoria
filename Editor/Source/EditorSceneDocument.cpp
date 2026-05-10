@@ -22,6 +22,7 @@
 #include <IGraphicsContext.h>    
 #include <Vector3.h>
 
+#include "EditorAssetPathUtils.h"
 #include "EditorStringUtils.h"
 
 namespace Xelqoria::Editor
@@ -209,7 +210,9 @@ namespace Xelqoria::Editor
                 return;
             }
 
-            if (entry.is_regular_file(errorCode) && false == static_cast<bool>(errorCode) && IsTextureImageFile(entry.path()))
+            if (entry.is_regular_file(errorCode)
+                && false == static_cast<bool>(errorCode)
+                && EditorAssetPathUtils::IsTextureImageFile(entry.path()))
             {
                 (void)RegisterImageAsset(entry.path());
             }
@@ -218,13 +221,16 @@ namespace Xelqoria::Editor
 
     bool EditorSceneDocument::RegisterImageAsset(const std::filesystem::path& imagePath)
     {
-        if (nullptr == m_graphicsContext || false == IsTextureImageFile(imagePath))
+        if (nullptr == m_graphicsContext || false == EditorAssetPathUtils::IsTextureImageFile(imagePath))
         {
             return false;
         }
 
-        const Core::AssetId textureAssetId = BuildTextureAssetId(imagePath);
-        const Core::AssetId spriteAssetId = BuildSpriteAssetId(imagePath);
+        const std::filesystem::path rootDirectory = m_project.GetInfo().has_value()
+            ? m_project.GetInfo()->projectFilePath.parent_path()
+            : std::filesystem::path{};
+        const Core::AssetId textureAssetId = EditorAssetPathUtils::BuildTextureAssetId(imagePath, rootDirectory);
+        const Core::AssetId spriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(imagePath, rootDirectory);
         if (textureAssetId.IsEmpty() || spriteAssetId.IsEmpty())
         {
             return false;
@@ -419,52 +425,4 @@ namespace Xelqoria::Editor
         return std::filesystem::path("Saved") / "EditorScene.xelqoria.scene";
     }
 
-    bool EditorSceneDocument::IsTextureImageFile(const std::filesystem::path& path)
-    {
-        const std::wstring extension = path.extension().wstring();
-        return extension == L".png"
-            || extension == L".jpg"
-            || extension == L".jpeg"
-            || extension == L".bmp";
-    }
-
-    Core::AssetId EditorSceneDocument::BuildTextureAssetId(const std::filesystem::path& path) const
-    {
-        if (false == m_project.GetInfo().has_value())
-        {
-            return {};
-        }
-
-        std::error_code errorCode;
-        const std::filesystem::path relativePath = std::filesystem::relative(
-            path,
-            m_project.GetInfo()->projectFilePath.parent_path(),
-            errorCode);
-        if (errorCode)
-        {
-            return {};
-        }
-
-        return Core::AssetId("textures/" + ToNarrowString(relativePath.generic_wstring()));
-    }
-
-    Core::AssetId EditorSceneDocument::BuildSpriteAssetId(const std::filesystem::path& path) const
-    {
-        if (false == m_project.GetInfo().has_value())
-        {
-            return {};
-        }
-
-        std::error_code errorCode;
-        const std::filesystem::path relativePath = std::filesystem::relative(
-            path,
-            m_project.GetInfo()->projectFilePath.parent_path(),
-            errorCode);
-        if (errorCode)
-        {
-            return {};
-        }
-
-        return Core::AssetId("sprites/" + ToNarrowString(relativePath.generic_wstring()));
-    }
 }

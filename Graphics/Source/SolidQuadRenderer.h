@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "IGraphicsContext.h"
+#include "QuadTransformFactory.h"
 
 namespace Xelqoria::Graphics
 {
@@ -72,30 +73,15 @@ namespace Xelqoria::Graphics
             }
 
             m_context->BindTexture(0, nullptr);
-            m_context->SetQuadTransform(RHI::QuadTransform2D{
-                (2.0f * quad.width) / static_cast<float>(viewportWidth),
-                (2.0f * quad.height) / static_cast<float>(viewportHeight),
-                1.0f,
-                0.0f,
-                (2.0f * quad.centerX) / static_cast<float>(viewportWidth),
-                (-2.0f * quad.centerY) / static_cast<float>(viewportHeight),
-                0.0f,
-                0.0f,
-                0.0f,
-                0.0f,
-                0.0f,
-                0.0f,
-                0.0f,
-                0.0f,
-                quad.color[0],
-                quad.color[1],
-                quad.color[2],
-                quad.color[3],
-                0.0f,
-                0.0f,
-                0.0f,
-                0.0f
-            });
+            const RHI::QuadTransform2D rhiTransform = MakeSolidQuadTransform(
+                quad.centerX,
+                quad.centerY,
+                quad.width,
+                quad.height,
+                viewportWidth,
+                viewportHeight,
+                quad.color);
+            m_context->SetQuadTransform(rhiTransform);
             m_context->Draw(6, 0);
         }
 
