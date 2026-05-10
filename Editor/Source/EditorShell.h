@@ -3,6 +3,10 @@
 #include <Windows.h>
 #include <array>
 #include <cstdint>
+#include <optional>
+#include <vector>
+
+#include "InputSystem.h"
 
 namespace Xelqoria::Editor
 {
@@ -182,7 +186,80 @@ namespace Xelqoria::Editor
         /// <returns>SceneView 高さ。</returns>
         [[nodiscard]] std::uint32_t GetSceneViewHeight() const;
 
+        /// <summary>
+        /// Dock UI のフレーム入力を処理する。
+        /// </summary>
+        /// <param name="parentWindow">親となる Editor メインウィンドウ。</param>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
+        /// <returns>Dock レイアウトが変化した場合は true。</returns>
+        bool UpdateDocking(HWND parentWindow, const Core::InputSnapshot& inputSnapshot);
+
+        /// <summary>
+        /// Dock 用 TabControl 通知を処理する。
+        /// </summary>
+        /// <param name="notifyParameter">WM_NOTIFY の LPARAM。</param>
+        /// <returns>Dock UI が通知を消費した場合は true。</returns>
+        bool HandleNotify(LPARAM notifyParameter);
+
+        /// <summary>
+        /// 現在開いているプロジェクト画面レイアウトを初期状態へ戻す。
+        /// </summary>
+        void ResetDockLayout();
+
     private:
+        enum class EditorPanelId
+        {
+            Hierarchy,
+            Assets,
+            SceneView,
+            Inspector
+        };
+
+        enum class DockAreaId
+        {
+            LeftTop,
+            LeftBottom,
+            Center,
+            Right,
+            Floating
+        };
+
+        enum class DockNodeKind
+        {
+            Leaf,
+            Split
+        };
+
+        enum class DockSplitOrientation
+        {
+            Horizontal,
+            Vertical
+        };
+
+        enum class DockGuideTargetKind
+        {
+            None,
+            Tab,
+            SplitLeft,
+            SplitRight,
+            SplitTop,
+            SplitBottom,
+            Float
+        };
+
+        enum class DockDragKind
+        {
+            None,
+            Panel,
+            VerticalSplitter,
+            HorizontalSplitter
+        };
+
+        using DockNodeId = int;
+
+        struct DockNode;
+        struct DockGuideTarget;
+
         /// <summary>
         /// レイアウト計算結果を保持する。
         /// </summary>
@@ -229,6 +306,196 @@ namespace Xelqoria::Editor
         void LayoutSceneViewPanel(const LayoutMetrics& metrics);
 
         /// <summary>
+        /// 指定矩形へ Hierarchy パネルをレイアウトする。
+        /// </summary>
+        void LayoutHierarchyPanelInRect(const RECT& panelRect);
+
+        /// <summary>
+        /// 指定矩形へ Assets パネルをレイアウトする。
+        /// </summary>
+        void LayoutAssetsPanelInRect(const RECT& panelRect);
+
+        /// <summary>
+        /// 指定矩形へ Inspector パネルをレイアウトする。
+        /// </summary>
+        void LayoutInspectorPanelInRect(const RECT& panelRect);
+
+        /// <summary>
+        /// 指定矩形へ SceneView パネルをレイアウトする。
+        /// </summary>
+        void LayoutSceneViewPanelInRect(const RECT& panelRect);
+
+        /// <summary>
+        /// DockArea に割り当てられたパネルをタブ付き領域として配置する。
+        /// </summary>
+        void LayoutDockArea(DockAreaId dockAreaId, const RECT& areaRect);
+
+        /// <summary>
+        /// Dock ツリーの初期状態を構築する。
+        /// </summary>
+        void BuildInitialDockTree();
+
+        /// <summary>
+        /// Dock ツリーの node を指定矩形へレイアウトする。
+        /// </summary>
+        void LayoutDockNode(DockNodeId dockNodeId, const RECT& nodeRect);
+
+        /// <summary>
+        /// Dock leaf に割り当てられたパネルをタブ付き領域として配置する。
+        /// </summary>
+        void LayoutDockLeaf(DockNodeId dockNodeId, const RECT& areaRect);
+
+        /// <summary>
+        /// Dock node を追加して ID を返す。
+        /// </summary>
+        [[nodiscard]] DockNodeId AddDockNode(DockNode node);
+
+        /// <summary>
+        /// カーソル位置にある Dock leaf を返す。
+        /// </summary>
+        [[nodiscard]] DockNodeId HitTestDockLeaf(POINT cursorClientPoint) const;
+
+        /// <summary>
+        /// root から到達可能な Dock leaf 一覧を返す。
+        /// </summary>
+        void CollectReachableDockLeaves(DockNodeId dockNodeId, std::vector<DockNodeId>& dockLeafNodeIds) const;
+
+        /// <summary>
+        /// 指定パネルを含む Dock leaf を返す。
+        /// </summary>
+        [[nodiscard]] DockNodeId FindPanelDockLeaf(EditorPanelId panelId) const;
+
+        /// <summary>
+        /// Dock ツリーから指定パネルを取り除く。
+        /// </summary>
+        void RemovePanelFromDockTree(EditorPanelId panelId, bool collapseEmptyLeaves = true);
+
+        /// <summary>
+        /// 空になった Dock leaf を親 node へ畳み込む。
+        /// </summary>
+        [[nodiscard]] bool CollapseEmptyDockLeaves(DockNodeId dockNodeId);
+
+        /// <summary>
+        /// Dock ガイドへのドロップ結果を適用する。
+        /// </summary>
+        void ApplyDockGuideTarget(EditorPanelId panelId, const DockGuideTarget& guideTarget, HWND parentWindow);
+
+        /// <summary>
+        /// Dock ガイドに対するカーソル位置を判定する。
+        /// </summary>
+        [[nodiscard]] DockGuideTarget HitTestDockGuideTarget(HWND parentWindow, POINT cursorScreenPoint) const;
+
+        /// <summary>
+        /// Dock ガイド表示を現在のドラッグ状態へ同期する。
+        /// </summary>
+        void UpdateDockGuideWindows(HWND parentWindow, POINT cursorScreenPoint);
+
+        /// <summary>
+        /// Dock ガイドを非表示にする。
+        /// </summary>
+        void HideDockGuideWindows();
+
+        /// <summary>
+        /// Dock ガイド window を指定矩形へ表示する。
+        /// </summary>
+        void ShowDockGuideWindow(HWND guideWindow, const RECT& guideRect);
+
+        /// <summary>
+        /// 指定パネルの HWND 群を表示または非表示にする。
+        /// </summary>
+        void ShowPanelControls(EditorPanelId panelId, bool visible) const;
+
+        /// <summary>
+        /// 指定パネルの HWND 群を指定親へ付け替える。
+        /// </summary>
+        void SetPanelParent(EditorPanelId panelId, HWND parentWindow) const;
+
+        /// <summary>
+        /// 指定パネルの Dock 見出し領域を返す。
+        /// </summary>
+        [[nodiscard]] RECT GetPanelCaptionRect(EditorPanelId panelId) const;
+
+        /// <summary>
+        /// カーソル位置にある Dock 操作対象パネルを返す。
+        /// </summary>
+        [[nodiscard]] std::optional<EditorPanelId> HitTestPanelCaption(POINT cursorScreenPoint) const;
+
+        /// <summary>
+        /// カーソル位置から Dock 先領域を判定する。
+        /// </summary>
+        [[nodiscard]] DockAreaId HitTestDockArea(HWND parentWindow, POINT cursorScreenPoint) const;
+
+        /// <summary>
+        /// Panel を指定 DockArea へ移動する。
+        /// </summary>
+        void MovePanelToDockArea(EditorPanelId panelId, DockAreaId dockAreaId, HWND parentWindow);
+
+        /// <summary>
+        /// 指定パネルをフローティングウィンドウへ移動する。
+        /// </summary>
+        void FloatPanel(EditorPanelId panelId, POINT screenPoint, HWND parentWindow);
+
+        /// <summary>
+        /// 指定パネルのフローティングウィンドウを閉じる。
+        /// </summary>
+        void DestroyFloatingWindow(EditorPanelId panelId);
+
+        /// <summary>
+        /// 指定パネルに対応するフローティングウィンドウ格納先を返す。
+        /// </summary>
+        [[nodiscard]] HWND& GetFloatingWindowRef(EditorPanelId panelId);
+
+        /// <summary>
+        /// Dock TabControl の表示を現在状態へ同期する。
+        /// </summary>
+        void SyncDockTabs();
+
+        /// <summary>
+        /// 指定 TabControl に DockArea のタブを設定する。
+        /// </summary>
+        void SyncDockAreaTabs(DockAreaId dockAreaId);
+
+        /// <summary>
+        /// 指定 DockArea に紐付く TabControl を返す。
+        /// </summary>
+        [[nodiscard]] HWND GetDockAreaTabControl(DockAreaId dockAreaId) const;
+
+        /// <summary>
+        /// 指定 Dock leaf に紐付く TabControl を返す。
+        /// </summary>
+        [[nodiscard]] HWND GetDockLeafTabControl(DockNodeId dockNodeId) const;
+
+        /// <summary>
+        /// DockArea に紐付くパネル一覧を返す。
+        /// </summary>
+        [[nodiscard]] std::vector<EditorPanelId>& GetDockAreaPanels(DockAreaId dockAreaId);
+
+        /// <summary>
+        /// DockArea に紐付くパネル一覧を返す。
+        /// </summary>
+        [[nodiscard]] const std::vector<EditorPanelId>& GetDockAreaPanels(DockAreaId dockAreaId) const;
+
+        /// <summary>
+        /// Panel 名を返す。
+        /// </summary>
+        [[nodiscard]] static const wchar_t* GetPanelTitle(EditorPanelId panelId);
+
+        /// <summary>
+        /// DockArea の有効なアクティブタブ index を返す。
+        /// </summary>
+        [[nodiscard]] int ClampActiveTabIndex(DockAreaId dockAreaId) const;
+
+        /// <summary>
+        /// DockArea のプレビュー矩形を返す。
+        /// </summary>
+        [[nodiscard]] RECT GetDockAreaPreviewRect(HWND parentWindow, DockAreaId dockAreaId) const;
+
+        /// <summary>
+        /// Dock 先プレビュー表示を現在状態へ同期する。
+        /// </summary>
+        void UpdateDockPreviewWindow(HWND parentWindow);
+
+        /// <summary>
         /// GroupBox を背面へ配置し、同じ親を持つ中身コントロールを前面に保つ。
         /// </summary>
         void SendGroupBoxesToBack();
@@ -266,7 +533,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 37> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 51> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -295,9 +562,40 @@ namespace Xelqoria::Editor
             DWORD exStyle = 0) const;
 
     private:
+        struct DockNode
+        {
+            DockNodeKind kind = DockNodeKind::Leaf;
+            DockSplitOrientation splitOrientation = DockSplitOrientation::Horizontal;
+            float splitRatio = 0.5f;
+            DockNodeId firstChild = -1;
+            DockNodeId secondChild = -1;
+            std::vector<EditorPanelId> panels{};
+            int activeTabIndex = 0;
+            RECT rect{};
+            HWND tabControl = nullptr;
+        };
+
+        struct DockGuideTarget
+        {
+            DockGuideTargetKind kind = DockGuideTargetKind::None;
+            DockNodeId dockNodeId = -1;
+            RECT previewRect{};
+        };
+
         HFONT m_defaultFont = nullptr;
         UINT m_currentDpi = 96;
         bool m_ownsDefaultFont = false;
+        HWND m_parentWindow = nullptr;
+        HWND m_leftTopDockTab = nullptr;
+        HWND m_leftBottomDockTab = nullptr;
+        HWND m_centerDockTab = nullptr;
+        HWND m_rightDockTab = nullptr;
+        HWND m_dockPreviewWindow = nullptr;
+        std::array<HWND, 9> m_dockGuideWindows{};
+        HWND m_hierarchyFloatingWindow = nullptr;
+        HWND m_assetsFloatingWindow = nullptr;
+        HWND m_sceneViewFloatingWindow = nullptr;
+        HWND m_inspectorFloatingWindow = nullptr;
         HWND m_hierarchyPanel = nullptr;
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;
@@ -327,6 +625,28 @@ namespace Xelqoria::Editor
         HWND m_spriteComponentActionButton = nullptr;
         std::uint32_t m_sceneViewWidth = 0;
         std::uint32_t m_sceneViewHeight = 0;
+        std::vector<EditorPanelId> m_leftTopDockPanels{};
+        std::vector<EditorPanelId> m_leftBottomDockPanels{};
+        std::vector<EditorPanelId> m_centerDockPanels{};
+        std::vector<EditorPanelId> m_rightDockPanels{};
+        std::vector<DockNode> m_dockNodes{};
+        DockNodeId m_rootDockNodeId = -1;
+        DockGuideTarget m_currentGuideTarget{};
+        int m_leftTopActiveTabIndex = 0;
+        int m_leftBottomActiveTabIndex = 0;
+        int m_centerActiveTabIndex = 0;
+        int m_rightActiveTabIndex = 0;
+        int m_leftPaneWidth = 260;
+        int m_rightPaneWidth = 300;
+        int m_leftTopHeight = 280;
+        DockDragKind m_dragKind = DockDragKind::None;
+        std::optional<EditorPanelId> m_dragPanelId{};
+        bool m_hasDockPreview = false;
+        RECT m_dockPreviewRect{};
+        POINT m_dragStartScreenPoint{};
+        int m_dragStartLeftPaneWidth = 0;
+        int m_dragStartRightPaneWidth = 0;
+        int m_dragStartLeftTopHeight = 0;
         bool m_layoutInitialized = false;
         int m_lastLayoutClientWidth = 0;
         int m_lastLayoutClientHeight = 0;

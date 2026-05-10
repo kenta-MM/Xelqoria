@@ -30,6 +30,7 @@ namespace Xelqoria::Editor
         constexpr unsigned ProjectMenuSaveAsCommandId = 5103;
         constexpr unsigned ProjectMenuOpenCommandId = 5104;
         constexpr unsigned ProjectMenuSettingsCommandId = 5105;
+        constexpr unsigned ProjectMenuResetLayoutCommandId = 5106;
 
         [[nodiscard]] std::filesystem::path SelectProjectFile(HWND ownerWindow)
         {
@@ -149,6 +150,11 @@ namespace Xelqoria::Editor
         m_window.SetNotifyHandler(
             [this](LPARAM notifyParameter)
             {
+                if (m_editorShell.HandleNotify(notifyParameter))
+                {
+                    return true;
+                }
+
                 return m_assetsPanelController.HandleNotify(notifyParameter);
             });
         m_window.SetCloseRequestHandler(
@@ -233,6 +239,8 @@ namespace Xelqoria::Editor
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSaveAsCommandId, L"プロジェクトを別名で保存する");
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuOpenCommandId, L"プロジェクトを開く");
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSettingsCommandId, L"プロジェクトの設定を開く");
+        AppendMenuW(m_projectMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuResetLayoutCommandId, L"画面レイアウトを初期状態に戻す");
 
         HMENU menuBar = CreateMenu();
         AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_projectMenu), L"プロジェクト");
@@ -259,6 +267,13 @@ namespace Xelqoria::Editor
             if (m_editorInitialized)
             {
                 SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクト設定画面は未実装です。");
+            }
+            break;
+        case ProjectMenuResetLayoutCommandId:
+            if (m_editorInitialized)
+            {
+                m_editorShell.ResetDockLayout();
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"画面レイアウトを初期状態に戻しました。");
             }
             break;
         default:
@@ -537,6 +552,7 @@ namespace Xelqoria::Editor
             return;
         }
 
+        (void)m_editorShell.UpdateDocking(m_window.GetHwnd(), inputSnapshot);
         const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
         if (true == sceneViewSizeChanged)
         {
