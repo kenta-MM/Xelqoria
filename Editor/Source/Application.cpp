@@ -499,10 +499,15 @@ namespace Xelqoria::Editor
             m_window.GetHwnd(),
             L"プロジェクトを保存しますか？",
             L"保存確認",
-            MB_YESNO | MB_ICONQUESTION);
+            MB_YESNOCANCEL | MB_ICONQUESTION);
         if (result == IDYES)
         {
-            SaveProjectFromMenu();
+            return SaveProjectFromMenu();
+        }
+
+        if (result == IDCANCEL)
+        {
+            return false;
         }
 
         return true;

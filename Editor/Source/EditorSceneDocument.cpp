@@ -23,12 +23,15 @@
 #include <Vector3.h>
 
 #include "EditorAssetPathUtils.h"
+#include "EditorPathSecurity.h"
 #include "EditorStringUtils.h"
 
 namespace Xelqoria::Editor
 {
     namespace
     {
+        constexpr std::uintmax_t MaxSceneFileBytes = 4u * 1024u * 1024u;
+
         /// <summary>
         /// Vector3 を `x,y,z` 形式で出力する。
         /// </summary>
@@ -191,7 +194,12 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        return LoadSceneFromPath(scenePath);
+        if (false == m_project.GetInfo().has_value())
+        {
+            return false;
+        }
+
+        return LoadSceneFromPath(m_project.GetInfo()->activeScenePath);
     }
 
     void EditorSceneDocument::RefreshProjectAssetRegistries()
@@ -212,6 +220,7 @@ namespace Xelqoria::Editor
 
             if (entry.is_regular_file(errorCode)
                 && false == static_cast<bool>(errorCode)
+                && EditorPathSecurity::IsPathInsideOrEqual(entry.path(), rootDirectory)
                 && EditorAssetPathUtils::IsTextureImageFile(entry.path()))
             {
                 (void)RegisterImageAsset(entry.path());
@@ -229,6 +238,12 @@ namespace Xelqoria::Editor
         const std::filesystem::path rootDirectory = m_project.GetInfo().has_value()
             ? m_project.GetInfo()->projectFilePath.parent_path()
             : std::filesystem::path{};
+        if (false == rootDirectory.empty()
+            && false == EditorPathSecurity::IsPathInsideOrEqual(imagePath, rootDirectory))
+        {
+            return false;
+        }
+
         const Core::AssetId textureAssetId = EditorAssetPathUtils::BuildTextureAssetId(imagePath, rootDirectory);
         const Core::AssetId spriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(imagePath, rootDirectory);
         if (textureAssetId.IsEmpty() || spriteAssetId.IsEmpty())
@@ -277,13 +292,14 @@ namespace Xelqoria::Editor
         std::error_code errorCode;
         if (false == targetDirectory.empty()
             && std::filesystem::is_directory(targetDirectory, errorCode)
-            && false == static_cast<bool>(errorCode))
+            && false == static_cast<bool>(errorCode)
+            && EditorPathSecurity::IsPathInsideOrEqual(targetDirectory, rootDirectory))
         {
             const std::filesystem::path relativeTargetDirectory =
                 std::filesystem::relative(targetDirectory, rootDirectory, errorCode);
             if (false == static_cast<bool>(errorCode)
                 && false == relativeTargetDirectory.empty()
-                && relativeTargetDirectory.native().find(L"..") != 0)
+                && EditorPathSecurity::IsSafeRelativePath(relativeTargetDirectory))
             {
                 outputDirectory = targetDirectory;
             }
@@ -291,6 +307,11 @@ namespace Xelqoria::Editor
 
         std::filesystem::create_directories(outputDirectory, errorCode);
         if (errorCode)
+        {
+            return false;
+        }
+
+        if (false == EditorPathSecurity::IsValidProjectName(ToWideString(entity.GetName())))
         {
             return false;
         }
@@ -397,6 +418,13 @@ namespace Xelqoria::Editor
     bool EditorSceneDocument::LoadSceneFromPath(const std::filesystem::path& scenePath)
     {
         if (false == std::filesystem::exists(scenePath))
+        {
+            return false;
+        }
+
+        std::error_code errorCode;
+        const std::uintmax_t fileSize = std::filesystem::file_size(scenePath, errorCode);
+        if (errorCode || fileSize > MaxSceneFileBytes)
         {
             return false;
         }

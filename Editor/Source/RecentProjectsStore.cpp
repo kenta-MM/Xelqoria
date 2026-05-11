@@ -5,21 +5,13 @@
 #include <string>
 #include <system_error>
 
+#include "EditorStringUtils.h"
+
 namespace Xelqoria::Editor
 {
     namespace
     {
         constexpr std::size_t MaxRecentProjectCount = 5;
-
-        [[nodiscard]] std::wstring ToWideString(const std::string& value)
-        {
-            return std::wstring(value.begin(), value.end());
-        }
-
-        [[nodiscard]] std::string ToNarrowString(const std::wstring& value)
-        {
-            return std::string(value.begin(), value.end());
-        }
     }
 
     std::vector<EditorProjectInfo> RecentProjectsStore::Load() const
@@ -99,7 +91,7 @@ namespace Xelqoria::Editor
         {
             output << ToNarrowString(project.name)
                 << '|'
-                << project.projectFilePath.generic_string()
+                << ToNarrowString(project.projectFilePath.generic_wstring())
                 << '\n';
         }
 

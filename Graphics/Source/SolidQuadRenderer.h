@@ -73,7 +73,7 @@ namespace Xelqoria::Graphics
             }
 
             m_context->BindTexture(0, nullptr);
-            const RHI::QuadTransform2D rhiTransform = MakeSolidQuadTransform(
+            const QuadRenderConstants quadRenderConstants = MakeSolidQuadTransform(
                 quad.centerX,
                 quad.centerY,
                 quad.width,
@@ -81,7 +81,7 @@ namespace Xelqoria::Graphics
                 viewportWidth,
                 viewportHeight,
                 quad.color);
-            m_context->SetQuadTransform(rhiTransform);
+            ApplyQuadRenderConstants(*m_context, quadRenderConstants);
             m_context->Draw(6, 0);
         }
 

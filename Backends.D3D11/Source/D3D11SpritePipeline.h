@@ -1,7 +1,9 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <memory>
+#include <span>
 
 #include <d3d11.h>
 #include <wrl/client.h>
@@ -39,10 +41,10 @@ namespace Xelqoria::Backends::D3D11
         void BindTexture(ID3D11DeviceContext* deviceContext, std::uint32_t slot, RHI::ITexture* texture);
 
         /// <summary>
-        /// スプライト描画に使用する 2D 変換値を設定する。
+        /// スプライト描画に使用するシェーダー定数を設定する。
         /// </summary>
-        /// <param name="transform">設定する変換値。</param>
-        void SetQuadTransform(const RHI::QuadTransform2D& transform);
+        /// <param name="constants">設定する定数列。</param>
+        void SetShaderConstants(std::span<const float> constants);
 
         /// <summary>
         /// スプライト描画を実行する。
@@ -71,6 +73,6 @@ namespace Xelqoria::Backends::D3D11
         std::shared_ptr<RHI::IVertexBuffer> m_vertexBuffer;
         Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerState;
         bool m_hasBoundTexture = false;
-        RHI::QuadTransform2D m_quadTransform{};
+        std::array<float, 20> m_shaderConstants{};
     };
 }

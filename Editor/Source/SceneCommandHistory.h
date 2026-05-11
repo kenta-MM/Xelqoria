@@ -79,6 +79,8 @@ namespace Xelqoria::Editor
         std::size_t GetCount() const;
 
     private:
+        static constexpr std::size_t MaxHistoryEntryCount = 128;
+
         std::vector<SceneCommandHistoryEntry> m_entries{};
         std::size_t m_currentIndex = 0;
     };

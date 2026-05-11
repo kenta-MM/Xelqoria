@@ -48,6 +48,10 @@ classDiagram
         class D3D12GraphicsContext
     }
 
+    namespace Editor_UI {
+        class EditorShell
+    }
+
     namespace Editor {
         class EditorScreenPoint
         class EditorWorldPoint
@@ -112,6 +116,7 @@ classDiagram
             -m_spriteRenderer SpriteRenderer
             -m_spriteAssetRegistry SpriteAssetRegistry
             -m_textureAssetRegistry TextureAssetRegistry
+            -m_editorShell EditorShell
             -m_editorCamera EditorCamera2D
             -m_commandHistory SceneCommandHistory
             +Run() int
@@ -140,6 +145,7 @@ classDiagram
     SceneEditingOperations --> SceneEditResult : returns
 
     Application *-- Window
+    Application *-- EditorShell
     Application *-- SceneCommandHistory
     Application *-- EditorCamera2D
     Application *-- SceneViewController

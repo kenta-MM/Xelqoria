@@ -12,6 +12,7 @@ Game → Graphics → RHI → Backends
 - Graphics = APIに依存しない描画ロジックおよび描画概念
 - RHI = 低レベルなGPU抽象化
 - Backends = RHIのプラットフォーム固有実装
+- Editor.UI = Editor 専用の UI シェルおよび Dock/パネル配置
 
 ## コアルール
 
@@ -19,6 +20,7 @@ Game → Graphics → RHI → Backends
 - Graphics は Direct3D 型を使用してはならない
 - RHI は Sprite、Camera、Material、Renderer などの描画概念を含めてはならない
 - Game は Backends や Direct3D を参照してはならない
+- Runtime は Editor.UI を参照してはならない
 
 ## 描画ルール
 

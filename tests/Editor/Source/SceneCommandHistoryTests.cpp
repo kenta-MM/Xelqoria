@@ -83,3 +83,22 @@ TEST(SceneCommandHistoryTests, ClearsRedoBranchWhenNewEditIsPushedAfterUndo)
     EXPECT_FALSE(history.CanRedo());
     EXPECT_EQ(static_cast<std::size_t>(3), history.GetCount());
 }
+
+TEST(SceneCommandHistoryTests, SkipsDuplicateSnapshotsAndCapsHistorySize)
+{
+    Xelqoria::Editor::SceneCommandHistory history;
+
+    Xelqoria::Game::Scene initialScene;
+    history.Reset(CreateEntry(initialScene, std::nullopt));
+    history.Push(CreateEntry(initialScene, std::nullopt));
+    EXPECT_EQ(static_cast<std::size_t>(1), history.GetCount());
+
+    for (int index = 0; index < 140; ++index)
+    {
+        Xelqoria::Game::Scene scene;
+        scene.CreateEntity(static_cast<Xelqoria::Game::EntityId>(index + 1));
+        history.Push(CreateEntry(scene, static_cast<Xelqoria::Game::EntityId>(index + 1)));
+    }
+
+    EXPECT_EQ(static_cast<std::size_t>(128), history.GetCount());
+}

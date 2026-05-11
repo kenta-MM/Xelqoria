@@ -1,6 +1,7 @@
 #include "Scene.h"
 
 #include <algorithm>
+#include <limits>
 #include <sstream>
 
 #include "Entity.h"
@@ -105,14 +106,38 @@ namespace Xelqoria::Game
 
 	Entity& Scene::CreateEntity()
 	{
-		m_entities.emplace_back(m_nextEntityId++);
+		while (FindEntity(m_nextEntityId).has_value()
+			&& m_nextEntityId < (std::numeric_limits<EntityId>::max)())
+		{
+			++m_nextEntityId;
+		}
+
+		const auto existingEntity = FindEntity(m_nextEntityId);
+		if (existingEntity.has_value())
+		{
+			return existingEntity->get();
+		}
+
+		const EntityId entityId = m_nextEntityId;
+		m_entities.emplace_back(entityId);
+		if (m_nextEntityId < (std::numeric_limits<EntityId>::max)())
+		{
+			++m_nextEntityId;
+		}
+
 		return m_entities.back();
 	}
 
 	Entity& Scene::CreateEntity(EntityId entityId)
 	{
+		const auto existingEntity = FindEntity(entityId);
+		if (existingEntity.has_value())
+		{
+			return existingEntity->get();
+		}
+
 		m_entities.emplace_back(entityId);
-		if (entityId >= m_nextEntityId) {
+		if (entityId >= m_nextEntityId && entityId < (std::numeric_limits<EntityId>::max)()) {
 			m_nextEntityId = entityId + 1;
 		}
 

@@ -7,7 +7,8 @@ var allowedDependencies = new Dictionary<string, HashSet<string>>(StringComparer
     ["App"] = new(StringComparer.OrdinalIgnoreCase) { "App", "Backends", "Core", "Game", "Graphics", "RHI" },
     ["Backends"] = new(StringComparer.OrdinalIgnoreCase) { "Backends", "RHI" },
     ["Core"] = new(StringComparer.OrdinalIgnoreCase) { "Core" },
-    ["Editor"] = new(StringComparer.OrdinalIgnoreCase) { "Backends", "Core", "Editor", "Game", "Graphics", "RHI" },
+    ["Editor"] = new(StringComparer.OrdinalIgnoreCase) { "Backends", "Core", "Editor", "Editor.UI", "Game", "Graphics", "RHI" },
+    ["Editor.UI"] = new(StringComparer.OrdinalIgnoreCase) { "Core", "Editor.UI" },
     ["Game"] = new(StringComparer.OrdinalIgnoreCase) { "Core", "Game", "Graphics" },
     ["Graphics"] = new(StringComparer.OrdinalIgnoreCase) { "Core", "Graphics", "RHI" },
     ["RHI"] = new(StringComparer.OrdinalIgnoreCase) { "RHI" },
@@ -20,6 +21,7 @@ var projectDirs = new[]
     "Backends.D3D11",
     "Backends.D3D12",
     "Core",
+    "Editor.UI",
     "App",
     "Editor",
     "Game",
@@ -47,7 +49,7 @@ var sourceFiles = sourceRoots
     .SelectMany(root => Directory.EnumerateFiles(root, "*.h", SearchOption.AllDirectories)
         .Concat(Directory.EnumerateFiles(root, "*.cpp", SearchOption.AllDirectories)));
 
-var includePattern = new Regex("^\\s*#include\\s+\"([^\"]+)\"", RegexOptions.Compiled);
+var includePattern = new Regex("^\\s*#include\\s+[<\"]([^>\"]+)[>\"]", RegexOptions.Compiled);
 var violations = new List<string>();
 
 foreach (var file in sourceFiles)

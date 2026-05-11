@@ -338,6 +338,24 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 
 		EXPECT_EQ(spriteAssetLoadResult.asset->textureAssetId, Xelqoria::Core::AssetId("textures/player-idle"));
 
+		const auto editorSpriteAssetLoadResult = Xelqoria::Game::Assets::SpriteAssetLoader::LoadFromText(
+		"magic=XelqoriaSpriteAsset\n"
+		"version=1\n"
+		"name=\"Sprite 1\"\n"
+		"transform.position=0.000000,0.000000,0.000000\n"
+		"transform.rotation=0.000000,0.000000,0.000000\n"
+		"transform.scale=1.000000,1.000000,1.000000\n"
+		"hasSpriteComponent=true\n"
+		"spriteAssetRef=sprites/player-idle\n"
+		"textureAssetId=textures/player-idle\n"
+		"texture.size=64,32\n"
+		"render.visible=true\n"
+		"render.sortOrder=0\n"
+		"render.opacity=1.000000\n");
+		EXPECT_TRUE(editorSpriteAssetLoadResult.IsSuccess());
+		ASSERT_TRUE(editorSpriteAssetLoadResult.asset.has_value());
+		EXPECT_EQ(editorSpriteAssetLoadResult.asset->textureAssetId, Xelqoria::Core::AssetId("textures/player-idle"));
+
 		Xelqoria::Game::Assets::SpriteAssetRegistry spriteAssetRegistry;
 		spriteAssetRegistry.RegisterSpriteAsset(
 		"sprites/player-idle",
@@ -583,6 +601,31 @@ TEST(TransformTests, SceneSerializerLoadReturnsErrorWhenEntityIdIsMissing)
 	ASSERT_TRUE(loadResult.error.has_value());
 	EXPECT_EQ("entity.0.id", loadResult.error->fieldName);
 	EXPECT_NE(loadResult.error->message.find("不足"), std::string::npos);
+}
+
+TEST(TransformTests, SceneSerializerLoadReturnsErrorWhenEntityIdIsDuplicated)
+{
+	const std::string source =
+		"magic=xelqoria.scene\n"
+		"version=1\n"
+		"entity.0.id=7\n"
+		"entity.0.name=\"First\"\n"
+		"entity.0.transform.position=0.000000,0.000000,0.000000\n"
+		"entity.0.transform.rotation=0.000000,0.000000,0.000000\n"
+		"entity.0.transform.scale=1.000000,1.000000,1.000000\n"
+		"entity.0.hasSpriteComponent=false\n"
+		"entity.1.id=7\n"
+		"entity.1.name=\"Second\"\n"
+		"entity.1.transform.position=0.000000,0.000000,0.000000\n"
+		"entity.1.transform.rotation=0.000000,0.000000,0.000000\n"
+		"entity.1.transform.scale=1.000000,1.000000,1.000000\n"
+		"entity.1.hasSpriteComponent=false\n";
+
+	const auto loadResult = Xelqoria::Game::SceneSerializer::LoadFromText(source);
+	EXPECT_FALSE(loadResult.IsSuccess());
+	ASSERT_TRUE(loadResult.error.has_value());
+	EXPECT_EQ("entity.1.id", loadResult.error->fieldName);
+	EXPECT_NE(loadResult.error->message.find("重複"), std::string::npos);
 }
 
 TEST(TransformTests, ResolveSceneSpritesPreservesEntityIdsAndResolvedTextures)

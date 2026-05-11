@@ -25,7 +25,6 @@
     <ClCompile Include="Source\EditorAssetPathUtils.cpp" />
     <ClCompile Include="Source\EditorProject.cpp" />
     <ClCompile Include="Source\EditorSceneDocument.cpp" />
-    <ClCompile Include="Source\EditorShell.cpp" />
     <ClCompile Include="Source\Entry.cpp" />
     <ClCompile Include="Source\HierarchyPanelController.cpp" />
     <ClCompile Include="Source\InspectorPanelController.cpp" />
@@ -47,8 +46,8 @@
     <ClInclude Include="Source\EditorCommandController.h" />
     <ClInclude Include="Source\EditorAssetPathUtils.h" />
     <ClInclude Include="Source\EditorProject.h" />
+    <ClInclude Include="Source\EditorPathSecurity.h" />
     <ClInclude Include="Source\EditorSceneDocument.h" />
-    <ClInclude Include="Source\EditorShell.h" />
     <ClInclude Include="Source\EditorStringUtils.h" />
     <ClInclude Include="Source\EditorCamera2D.h" />
     <ClInclude Include="Source\HierarchyPanelController.h" />
@@ -69,6 +68,9 @@
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">
       <Project>{79E8E826-7407-4766-B731-675CB84F6552}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Editor.UI\Xelqoria.Editor.UI.vcxproj">
+      <Project>{66FA8A19-4FCE-418A-B450-638F3A42681E}</Project>
     </ProjectReference>
     <ProjectReference Include="..\Xelqoria.Math\Xelqoria.Math.vcxproj">
       <Project>{9143e43a-0447-43e1-9fe4-9c3edec98212}</Project>
@@ -151,7 +153,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -169,7 +171,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -185,7 +187,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -203,7 +205,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>

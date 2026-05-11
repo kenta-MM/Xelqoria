@@ -14,6 +14,7 @@
 #include <wrl/client.h>
 
 #include "EditorAssetPathUtils.h"
+#include "EditorPathSecurity.h"
 
 namespace Xelqoria::Editor
 {
@@ -273,11 +274,12 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path rootDirectory = projectInfo->projectFilePath.parent_path();
+        const std::filesystem::path rootDirectory =
+            EditorPathSecurity::NormalizeForContainment(projectInfo->projectFilePath.parent_path());
         if (rootDirectory != m_assetsRootDirectory)
         {
             m_assetsRootDirectory = rootDirectory;
-            m_currentDirectory = rootDirectory;
+            m_currentDirectory = m_assetsRootDirectory;
             m_selectedFilePath.clear();
             m_lastClickTick = 0;
             m_lastClickedIndex = -1;
@@ -430,7 +432,9 @@ namespace Xelqoria::Editor
         SyncSelectedPathFromListView();
 
         const AssetListEntry& hitEntry = m_visibleEntries[static_cast<std::size_t>(hitIndex)];
-        if (false == hitEntry.isDirectory && EditorAssetPathUtils::IsTextureImageFile(hitEntry.path))
+        if (false == hitEntry.isDirectory
+            && EditorPathSecurity::IsPathInsideOrEqual(hitEntry.path, m_assetsRootDirectory)
+            && EditorAssetPathUtils::IsTextureImageFile(hitEntry.path))
         {
             m_draggingImagePath = hitEntry.path;
             m_draggingTextureAssetId = EditorAssetPathUtils::BuildTextureAssetId(hitEntry.path, m_assetsRootDirectory);
@@ -623,7 +627,10 @@ namespace Xelqoria::Editor
                 return;
             }
 
-            entries.push_back(entry);
+            if (EditorPathSecurity::IsPathInsideOrEqual(entry.path(), m_assetsRootDirectory))
+            {
+                entries.push_back(entry);
+            }
         }
 
         std::sort(entries.begin(), entries.end(), CompareDirectoryEntry);
@@ -704,7 +711,8 @@ namespace Xelqoria::Editor
         else
         {
             m_selectedFilePath = entry.path;
-            m_selectedSpriteAssetId = EditorAssetPathUtils::IsTextureImageFile(entry.path)
+            m_selectedSpriteAssetId = EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory)
+                && EditorAssetPathUtils::IsTextureImageFile(entry.path)
                 ? EditorAssetPathUtils::BuildSpriteAssetId(entry.path, m_assetsRootDirectory)
                 : Core::AssetId{};
         }
@@ -730,7 +738,12 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        m_currentDirectory = entry.path;
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory))
+        {
+            return false;
+        }
+
+        m_currentDirectory = EditorPathSecurity::NormalizeForContainment(entry.path);
         if (m_currentDirectory.empty())
         {
             m_currentDirectory = m_assetsRootDirectory;
@@ -870,6 +883,11 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(targetDirectory, m_assetsRootDirectory))
+        {
+            return false;
+        }
+
         HMENU popupMenu = CreatePopupMenu();
         if (nullptr == popupMenu)
         {
@@ -907,6 +925,11 @@ namespace Xelqoria::Editor
 
         const AssetListEntry entry = m_visibleEntries[entryIndex];
         if (entry.isParentLink || true == entry.path.empty())
+        {
+            return false;
+        }
+
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory))
         {
             return false;
         }

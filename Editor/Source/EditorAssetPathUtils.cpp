@@ -3,6 +3,7 @@
 #include <string>
 #include <system_error>
 
+#include "EditorPathSecurity.h"
 #include "EditorStringUtils.h"
 
 namespace Xelqoria::Editor::EditorAssetPathUtils
@@ -28,7 +29,7 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
 
             std::error_code errorCode;
             const std::filesystem::path relativePath = std::filesystem::relative(path, assetsRootDirectory, errorCode);
-            if (errorCode)
+            if (errorCode || false == EditorPathSecurity::IsSafeRelativePath(relativePath))
             {
                 return {};
             }
