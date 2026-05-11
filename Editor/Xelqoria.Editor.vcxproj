@@ -46,6 +46,7 @@
     <ClInclude Include="Source\EditorCommandController.h" />
     <ClInclude Include="Source\EditorAssetPathUtils.h" />
     <ClInclude Include="Source\EditorProject.h" />
+    <ClInclude Include="Source\EditorPathSecurity.h" />
     <ClInclude Include="Source\EditorSceneDocument.h" />
     <ClInclude Include="Source\EditorStringUtils.h" />
     <ClInclude Include="Source\EditorCamera2D.h" />

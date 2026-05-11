@@ -183,6 +183,17 @@ Invoke-CheckedCommand -FilePath $dotnetPath -Arguments @(
     $Configuration
 )
 
+Write-Host "Checking layer dependencies..."
+Invoke-CheckedCommand -FilePath $dotnetPath -Arguments @(
+    "run",
+    "--project",
+    $layerCheckerProject,
+    "--configuration",
+    $Configuration,
+    "--",
+    (Convert-ToNativePath $repoRoot)
+)
+
 Write-Host "Checking runtime project references..."
 Assert-NoEditorProjectReference -ProjectPath $appProjectPath
 

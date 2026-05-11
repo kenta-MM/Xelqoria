@@ -26,8 +26,14 @@ namespace Xelqoria::Backends::D3D11
         Shutdown();
     }
 
-    bool D3D11GraphicsContext::Initialize(HWND hwnd, HINSTANCE hInstance, std::uint32_t width, std::uint32_t height)
+    bool D3D11GraphicsContext::Initialize(
+        RHI::NativeWindowHandle windowHandle,
+        RHI::NativeInstanceHandle instanceHandle,
+        std::uint32_t width,
+        std::uint32_t height)
     {
+        HWND hwnd = static_cast<HWND>(windowHandle);
+        HINSTANCE hInstance = static_cast<HINSTANCE>(instanceHandle);
         m_hwnd = hwnd;
         m_hInstance = hInstance;
         m_width = width;
@@ -134,9 +140,9 @@ namespace Xelqoria::Backends::D3D11
         m_spritePipeline.BindTexture(m_deviceContext.Get(), slot, texture);
     }
 
-    void D3D11GraphicsContext::SetQuadTransform(const RHI::QuadTransform2D& transform)
+    void D3D11GraphicsContext::SetShaderConstants(std::span<const float> constants)
     {
-        m_spritePipeline.SetQuadTransform(transform);
+        m_spritePipeline.SetShaderConstants(constants);
     }
 
     void D3D11GraphicsContext::Draw(std::uint32_t vertexCount, std::uint32_t startVertexLocation)

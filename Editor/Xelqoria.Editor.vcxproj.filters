@@ -83,6 +83,9 @@
     <ClInclude Include="Source\EditorProject.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\EditorPathSecurity.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\EditorSceneDocument.h">
       <Filter>Source</Filter>
     </ClInclude>

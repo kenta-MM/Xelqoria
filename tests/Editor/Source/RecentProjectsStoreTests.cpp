@@ -48,3 +48,31 @@ TEST(RecentProjectsStoreTests, RecordKeepsMostRecentFiveExistingProjects)
     std::filesystem::current_path(originalCurrentPath);
     std::filesystem::remove_all(tempDirectory);
 }
+
+TEST(RecentProjectsStoreTests, RecordPreservesUtf8ProjectNameAndPath)
+{
+    const std::filesystem::path originalCurrentPath = std::filesystem::current_path();
+    const std::filesystem::path tempDirectory = MakeTempDirectory(L"XelqoriaRecentProjectsStoreTests_Utf8");
+    std::filesystem::current_path(tempDirectory);
+
+    const std::filesystem::path projectRoot = tempDirectory / L"日本語Project";
+    std::filesystem::create_directories(projectRoot);
+    const std::filesystem::path projectFilePath = projectRoot / L"日本語Project.proj";
+    std::ofstream(projectFilePath).put('\n');
+
+    Xelqoria::Editor::EditorProjectInfo info{};
+    info.name = L"日本語Project";
+    info.projectFilePath = projectFilePath;
+    info.rootDirectory = projectRoot;
+
+    Xelqoria::Editor::RecentProjectsStore store{};
+    ASSERT_TRUE(store.Record(info));
+
+    const std::vector<Xelqoria::Editor::EditorProjectInfo> projects = store.Load();
+    ASSERT_EQ(1u, projects.size());
+    EXPECT_EQ(L"日本語Project", projects[0].name);
+    EXPECT_EQ(projectFilePath, projects[0].projectFilePath);
+
+    std::filesystem::current_path(originalCurrentPath);
+    std::filesystem::remove_all(tempDirectory);
+}

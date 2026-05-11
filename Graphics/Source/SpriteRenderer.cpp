@@ -42,12 +42,12 @@ namespace Xelqoria::Graphics
             sprite,
             m_context->GetViewportWidth(),
             m_context->GetViewportHeight());
-        const RHI::QuadTransform2D rhiTransform = MakeTexturedQuadTransform(
+        const QuadRenderConstants quadRenderConstants = MakeTexturedQuadTransform(
             quadTransform,
             sprite.IsOutlineEnabled(),
             sprite.GetOutlineThickness(),
             sprite.GetOutlineColor());
-        m_context->SetQuadTransform(rhiTransform);
+        ApplyQuadRenderConstants(*m_context, quadRenderConstants);
 
         // 1スプライトを2三角形(6頂点)で描画する前提。
         m_context->Draw(6, 0);

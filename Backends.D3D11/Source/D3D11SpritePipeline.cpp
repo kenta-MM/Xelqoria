@@ -91,7 +91,7 @@ namespace Xelqoria::Backends::D3D11
         m_pixelShader.Reset();
         m_vertexShader.Reset();
         m_hasBoundTexture = false;
-        m_quadTransform = {};
+        m_shaderConstants = {};
     }
 
     void D3D11SpritePipeline::BindTexture(ID3D11DeviceContext* deviceContext, std::uint32_t slot, RHI::ITexture* texture)
@@ -115,9 +115,11 @@ namespace Xelqoria::Backends::D3D11
         deviceContext->PSSetShaderResources(slot, 1, &shaderResourceView);
     }
 
-    void D3D11SpritePipeline::SetQuadTransform(const RHI::QuadTransform2D& transform)
+    void D3D11SpritePipeline::SetShaderConstants(std::span<const float> constants)
     {
-        m_quadTransform = transform;
+        m_shaderConstants = {};
+        const std::size_t copyCount = (std::min)(constants.size(), m_shaderConstants.size());
+        std::copy_n(constants.begin(), copyCount, m_shaderConstants.begin());
     }
 
     void D3D11SpritePipeline::Draw(
@@ -156,30 +158,9 @@ namespace Xelqoria::Backends::D3D11
         deviceContext->VSSetShader(m_vertexShader.Get(), nullptr, 0);
         deviceContext->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
-        const float quadTransformData[20] =
-        {
-            m_quadTransform.scaleX,
-            m_quadTransform.scaleY,
-            m_quadTransform.rotationCos,
-            m_quadTransform.rotationSin,
-            m_quadTransform.translateX,
-            m_quadTransform.translateY,
-            m_quadTransform.outlineEnabled,
-            m_quadTransform.outlineThickness,
-            m_quadTransform.outlineColorR,
-            m_quadTransform.outlineColorG,
-            m_quadTransform.outlineColorB,
-            m_quadTransform.outlineColorA,
-            m_quadTransform.fillColorR,
-            m_quadTransform.fillColorG,
-            m_quadTransform.fillColorB,
-            m_quadTransform.fillColorA,
-            m_hasBoundTexture ? 1.0f : 0.0f,
-            m_quadTransform.reserved2,
-            m_quadTransform.reserved3,
-            m_quadTransform.reserved4
-        };
-        deviceContext->UpdateSubresource(m_transformBuffer.Get(), 0, nullptr, quadTransformData, 0, 0);
+        std::array<float, 20> shaderConstants = m_shaderConstants;
+        shaderConstants[16] = m_hasBoundTexture ? 1.0f : 0.0f;
+        deviceContext->UpdateSubresource(m_transformBuffer.Get(), 0, nullptr, shaderConstants.data(), 0, 0);
         ID3D11Buffer* transformBuffer = m_transformBuffer.Get();
         deviceContext->VSSetConstantBuffers(0, 1, &transformBuffer);
         deviceContext->PSSetConstantBuffers(0, 1, &transformBuffer);

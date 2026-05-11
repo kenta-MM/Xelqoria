@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 
 #include <d3d12.h>
@@ -28,7 +29,11 @@ namespace Xelqoria::Backends::D3D12
         D3D12GraphicsContext& operator=(const D3D12GraphicsContext&) = delete;
 
         /// <inheritdoc/>
-        bool Initialize(HWND hwnd, HINSTANCE hInstance, std::uint32_t width, std::uint32_t height) override;
+        bool Initialize(
+            RHI::NativeWindowHandle windowHandle,
+            RHI::NativeInstanceHandle instanceHandle,
+            std::uint32_t width,
+            std::uint32_t height) override;
         /// <inheritdoc/>
         void Shutdown() override;
 
@@ -42,7 +47,7 @@ namespace Xelqoria::Backends::D3D12
         /// <inheritdoc/>
         void BindTexture(std::uint32_t slot, RHI::ITexture* texture) override;
         /// <inheritdoc/>
-        void SetQuadTransform(const RHI::QuadTransform2D& transform) override;
+        void SetShaderConstants(std::span<const float> constants) override;
 
         /// <inheritdoc/>
         void Draw(std::uint32_t vertexCount, std::uint32_t startVertexLocation = 0) override;

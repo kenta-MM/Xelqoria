@@ -5,6 +5,7 @@
 
 #include "AssetId.h"
 #include "ITexture.h"
+#include "QuadTransformFactory.h"
 #include "Sprite.h"
 #include "SpriteRenderMath.h"
 #include "TextureAssetRegistry.h"
@@ -96,4 +97,36 @@ TEST(SpriteRenderMathTests, TextureRegistryAndTexture2DHandleResolvedAndMissingT
     EXPECT_EQ(emptyTexture.GetRHITexture(), nullptr);
     EXPECT_EQ(emptyTexture.GetWidth(), 0u);
     EXPECT_EQ(emptyTexture.GetHeight(), 0u);
+}
+
+TEST(SpriteRenderMathTests, QuadRenderConstantsPackGraphicsStateForRhi)
+{
+    Xelqoria::Graphics::QuadRenderConstants constants{};
+    constants.scaleX = 2.0f;
+    constants.scaleY = 3.0f;
+    constants.rotationCos = 0.5f;
+    constants.rotationSin = 0.25f;
+    constants.translateX = 0.125f;
+    constants.translateY = -0.5f;
+    constants.outlineEnabled = 1.0f;
+    constants.outlineThickness = 4.0f;
+    constants.outlineColor = { 0.1f, 0.2f, 0.3f, 0.4f };
+    constants.fillColor = { 0.5f, 0.6f, 0.7f, 0.8f };
+    constants.textureEnabled = 0.0f;
+
+    const auto packedConstants = Xelqoria::Graphics::PackQuadRenderConstants(constants);
+    EXPECT_EQ(Xelqoria::Graphics::QuadRenderConstantFloatCount, packedConstants.size());
+    EXPECT_TRUE(IsEqual(2.0f, packedConstants[0]));
+    EXPECT_TRUE(IsEqual(3.0f, packedConstants[1]));
+    EXPECT_TRUE(IsEqual(0.5f, packedConstants[2]));
+    EXPECT_TRUE(IsEqual(0.25f, packedConstants[3]));
+    EXPECT_TRUE(IsEqual(0.125f, packedConstants[4]));
+    EXPECT_TRUE(IsEqual(-0.5f, packedConstants[5]));
+    EXPECT_TRUE(IsEqual(1.0f, packedConstants[6]));
+    EXPECT_TRUE(IsEqual(4.0f, packedConstants[7]));
+    EXPECT_TRUE(IsEqual(0.1f, packedConstants[8]));
+    EXPECT_TRUE(IsEqual(0.4f, packedConstants[11]));
+    EXPECT_TRUE(IsEqual(0.5f, packedConstants[12]));
+    EXPECT_TRUE(IsEqual(0.8f, packedConstants[15]));
+    EXPECT_TRUE(IsEqual(0.0f, packedConstants[16]));
 }

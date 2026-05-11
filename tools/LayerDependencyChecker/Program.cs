@@ -49,7 +49,7 @@ var sourceFiles = sourceRoots
     .SelectMany(root => Directory.EnumerateFiles(root, "*.h", SearchOption.AllDirectories)
         .Concat(Directory.EnumerateFiles(root, "*.cpp", SearchOption.AllDirectories)));
 
-var includePattern = new Regex("^\\s*#include\\s+\"([^\"]+)\"", RegexOptions.Compiled);
+var includePattern = new Regex("^\\s*#include\\s+[<\"]([^>\"]+)[>\"]", RegexOptions.Compiled);
 var violations = new List<string>();
 
 foreach (var file in sourceFiles)

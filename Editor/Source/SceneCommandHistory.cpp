@@ -25,8 +25,24 @@ namespace Xelqoria::Editor
             m_entries.erase(m_entries.begin() + static_cast<std::ptrdiff_t>(m_currentIndex + 1), m_entries.end());
         }
 
+        const SceneCommandHistoryEntry& currentEntry = m_entries[m_currentIndex];
+        if (currentEntry.serializedScene == entry.serializedScene
+            && currentEntry.selectedEntityId == entry.selectedEntityId)
+        {
+            return;
+        }
+
         m_entries.push_back(std::move(entry));
         m_currentIndex = m_entries.size() - 1;
+
+        if (m_entries.size() > MaxHistoryEntryCount)
+        {
+            const std::size_t removeCount = m_entries.size() - MaxHistoryEntryCount;
+            m_entries.erase(
+                m_entries.begin(),
+                m_entries.begin() + static_cast<std::ptrdiff_t>(removeCount));
+            m_currentIndex -= removeCount;
+        }
     }
 
     bool SceneCommandHistory::CanUndo() const

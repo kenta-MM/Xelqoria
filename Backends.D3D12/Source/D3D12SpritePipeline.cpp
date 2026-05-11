@@ -87,7 +87,7 @@ namespace Xelqoria::Backends::D3D12
 
     void D3D12SpritePipeline::Shutdown()
     {
-        m_quadTransform = {};
+        m_shaderConstants = {};
         m_hasBoundTexture = false;
         m_boundTextureSrvGpu = {};
         m_vertexBuffer.reset();
@@ -144,9 +144,11 @@ namespace Xelqoria::Backends::D3D12
         m_hasBoundTexture = true;
     }
 
-    void D3D12SpritePipeline::SetQuadTransform(const RHI::QuadTransform2D& transform)
+    void D3D12SpritePipeline::SetShaderConstants(std::span<const float> constants)
     {
-        m_quadTransform = transform;
+        m_shaderConstants = {};
+        const std::size_t copyCount = (std::min)(constants.size(), m_shaderConstants.size());
+        std::copy_n(constants.begin(), copyCount, m_shaderConstants.begin());
     }
 
     void D3D12SpritePipeline::Draw(
@@ -182,31 +184,10 @@ namespace Xelqoria::Backends::D3D12
         commandList->SetGraphicsRootSignature(m_rootSignature.Get());
         commandList->SetPipelineState(m_pipelineState.Get());
 
-        const float quadTransformData[20] =
-        {
-            m_quadTransform.scaleX,
-            m_quadTransform.scaleY,
-            m_quadTransform.rotationCos,
-            m_quadTransform.rotationSin,
-            m_quadTransform.translateX,
-            m_quadTransform.translateY,
-            m_quadTransform.outlineEnabled,
-            m_quadTransform.outlineThickness,
-            m_quadTransform.outlineColorR,
-            m_quadTransform.outlineColorG,
-            m_quadTransform.outlineColorB,
-            m_quadTransform.outlineColorA,
-            m_quadTransform.fillColorR,
-            m_quadTransform.fillColorG,
-            m_quadTransform.fillColorB,
-            m_quadTransform.fillColorA,
-            m_hasBoundTexture ? 1.0f : 0.0f,
-            m_quadTransform.reserved2,
-            m_quadTransform.reserved3,
-            m_quadTransform.reserved4
-        };
+        std::array<float, 20> shaderConstants = m_shaderConstants;
+        shaderConstants[16] = m_hasBoundTexture ? 1.0f : 0.0f;
 
-        commandList->SetGraphicsRoot32BitConstants(0, 20, quadTransformData, 0);
+        commandList->SetGraphicsRoot32BitConstants(0, 20, shaderConstants.data(), 0);
         commandList->SetGraphicsRootDescriptorTable(1, m_boundTextureSrvGpu);
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         commandList->IASetVertexBuffers(0, 1, &vertexBufferView);

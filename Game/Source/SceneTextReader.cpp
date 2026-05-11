@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <map>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string_view>
 
@@ -374,11 +375,17 @@ namespace Xelqoria::Game
 		}
 
 		Scene scene;
+		std::set<EntityId> usedEntityIds;
 		for (const auto& [entityIndex, record] : records)
 		{
 			if (record.entityId == 0)
 			{
 				return MakeError(0, "entity." + std::to_string(entityIndex) + ".id", "entity id が不足しています。");
+			}
+
+			if (false == usedEntityIds.insert(record.entityId).second)
+			{
+				return MakeError(0, "entity." + std::to_string(entityIndex) + ".id", "entity id が重複しています。");
 			}
 
 			auto& entity = scene.CreateEntity(record.entityId);

@@ -6,6 +6,8 @@
 #include <string_view>
 #include <system_error>
 
+#include "EditorPathSecurity.h"
+#include "EditorStringUtils.h"
 #include "SceneSerializer.h"
 
 namespace Xelqoria::Editor
@@ -14,11 +16,6 @@ namespace Xelqoria::Editor
     {
         constexpr const char* ProjectFileHeader = "XelqoriaProject=1";
         constexpr const wchar_t* InitialSceneFileName = L"Main.xelqoria.scene";
-
-        [[nodiscard]] std::wstring ToWideString(const std::string& value)
-        {
-            return std::wstring(value.begin(), value.end());
-        }
 
         [[nodiscard]] std::optional<std::string> ReadValue(std::string_view line, std::string_view key)
         {
@@ -36,7 +33,7 @@ namespace Xelqoria::Editor
         const std::filesystem::path& parentDirectory,
         const Game::Scene& initialScene)
     {
-        if (projectName.empty())
+        if (false == EditorPathSecurity::IsValidProjectName(projectName) || parentDirectory.empty())
         {
             return false;
         }
@@ -104,14 +101,31 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        if (false == EditorPathSecurity::IsValidProjectName(ToWideString(*projectName)))
+        {
+            return false;
+        }
+
+        const std::filesystem::path activeSceneRelativePath(*activeScene);
+        if (false == EditorPathSecurity::IsSafeRelativePath(activeSceneRelativePath)
+            || activeSceneRelativePath.extension() != ".scene")
+        {
+            return false;
+        }
+
         EditorProjectInfo info{};
         info.name = ToWideString(*projectName);
         info.projectFilePath = projectFilePath;
         info.rootDirectory = projectFilePath.parent_path();
         info.scenesDirectory = info.rootDirectory / L"Scenes";
-        info.activeScenePath = info.rootDirectory / std::filesystem::path(*activeScene);
+        info.activeScenePath = info.rootDirectory / activeSceneRelativePath;
 
         if (false == std::filesystem::exists(info.activeScenePath))
+        {
+            return false;
+        }
+
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(info.activeScenePath, info.scenesDirectory))
         {
             return false;
         }
@@ -157,7 +171,8 @@ namespace Xelqoria::Editor
         }
 
         if (false == std::filesystem::is_regular_file(selectedScenePath)
-            || selectedScenePath.extension() != ".scene")
+            || selectedScenePath.extension() != ".scene"
+            || false == EditorPathSecurity::IsPathInsideOrEqual(selectedScenePath, m_info->scenesDirectory))
         {
             return false;
         }
@@ -198,6 +213,12 @@ namespace Xelqoria::Editor
 
     bool EditorProject::WriteProjectFile(const EditorProjectInfo& info) const
     {
+        if (false == EditorPathSecurity::IsValidProjectName(info.name)
+            || false == EditorPathSecurity::IsPathInsideOrEqual(info.activeScenePath, info.scenesDirectory))
+        {
+            return false;
+        }
+
         std::error_code errorCode;
         std::filesystem::create_directories(info.rootDirectory, errorCode);
         if (errorCode)
@@ -218,7 +239,7 @@ namespace Xelqoria::Editor
         }
 
         output << ProjectFileHeader << '\n';
-        output << "Name=" << std::string(info.name.begin(), info.name.end()) << '\n';
+        output << "Name=" << ToNarrowString(info.name) << '\n';
         output << "ActiveScene=" << relativeScenePath.generic_string() << '\n';
         return output.good();
     }

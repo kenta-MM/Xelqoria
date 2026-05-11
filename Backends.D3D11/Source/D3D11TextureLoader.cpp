@@ -4,12 +4,20 @@
 
 #include <Windows.h>
 #include <wrl/client.h>
+#include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
 namespace Xelqoria::Backends::D3D11
 {
+    namespace
+    {
+        constexpr std::uint64_t MaxTexturePixels = 8192ull * 8192ull;
+        constexpr std::uint64_t BytesPerPixel = 4ull;
+    }
+
     bool D3D11TextureLoader::LoadRgbaPixelsFromFile(
         const std::wstring& filePath,
         std::vector<std::uint8_t>& outPixels,
@@ -96,7 +104,15 @@ namespace Xelqoria::Backends::D3D11
             return false;
         }
 
-        const std::uint32_t rowPitch = static_cast<std::uint32_t>(width) * 4u;
+        const std::uint64_t pixelCount = static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height);
+        if (pixelCount > MaxTexturePixels
+            || width > (std::numeric_limits<std::uint32_t>::max)() / BytesPerPixel
+            || pixelCount > (std::numeric_limits<std::size_t>::max)() / BytesPerPixel)
+        {
+            return false;
+        }
+
+        const std::uint32_t rowPitch = static_cast<std::uint32_t>(width) * static_cast<std::uint32_t>(BytesPerPixel);
         outPixels.resize(static_cast<std::size_t>(rowPitch) * static_cast<std::size_t>(height));
         localHr = converter->CopyPixels(
             nullptr,

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Windows.h>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 
 namespace Xelqoria::RHI
@@ -10,120 +10,14 @@ namespace Xelqoria::RHI
     class ITexture;
 
     /// <summary>
-    /// 単位クアッドへ適用する 2D 変換値を表す。
+    /// プラットフォーム固有の描画先ウィンドウハンドルを表す。
     /// </summary>
-    struct QuadTransform2D
-    {
-        /// <summary>
-        /// X 軸方向の拡大量を表す。
-        /// </summary>
-        float scaleX = 1.0f;
+    using NativeWindowHandle = void*;
 
-        /// <summary>
-        /// Y 軸方向の拡大量を表す。
-        /// </summary>
-        float scaleY = 1.0f;
-
-        /// <summary>
-        /// X 軸方向の移動量を表す。
-        /// </summary>
-        float rotationCos = 1.0f;
-
-        /// <summary>
-        /// 回転角度の sin 値を表す。
-        /// </summary>
-        float rotationSin = 0.0f;
-
-        /// <summary>
-        /// X 軸方向の移動量を表す。
-        /// </summary>
-        float translateX = 0.0f;
-
-        /// <summary>
-        /// Y 軸方向の移動量を表す。
-        /// </summary>
-        float translateY = 0.0f;
-
-        /// <summary>
-        /// 外枠描画が有効な場合は 1.0f、それ以外は 0.0f を表す。
-        /// </summary>
-        float outlineEnabled = 0.0f;
-
-        /// <summary>
-        /// 外枠太さを画面ピクセル単位で表す。
-        /// </summary>
-        float outlineThickness = 0.0f;
-
-        /// <summary>
-        /// 将来拡張用の予約領域を表す。
-        /// </summary>
-        float reserved0 = 0.0f;
-
-        /// <summary>
-        /// 将来拡張用の予約領域を表す。
-        /// </summary>
-        float reserved1 = 0.0f;
-
-        /// <summary>
-        /// 外枠色の赤成分を表す。
-        /// </summary>
-        float outlineColorR = 1.0f;
-
-        /// <summary>
-        /// 外枠色の緑成分を表す。
-        /// </summary>
-        float outlineColorG = 1.0f;
-
-        /// <summary>
-        /// 外枠色の青成分を表す。
-        /// </summary>
-        float outlineColorB = 0.0f;
-
-        /// <summary>
-        /// 外枠色のアルファ成分を表す。
-        /// </summary>
-        float outlineColorA = 1.0f;
-
-        /// <summary>
-        /// 塗りつぶし色の赤成分を表す。
-        /// </summary>
-        float fillColorR = 1.0f;
-
-        /// <summary>
-        /// 塗りつぶし色の緑成分を表す。
-        /// </summary>
-        float fillColorG = 1.0f;
-
-        /// <summary>
-        /// 塗りつぶし色の青成分を表す。
-        /// </summary>
-        float fillColorB = 1.0f;
-
-        /// <summary>
-        /// 塗りつぶし色のアルファ成分を表す。
-        /// </summary>
-        float fillColorA = 1.0f;
-
-        /// <summary>
-        /// テクスチャサンプリングを使用する場合は 1.0f、それ以外は 0.0f を表す。
-        /// </summary>
-        float textureEnabled = 1.0f;
-
-        /// <summary>
-        /// 将来拡張用の予約領域を表す。
-        /// </summary>
-        float reserved2 = 0.0f;
-
-        /// <summary>
-        /// 将来拡張用の予約領域を表す。
-        /// </summary>
-        float reserved3 = 0.0f;
-
-        /// <summary>
-        /// 将来拡張用の予約領域を表す。
-        /// </summary>
-        float reserved4 = 0.0f;
-    };
+    /// <summary>
+    /// プラットフォーム固有のアプリケーションインスタンスハンドルを表す。
+    /// </summary>
+    using NativeInstanceHandle = void*;
 
     /// <summary>
     /// レンダリング基盤の初期化・フレーム制御・描画を抽象化する RHI インターフェース。
@@ -136,12 +30,16 @@ namespace Xelqoria::RHI
         /// <summary>
         /// グラフィックスコンテキストを初期化する。
         /// </summary>
-        /// <param name="hWnd">描画対象のウィンドウハンドル。</param>
-        /// <param name="hInstance">アプリケーションインスタンスハンドル。</param>
+        /// <param name="windowHandle">描画対象のネイティブウィンドウハンドル。</param>
+        /// <param name="instanceHandle">ネイティブアプリケーションインスタンスハンドル。</param>
         /// <param name="width">初期描画幅（ピクセル）。</param>
         /// <param name="height">初期描画高さ（ピクセル）。</param>
         /// <returns>初期化成功時は true。</returns>
-        virtual bool Initialize(HWND hWnd, HINSTANCE hInstance, std::uint32_t width, std::uint32_t height) = 0;
+        virtual bool Initialize(
+            NativeWindowHandle windowHandle,
+            NativeInstanceHandle instanceHandle,
+            std::uint32_t width,
+            std::uint32_t height) = 0;
 
         /// <summary>
         /// グラフィックスコンテキストを終了し、内部リソースを解放する。
@@ -173,10 +71,10 @@ namespace Xelqoria::RHI
         virtual void BindTexture(std::uint32_t slot, ITexture* texture) = 0;
 
         /// <summary>
-        /// 単位クアッド描画に適用する 2D 変換値を設定する。
+        /// 現在の描画パイプラインに渡す 32bit 浮動小数点定数を設定する。
         /// </summary>
-        /// <param name="transform">設定する変換値。</param>
-        virtual void SetQuadTransform(const QuadTransform2D& transform) = 0;
+        /// <param name="constants">設定する定数列。</param>
+        virtual void SetShaderConstants(std::span<const float> constants) = 0;
 
         /// <summary>
         /// 非インデックス描画を実行する。
