@@ -946,6 +946,7 @@ namespace Xelqoria::Editor
         }
 
         const int panelSpacing = ScaleMetric(12);
+        dockNode.splitRatio = ClampDockSplitRatio(dockNodeId, dockNode.splitRatio);
         if (DockSplitOrientation::Horizontal == dockNode.splitOrientation)
         {
             const int width = (std::max)(0, static_cast<int>(nodeRect.right - nodeRect.left));
@@ -1377,12 +1378,27 @@ namespace Xelqoria::Editor
 
         if (inputSnapshot.WasMouseButtonPressed(Core::MouseButton::Left))
         {
-            const std::optional<EditorPanelId> hitPanel = HitTestPanelCaption(cursorScreenPoint);
-            if (hitPanel.has_value())
+            const DockNodeId hitSplitterNodeId = HitTestDockSplitter(cursorScreenPoint);
+            if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_dockNodes.size())
             {
-                m_dragKind = DockDragKind::Panel;
-                m_dragPanelId = hitPanel;
+                const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
+                m_dragKind = DockSplitOrientation::Horizontal == splitNode.splitOrientation
+                    ? DockDragKind::HorizontalSplitter
+                    : DockDragKind::VerticalSplitter;
+                m_dragSplitNodeId = hitSplitterNodeId;
                 m_dragStartScreenPoint = cursorScreenPoint;
+                m_dragStartSplitRatio = splitNode.splitRatio;
+                SetCapture(parentWindow);
+            }
+            else
+            {
+                const std::optional<EditorPanelId> hitPanel = HitTestPanelCaption(cursorScreenPoint);
+                if (hitPanel.has_value())
+                {
+                    m_dragKind = DockDragKind::Panel;
+                    m_dragPanelId = hitPanel;
+                    m_dragStartScreenPoint = cursorScreenPoint;
+                }
             }
         }
 
@@ -1396,6 +1412,20 @@ namespace Xelqoria::Editor
                     && DockGuideTargetKind::Float != m_currentGuideTarget.kind;
                 m_dockPreviewRect = m_currentGuideTarget.previewRect;
                 UpdateDockPreviewWindow(parentWindow);
+            }
+            else if (DockDragKind::HorizontalSplitter == m_dragKind || DockDragKind::VerticalSplitter == m_dragKind)
+            {
+                changed = UpdateDockSplitterDrag(parentWindow, cursorScreenPoint) || changed;
+                SetCursor(LoadCursorW(nullptr, DockDragKind::HorizontalSplitter == m_dragKind ? IDC_SIZEWE : IDC_SIZENS));
+            }
+        }
+        else if (DockDragKind::None == m_dragKind)
+        {
+            const DockNodeId hitSplitterNodeId = HitTestDockSplitter(cursorScreenPoint);
+            if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_dockNodes.size())
+            {
+                const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
+                SetCursor(LoadCursorW(nullptr, DockSplitOrientation::Horizontal == splitNode.splitOrientation ? IDC_SIZEWE : IDC_SIZENS));
             }
         }
 
@@ -1414,7 +1444,9 @@ namespace Xelqoria::Editor
 
             m_dragKind = DockDragKind::None;
             m_dragPanelId.reset();
+            m_dragSplitNodeId = -1;
             m_hasDockPreview = false;
+            ReleaseCapture();
             HideDockGuideWindows();
             UpdateDockPreviewWindow(parentWindow);
         }
@@ -1666,6 +1698,65 @@ namespace Xelqoria::Editor
         return -1;
     }
 
+    EditorShell::DockNodeId EditorShell::HitTestDockSplitter(POINT cursorScreenPoint) const
+    {
+        if (nullptr == m_parentWindow)
+        {
+            return -1;
+        }
+
+        POINT cursorClientPoint = cursorScreenPoint;
+        ScreenToClient(m_parentWindow, &cursorClientPoint);
+
+        std::vector<DockNodeId> dockSplitNodeIds{};
+        CollectReachableDockSplits(m_rootDockNodeId, dockSplitNodeIds);
+        for (DockNodeId dockNodeId : dockSplitNodeIds)
+        {
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Split != dockNode.kind
+                || dockNode.firstChild < 0
+                || dockNode.secondChild < 0
+                || static_cast<std::size_t>(dockNode.firstChild) >= m_dockNodes.size()
+                || static_cast<std::size_t>(dockNode.secondChild) >= m_dockNodes.size())
+            {
+                continue;
+            }
+
+            const RECT firstRect = m_dockNodes[static_cast<std::size_t>(dockNode.firstChild)].rect;
+            const RECT secondRect = m_dockNodes[static_cast<std::size_t>(dockNode.secondChild)].rect;
+            RECT splitterRect{};
+            if (DockSplitOrientation::Horizontal == dockNode.splitOrientation)
+            {
+                splitterRect = RECT{ firstRect.right, dockNode.rect.top, secondRect.left, dockNode.rect.bottom };
+            }
+            else
+            {
+                splitterRect = RECT{ dockNode.rect.left, firstRect.bottom, dockNode.rect.right, secondRect.top };
+            }
+
+            const int minimumHitThickness = ScaleMetric(6);
+            if ((splitterRect.right - splitterRect.left) < minimumHitThickness)
+            {
+                const int centerX = (splitterRect.left + splitterRect.right) / 2;
+                splitterRect.left = centerX - minimumHitThickness / 2;
+                splitterRect.right = splitterRect.left + minimumHitThickness;
+            }
+            if ((splitterRect.bottom - splitterRect.top) < minimumHitThickness)
+            {
+                const int centerY = (splitterRect.top + splitterRect.bottom) / 2;
+                splitterRect.top = centerY - minimumHitThickness / 2;
+                splitterRect.bottom = splitterRect.top + minimumHitThickness;
+            }
+
+            if (PtInRect(&splitterRect, cursorClientPoint))
+            {
+                return dockNodeId;
+            }
+        }
+
+        return -1;
+    }
+
     void EditorShell::CollectReachableDockLeaves(DockNodeId dockNodeId, std::vector<DockNodeId>& dockLeafNodeIds) const
     {
         if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
@@ -1682,6 +1773,88 @@ namespace Xelqoria::Editor
 
         CollectReachableDockLeaves(dockNode.firstChild, dockLeafNodeIds);
         CollectReachableDockLeaves(dockNode.secondChild, dockLeafNodeIds);
+    }
+
+    void EditorShell::CollectReachableDockSplits(DockNodeId dockNodeId, std::vector<DockNodeId>& dockSplitNodeIds) const
+    {
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        {
+            return;
+        }
+
+        const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        if (DockNodeKind::Leaf == dockNode.kind)
+        {
+            return;
+        }
+
+        CollectReachableDockSplits(dockNode.firstChild, dockSplitNodeIds);
+        dockSplitNodeIds.push_back(dockNodeId);
+        CollectReachableDockSplits(dockNode.secondChild, dockSplitNodeIds);
+    }
+
+    bool EditorShell::UpdateDockSplitterDrag(HWND parentWindow, POINT cursorScreenPoint)
+    {
+        if (nullptr == parentWindow
+            || m_dragSplitNodeId < 0
+            || static_cast<std::size_t>(m_dragSplitNodeId) >= m_dockNodes.size())
+        {
+            return false;
+        }
+
+        DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(m_dragSplitNodeId)];
+        if (DockNodeKind::Split != splitNode.kind)
+        {
+            return false;
+        }
+
+        const int panelSpacing = ScaleMetric(12);
+        const int width = (std::max)(0, static_cast<int>(splitNode.rect.right - splitNode.rect.left));
+        const int height = (std::max)(0, static_cast<int>(splitNode.rect.bottom - splitNode.rect.top));
+        const int availableLength = DockSplitOrientation::Horizontal == splitNode.splitOrientation
+            ? width - panelSpacing
+            : height - panelSpacing;
+        if (availableLength <= 0)
+        {
+            return false;
+        }
+
+        const int cursorDelta = DockSplitOrientation::Horizontal == splitNode.splitOrientation
+            ? cursorScreenPoint.x - m_dragStartScreenPoint.x
+            : cursorScreenPoint.y - m_dragStartScreenPoint.y;
+        const float nextRatio = ClampDockSplitRatio(
+            m_dragSplitNodeId,
+            m_dragStartSplitRatio + static_cast<float>(cursorDelta) / static_cast<float>(availableLength));
+        if (splitNode.splitRatio == nextRatio)
+        {
+            return false;
+        }
+
+        splitNode.splitRatio = nextRatio;
+        m_layoutInitialized = false;
+        return true;
+    }
+
+    float EditorShell::ClampDockSplitRatio(DockNodeId dockNodeId, float ratio) const
+    {
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        {
+            return ratio;
+        }
+
+        const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        const int panelSpacing = ScaleMetric(12);
+        const int totalLength = DockSplitOrientation::Horizontal == splitNode.splitOrientation
+            ? splitNode.rect.right - splitNode.rect.left
+            : splitNode.rect.bottom - splitNode.rect.top;
+        const int availableLength = totalLength - panelSpacing;
+        if (availableLength <= 0)
+        {
+            return 0.5f;
+        }
+
+        const float minimumRatio = (std::min)(0.45f, static_cast<float>(ScaleMetric(80)) / static_cast<float>(availableLength));
+        return (std::max)(minimumRatio, (std::min)(1.0f - minimumRatio, ratio));
     }
 
     EditorShell::DockNodeId EditorShell::FindPanelDockLeaf(EditorPanelId panelId) const

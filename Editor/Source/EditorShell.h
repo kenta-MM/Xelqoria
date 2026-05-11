@@ -356,9 +356,29 @@ namespace Xelqoria::Editor
         [[nodiscard]] DockNodeId HitTestDockLeaf(POINT cursorClientPoint) const;
 
         /// <summary>
+        /// カーソル位置にある Dock 分割境界を返す。
+        /// </summary>
+        [[nodiscard]] DockNodeId HitTestDockSplitter(POINT cursorScreenPoint) const;
+
+        /// <summary>
         /// root から到達可能な Dock leaf 一覧を返す。
         /// </summary>
         void CollectReachableDockLeaves(DockNodeId dockNodeId, std::vector<DockNodeId>& dockLeafNodeIds) const;
+
+        /// <summary>
+        /// root から到達可能な Dock split 一覧を返す。
+        /// </summary>
+        void CollectReachableDockSplits(DockNodeId dockNodeId, std::vector<DockNodeId>& dockSplitNodeIds) const;
+
+        /// <summary>
+        /// Dock 分割境界のドラッグ量を splitRatio へ反映する。
+        /// </summary>
+        [[nodiscard]] bool UpdateDockSplitterDrag(HWND parentWindow, POINT cursorScreenPoint);
+
+        /// <summary>
+        /// 指定 Dock split の比率を子領域の最小サイズに収める。
+        /// </summary>
+        [[nodiscard]] float ClampDockSplitRatio(DockNodeId dockNodeId, float ratio) const;
 
         /// <summary>
         /// 指定パネルを含む Dock leaf を返す。
@@ -692,6 +712,8 @@ namespace Xelqoria::Editor
         bool m_hasDockPreview = false;
         RECT m_dockPreviewRect{};
         POINT m_dragStartScreenPoint{};
+        DockNodeId m_dragSplitNodeId = -1;
+        float m_dragStartSplitRatio = 0.5f;
         int m_dragStartLeftPaneWidth = 0;
         int m_dragStartRightPaneWidth = 0;
         int m_dragStartLeftTopHeight = 0;
