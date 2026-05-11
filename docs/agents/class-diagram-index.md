@@ -12,6 +12,7 @@
 - Backends.D3D11: `docs/class_diagram/backends-d3d11-class-diagram.md`
 - Backends.D3D12: `docs/class_diagram/backends-d3d12-class-diagram.md`
 - App: `docs/class_diagram/app-class-diagram.md`
+- Editor.UI: `docs/class_diagram/editor-ui-class-diagram.md`
 - Editor: `docs/class_diagram/editor-class-diagram.md`
 - Tests.Core: `docs/class_diagram/tests-core-class-diagram.md`
 - Tests.Graphics: `docs/class_diagram/tests-graphics-class-diagram.md`

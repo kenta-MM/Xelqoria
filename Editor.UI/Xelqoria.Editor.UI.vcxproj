@@ -19,67 +19,45 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\EditorCamera2DTests.cpp" />
-    <ClCompile Include="..\..\Editor\Source\EditorProject.cpp" />
-    <ClCompile Include="..\..\Editor\Source\RecentProjectsStore.cpp" />
-    <ClCompile Include="..\..\Editor\Source\SceneCommandHistory.cpp" />
-    <ClCompile Include="..\..\Editor\Source\SceneEditingOperations.cpp" />
-    <ClCompile Include="Source\EditorProjectTests.cpp" />
-    <ClCompile Include="Source\HierarchyPanelControllerTests.cpp" />
-    <ClCompile Include="Source\InspectorPanelControllerTests.cpp" />
-    <ClCompile Include="Source\RecentProjectsStoreTests.cpp" />
-    <ClCompile Include="Source\SceneCommandHistoryTests.cpp" />
-    <ClCompile Include="Source\SceneEditingOperationsTests.cpp" />
+    <ClCompile Include="Source\EditorShell.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\third_party\googletest\Xelqoria.GoogleTest.vcxproj">
-      <Project>{0F71D759-12A2-42D9-B1CA-9F19C4E586C9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Xelqoria.Math\Xelqoria.Math.vcxproj">
-      <Project>{9143e43a-0447-43e1-9fe4-9c3edec98212}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Core\Xelqoria.Core.vcxproj">
+    <ClInclude Include="Source\EditorShell.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">
       <Project>{79E8E826-7407-4766-B731-675CB84F6552}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Editor.UI\Xelqoria.Editor.UI.vcxproj">
-      <Project>{66FA8A19-4FCE-418A-B450-638F3A42681E}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Game\Xelqoria.Game.vcxproj">
-      <Project>{B43E8E97-59EF-4CAA-8A27-BD9192D8833A}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Graphics\Xelqoria.Graphics.vcxproj">
-      <Project>{7693792A-4AD4-445A-98F7-B90D6989A837}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{5B9E9E22-77E0-4B57-9D12-6A6A86A8A6A4}</ProjectGuid>
-    <RootNamespace>XelqoriaTestsEditor</RootNamespace>
+    <ProjectGuid>{66FA8A19-4FCE-418A-B450-638F3A42681E}</ProjectGuid>
+    <RootNamespace>XelqoriaEditorUI</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -102,7 +80,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <RepoRootDir>$(MSBuildProjectDirectory)\..\..\</RepoRootDir>
+    <RepoRootDir>$(MSBuildProjectDirectory)\..\</RepoRootDir>
     <OutDir>$(RepoRootDir)artifacts\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(RepoRootDir)build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
@@ -110,19 +88,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-    <PostBuildEvent>
-      <Command>echo. &gt; &quot;$(TargetPath).is_google_test&quot;</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -130,37 +101,23 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-    <PostBuildEvent>
-      <Command>echo. &gt; &quot;$(TargetPath).is_google_test&quot;</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-    <PostBuildEvent>
-      <Command>echo. &gt; &quot;$(TargetPath).is_google_test&quot;</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -168,20 +125,20 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Core\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-    <PostBuildEvent>
-      <Command>echo. &gt; &quot;$(TargetPath).is_google_test&quot;</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <PropertyGroup>
+    <LayerDependencyCheckerExe>$(RepoRootDir)tools\LayerDependencyChecker\bin\$(Configuration)\net8.0\LayerDependencyChecker.exe</LayerDependencyCheckerExe>
+  </PropertyGroup>
+  <Target Name="ValidateLayerDependencies" BeforeTargets="ClCompile">
+    <Error Condition="!Exists('$(LayerDependencyCheckerExe)')" Text="LayerDependencyChecker.exe が見つかりません。tools\LayerDependencyChecker をビルドしてください。期待パス: $(LayerDependencyCheckerExe)" />
+    <Exec Command="&quot;$(LayerDependencyCheckerExe)&quot; &quot;$(RepoRootDir)&quot;" />
+  </Target>
   <ImportGroup Label="ExtensionTargets" />
 </Project>

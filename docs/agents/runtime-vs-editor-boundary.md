@@ -30,6 +30,7 @@ Xelqoria における Runtime 成果物と Editor 成果物の境界を定義す
 ### 置いてよいもの
 
 - `EditorCamera2D`
+- `Editor.UI` の Win32 UI シェル、Dock、パネル配置
 - `SceneCommandHistory`
 - `SceneEditingOperations`
 - SceneView 入力補助

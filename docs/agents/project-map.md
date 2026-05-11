@@ -52,5 +52,11 @@ Core は共通基盤レイヤー
 ## Editor
 
 - 役割: エディタ専用ツールおよび編集支援
-- 利用可能: Core, Game, Graphics, RHI, Backends
+- 利用可能: Core, Editor.UI, Game, Graphics, RHI, Backends
 - エディタ専用概念を共有ランタイム層に持ち込まない
+
+## Editor.UI
+
+- 役割: Editor 専用の Win32 UI シェル、パネル配置、Dock 管理
+- 利用可能: Core
+- Runtime から参照しない
