@@ -436,6 +436,31 @@ namespace Xelqoria::Editor
         void FloatPanel(EditorPanelId panelId, POINT screenPoint, HWND parentWindow);
 
         /// <summary>
+        /// 指定パネルをフローティングウィンドウの現在サイズへ合わせて配置する。
+        /// </summary>
+        void LayoutFloatingPanel(EditorPanelId panelId, HWND floatingWindow);
+
+        /// <summary>
+        /// フローティングウィンドウの移動による Dock 操作を開始する。
+        /// </summary>
+        void BeginFloatingWindowDockDrag(EditorPanelId panelId);
+
+        /// <summary>
+        /// フローティングウィンドウの移動中に Dock ガイドを更新する。
+        /// </summary>
+        void UpdateFloatingWindowDockDrag();
+
+        /// <summary>
+        /// フローティングウィンドウの移動終了時に Dock 操作を確定する。
+        /// </summary>
+        void CompleteFloatingWindowDockDrag(EditorPanelId panelId);
+
+        /// <summary>
+        /// フローティングウィンドウの閉じる操作を処理する。
+        /// </summary>
+        void HandleFloatingWindowClose(EditorPanelId panelId, HWND floatingWindow);
+
+        /// <summary>
         /// 指定パネルのフローティングウィンドウを閉じる。
         /// </summary>
         void DestroyFloatingWindow(EditorPanelId panelId);
@@ -449,6 +474,11 @@ namespace Xelqoria::Editor
         /// Dock TabControl の表示を現在状態へ同期する。
         /// </summary>
         void SyncDockTabs();
+
+        /// <summary>
+        /// split Dock leaf 用の TabControl を追加生成する。
+        /// </summary>
+        [[nodiscard]] HWND CreateAdditionalDockTabControl(HWND parentWindow);
 
         /// <summary>
         /// 指定 TabControl に DockArea のタブを設定する。
@@ -542,6 +572,11 @@ namespace Xelqoria::Editor
         /// <returns>DPI 適用後の値。</returns>
         [[nodiscard]] int ScaleMetric(int value) const;
 
+        /// <summary>
+        /// フローティングビュー用 window procedure。
+        /// </summary>
+        static LRESULT CALLBACK FloatingPanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
     private:
         /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
@@ -582,6 +617,18 @@ namespace Xelqoria::Editor
             RECT previewRect{};
         };
 
+        struct FloatingPanelCreateParams
+        {
+            EditorShell* shell = nullptr;
+            EditorPanelId panelId = EditorPanelId::SceneView;
+        };
+
+        struct FloatingPanelWindowData
+        {
+            EditorShell* shell = nullptr;
+            EditorPanelId panelId = EditorPanelId::SceneView;
+        };
+
         HFONT m_defaultFont = nullptr;
         UINT m_currentDpi = 96;
         bool m_ownsDefaultFont = false;
@@ -590,6 +637,7 @@ namespace Xelqoria::Editor
         HWND m_leftBottomDockTab = nullptr;
         HWND m_centerDockTab = nullptr;
         HWND m_rightDockTab = nullptr;
+        std::vector<HWND> m_dynamicDockTabs{};
         HWND m_dockPreviewWindow = nullptr;
         std::array<HWND, 9> m_dockGuideWindows{};
         HWND m_hierarchyFloatingWindow = nullptr;
