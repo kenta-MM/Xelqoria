@@ -5,15 +5,247 @@
 #include <array>
 #include <CommCtrl.h>
 #include <cstdint>
+#include <cstdlib>
 #include <cstdio>
 #include <cwchar>
 #include <iterator>
+#include <utility>
 
 namespace Xelqoria::Editor
 {
     namespace
     {
         constexpr UINT_PTR SpriteRefEditSubclassId = 1;
+        constexpr const wchar_t* DockPreviewWindowClassName = L"XelqoriaDockPreviewWindow";
+        constexpr const wchar_t* DockGuideWindowClassName = L"XelqoriaDockGuideWindow";
+        constexpr const wchar_t* FloatingPanelWindowClassName = L"XelqoriaFloatingPanelWindow";
+
+        /// <summary>
+        /// Dock 先プレビューの青い配置範囲を描画する。
+        /// </summary>
+        /// <param name="window">プレビュー用 child window。</param>
+        /// <param name="message">Win32 メッセージ。</param>
+        /// <param name="wParam">メッセージ WPARAM。</param>
+        /// <param name="lParam">メッセージ LPARAM。</param>
+        /// <returns>メッセージ処理結果。</returns>
+        LRESULT CALLBACK DockPreviewWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+        {
+            if (WM_PAINT == message)
+            {
+                PAINTSTRUCT paintStruct{};
+                HDC deviceContext = BeginPaint(window, &paintStruct);
+                RECT clientRect{};
+                GetClientRect(window, &clientRect);
+
+                HBRUSH previewBrush = CreateSolidBrush(RGB(43, 83, 98));
+                FillRect(deviceContext, &clientRect, previewBrush);
+                DeleteObject(previewBrush);
+
+                HPEN previewPen = CreatePen(PS_SOLID, 1, RGB(115, 196, 226));
+                HGDIOBJ previousPen = SelectObject(deviceContext, previewPen);
+                HGDIOBJ previousBrush = SelectObject(deviceContext, GetStockObject(NULL_BRUSH));
+                Rectangle(deviceContext, 0, 0, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
+                SelectObject(deviceContext, previousBrush);
+                SelectObject(deviceContext, previousPen);
+                DeleteObject(previewPen);
+
+                EndPaint(window, &paintStruct);
+                return 0;
+            }
+
+            if (WM_ERASEBKGND == message)
+            {
+                return 1;
+            }
+
+            return DefWindowProcW(window, message, wParam, lParam);
+        }
+
+        /// <summary>
+        /// Dock ガイドアイコンに描く配置方向を文字列から判定する。
+        /// </summary>
+        /// <param name="window">Dock ガイド window。</param>
+        /// <returns>配置方向を表す文字列。</returns>
+        const wchar_t* GetDockGuideDirection(HWND window)
+        {
+            static wchar_t direction[16]{};
+            GetWindowTextW(window, direction, static_cast<int>(std::size(direction)));
+            return direction;
+        }
+
+        /// <summary>
+        /// Dock ガイドアイコン内の配置イメージを描画する。
+        /// </summary>
+        /// <param name="deviceContext">描画先 DC。</param>
+        /// <param name="iconRect">アイコン描画矩形。</param>
+        /// <param name="direction">配置方向。</param>
+        void DrawDockGuideGlyph(HDC deviceContext, const RECT& iconRect, const wchar_t* direction)
+        {
+            HBRUSH panelBrush = CreateSolidBrush(RGB(38, 38, 38));
+            HBRUSH targetBrush = CreateSolidBrush(RGB(64, 64, 64));
+            HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(174, 174, 174));
+            HPEN targetPen = CreatePen(PS_DOT, 1, RGB(208, 208, 208));
+
+            HGDIOBJ previousPen = SelectObject(deviceContext, borderPen);
+            HGDIOBJ previousBrush = SelectObject(deviceContext, panelBrush);
+            Rectangle(deviceContext, iconRect.left, iconRect.top, iconRect.right, iconRect.bottom);
+
+            RECT targetRect = iconRect;
+            InflateRect(&targetRect, -4, -4);
+            FillRect(deviceContext, &targetRect, targetBrush);
+
+            const bool isTop = 0 == wcscmp(direction, L"top");
+            const bool isBottom = 0 == wcscmp(direction, L"bottom");
+            const bool isLeft = 0 == wcscmp(direction, L"left");
+            const bool isRight = 0 == wcscmp(direction, L"right");
+            const int width = targetRect.right - targetRect.left;
+            const int height = targetRect.bottom - targetRect.top;
+
+            RECT splitRect = targetRect;
+            if (isTop)
+            {
+                splitRect.bottom = targetRect.top + (std::max)(2, height / 3);
+            }
+            else if (isBottom)
+            {
+                splitRect.top = targetRect.bottom - (std::max)(2, height / 3);
+            }
+            else if (isLeft)
+            {
+                splitRect.right = targetRect.left + (std::max)(2, width / 3);
+            }
+            else if (isRight)
+            {
+                splitRect.left = targetRect.right - (std::max)(2, width / 3);
+            }
+
+            if (isTop || isBottom || isLeft || isRight)
+            {
+                HBRUSH splitBrush = CreateSolidBrush(RGB(82, 82, 82));
+                FillRect(deviceContext, &splitRect, splitBrush);
+                DeleteObject(splitBrush);
+            }
+
+            SelectObject(deviceContext, targetPen);
+            Rectangle(deviceContext, targetRect.left, targetRect.top, targetRect.right, targetRect.bottom);
+
+            SelectObject(deviceContext, previousBrush);
+            SelectObject(deviceContext, previousPen);
+            DeleteObject(targetPen);
+            DeleteObject(borderPen);
+            DeleteObject(targetBrush);
+            DeleteObject(panelBrush);
+        }
+
+        /// <summary>
+        /// Visual Studio 風の Dock ガイドアイコンを描画する。
+        /// </summary>
+        /// <param name="window">Dock ガイド window。</param>
+        /// <param name="message">Win32 メッセージ。</param>
+        /// <param name="wParam">メッセージ WPARAM。</param>
+        /// <param name="lParam">メッセージ LPARAM。</param>
+        /// <returns>メッセージ処理結果。</returns>
+        LRESULT CALLBACK DockGuideWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+        {
+            if (WM_PAINT == message)
+            {
+                PAINTSTRUCT paintStruct{};
+                HDC deviceContext = BeginPaint(window, &paintStruct);
+                RECT clientRect{};
+                GetClientRect(window, &clientRect);
+
+                HBRUSH backgroundBrush = CreateSolidBrush(RGB(31, 31, 31));
+                FillRect(deviceContext, &clientRect, backgroundBrush);
+                DeleteObject(backgroundBrush);
+
+                HPEN outlinePen = CreatePen(PS_SOLID, 1, RGB(72, 72, 72));
+                HGDIOBJ previousPen = SelectObject(deviceContext, outlinePen);
+                HGDIOBJ previousBrush = SelectObject(deviceContext, GetStockObject(NULL_BRUSH));
+                Rectangle(deviceContext, 0, 0, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
+                SelectObject(deviceContext, previousBrush);
+                SelectObject(deviceContext, previousPen);
+                DeleteObject(outlinePen);
+
+                RECT iconRect = clientRect;
+                InflateRect(&iconRect, -6, -6);
+                DrawDockGuideGlyph(deviceContext, iconRect, GetDockGuideDirection(window));
+
+                EndPaint(window, &paintStruct);
+                return 0;
+            }
+
+            if (WM_ERASEBKGND == message)
+            {
+                return 1;
+            }
+
+            return DefWindowProcW(window, message, wParam, lParam);
+        }
+
+        /// <summary>
+        /// Dock 先プレビュー用 child window class を登録する。
+        /// </summary>
+        /// <param name="hInstance">Windows アプリケーションインスタンス。</param>
+        /// <returns>登録済みまたは登録成功の場合は true。</returns>
+        bool RegisterDockPreviewWindowClass(HINSTANCE hInstance)
+        {
+            WNDCLASSW existingClass{};
+            if (GetClassInfoW(hInstance, DockPreviewWindowClassName, &existingClass))
+            {
+                return true;
+            }
+
+            WNDCLASSW windowClass{};
+            windowClass.lpfnWndProc = DockPreviewWindowProc;
+            windowClass.hInstance = hInstance;
+            windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
+            windowClass.lpszClassName = DockPreviewWindowClassName;
+            return 0 != RegisterClassW(&windowClass);
+        }
+
+        /// <summary>
+        /// Dock ガイド用 child window class を登録する。
+        /// </summary>
+        /// <param name="hInstance">Windows アプリケーションインスタンス。</param>
+        /// <returns>登録済みまたは登録成功の場合は true。</returns>
+        bool RegisterDockGuideWindowClass(HINSTANCE hInstance)
+        {
+            WNDCLASSW existingClass{};
+            if (GetClassInfoW(hInstance, DockGuideWindowClassName, &existingClass))
+            {
+                return true;
+            }
+
+            WNDCLASSW windowClass{};
+            windowClass.lpfnWndProc = DockGuideWindowProc;
+            windowClass.hInstance = hInstance;
+            windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
+            windowClass.lpszClassName = DockGuideWindowClassName;
+            return 0 != RegisterClassW(&windowClass);
+        }
+
+        /// <summary>
+        /// 独立ビュー用 top-level window class を登録する。
+        /// </summary>
+        /// <param name="hInstance">Windows アプリケーションインスタンス。</param>
+        /// <param name="windowProc">フローティングビューの window procedure。</param>
+        /// <returns>登録済みまたは登録成功の場合は true。</returns>
+        bool RegisterFloatingPanelWindowClass(HINSTANCE hInstance, WNDPROC windowProc)
+        {
+            WNDCLASSW existingClass{};
+            if (GetClassInfoW(hInstance, FloatingPanelWindowClassName, &existingClass))
+            {
+                return true;
+            }
+
+            WNDCLASSW windowClass{};
+            windowClass.lpfnWndProc = windowProc;
+            windowClass.hInstance = hInstance;
+            windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
+            windowClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+            windowClass.lpszClassName = FloatingPanelWindowClassName;
+            return 0 != RegisterClassW(&windowClass);
+        }
 
         /// <summary>
         /// Texture 欄の直接テキスト編集だけを抑止する。
@@ -137,28 +369,111 @@ namespace Xelqoria::Editor
 
     bool EditorShell::Initialize(HWND parentWindow, HINSTANCE hInstance)
     {
+        if (false == RegisterDockPreviewWindowClass(hInstance))
+        {
+            return false;
+        }
+
+        if (false == RegisterDockGuideWindowClass(hInstance))
+        {
+            return false;
+        }
+
+        if (false == RegisterFloatingPanelWindowClass(hInstance, EditorShell::FloatingPanelWindowProc))
+        {
+            return false;
+        }
+
         INITCOMMONCONTROLSEX commonControls{};
         commonControls.dwSize = sizeof(commonControls);
-        commonControls.dwICC = ICC_LISTVIEW_CLASSES;
+        commonControls.dwICC = ICC_LISTVIEW_CLASSES | ICC_TAB_CLASSES;
         if (FALSE == InitCommonControlsEx(&commonControls))
         {
             return false;
         }
 
         (void)RefreshDpiResources(parentWindow);
+        m_parentWindow = parentWindow;
 
-        return InitializeHierarchyPanel(parentWindow, hInstance)
+        constexpr DWORD tabStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS;
+        m_leftTopDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
+        m_leftBottomDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
+        m_centerDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
+        m_rightDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
+        m_dockPreviewWindow = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            DockPreviewWindowClassName,
+            L"",
+            WS_CHILD | WS_CLIPSIBLINGS);
+        const std::array<const wchar_t*, 9> guideTexts{
+            L"top",
+            L"bottom",
+            L"left",
+            L"right",
+            L"tab",
+            L"top",
+            L"bottom",
+            L"left",
+            L"right"
+        };
+        for (std::size_t index = 0; index < m_dockGuideWindows.size(); ++index)
+        {
+            m_dockGuideWindows[index] = CreateChildWindow(
+                parentWindow,
+                hInstance,
+                DockGuideWindowClassName,
+                guideTexts[index],
+                WS_CHILD | WS_CLIPSIBLINGS);
+            if (nullptr == m_dockGuideWindows[index])
+            {
+                return false;
+            }
+            ShowWindow(m_dockGuideWindows[index], SW_HIDE);
+        }
+        if (nullptr == m_leftTopDockTab
+            || nullptr == m_leftBottomDockTab
+            || nullptr == m_centerDockTab
+            || nullptr == m_rightDockTab
+            || nullptr == m_dockPreviewWindow)
+        {
+            return false;
+        }
+        ShowWindow(m_dockPreviewWindow, SW_HIDE);
+        BuildInitialDockTree();
+
+        const bool initialized = InitializeHierarchyPanel(parentWindow, hInstance)
             && InitializeAssetsPanel(parentWindow, hInstance)
             && InitializeInspectorPanel(parentWindow, hInstance)
             && InitializeSceneViewPanel(parentWindow, hInstance);
+        if (initialized)
+        {
+            SyncDockTabs();
+        }
+
+        return initialized;
     }
 
     EditorShell::~EditorShell()
     {
+        DestroyFloatingWindow(EditorPanelId::Hierarchy);
+        DestroyFloatingWindow(EditorPanelId::Assets);
+        DestroyFloatingWindow(EditorPanelId::SceneView);
+        DestroyFloatingWindow(EditorPanelId::Inspector);
+
+        for (HWND tabControl : m_dynamicDockTabs)
+        {
+            if (nullptr != tabControl)
+            {
+                DestroyWindow(tabControl);
+            }
+        }
+        m_dynamicDockTabs.clear();
+
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 37> controls = CollectControls();
+            const std::array<HWND, 51> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -196,95 +511,15 @@ namespace Xelqoria::Editor
             return UpdateSceneViewHostSize();
         }
 
-        LayoutMetrics metrics{};
-        metrics.outerPadding = ScaleMetric(12);
-        metrics.panelSpacing = ScaleMetric(12);
-        metrics.leftPaneWidth = ScaleMetric(260);
-        metrics.rightPaneWidth = ScaleMetric(300);
-        metrics.groupHeaderHeight = ScaleMetric(26);
-        metrics.hierarchyHeight = ScaleMetric(280);
-        metrics.labelHeight = ScaleMetric(24);
-        metrics.buttonHeight = ScaleMetric(28);
-        metrics.hierarchyButtonGap = ScaleMetric(8);
-        metrics.inspectorLabelWidth = ScaleMetric(72);
-        metrics.inspectorRowHeight = ScaleMetric(24);
-        metrics.inspectorRowSpacing = ScaleMetric(8);
-        metrics.inspectorSectionSpacing = ScaleMetric(12);
-
-        const int availableColumnWidth =
-            (std::max)(0, clientWidth - (metrics.outerPadding * 2) - (metrics.panelSpacing * 2));
-        const int preferredLeftPaneWidth = metrics.leftPaneWidth;
-        const int preferredRightPaneWidth = metrics.rightPaneWidth;
-        const int minimumCenterWidth = ScaleMetric(120);
-        if (availableColumnWidth >= preferredLeftPaneWidth + preferredRightPaneWidth + minimumCenterWidth)
-        {
-            metrics.leftPaneWidth = preferredLeftPaneWidth;
-            metrics.rightPaneWidth = preferredRightPaneWidth;
-            metrics.centerWidth = availableColumnWidth - metrics.leftPaneWidth - metrics.rightPaneWidth;
-        }
-        else
-        {
-            const int sidePaneWidth = availableColumnWidth / 4;
-            metrics.leftPaneWidth = sidePaneWidth;
-            metrics.rightPaneWidth = sidePaneWidth;
-            metrics.centerWidth = availableColumnWidth - metrics.leftPaneWidth - metrics.rightPaneWidth;
-        }
-
-        metrics.centerX = metrics.outerPadding + metrics.leftPaneWidth + metrics.panelSpacing;
-        metrics.rightX = metrics.centerX + metrics.centerWidth + metrics.panelSpacing;
-        metrics.rightWidth = metrics.rightPaneWidth;
-
-        const int availableSidePanelHeight =
-            (std::max)(0, clientHeight - (metrics.outerPadding * 2) - metrics.panelSpacing);
-        const int minimumHierarchyPanelHeight = ScaleMetric(120);
-        const int minimumAssetsPanelHeight = ScaleMetric(100);
-        if (availableSidePanelHeight >= minimumHierarchyPanelHeight + minimumAssetsPanelHeight)
-        {
-            metrics.hierarchyPanelHeight =
-                (std::min)(metrics.hierarchyHeight, availableSidePanelHeight - minimumAssetsPanelHeight);
-            metrics.hierarchyPanelHeight = (std::max)(minimumHierarchyPanelHeight, metrics.hierarchyPanelHeight);
-            metrics.assetsPanelHeight = availableSidePanelHeight - metrics.hierarchyPanelHeight;
-        }
-        else
-        {
-            metrics.hierarchyPanelHeight = availableSidePanelHeight / 2;
-            metrics.assetsPanelHeight = availableSidePanelHeight - metrics.hierarchyPanelHeight;
-        }
-
-        metrics.assetsPanelY = metrics.outerPadding + metrics.hierarchyPanelHeight + metrics.panelSpacing;
-        metrics.scenePanelHeight = (std::max)(0, clientHeight - (metrics.outerPadding * 2));
-        metrics.sideInnerWidth = (std::max)(0, metrics.leftPaneWidth - (metrics.outerPadding * 2));
-        metrics.hierarchyButtonTop = metrics.outerPadding + metrics.groupHeaderHeight + metrics.labelHeight + ScaleMetric(6);
-        if (metrics.sideInnerWidth < metrics.hierarchyButtonGap * 2)
-        {
-            metrics.hierarchyButtonGap = 0;
-        }
-        metrics.hierarchyButtonWidth =
-            (std::max)(0, (metrics.sideInnerWidth - (metrics.hierarchyButtonGap * 2)) / 3);
-        metrics.inspectorInnerX = metrics.rightX + metrics.outerPadding;
-        metrics.inspectorInnerWidth = (std::max)(0, metrics.rightWidth - (metrics.outerPadding * 2));
-        metrics.inspectorEditWidth =
-            (std::max)(0, (metrics.inspectorInnerWidth - metrics.inspectorLabelWidth - ScaleMetric(24)) / 3);
-        metrics.transformSectionTop = metrics.outerPadding + metrics.groupHeaderHeight + metrics.labelHeight + ScaleMetric(8);
-        metrics.spriteSectionTop =
-            metrics.transformSectionTop + metrics.labelHeight + ScaleMetric(4) + 3 * (metrics.inspectorRowHeight + metrics.inspectorRowSpacing) + metrics.inspectorSectionSpacing;
-        metrics.spriteRefTop = metrics.spriteSectionTop + metrics.labelHeight + ScaleMetric(4);
-        metrics.sceneInnerWidth = (std::max)(0, metrics.centerWidth - (metrics.outerPadding * 2));
-        metrics.projectSceneListTop = metrics.outerPadding + metrics.groupHeaderHeight + (metrics.labelHeight * 2) + ScaleMetric(8);
-        metrics.projectSceneListHeight = ScaleMetric(96);
-        metrics.sceneHostHeight = (std::max)(
-            0,
-            metrics.scenePanelHeight
-                - metrics.groupHeaderHeight
-                - (metrics.labelHeight * 4)
-                - metrics.projectSceneListHeight
-                - (metrics.outerPadding * 3)
-                - metrics.panelSpacing);
-
-        LayoutHierarchyPanel(metrics);
-        LayoutAssetsPanel(metrics);
-        LayoutInspectorPanel(metrics);
-        LayoutSceneViewPanel(metrics);
+        const int outerPadding = ScaleMetric(12);
+        const RECT rootRect{
+            outerPadding,
+            outerPadding,
+            clientWidth - outerPadding,
+            clientHeight - outerPadding
+        };
+        LayoutDockNode(m_rootDockNodeId, rootRect);
+        HideDockGuideWindows();
         SendGroupBoxesToBack();
         RedrawLayout(parentWindow);
         m_layoutInitialized = true;
@@ -297,7 +532,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeHierarchyPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE | BS_GROUPBOX;
-        m_hierarchyPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"Hierarchy", panelStyle);
+        m_hierarchyPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"", panelStyle);
         if (nullptr == m_hierarchyPanel)
         {
             return false;
@@ -370,7 +605,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeAssetsPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE | BS_GROUPBOX;
-        m_assetsPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"Assets", panelStyle);
+        m_assetsPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"", panelStyle);
         if (nullptr == m_assetsPanel)
         {
             return false;
@@ -406,7 +641,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeInspectorPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE | BS_GROUPBOX;
-        m_inspectorPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"Inspector", panelStyle);
+        m_inspectorPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"", panelStyle);
         if (nullptr == m_inspectorPanel)
         {
             return false;
@@ -511,7 +746,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeSceneViewPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE | BS_GROUPBOX;
-        m_sceneViewPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"SceneView", panelStyle);
+        m_sceneViewPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"", panelStyle);
         if (nullptr == m_sceneViewPanel)
         {
             return false;
@@ -580,6 +815,349 @@ namespace Xelqoria::Editor
             L"SceneView size: pending",
             WS_CHILD | WS_VISIBLE);
         return nullptr != m_sceneViewSizeLabel;
+    }
+
+    void EditorShell::LayoutDockArea(DockAreaId dockAreaId, const RECT& areaRect)
+    {
+        HWND tabControl = GetDockAreaTabControl(dockAreaId);
+        if (nullptr == tabControl)
+        {
+            return;
+        }
+
+        const std::vector<EditorPanelId>& panels = GetDockAreaPanels(dockAreaId);
+        const int tabHeight = ScaleMetric(28);
+        MoveChildWindowNoRedraw(
+            tabControl,
+            areaRect.left,
+            areaRect.top,
+            areaRect.right - areaRect.left,
+            tabHeight);
+        ShowWindow(tabControl, panels.empty() ? SW_HIDE : SW_SHOW);
+        if (panels.empty())
+        {
+            return;
+        }
+
+        const RECT panelRect{
+            areaRect.left,
+            areaRect.top + tabHeight,
+            areaRect.right,
+            areaRect.bottom
+        };
+
+        const int activeTabIndex = ClampActiveTabIndex(dockAreaId);
+        for (std::size_t index = 0; index < panels.size(); ++index)
+        {
+            const bool active = static_cast<int>(index) == activeTabIndex;
+            ShowPanelControls(panels[index], active);
+            if (false == active)
+            {
+                continue;
+            }
+
+            SetPanelParent(panels[index], m_parentWindow);
+            switch (panels[index])
+            {
+            case EditorPanelId::Hierarchy:
+                LayoutHierarchyPanelInRect(panelRect);
+                break;
+            case EditorPanelId::Assets:
+                LayoutAssetsPanelInRect(panelRect);
+                break;
+            case EditorPanelId::SceneView:
+                LayoutSceneViewPanelInRect(panelRect);
+                break;
+            case EditorPanelId::Inspector:
+                LayoutInspectorPanelInRect(panelRect);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    void EditorShell::BuildInitialDockTree()
+    {
+        m_dockNodes.clear();
+
+        DockNode hierarchyNode{};
+        hierarchyNode.kind = DockNodeKind::Leaf;
+        hierarchyNode.panels = { EditorPanelId::Hierarchy };
+        hierarchyNode.tabControl = m_leftTopDockTab;
+        const DockNodeId hierarchyNodeId = AddDockNode(std::move(hierarchyNode));
+
+        DockNode assetsNode{};
+        assetsNode.kind = DockNodeKind::Leaf;
+        assetsNode.panels = { EditorPanelId::Assets };
+        assetsNode.tabControl = m_leftBottomDockTab;
+        const DockNodeId assetsNodeId = AddDockNode(std::move(assetsNode));
+
+        DockNode sceneViewNode{};
+        sceneViewNode.kind = DockNodeKind::Leaf;
+        sceneViewNode.panels = { EditorPanelId::SceneView };
+        sceneViewNode.tabControl = m_centerDockTab;
+        const DockNodeId sceneViewNodeId = AddDockNode(std::move(sceneViewNode));
+
+        DockNode inspectorNode{};
+        inspectorNode.kind = DockNodeKind::Leaf;
+        inspectorNode.panels = { EditorPanelId::Inspector };
+        inspectorNode.tabControl = m_rightDockTab;
+        const DockNodeId inspectorNodeId = AddDockNode(std::move(inspectorNode));
+
+        DockNode leftColumnNode{};
+        leftColumnNode.kind = DockNodeKind::Split;
+        leftColumnNode.splitOrientation = DockSplitOrientation::Vertical;
+        leftColumnNode.splitRatio = 0.32f;
+        leftColumnNode.firstChild = hierarchyNodeId;
+        leftColumnNode.secondChild = assetsNodeId;
+        const DockNodeId leftColumnNodeId = AddDockNode(leftColumnNode);
+
+        DockNode centerRightNode{};
+        centerRightNode.kind = DockNodeKind::Split;
+        centerRightNode.splitOrientation = DockSplitOrientation::Horizontal;
+        centerRightNode.splitRatio = 0.84f;
+        centerRightNode.firstChild = sceneViewNodeId;
+        centerRightNode.secondChild = inspectorNodeId;
+        const DockNodeId centerRightNodeId = AddDockNode(centerRightNode);
+
+        DockNode rootNode{};
+        rootNode.kind = DockNodeKind::Split;
+        rootNode.splitOrientation = DockSplitOrientation::Horizontal;
+        rootNode.splitRatio = 0.12f;
+        rootNode.firstChild = leftColumnNodeId;
+        rootNode.secondChild = centerRightNodeId;
+        m_rootDockNodeId = AddDockNode(rootNode);
+    }
+
+    void EditorShell::LayoutDockNode(DockNodeId dockNodeId, const RECT& nodeRect)
+    {
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        {
+            return;
+        }
+
+        DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        dockNode.rect = nodeRect;
+        if (DockNodeKind::Leaf == dockNode.kind)
+        {
+            LayoutDockLeaf(dockNodeId, nodeRect);
+            return;
+        }
+
+        const int panelSpacing = ScaleMetric(12);
+        dockNode.splitRatio = ClampDockSplitRatio(dockNodeId, dockNode.splitRatio);
+        if (DockSplitOrientation::Horizontal == dockNode.splitOrientation)
+        {
+            const int width = (std::max)(0, static_cast<int>(nodeRect.right - nodeRect.left));
+            const int firstWidth = (std::max)(ScaleMetric(80), static_cast<int>((width - panelSpacing) * dockNode.splitRatio));
+            const RECT firstRect{ nodeRect.left, nodeRect.top, nodeRect.left + firstWidth, nodeRect.bottom };
+            const RECT secondRect{ nodeRect.left + firstWidth + panelSpacing, nodeRect.top, nodeRect.right, nodeRect.bottom };
+            LayoutDockNode(dockNode.firstChild, firstRect);
+            LayoutDockNode(dockNode.secondChild, secondRect);
+            return;
+        }
+
+        const int height = (std::max)(0, static_cast<int>(nodeRect.bottom - nodeRect.top));
+        const int firstHeight = (std::max)(ScaleMetric(80), static_cast<int>((height - panelSpacing) * dockNode.splitRatio));
+        const RECT firstRect{ nodeRect.left, nodeRect.top, nodeRect.right, nodeRect.top + firstHeight };
+        const RECT secondRect{ nodeRect.left, nodeRect.top + firstHeight + panelSpacing, nodeRect.right, nodeRect.bottom };
+        LayoutDockNode(dockNode.firstChild, firstRect);
+        LayoutDockNode(dockNode.secondChild, secondRect);
+    }
+
+    void EditorShell::LayoutDockLeaf(DockNodeId dockNodeId, const RECT& areaRect)
+    {
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        {
+            return;
+        }
+
+        DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        HWND tabControl = dockNode.tabControl;
+        if (nullptr == tabControl)
+        {
+            return;
+        }
+
+        const int tabHeight = ScaleMetric(28);
+        MoveChildWindowNoRedraw(
+            tabControl,
+            areaRect.left,
+            areaRect.top,
+            areaRect.right - areaRect.left,
+            tabHeight);
+        ShowWindow(tabControl, dockNode.panels.empty() ? SW_HIDE : SW_SHOW);
+        if (dockNode.panels.empty())
+        {
+            return;
+        }
+
+        const RECT panelRect{
+            areaRect.left,
+            areaRect.top + tabHeight,
+            areaRect.right,
+            areaRect.bottom
+        };
+        dockNode.activeTabIndex = (std::max)(0, (std::min)(dockNode.activeTabIndex, static_cast<int>(dockNode.panels.size()) - 1));
+
+        for (std::size_t index = 0; index < dockNode.panels.size(); ++index)
+        {
+            const EditorPanelId panelId = dockNode.panels[index];
+            const bool active = static_cast<int>(index) == dockNode.activeTabIndex;
+            ShowPanelControls(panelId, active);
+            if (false == active)
+            {
+                continue;
+            }
+
+            SetPanelParent(panelId, m_parentWindow);
+            switch (panelId)
+            {
+            case EditorPanelId::Hierarchy:
+                LayoutHierarchyPanelInRect(panelRect);
+                break;
+            case EditorPanelId::Assets:
+                LayoutAssetsPanelInRect(panelRect);
+                break;
+            case EditorPanelId::SceneView:
+                LayoutSceneViewPanelInRect(panelRect);
+                break;
+            case EditorPanelId::Inspector:
+                LayoutInspectorPanelInRect(panelRect);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    EditorShell::DockNodeId EditorShell::AddDockNode(DockNode node)
+    {
+        const DockNodeId dockNodeId = static_cast<DockNodeId>(m_dockNodes.size());
+        m_dockNodes.push_back(std::move(node));
+        return dockNodeId;
+    }
+
+    void EditorShell::LayoutHierarchyPanelInRect(const RECT& panelRect)
+    {
+        const int outerPadding = ScaleMetric(12);
+        const int groupHeaderHeight = ScaleMetric(26);
+        const int labelHeight = ScaleMetric(24);
+        const int buttonHeight = ScaleMetric(28);
+        int hierarchyButtonGap = ScaleMetric(8);
+        const int width = panelRect.right - panelRect.left;
+        const int height = panelRect.bottom - panelRect.top;
+        const int innerWidth = (std::max)(0, width - outerPadding * 2);
+        if (innerWidth < hierarchyButtonGap * 2)
+        {
+            hierarchyButtonGap = 0;
+        }
+
+        const int buttonTop = panelRect.top + outerPadding + groupHeaderHeight + labelHeight + ScaleMetric(6);
+        const int buttonWidth = (std::max)(0, (innerWidth - hierarchyButtonGap * 2) / 3);
+        MoveChildWindowNoRedraw(m_hierarchyPanel, panelRect.left, panelRect.top, width, height);
+        MoveChildWindowNoRedraw(m_hierarchySummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_hierarchyCreateButton, panelRect.left + outerPadding, buttonTop, buttonWidth, buttonHeight);
+        MoveChildWindowNoRedraw(
+            m_hierarchyDuplicateButton,
+            panelRect.left + outerPadding + buttonWidth + hierarchyButtonGap,
+            buttonTop,
+            buttonWidth,
+            buttonHeight);
+        MoveChildWindowNoRedraw(
+            m_hierarchyDeleteButton,
+            panelRect.left + outerPadding + (buttonWidth + hierarchyButtonGap) * 2,
+            buttonTop,
+            (std::max)(0, innerWidth - (buttonWidth + hierarchyButtonGap) * 2),
+            buttonHeight);
+
+        const int hierarchyListTop = buttonTop + buttonHeight + ScaleMetric(8);
+        const int hierarchyNameTop = panelRect.top + height - outerPadding - labelHeight;
+        MoveChildWindowNoRedraw(m_hierarchyListBox, panelRect.left + outerPadding, hierarchyListTop, innerWidth, (std::max)(0, hierarchyNameTop - hierarchyListTop - ScaleMetric(8)));
+        MoveChildWindowNoRedraw(m_hierarchyNameEdit, panelRect.left + outerPadding, hierarchyNameTop, innerWidth, labelHeight);
+    }
+
+    void EditorShell::LayoutAssetsPanelInRect(const RECT& panelRect)
+    {
+        const int outerPadding = ScaleMetric(12);
+        const int groupHeaderHeight = ScaleMetric(26);
+        const int labelHeight = ScaleMetric(24);
+        const int width = panelRect.right - panelRect.left;
+        const int height = panelRect.bottom - panelRect.top;
+        const int innerWidth = (std::max)(0, width - outerPadding * 2);
+        MoveChildWindowNoRedraw(m_assetsPanel, panelRect.left, panelRect.top, width, height);
+        MoveChildWindowNoRedraw(m_assetsSummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(
+            m_assetsListView,
+            panelRect.left + outerPadding,
+            panelRect.top + groupHeaderHeight + labelHeight + ScaleMetric(6),
+            innerWidth,
+            (std::max)(0, height - groupHeaderHeight - labelHeight - outerPadding - ScaleMetric(12)));
+    }
+
+    void EditorShell::LayoutInspectorPanelInRect(const RECT& panelRect)
+    {
+        const int outerPadding = ScaleMetric(12);
+        const int groupHeaderHeight = ScaleMetric(26);
+        const int labelHeight = ScaleMetric(24);
+        const int rowHeight = ScaleMetric(24);
+        const int rowSpacing = ScaleMetric(8);
+        const int sectionSpacing = ScaleMetric(12);
+        const int labelWidth = ScaleMetric(72);
+        const int width = panelRect.right - panelRect.left;
+        const int height = panelRect.bottom - panelRect.top;
+        const int innerX = panelRect.left + outerPadding;
+        const int innerWidth = (std::max)(0, width - outerPadding * 2);
+        const int editWidth = (std::max)(0, (innerWidth - labelWidth - ScaleMetric(24)) / 3);
+        const int transformTop = panelRect.top + groupHeaderHeight + labelHeight + ScaleMetric(8);
+        const int spriteSectionTop = transformTop + labelHeight + ScaleMetric(4) + 3 * (rowHeight + rowSpacing) + sectionSpacing;
+        const int spriteRefTop = spriteSectionTop + labelHeight + ScaleMetric(4);
+
+        MoveChildWindowNoRedraw(m_inspectorPanel, panelRect.left, panelRect.top, width, height);
+        MoveChildWindowNoRedraw(m_inspectorSummaryLabel, innerX, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_transformSectionLabel, innerX, transformTop, innerWidth, labelHeight);
+        for (int row = 0; row < 3; ++row)
+        {
+            const int rowTop = transformTop + labelHeight + ScaleMetric(4) + row * (rowHeight + rowSpacing);
+            MoveChildWindowNoRedraw(m_transformLabels[static_cast<std::size_t>(row)], innerX, rowTop + ScaleMetric(4), labelWidth, rowHeight);
+            for (int column = 0; column < 3; ++column)
+            {
+                const int editIndex = row * 3 + column;
+                const int editLeft = innerX + labelWidth + column * (editWidth + ScaleMetric(8));
+                MoveChildWindowNoRedraw(m_transformEditControls[static_cast<std::size_t>(editIndex)], editLeft, rowTop, editWidth, rowHeight);
+            }
+        }
+
+        MoveChildWindowNoRedraw(m_spriteComponentSectionLabel, innerX, spriteSectionTop, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_spriteRefLabel, innerX, spriteRefTop + ScaleMetric(4), labelWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_spriteRefDropHighlight, innerX + labelWidth - ScaleMetric(2), spriteRefTop - ScaleMetric(2), (std::max)(0, innerWidth - labelWidth + ScaleMetric(4)), rowHeight + ScaleMetric(4));
+        MoveChildWindowNoRedraw(m_spriteRefEdit, innerX + labelWidth, spriteRefTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
+        MoveChildWindowNoRedraw(m_spriteComponentActionButton, innerX, spriteRefTop + rowHeight + rowSpacing, innerWidth, rowHeight + ScaleMetric(4));
+    }
+
+    void EditorShell::LayoutSceneViewPanelInRect(const RECT& panelRect)
+    {
+        const int outerPadding = ScaleMetric(12);
+        const int groupHeaderHeight = ScaleMetric(26);
+        const int labelHeight = ScaleMetric(24);
+        const int panelSpacing = ScaleMetric(12);
+        const int width = panelRect.right - panelRect.left;
+        const int height = panelRect.bottom - panelRect.top;
+        const int innerWidth = (std::max)(0, width - outerPadding * 2);
+        const int projectSceneListTop = panelRect.top + groupHeaderHeight + labelHeight * 2 + ScaleMetric(8);
+        const int projectSceneListHeight = ScaleMetric(96);
+        const int sceneHostHeight = (std::max)(
+            0,
+            height - groupHeaderHeight - labelHeight * 4 - projectSceneListHeight - outerPadding * 3 - panelSpacing);
+
+        MoveChildWindowNoRedraw(m_sceneViewPanel, panelRect.left, panelRect.top, width, height);
+        MoveChildWindowNoRedraw(m_sceneViewPlanLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_projectSummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight + labelHeight + ScaleMetric(4), innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_projectSceneListBox, panelRect.left + outerPadding, projectSceneListTop, innerWidth, projectSceneListHeight);
+        MoveChildWindowNoRedraw(m_projectSceneDetailLabel, panelRect.left + outerPadding, projectSceneListTop + projectSceneListHeight + ScaleMetric(6), innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_sceneViewHost, panelRect.left + outerPadding, projectSceneListTop + projectSceneListHeight + labelHeight + panelSpacing, innerWidth, sceneHostHeight);
+        MoveChildWindowNoRedraw(m_sceneViewSizeLabel, panelRect.left + outerPadding, projectSceneListTop + projectSceneListHeight + labelHeight + panelSpacing + sceneHostHeight + ScaleMetric(6), innerWidth, labelHeight);
     }
 
     void EditorShell::LayoutHierarchyPanel(const LayoutMetrics& metrics)
@@ -782,6 +1360,1388 @@ namespace Xelqoria::Editor
         }
     }
 
+    bool EditorShell::UpdateDocking(HWND parentWindow, const Core::InputSnapshot& inputSnapshot)
+    {
+        if (nullptr == parentWindow)
+        {
+            return false;
+        }
+
+        bool changed = false;
+        const POINT cursorScreenPoint = inputSnapshot.GetCursorScreenPoint();
+
+        if (inputSnapshot.WasKeyPressed('R') && inputSnapshot.IsKeyDown(VK_CONTROL))
+        {
+            ResetDockLayout();
+            changed = true;
+        }
+
+        if (inputSnapshot.WasMouseButtonPressed(Core::MouseButton::Left))
+        {
+            const DockNodeId hitSplitterNodeId = HitTestDockSplitter(cursorScreenPoint);
+            if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_dockNodes.size())
+            {
+                const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
+                m_dragKind = DockSplitOrientation::Horizontal == splitNode.splitOrientation
+                    ? DockDragKind::HorizontalSplitter
+                    : DockDragKind::VerticalSplitter;
+                m_dragSplitNodeId = hitSplitterNodeId;
+                m_dragStartScreenPoint = cursorScreenPoint;
+                m_dragStartSplitRatio = splitNode.splitRatio;
+                SetCapture(parentWindow);
+            }
+            else
+            {
+                const std::optional<EditorPanelId> hitPanel = HitTestPanelCaption(cursorScreenPoint);
+                if (hitPanel.has_value())
+                {
+                    m_dragKind = DockDragKind::Panel;
+                    m_dragPanelId = hitPanel;
+                    m_dragStartScreenPoint = cursorScreenPoint;
+                }
+            }
+        }
+
+        if (inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left))
+        {
+            if (DockDragKind::Panel == m_dragKind && m_dragPanelId.has_value())
+            {
+                UpdateDockGuideWindows(parentWindow, cursorScreenPoint);
+                m_currentGuideTarget = HitTestDockGuideTarget(parentWindow, cursorScreenPoint);
+                m_hasDockPreview = DockGuideTargetKind::None != m_currentGuideTarget.kind
+                    && DockGuideTargetKind::Float != m_currentGuideTarget.kind;
+                m_dockPreviewRect = m_currentGuideTarget.previewRect;
+                UpdateDockPreviewWindow(parentWindow);
+            }
+            else if (DockDragKind::HorizontalSplitter == m_dragKind || DockDragKind::VerticalSplitter == m_dragKind)
+            {
+                changed = UpdateDockSplitterDrag(parentWindow, cursorScreenPoint) || changed;
+                SetCursor(LoadCursorW(nullptr, DockDragKind::HorizontalSplitter == m_dragKind ? IDC_SIZEWE : IDC_SIZENS));
+            }
+        }
+        else if (DockDragKind::None == m_dragKind)
+        {
+            const DockNodeId hitSplitterNodeId = HitTestDockSplitter(cursorScreenPoint);
+            if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_dockNodes.size())
+            {
+                const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
+                SetCursor(LoadCursorW(nullptr, DockSplitOrientation::Horizontal == splitNode.splitOrientation ? IDC_SIZEWE : IDC_SIZENS));
+            }
+        }
+
+        if (inputSnapshot.WasMouseButtonReleased(Core::MouseButton::Left))
+        {
+            if (DockDragKind::Panel == m_dragKind && m_dragPanelId.has_value())
+            {
+                const DockGuideTarget guideTarget = m_currentGuideTarget;
+                m_currentGuideTarget = DockGuideTarget{};
+                m_hasDockPreview = false;
+                HideDockGuideWindows();
+                UpdateDockPreviewWindow(parentWindow);
+                ApplyDockGuideTarget(*m_dragPanelId, guideTarget, parentWindow);
+                changed = true;
+            }
+
+            m_dragKind = DockDragKind::None;
+            m_dragPanelId.reset();
+            m_dragSplitNodeId = -1;
+            m_hasDockPreview = false;
+            ReleaseCapture();
+            HideDockGuideWindows();
+            UpdateDockPreviewWindow(parentWindow);
+        }
+
+        if (changed)
+        {
+            m_layoutInitialized = false;
+        }
+
+        return changed;
+    }
+
+    bool EditorShell::HandleNotify(LPARAM notifyParameter)
+    {
+        const NMHDR* notifyHeader = reinterpret_cast<const NMHDR*>(notifyParameter);
+        if (nullptr == notifyHeader || TCN_SELCHANGE != notifyHeader->code)
+        {
+            return false;
+        }
+
+        for (DockNode& dockNode : m_dockNodes)
+        {
+            if (DockNodeKind::Leaf != dockNode.kind || notifyHeader->hwndFrom != dockNode.tabControl)
+            {
+                continue;
+            }
+
+            dockNode.activeTabIndex = TabCtrl_GetCurSel(dockNode.tabControl);
+            m_layoutInitialized = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    void EditorShell::ResetDockLayout()
+    {
+        m_leftTopDockPanels = { EditorPanelId::Hierarchy };
+        m_leftBottomDockPanels = { EditorPanelId::Assets };
+        m_centerDockPanels = { EditorPanelId::SceneView };
+        m_rightDockPanels = { EditorPanelId::Inspector };
+        m_leftTopActiveTabIndex = 0;
+        m_leftBottomActiveTabIndex = 0;
+        m_centerActiveTabIndex = 0;
+        m_rightActiveTabIndex = 0;
+        for (HWND tabControl : m_dynamicDockTabs)
+        {
+            if (nullptr != tabControl)
+            {
+                DestroyWindow(tabControl);
+            }
+        }
+        m_dynamicDockTabs.clear();
+        m_hasDockPreview = false;
+        m_currentGuideTarget = DockGuideTarget{};
+        BuildInitialDockTree();
+        HideDockGuideWindows();
+        UpdateDockPreviewWindow(m_parentWindow);
+        m_leftPaneWidth = ScaleMetric(260);
+        m_rightPaneWidth = ScaleMetric(300);
+        m_leftTopHeight = ScaleMetric(280);
+        SetPanelParent(EditorPanelId::Hierarchy, m_parentWindow);
+        SetPanelParent(EditorPanelId::Assets, m_parentWindow);
+        SetPanelParent(EditorPanelId::SceneView, m_parentWindow);
+        SetPanelParent(EditorPanelId::Inspector, m_parentWindow);
+        DestroyFloatingWindow(EditorPanelId::Hierarchy);
+        DestroyFloatingWindow(EditorPanelId::Assets);
+        DestroyFloatingWindow(EditorPanelId::SceneView);
+        DestroyFloatingWindow(EditorPanelId::Inspector);
+        SyncDockTabs();
+        m_layoutInitialized = false;
+    }
+
+    void EditorShell::ShowPanelControls(EditorPanelId panelId, bool visible) const
+    {
+        const int showCommand = visible ? SW_SHOW : SW_HIDE;
+        switch (panelId)
+        {
+        case EditorPanelId::Hierarchy:
+            for (HWND control : { m_hierarchyPanel, m_hierarchySummaryLabel, m_hierarchyListBox, m_hierarchyNameEdit, m_hierarchyCreateButton, m_hierarchyDuplicateButton, m_hierarchyDeleteButton })
+            {
+                ShowWindow(control, showCommand);
+            }
+            break;
+        case EditorPanelId::Assets:
+            for (HWND control : { m_assetsPanel, m_assetsSummaryLabel, m_assetsListView })
+            {
+                ShowWindow(control, showCommand);
+            }
+            break;
+        case EditorPanelId::SceneView:
+            for (HWND control : { m_sceneViewPanel, m_sceneViewPlanLabel, m_projectSummaryLabel, m_projectSceneListBox, m_projectSceneDetailLabel, m_sceneViewHost, m_sceneViewSizeLabel })
+            {
+                ShowWindow(control, showCommand);
+            }
+            break;
+        case EditorPanelId::Inspector:
+            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefDropHighlight, m_spriteRefEdit, m_spriteComponentActionButton })
+            {
+                ShowWindow(control, showCommand);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    void EditorShell::SetPanelParent(EditorPanelId panelId, HWND parentWindow) const
+    {
+        if (nullptr == parentWindow)
+        {
+            return;
+        }
+
+        const auto setParent =
+            [parentWindow](HWND control)
+            {
+                if (nullptr != control && GetParent(control) != parentWindow)
+                {
+                    SetParent(control, parentWindow);
+                }
+            };
+
+        switch (panelId)
+        {
+        case EditorPanelId::Hierarchy:
+            for (HWND control : { m_hierarchyPanel, m_hierarchySummaryLabel, m_hierarchyListBox, m_hierarchyNameEdit, m_hierarchyCreateButton, m_hierarchyDuplicateButton, m_hierarchyDeleteButton })
+            {
+                setParent(control);
+            }
+            break;
+        case EditorPanelId::Assets:
+            for (HWND control : { m_assetsPanel, m_assetsSummaryLabel, m_assetsListView })
+            {
+                setParent(control);
+            }
+            break;
+        case EditorPanelId::SceneView:
+            for (HWND control : { m_sceneViewPanel, m_sceneViewPlanLabel, m_projectSummaryLabel, m_projectSceneListBox, m_projectSceneDetailLabel, m_sceneViewHost, m_sceneViewSizeLabel })
+            {
+                setParent(control);
+            }
+            break;
+        case EditorPanelId::Inspector:
+            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefDropHighlight, m_spriteRefEdit, m_spriteComponentActionButton })
+            {
+                setParent(control);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    RECT EditorShell::GetPanelCaptionRect(EditorPanelId panelId) const
+    {
+        HWND panelWindow = nullptr;
+        switch (panelId)
+        {
+        case EditorPanelId::Hierarchy:
+            panelWindow = m_hierarchyPanel;
+            break;
+        case EditorPanelId::Assets:
+            panelWindow = m_assetsPanel;
+            break;
+        case EditorPanelId::SceneView:
+            panelWindow = m_sceneViewPanel;
+            break;
+        case EditorPanelId::Inspector:
+            panelWindow = m_inspectorPanel;
+            break;
+        default:
+            break;
+        }
+
+        RECT captionRect{};
+        if (nullptr != panelWindow && IsWindowVisible(panelWindow))
+        {
+            GetWindowRect(panelWindow, &captionRect);
+            captionRect.bottom = captionRect.top + ScaleMetric(28);
+        }
+
+        return captionRect;
+    }
+
+    std::optional<EditorShell::EditorPanelId> EditorShell::HitTestPanelCaption(POINT cursorScreenPoint) const
+    {
+        for (EditorPanelId panelId : { EditorPanelId::Hierarchy, EditorPanelId::Assets, EditorPanelId::SceneView, EditorPanelId::Inspector })
+        {
+            const RECT captionRect = GetPanelCaptionRect(panelId);
+            if (PtInRect(&captionRect, cursorScreenPoint))
+            {
+                return panelId;
+            }
+        }
+
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Leaf != dockNode.kind)
+            {
+                continue;
+            }
+
+            HWND tabControl = dockNode.tabControl;
+            if (nullptr == tabControl || false == IsWindowVisible(tabControl))
+            {
+                continue;
+            }
+
+            RECT tabRect{};
+            GetWindowRect(tabControl, &tabRect);
+            tabRect.bottom = tabRect.top + ScaleMetric(28);
+            if (false == PtInRect(&tabRect, cursorScreenPoint))
+            {
+                continue;
+            }
+
+            const int activeIndex = (std::max)(0, (std::min)(dockNode.activeTabIndex, static_cast<int>(dockNode.panels.size()) - 1));
+            if (0 <= activeIndex && activeIndex < static_cast<int>(dockNode.panels.size()))
+            {
+                return dockNode.panels[static_cast<std::size_t>(activeIndex)];
+            }
+        }
+
+        return std::nullopt;
+    }
+
+    EditorShell::DockNodeId EditorShell::HitTestDockLeaf(POINT cursorClientPoint) const
+    {
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Leaf != dockNode.kind || dockNode.panels.empty())
+            {
+                continue;
+            }
+
+            if (PtInRect(&dockNode.rect, cursorClientPoint))
+            {
+                return dockNodeId;
+            }
+        }
+
+        return -1;
+    }
+
+    EditorShell::DockNodeId EditorShell::HitTestDockSplitter(POINT cursorScreenPoint) const
+    {
+        if (nullptr == m_parentWindow)
+        {
+            return -1;
+        }
+
+        POINT cursorClientPoint = cursorScreenPoint;
+        ScreenToClient(m_parentWindow, &cursorClientPoint);
+
+        std::vector<DockNodeId> dockSplitNodeIds{};
+        CollectReachableDockSplits(m_rootDockNodeId, dockSplitNodeIds);
+        for (DockNodeId dockNodeId : dockSplitNodeIds)
+        {
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Split != dockNode.kind
+                || dockNode.firstChild < 0
+                || dockNode.secondChild < 0
+                || static_cast<std::size_t>(dockNode.firstChild) >= m_dockNodes.size()
+                || static_cast<std::size_t>(dockNode.secondChild) >= m_dockNodes.size())
+            {
+                continue;
+            }
+
+            const RECT firstRect = m_dockNodes[static_cast<std::size_t>(dockNode.firstChild)].rect;
+            const RECT secondRect = m_dockNodes[static_cast<std::size_t>(dockNode.secondChild)].rect;
+            RECT splitterRect{};
+            if (DockSplitOrientation::Horizontal == dockNode.splitOrientation)
+            {
+                splitterRect = RECT{ firstRect.right, dockNode.rect.top, secondRect.left, dockNode.rect.bottom };
+            }
+            else
+            {
+                splitterRect = RECT{ dockNode.rect.left, firstRect.bottom, dockNode.rect.right, secondRect.top };
+            }
+
+            const int minimumHitThickness = ScaleMetric(6);
+            if ((splitterRect.right - splitterRect.left) < minimumHitThickness)
+            {
+                const int centerX = (splitterRect.left + splitterRect.right) / 2;
+                splitterRect.left = centerX - minimumHitThickness / 2;
+                splitterRect.right = splitterRect.left + minimumHitThickness;
+            }
+            if ((splitterRect.bottom - splitterRect.top) < minimumHitThickness)
+            {
+                const int centerY = (splitterRect.top + splitterRect.bottom) / 2;
+                splitterRect.top = centerY - minimumHitThickness / 2;
+                splitterRect.bottom = splitterRect.top + minimumHitThickness;
+            }
+
+            if (PtInRect(&splitterRect, cursorClientPoint))
+            {
+                return dockNodeId;
+            }
+        }
+
+        return -1;
+    }
+
+    void EditorShell::CollectReachableDockLeaves(DockNodeId dockNodeId, std::vector<DockNodeId>& dockLeafNodeIds) const
+    {
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        {
+            return;
+        }
+
+        const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        if (DockNodeKind::Leaf == dockNode.kind)
+        {
+            dockLeafNodeIds.push_back(dockNodeId);
+            return;
+        }
+
+        CollectReachableDockLeaves(dockNode.firstChild, dockLeafNodeIds);
+        CollectReachableDockLeaves(dockNode.secondChild, dockLeafNodeIds);
+    }
+
+    void EditorShell::CollectReachableDockSplits(DockNodeId dockNodeId, std::vector<DockNodeId>& dockSplitNodeIds) const
+    {
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        {
+            return;
+        }
+
+        const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        if (DockNodeKind::Leaf == dockNode.kind)
+        {
+            return;
+        }
+
+        CollectReachableDockSplits(dockNode.firstChild, dockSplitNodeIds);
+        dockSplitNodeIds.push_back(dockNodeId);
+        CollectReachableDockSplits(dockNode.secondChild, dockSplitNodeIds);
+    }
+
+    bool EditorShell::UpdateDockSplitterDrag(HWND parentWindow, POINT cursorScreenPoint)
+    {
+        if (nullptr == parentWindow
+            || m_dragSplitNodeId < 0
+            || static_cast<std::size_t>(m_dragSplitNodeId) >= m_dockNodes.size())
+        {
+            return false;
+        }
+
+        DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(m_dragSplitNodeId)];
+        if (DockNodeKind::Split != splitNode.kind)
+        {
+            return false;
+        }
+
+        const int panelSpacing = ScaleMetric(12);
+        const int width = (std::max)(0, static_cast<int>(splitNode.rect.right - splitNode.rect.left));
+        const int height = (std::max)(0, static_cast<int>(splitNode.rect.bottom - splitNode.rect.top));
+        const int availableLength = DockSplitOrientation::Horizontal == splitNode.splitOrientation
+            ? width - panelSpacing
+            : height - panelSpacing;
+        if (availableLength <= 0)
+        {
+            return false;
+        }
+
+        const int cursorDelta = DockSplitOrientation::Horizontal == splitNode.splitOrientation
+            ? cursorScreenPoint.x - m_dragStartScreenPoint.x
+            : cursorScreenPoint.y - m_dragStartScreenPoint.y;
+        const float nextRatio = ClampDockSplitRatio(
+            m_dragSplitNodeId,
+            m_dragStartSplitRatio + static_cast<float>(cursorDelta) / static_cast<float>(availableLength));
+        if (splitNode.splitRatio == nextRatio)
+        {
+            return false;
+        }
+
+        splitNode.splitRatio = nextRatio;
+        m_layoutInitialized = false;
+        return true;
+    }
+
+    float EditorShell::ClampDockSplitRatio(DockNodeId dockNodeId, float ratio) const
+    {
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        {
+            return ratio;
+        }
+
+        const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        const int panelSpacing = ScaleMetric(12);
+        const int totalLength = DockSplitOrientation::Horizontal == splitNode.splitOrientation
+            ? splitNode.rect.right - splitNode.rect.left
+            : splitNode.rect.bottom - splitNode.rect.top;
+        const int availableLength = totalLength - panelSpacing;
+        if (availableLength <= 0)
+        {
+            return 0.5f;
+        }
+
+        const float minimumRatio = (std::min)(0.45f, static_cast<float>(ScaleMetric(80)) / static_cast<float>(availableLength));
+        return (std::max)(minimumRatio, (std::min)(1.0f - minimumRatio, ratio));
+    }
+
+    EditorShell::DockNodeId EditorShell::FindPanelDockLeaf(EditorPanelId panelId) const
+    {
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Leaf != dockNode.kind)
+            {
+                continue;
+            }
+
+            if (dockNode.panels.end() != std::find(dockNode.panels.begin(), dockNode.panels.end(), panelId))
+            {
+                return dockNodeId;
+            }
+        }
+
+        return -1;
+    }
+
+    void EditorShell::RemovePanelFromDockTree(EditorPanelId panelId, bool collapseEmptyLeaves)
+    {
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Leaf != dockNode.kind)
+            {
+                continue;
+            }
+
+            dockNode.panels.erase(std::remove(dockNode.panels.begin(), dockNode.panels.end(), panelId), dockNode.panels.end());
+            if (dockNode.activeTabIndex >= static_cast<int>(dockNode.panels.size()))
+            {
+                dockNode.activeTabIndex = (std::max)(0, static_cast<int>(dockNode.panels.size()) - 1);
+            }
+        }
+
+        if (collapseEmptyLeaves && m_rootDockNodeId >= 0)
+        {
+            (void)CollapseEmptyDockLeaves(m_rootDockNodeId);
+        }
+    }
+
+    bool EditorShell::CollapseEmptyDockLeaves(DockNodeId dockNodeId)
+    {
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        {
+            return false;
+        }
+
+        DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        if (DockNodeKind::Leaf == dockNode.kind)
+        {
+            return dockNode.panels.empty();
+        }
+
+        const bool firstEmpty = CollapseEmptyDockLeaves(dockNode.firstChild);
+        const bool secondEmpty = CollapseEmptyDockLeaves(dockNode.secondChild);
+        if (firstEmpty && false == secondEmpty)
+        {
+            dockNode = m_dockNodes[static_cast<std::size_t>(dockNode.secondChild)];
+            return false;
+        }
+
+        if (secondEmpty && false == firstEmpty)
+        {
+            dockNode = m_dockNodes[static_cast<std::size_t>(dockNode.firstChild)];
+            return false;
+        }
+
+        return firstEmpty && secondEmpty;
+    }
+
+    EditorShell::DockGuideTarget EditorShell::HitTestDockGuideTarget(HWND parentWindow, POINT cursorScreenPoint) const
+    {
+        (void)parentWindow;
+
+        const auto hitVisibleGuide =
+            [cursorScreenPoint](HWND guideWindow)
+            {
+                RECT guideRect{};
+                if (nullptr == guideWindow || false == IsWindowVisible(guideWindow))
+                {
+                    return false;
+                }
+
+                GetWindowRect(guideWindow, &guideRect);
+                return TRUE == PtInRect(&guideRect, cursorScreenPoint);
+            };
+
+        const std::array<DockGuideTargetKind, 9> guideKinds{
+            DockGuideTargetKind::SplitTop,
+            DockGuideTargetKind::SplitBottom,
+            DockGuideTargetKind::SplitLeft,
+            DockGuideTargetKind::SplitRight,
+            DockGuideTargetKind::Tab,
+            DockGuideTargetKind::SplitTop,
+            DockGuideTargetKind::SplitBottom,
+            DockGuideTargetKind::SplitLeft,
+            DockGuideTargetKind::SplitRight
+        };
+
+        for (std::size_t index = 0; index < m_dockGuideWindows.size(); ++index)
+        {
+            if (false == hitVisibleGuide(m_dockGuideWindows[index]))
+            {
+                continue;
+            }
+
+            const DockGuideTargetKind kind = guideKinds[index];
+            const DockNodeId dockNodeId = index < 5 ? m_currentGuideTarget.dockNodeId : m_rootDockNodeId;
+            if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+            {
+                return DockGuideTarget{};
+            }
+
+            const RECT sourceRect = index < 5
+                ? m_dockNodes[static_cast<std::size_t>(dockNodeId)].rect
+                : m_dockNodes[static_cast<std::size_t>(m_rootDockNodeId)].rect;
+            RECT previewRect = sourceRect;
+            const int width = sourceRect.right - sourceRect.left;
+            const int height = sourceRect.bottom - sourceRect.top;
+            const float splitRatio = index < 5 ? 0.35f : 0.25f;
+            if (DockGuideTargetKind::Tab == kind)
+            {
+                previewRect = sourceRect;
+            }
+            else if (DockGuideTargetKind::SplitLeft == kind)
+            {
+                previewRect.right = sourceRect.left + static_cast<int>(width * splitRatio);
+            }
+            else if (DockGuideTargetKind::SplitRight == kind)
+            {
+                previewRect.left = sourceRect.right - static_cast<int>(width * splitRatio);
+            }
+            else if (DockGuideTargetKind::SplitTop == kind)
+            {
+                previewRect.bottom = sourceRect.top + static_cast<int>(height * splitRatio);
+            }
+            else if (DockGuideTargetKind::SplitBottom == kind)
+            {
+                previewRect.top = sourceRect.bottom - static_cast<int>(height * splitRatio);
+            }
+
+            return DockGuideTarget{ kind, dockNodeId, previewRect };
+        }
+
+        return DockGuideTarget{};
+    }
+
+    void EditorShell::ApplyDockGuideTarget(EditorPanelId panelId, const DockGuideTarget& guideTarget, HWND parentWindow)
+    {
+        if (DockGuideTargetKind::None == guideTarget.kind || DockGuideTargetKind::Float == guideTarget.kind)
+        {
+            POINT cursorScreenPoint{};
+            GetCursorPos(&cursorScreenPoint);
+            RemovePanelFromDockTree(panelId);
+            FloatPanel(panelId, cursorScreenPoint, parentWindow);
+            SyncDockTabs();
+            m_layoutInitialized = false;
+            return;
+        }
+
+        if (guideTarget.dockNodeId < 0 || static_cast<std::size_t>(guideTarget.dockNodeId) >= m_dockNodes.size())
+        {
+            return;
+        }
+
+        const DockNodeId sourceLeafNodeId = FindPanelDockLeaf(panelId);
+        HWND sourceTabControl = GetDockLeafTabControl(sourceLeafNodeId);
+        if (nullptr == sourceTabControl)
+        {
+            sourceTabControl = m_centerDockTab;
+        }
+
+        RemovePanelFromDockTree(panelId, false);
+        if (guideTarget.dockNodeId < 0 || static_cast<std::size_t>(guideTarget.dockNodeId) >= m_dockNodes.size())
+        {
+            return;
+        }
+
+        DockNode& targetNode = m_dockNodes[static_cast<std::size_t>(guideTarget.dockNodeId)];
+        if (DockGuideTargetKind::Tab == guideTarget.kind && DockNodeKind::Leaf == targetNode.kind)
+        {
+            DestroyFloatingWindow(panelId);
+            SetPanelParent(panelId, parentWindow);
+            targetNode.panels.push_back(panelId);
+            targetNode.activeTabIndex = static_cast<int>(targetNode.panels.size()) - 1;
+            if (m_rootDockNodeId >= 0)
+            {
+                (void)CollapseEmptyDockLeaves(m_rootDockNodeId);
+            }
+            SyncDockTabs();
+            m_layoutInitialized = false;
+            return;
+        }
+
+        DestroyFloatingWindow(panelId);
+        SetPanelParent(panelId, parentWindow);
+
+        DockNode newLeaf{};
+        newLeaf.kind = DockNodeKind::Leaf;
+        newLeaf.panels = { panelId };
+        newLeaf.tabControl = CreateAdditionalDockTabControl(parentWindow);
+        if (nullptr == newLeaf.tabControl)
+        {
+            newLeaf.tabControl = sourceTabControl;
+        }
+
+        const DockNode oldTargetNode = targetNode;
+        const std::size_t targetNodeIndex = static_cast<std::size_t>(guideTarget.dockNodeId);
+        const DockNodeId newLeafNodeId = AddDockNode(std::move(newLeaf));
+        DockNode splitNode{};
+        splitNode.kind = DockNodeKind::Split;
+        splitNode.splitOrientation =
+            (DockGuideTargetKind::SplitLeft == guideTarget.kind || DockGuideTargetKind::SplitRight == guideTarget.kind)
+                ? DockSplitOrientation::Horizontal
+                : DockSplitOrientation::Vertical;
+        splitNode.splitRatio = 0.35f;
+
+        const DockNodeId oldTargetNodeId = AddDockNode(oldTargetNode);
+        if (DockGuideTargetKind::SplitLeft == guideTarget.kind || DockGuideTargetKind::SplitTop == guideTarget.kind)
+        {
+            splitNode.firstChild = newLeafNodeId;
+            splitNode.secondChild = oldTargetNodeId;
+        }
+        else
+        {
+            splitNode.firstChild = oldTargetNodeId;
+            splitNode.secondChild = newLeafNodeId;
+            splitNode.splitRatio = 0.65f;
+        }
+
+        m_dockNodes[targetNodeIndex] = splitNode;
+        if (m_rootDockNodeId >= 0)
+        {
+            (void)CollapseEmptyDockLeaves(m_rootDockNodeId);
+        }
+        SyncDockTabs();
+        m_layoutInitialized = false;
+    }
+
+    void EditorShell::UpdateDockGuideWindows(HWND parentWindow, POINT cursorScreenPoint)
+    {
+        if (nullptr == parentWindow || DockDragKind::Panel != m_dragKind)
+        {
+            HideDockGuideWindows();
+            return;
+        }
+
+        POINT cursorClientPoint = cursorScreenPoint;
+        ScreenToClient(parentWindow, &cursorClientPoint);
+        const DockNodeId hitLeafNodeId = HitTestDockLeaf(cursorClientPoint);
+        m_currentGuideTarget.dockNodeId = hitLeafNodeId;
+
+        const int guideSize = ScaleMetric(40);
+        const int guideGap = ScaleMetric(3);
+        if (0 <= hitLeafNodeId && static_cast<std::size_t>(hitLeafNodeId) < m_dockNodes.size())
+        {
+            const RECT leafRect = m_dockNodes[static_cast<std::size_t>(hitLeafNodeId)].rect;
+            const int centerX = (leafRect.left + leafRect.right) / 2;
+            const int centerY = (leafRect.top + leafRect.bottom) / 2;
+            ShowDockGuideWindow(m_dockGuideWindows[4], RECT{ centerX - guideSize / 2, centerY - guideSize / 2, centerX + guideSize / 2, centerY + guideSize / 2 });
+            ShowDockGuideWindow(m_dockGuideWindows[0], RECT{ centerX - guideSize / 2, centerY - guideSize - guideGap - guideSize / 2, centerX + guideSize / 2, centerY - guideGap - guideSize / 2 });
+            ShowDockGuideWindow(m_dockGuideWindows[1], RECT{ centerX - guideSize / 2, centerY + guideGap + guideSize / 2, centerX + guideSize / 2, centerY + guideSize + guideGap + guideSize / 2 });
+            ShowDockGuideWindow(m_dockGuideWindows[2], RECT{ centerX - guideSize - guideGap - guideSize / 2, centerY - guideSize / 2, centerX - guideGap - guideSize / 2, centerY + guideSize / 2 });
+            ShowDockGuideWindow(m_dockGuideWindows[3], RECT{ centerX + guideGap + guideSize / 2, centerY - guideSize / 2, centerX + guideSize + guideGap + guideSize / 2, centerY + guideSize / 2 });
+        }
+        else
+        {
+            for (std::size_t index = 0; index < 5; ++index)
+            {
+                ShowWindow(m_dockGuideWindows[index], SW_HIDE);
+            }
+        }
+
+        const RECT rootRect = 0 <= m_rootDockNodeId && static_cast<std::size_t>(m_rootDockNodeId) < m_dockNodes.size()
+            ? m_dockNodes[static_cast<std::size_t>(m_rootDockNodeId)].rect
+            : RECT{};
+        const int rootCenterX = (rootRect.left + rootRect.right) / 2;
+        const int rootCenterY = (rootRect.top + rootRect.bottom) / 2;
+        ShowDockGuideWindow(m_dockGuideWindows[5], RECT{ rootCenterX - guideSize / 2, rootRect.top + guideGap, rootCenterX + guideSize / 2, rootRect.top + guideGap + guideSize });
+        ShowDockGuideWindow(m_dockGuideWindows[6], RECT{ rootCenterX - guideSize / 2, rootRect.bottom - guideGap - guideSize, rootCenterX + guideSize / 2, rootRect.bottom - guideGap });
+        ShowDockGuideWindow(m_dockGuideWindows[7], RECT{ rootRect.left + guideGap, rootCenterY - guideSize / 2, rootRect.left + guideGap + guideSize, rootCenterY + guideSize / 2 });
+        ShowDockGuideWindow(m_dockGuideWindows[8], RECT{ rootRect.right - guideGap - guideSize, rootCenterY - guideSize / 2, rootRect.right - guideGap, rootCenterY + guideSize / 2 });
+    }
+
+    void EditorShell::HideDockGuideWindows()
+    {
+        for (HWND guideWindow : m_dockGuideWindows)
+        {
+            ShowWindow(guideWindow, SW_HIDE);
+        }
+    }
+
+    void EditorShell::ShowDockGuideWindow(HWND guideWindow, const RECT& guideRect)
+    {
+        if (nullptr == guideWindow)
+        {
+            return;
+        }
+
+        SetWindowPos(
+            guideWindow,
+            HWND_TOP,
+            guideRect.left,
+            guideRect.top,
+            (std::max)(0, static_cast<int>(guideRect.right - guideRect.left)),
+            (std::max)(0, static_cast<int>(guideRect.bottom - guideRect.top)),
+            SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    }
+
+    EditorShell::DockAreaId EditorShell::HitTestDockArea(HWND parentWindow, POINT cursorScreenPoint) const
+    {
+        RECT clientRect{};
+        GetClientRect(parentWindow, &clientRect);
+        POINT cursorClientPoint = cursorScreenPoint;
+        ScreenToClient(parentWindow, &cursorClientPoint);
+        if (false == PtInRect(&clientRect, cursorClientPoint))
+        {
+            return DockAreaId::Floating;
+        }
+
+        const int outerPadding = ScaleMetric(12);
+        const int panelSpacing = ScaleMetric(12);
+        if (cursorClientPoint.x < outerPadding + m_leftPaneWidth)
+        {
+            return cursorClientPoint.y < outerPadding + m_leftTopHeight + panelSpacing / 2
+                ? DockAreaId::LeftTop
+                : DockAreaId::LeftBottom;
+        }
+
+        if (cursorClientPoint.x > clientRect.right - outerPadding - m_rightPaneWidth)
+        {
+            return DockAreaId::Right;
+        }
+
+        return DockAreaId::Center;
+    }
+
+    void EditorShell::MovePanelToDockArea(EditorPanelId panelId, DockAreaId dockAreaId, HWND parentWindow)
+    {
+        const auto removePanel =
+            [panelId](std::vector<EditorPanelId>& panels)
+            {
+                panels.erase(std::remove(panels.begin(), panels.end(), panelId), panels.end());
+            };
+
+        removePanel(m_leftTopDockPanels);
+        removePanel(m_leftBottomDockPanels);
+        removePanel(m_centerDockPanels);
+        removePanel(m_rightDockPanels);
+
+        if (DockAreaId::Floating == dockAreaId)
+        {
+            POINT cursorScreenPoint{};
+            GetCursorPos(&cursorScreenPoint);
+            FloatPanel(panelId, cursorScreenPoint, parentWindow);
+            SyncDockTabs();
+            m_layoutInitialized = false;
+            return;
+        }
+
+        SetPanelParent(panelId, parentWindow);
+        DestroyFloatingWindow(panelId);
+        std::vector<EditorPanelId>& panels = GetDockAreaPanels(dockAreaId);
+        panels.push_back(panelId);
+        switch (dockAreaId)
+        {
+        case DockAreaId::LeftTop:
+            m_leftTopActiveTabIndex = static_cast<int>(panels.size()) - 1;
+            break;
+        case DockAreaId::LeftBottom:
+            m_leftBottomActiveTabIndex = static_cast<int>(panels.size()) - 1;
+            break;
+        case DockAreaId::Center:
+            m_centerActiveTabIndex = static_cast<int>(panels.size()) - 1;
+            break;
+        case DockAreaId::Right:
+            m_rightActiveTabIndex = static_cast<int>(panels.size()) - 1;
+            break;
+        default:
+            break;
+        }
+
+        SyncDockTabs();
+        m_layoutInitialized = false;
+    }
+
+    void EditorShell::FloatPanel(EditorPanelId panelId, POINT screenPoint, HWND parentWindow)
+    {
+        DestroyFloatingWindow(panelId);
+        FloatingPanelCreateParams createParams{
+            this,
+            panelId
+        };
+        HWND floatingWindow = CreateWindowExW(
+            WS_EX_TOOLWINDOW,
+            FloatingPanelWindowClassName,
+            GetPanelTitle(panelId),
+            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+            screenPoint.x,
+            screenPoint.y,
+            ScaleMetric(360),
+            ScaleMetric(360),
+            parentWindow,
+            nullptr,
+            reinterpret_cast<HINSTANCE>(GetWindowLongPtrW(parentWindow, GWLP_HINSTANCE)),
+            &createParams);
+        if (nullptr == floatingWindow)
+        {
+            return;
+        }
+        GetFloatingWindowRef(panelId) = floatingWindow;
+
+        SetPanelParent(panelId, floatingWindow);
+        ShowPanelControls(panelId, true);
+        LayoutFloatingPanel(panelId, floatingWindow);
+    }
+
+    void EditorShell::BeginFloatingWindowDockDrag(EditorPanelId panelId)
+    {
+        if (nullptr == m_parentWindow)
+        {
+            return;
+        }
+
+        if (DockDragKind::Panel == m_dragKind && m_dragPanelId.has_value() && *m_dragPanelId == panelId)
+        {
+            return;
+        }
+
+        m_dragKind = DockDragKind::Panel;
+        m_dragPanelId = panelId;
+        GetCursorPos(&m_dragStartScreenPoint);
+        m_currentGuideTarget = DockGuideTarget{};
+        m_hasDockPreview = false;
+    }
+
+    void EditorShell::UpdateFloatingWindowDockDrag()
+    {
+        if (nullptr == m_parentWindow || DockDragKind::Panel != m_dragKind || false == m_dragPanelId.has_value())
+        {
+            return;
+        }
+
+        POINT cursorScreenPoint{};
+        GetCursorPos(&cursorScreenPoint);
+        UpdateDockGuideWindows(m_parentWindow, cursorScreenPoint);
+        m_currentGuideTarget = HitTestDockGuideTarget(m_parentWindow, cursorScreenPoint);
+        m_hasDockPreview = DockGuideTargetKind::None != m_currentGuideTarget.kind
+            && DockGuideTargetKind::Float != m_currentGuideTarget.kind;
+        m_dockPreviewRect = m_currentGuideTarget.previewRect;
+        UpdateDockPreviewWindow(m_parentWindow);
+    }
+
+    void EditorShell::CompleteFloatingWindowDockDrag(EditorPanelId panelId)
+    {
+        if (nullptr == m_parentWindow)
+        {
+            return;
+        }
+
+        UpdateFloatingWindowDockDrag();
+        const DockGuideTarget guideTarget = m_currentGuideTarget;
+        m_currentGuideTarget = DockGuideTarget{};
+        m_hasDockPreview = false;
+        HideDockGuideWindows();
+        UpdateDockPreviewWindow(m_parentWindow);
+        m_dragKind = DockDragKind::None;
+        m_dragPanelId.reset();
+
+        if (DockGuideTargetKind::None == guideTarget.kind || DockGuideTargetKind::Float == guideTarget.kind)
+        {
+            return;
+        }
+
+        ApplyDockGuideTarget(panelId, guideTarget, m_parentWindow);
+        m_layoutInitialized = false;
+    }
+
+    void EditorShell::LayoutFloatingPanel(EditorPanelId panelId, HWND floatingWindow)
+    {
+        if (nullptr == floatingWindow)
+        {
+            return;
+        }
+
+        RECT clientRect{};
+        GetClientRect(floatingWindow, &clientRect);
+        const int padding = ScaleMetric(8);
+        const RECT panelRect{
+            clientRect.left + padding,
+            clientRect.top + padding,
+            (std::max)(clientRect.left + padding, clientRect.right - padding),
+            (std::max)(clientRect.top + padding, clientRect.bottom - padding)
+        };
+
+        switch (panelId)
+        {
+        case EditorPanelId::Hierarchy:
+            LayoutHierarchyPanelInRect(panelRect);
+            break;
+        case EditorPanelId::Assets:
+            LayoutAssetsPanelInRect(panelRect);
+            break;
+        case EditorPanelId::SceneView:
+            LayoutSceneViewPanelInRect(panelRect);
+            break;
+        case EditorPanelId::Inspector:
+            LayoutInspectorPanelInRect(panelRect);
+            break;
+        default:
+            break;
+        }
+
+        SendGroupBoxesToBack();
+        RedrawLayout(floatingWindow);
+        if (EditorPanelId::SceneView == panelId)
+        {
+            (void)UpdateSceneViewHostSize();
+        }
+    }
+
+    void EditorShell::HandleFloatingWindowClose(EditorPanelId panelId, HWND floatingWindow)
+    {
+        HWND& floatingWindowRef = GetFloatingWindowRef(panelId);
+        if (floatingWindowRef == floatingWindow)
+        {
+            floatingWindowRef = nullptr;
+        }
+
+        SetPanelParent(panelId, m_parentWindow);
+        RemovePanelFromDockTree(panelId, false);
+
+        DockNodeId targetLeafNodeId = -1;
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (dockNode.tabControl == m_centerDockTab)
+            {
+                targetLeafNodeId = dockNodeId;
+                break;
+            }
+        }
+
+        if (targetLeafNodeId < 0 && false == dockLeafNodeIds.empty())
+        {
+            targetLeafNodeId = dockLeafNodeIds.front();
+        }
+
+        if (0 <= targetLeafNodeId && static_cast<std::size_t>(targetLeafNodeId) < m_dockNodes.size())
+        {
+            DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(targetLeafNodeId)];
+            dockNode.panels.push_back(panelId);
+            dockNode.activeTabIndex = static_cast<int>(dockNode.panels.size()) - 1;
+        }
+
+        SyncDockTabs();
+        m_layoutInitialized = false;
+        DestroyWindow(floatingWindow);
+    }
+
+    void EditorShell::DestroyFloatingWindow(EditorPanelId panelId)
+    {
+        HWND& floatingWindow = GetFloatingWindowRef(panelId);
+        if (nullptr != floatingWindow)
+        {
+            SetPanelParent(panelId, m_parentWindow);
+            const HWND windowToDestroy = floatingWindow;
+            floatingWindow = nullptr;
+            DestroyWindow(windowToDestroy);
+        }
+    }
+
+    HWND& EditorShell::GetFloatingWindowRef(EditorPanelId panelId)
+    {
+        switch (panelId)
+        {
+        case EditorPanelId::Hierarchy:
+            return m_hierarchyFloatingWindow;
+        case EditorPanelId::Assets:
+            return m_assetsFloatingWindow;
+        case EditorPanelId::SceneView:
+            return m_sceneViewFloatingWindow;
+        case EditorPanelId::Inspector:
+            return m_inspectorFloatingWindow;
+        default:
+            return m_sceneViewFloatingWindow;
+        }
+    }
+
+    void EditorShell::SyncDockTabs()
+    {
+        for (HWND tabControl : { m_leftTopDockTab, m_leftBottomDockTab, m_centerDockTab, m_rightDockTab })
+        {
+            if (nullptr != tabControl)
+            {
+                TabCtrl_DeleteAllItems(tabControl);
+                ShowWindow(tabControl, SW_HIDE);
+            }
+        }
+        for (HWND tabControl : m_dynamicDockTabs)
+        {
+            if (nullptr != tabControl)
+            {
+                TabCtrl_DeleteAllItems(tabControl);
+                ShowWindow(tabControl, SW_HIDE);
+            }
+        }
+
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Leaf != dockNode.kind || nullptr == dockNode.tabControl)
+            {
+                continue;
+            }
+
+            TabCtrl_DeleteAllItems(dockNode.tabControl);
+            for (std::size_t index = 0; index < dockNode.panels.size(); ++index)
+            {
+                TCITEMW item{};
+                item.mask = TCIF_TEXT;
+                item.pszText = const_cast<LPWSTR>(GetPanelTitle(dockNode.panels[index]));
+                TabCtrl_InsertItem(dockNode.tabControl, static_cast<int>(index), &item);
+            }
+
+            dockNode.activeTabIndex = (std::max)(0, (std::min)(dockNode.activeTabIndex, static_cast<int>(dockNode.panels.size()) - 1));
+            TabCtrl_SetCurSel(dockNode.tabControl, dockNode.activeTabIndex);
+        }
+    }
+
+    HWND EditorShell::CreateAdditionalDockTabControl(HWND parentWindow)
+    {
+        if (nullptr == parentWindow)
+        {
+            return nullptr;
+        }
+
+        constexpr DWORD tabStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS;
+        HWND tabControl = CreateChildWindow(
+            parentWindow,
+            reinterpret_cast<HINSTANCE>(GetWindowLongPtrW(parentWindow, GWLP_HINSTANCE)),
+            WC_TABCONTROLW,
+            L"",
+            tabStyle);
+        if (nullptr == tabControl)
+        {
+            return nullptr;
+        }
+
+        SendMessageW(tabControl, WM_SETFONT, reinterpret_cast<WPARAM>(m_defaultFont), TRUE);
+        ShowWindow(tabControl, SW_HIDE);
+        m_dynamicDockTabs.push_back(tabControl);
+        return tabControl;
+    }
+
+    void EditorShell::SyncDockAreaTabs(DockAreaId dockAreaId)
+    {
+        HWND tabControl = GetDockAreaTabControl(dockAreaId);
+        if (nullptr == tabControl)
+        {
+            return;
+        }
+
+        TabCtrl_DeleteAllItems(tabControl);
+        const std::vector<EditorPanelId>& panels = GetDockAreaPanels(dockAreaId);
+        for (std::size_t index = 0; index < panels.size(); ++index)
+        {
+            TCITEMW item{};
+            item.mask = TCIF_TEXT;
+            item.pszText = const_cast<LPWSTR>(GetPanelTitle(panels[index]));
+            TabCtrl_InsertItem(tabControl, static_cast<int>(index), &item);
+        }
+
+        TabCtrl_SetCurSel(tabControl, ClampActiveTabIndex(dockAreaId));
+    }
+
+    HWND EditorShell::GetDockAreaTabControl(DockAreaId dockAreaId) const
+    {
+        switch (dockAreaId)
+        {
+        case DockAreaId::LeftTop:
+            return m_leftTopDockTab;
+        case DockAreaId::LeftBottom:
+            return m_leftBottomDockTab;
+        case DockAreaId::Center:
+            return m_centerDockTab;
+        case DockAreaId::Right:
+            return m_rightDockTab;
+        default:
+            return nullptr;
+        }
+    }
+
+    HWND EditorShell::GetDockLeafTabControl(DockNodeId dockNodeId) const
+    {
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        {
+            return nullptr;
+        }
+
+        return m_dockNodes[static_cast<std::size_t>(dockNodeId)].tabControl;
+    }
+
+    std::vector<EditorShell::EditorPanelId>& EditorShell::GetDockAreaPanels(DockAreaId dockAreaId)
+    {
+        switch (dockAreaId)
+        {
+        case DockAreaId::LeftTop:
+            return m_leftTopDockPanels;
+        case DockAreaId::LeftBottom:
+            return m_leftBottomDockPanels;
+        case DockAreaId::Center:
+            return m_centerDockPanels;
+        case DockAreaId::Right:
+            return m_rightDockPanels;
+        default:
+            return m_centerDockPanels;
+        }
+    }
+
+    const std::vector<EditorShell::EditorPanelId>& EditorShell::GetDockAreaPanels(DockAreaId dockAreaId) const
+    {
+        switch (dockAreaId)
+        {
+        case DockAreaId::LeftTop:
+            return m_leftTopDockPanels;
+        case DockAreaId::LeftBottom:
+            return m_leftBottomDockPanels;
+        case DockAreaId::Center:
+            return m_centerDockPanels;
+        case DockAreaId::Right:
+            return m_rightDockPanels;
+        default:
+            return m_centerDockPanels;
+        }
+    }
+
+    const wchar_t* EditorShell::GetPanelTitle(EditorPanelId panelId)
+    {
+        switch (panelId)
+        {
+        case EditorPanelId::Hierarchy:
+            return L"Hierarchy";
+        case EditorPanelId::Assets:
+            return L"Assets";
+        case EditorPanelId::SceneView:
+            return L"SceneView";
+        case EditorPanelId::Inspector:
+            return L"Inspector";
+        default:
+            return L"Panel";
+        }
+    }
+
+    int EditorShell::ClampActiveTabIndex(DockAreaId dockAreaId) const
+    {
+        const std::vector<EditorPanelId>& panels = GetDockAreaPanels(dockAreaId);
+        if (panels.empty())
+        {
+            return -1;
+        }
+
+        int activeIndex = 0;
+        switch (dockAreaId)
+        {
+        case DockAreaId::LeftTop:
+            activeIndex = m_leftTopActiveTabIndex;
+            break;
+        case DockAreaId::LeftBottom:
+            activeIndex = m_leftBottomActiveTabIndex;
+            break;
+        case DockAreaId::Center:
+            activeIndex = m_centerActiveTabIndex;
+            break;
+        case DockAreaId::Right:
+            activeIndex = m_rightActiveTabIndex;
+            break;
+        default:
+            activeIndex = 0;
+            break;
+        }
+
+        return (std::max)(0, (std::min)(activeIndex, static_cast<int>(panels.size()) - 1));
+    }
+
+    RECT EditorShell::GetDockAreaPreviewRect(HWND parentWindow, DockAreaId dockAreaId) const
+    {
+        RECT clientRect{};
+        GetClientRect(parentWindow, &clientRect);
+
+        const int outerPadding = ScaleMetric(12);
+        const int panelSpacing = ScaleMetric(12);
+        const int clientWidth = static_cast<int>(clientRect.right - clientRect.left);
+        const int clientHeight = static_cast<int>(clientRect.bottom - clientRect.top);
+        const int availableColumnWidth = (std::max)(0, clientWidth - (outerPadding * 2) - (panelSpacing * 2));
+        const int centerWidth = (std::max)(ScaleMetric(120), availableColumnWidth - m_leftPaneWidth - m_rightPaneWidth);
+        const int centerX = outerPadding + m_leftPaneWidth + panelSpacing;
+        const int rightX = centerX + centerWidth + panelSpacing;
+        const int dockHeight = (std::max)(0, clientHeight - outerPadding * 2);
+
+        switch (dockAreaId)
+        {
+        case DockAreaId::LeftTop:
+            return RECT{
+                outerPadding,
+                outerPadding,
+                outerPadding + m_leftPaneWidth,
+                outerPadding + m_leftTopHeight
+            };
+        case DockAreaId::LeftBottom:
+            return RECT{
+                outerPadding,
+                outerPadding + m_leftTopHeight + panelSpacing,
+                outerPadding + m_leftPaneWidth,
+                outerPadding + dockHeight
+            };
+        case DockAreaId::Center:
+            return RECT{
+                centerX,
+                outerPadding,
+                centerX + centerWidth,
+                outerPadding + dockHeight
+            };
+        case DockAreaId::Right:
+            return RECT{
+                rightX,
+                outerPadding,
+                rightX + m_rightPaneWidth,
+                outerPadding + dockHeight
+            };
+        default:
+            return RECT{};
+        }
+    }
+
+    void EditorShell::UpdateDockPreviewWindow(HWND parentWindow)
+    {
+        if (nullptr == m_dockPreviewWindow || nullptr == parentWindow)
+        {
+            return;
+        }
+
+        if (false == m_hasDockPreview)
+        {
+            ShowWindow(m_dockPreviewWindow, SW_HIDE);
+            return;
+        }
+
+        SetWindowPos(
+            m_dockPreviewWindow,
+            HWND_TOP,
+            m_dockPreviewRect.left,
+            m_dockPreviewRect.top,
+            (std::max)(0, static_cast<int>(m_dockPreviewRect.right - m_dockPreviewRect.left)),
+            (std::max)(0, static_cast<int>(m_dockPreviewRect.bottom - m_dockPreviewRect.top)),
+            SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        InvalidateRect(m_dockPreviewWindow, nullptr, TRUE);
+        UpdateWindow(m_dockPreviewWindow);
+
+        for (HWND guideWindow : m_dockGuideWindows)
+        {
+            if (nullptr != guideWindow && IsWindowVisible(guideWindow))
+            {
+                SetWindowPos(
+                    guideWindow,
+                    HWND_TOP,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            }
+        }
+    }
+
     void EditorShell::MoveChildWindowNoRedraw(HWND window, int x, int y, int width, int height) const
     {
         if (nullptr == window)
@@ -810,7 +2770,7 @@ namespace Xelqoria::Editor
                 RDW_INVALIDATE | RDW_ERASE | RDW_ERASENOW | RDW_UPDATENOW | RDW_ALLCHILDREN | RDW_FRAME);
         }
 
-        const std::array<HWND, 37> controls = CollectControls();
+        const std::array<HWND, 51> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -880,7 +2840,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 37> controls = CollectControls();
+        const std::array<HWND, 51> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -898,9 +2858,23 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 37> EditorShell::CollectControls() const
+    std::array<HWND, 51> EditorShell::CollectControls() const
     {
         return {
+            m_leftTopDockTab,
+            m_leftBottomDockTab,
+            m_centerDockTab,
+            m_rightDockTab,
+            m_dockPreviewWindow,
+            m_dockGuideWindows[0],
+            m_dockGuideWindows[1],
+            m_dockGuideWindows[2],
+            m_dockGuideWindows[3],
+            m_dockGuideWindows[4],
+            m_dockGuideWindows[5],
+            m_dockGuideWindows[6],
+            m_dockGuideWindows[7],
+            m_dockGuideWindows[8],
             m_hierarchyPanel,
             m_assetsPanel,
             m_inspectorPanel,
@@ -944,6 +2918,62 @@ namespace Xelqoria::Editor
     int EditorShell::ScaleMetric(int value) const
     {
         return MulDiv(value, static_cast<int>(m_currentDpi), 96);
+    }
+
+    LRESULT CALLBACK EditorShell::FloatingPanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    {
+        if (WM_NCCREATE == message)
+        {
+            const CREATESTRUCTW* createStruct = reinterpret_cast<const CREATESTRUCTW*>(lParam);
+            const FloatingPanelCreateParams* createParams =
+                nullptr != createStruct
+                    ? static_cast<const FloatingPanelCreateParams*>(createStruct->lpCreateParams)
+                    : nullptr;
+            if (nullptr != createParams && nullptr != createParams->shell)
+            {
+                FloatingPanelWindowData* windowData = new FloatingPanelWindowData{
+                    createParams->shell,
+                    createParams->panelId
+                };
+                SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(windowData));
+            }
+        }
+
+        FloatingPanelWindowData* windowData =
+            reinterpret_cast<FloatingPanelWindowData*>(GetWindowLongPtrW(window, GWLP_USERDATA));
+        if (nullptr != windowData && nullptr != windowData->shell)
+        {
+            if (WM_SIZE == message)
+            {
+                windowData->shell->LayoutFloatingPanel(windowData->panelId, window);
+                return 0;
+            }
+
+            if (WM_MOVING == message)
+            {
+                windowData->shell->BeginFloatingWindowDockDrag(windowData->panelId);
+                windowData->shell->UpdateFloatingWindowDockDrag();
+            }
+
+            if (WM_EXITSIZEMOVE == message)
+            {
+                windowData->shell->CompleteFloatingWindowDockDrag(windowData->panelId);
+            }
+
+            if (WM_CLOSE == message)
+            {
+                windowData->shell->HandleFloatingWindowClose(windowData->panelId, window);
+                return 0;
+            }
+        }
+
+        if (WM_NCDESTROY == message)
+        {
+            SetWindowLongPtrW(window, GWLP_USERDATA, 0);
+            delete windowData;
+        }
+
+        return DefWindowProcW(window, message, wParam, lParam);
     }
 
     HWND EditorShell::GetHierarchyListBox() const
