@@ -17,10 +17,11 @@ namespace Xelqoria::Editor
     {
         constexpr UINT_PTR SpriteRefEditSubclassId = 1;
         constexpr const wchar_t* DockPreviewWindowClassName = L"XelqoriaDockPreviewWindow";
+        constexpr const wchar_t* DockGuideWindowClassName = L"XelqoriaDockGuideWindow";
         constexpr const wchar_t* FloatingPanelWindowClassName = L"XelqoriaFloatingPanelWindow";
 
         /// <summary>
-        /// Dock 先プレビューの黄色い点線枠を描画する。
+        /// Dock 先プレビューの青い配置範囲を描画する。
         /// </summary>
         /// <param name="window">プレビュー用 child window。</param>
         /// <param name="message">Win32 メッセージ。</param>
@@ -36,13 +37,138 @@ namespace Xelqoria::Editor
                 RECT clientRect{};
                 GetClientRect(window, &clientRect);
 
-                HPEN previewPen = CreatePen(PS_DOT, 1, RGB(255, 215, 0));
+                HBRUSH previewBrush = CreateSolidBrush(RGB(43, 83, 98));
+                FillRect(deviceContext, &clientRect, previewBrush);
+                DeleteObject(previewBrush);
+
+                HPEN previewPen = CreatePen(PS_SOLID, 1, RGB(115, 196, 226));
                 HGDIOBJ previousPen = SelectObject(deviceContext, previewPen);
                 HGDIOBJ previousBrush = SelectObject(deviceContext, GetStockObject(NULL_BRUSH));
                 Rectangle(deviceContext, 0, 0, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
                 SelectObject(deviceContext, previousBrush);
                 SelectObject(deviceContext, previousPen);
                 DeleteObject(previewPen);
+
+                EndPaint(window, &paintStruct);
+                return 0;
+            }
+
+            if (WM_ERASEBKGND == message)
+            {
+                return 1;
+            }
+
+            return DefWindowProcW(window, message, wParam, lParam);
+        }
+
+        /// <summary>
+        /// Dock ガイドアイコンに描く配置方向を文字列から判定する。
+        /// </summary>
+        /// <param name="window">Dock ガイド window。</param>
+        /// <returns>配置方向を表す文字列。</returns>
+        const wchar_t* GetDockGuideDirection(HWND window)
+        {
+            static wchar_t direction[16]{};
+            GetWindowTextW(window, direction, static_cast<int>(std::size(direction)));
+            return direction;
+        }
+
+        /// <summary>
+        /// Dock ガイドアイコン内の配置イメージを描画する。
+        /// </summary>
+        /// <param name="deviceContext">描画先 DC。</param>
+        /// <param name="iconRect">アイコン描画矩形。</param>
+        /// <param name="direction">配置方向。</param>
+        void DrawDockGuideGlyph(HDC deviceContext, const RECT& iconRect, const wchar_t* direction)
+        {
+            HBRUSH panelBrush = CreateSolidBrush(RGB(38, 38, 38));
+            HBRUSH targetBrush = CreateSolidBrush(RGB(64, 64, 64));
+            HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(174, 174, 174));
+            HPEN targetPen = CreatePen(PS_DOT, 1, RGB(208, 208, 208));
+
+            HGDIOBJ previousPen = SelectObject(deviceContext, borderPen);
+            HGDIOBJ previousBrush = SelectObject(deviceContext, panelBrush);
+            Rectangle(deviceContext, iconRect.left, iconRect.top, iconRect.right, iconRect.bottom);
+
+            RECT targetRect = iconRect;
+            InflateRect(&targetRect, -4, -4);
+            FillRect(deviceContext, &targetRect, targetBrush);
+
+            const bool isTop = 0 == wcscmp(direction, L"top");
+            const bool isBottom = 0 == wcscmp(direction, L"bottom");
+            const bool isLeft = 0 == wcscmp(direction, L"left");
+            const bool isRight = 0 == wcscmp(direction, L"right");
+            const int width = targetRect.right - targetRect.left;
+            const int height = targetRect.bottom - targetRect.top;
+
+            RECT splitRect = targetRect;
+            if (isTop)
+            {
+                splitRect.bottom = targetRect.top + (std::max)(2, height / 3);
+            }
+            else if (isBottom)
+            {
+                splitRect.top = targetRect.bottom - (std::max)(2, height / 3);
+            }
+            else if (isLeft)
+            {
+                splitRect.right = targetRect.left + (std::max)(2, width / 3);
+            }
+            else if (isRight)
+            {
+                splitRect.left = targetRect.right - (std::max)(2, width / 3);
+            }
+
+            if (isTop || isBottom || isLeft || isRight)
+            {
+                HBRUSH splitBrush = CreateSolidBrush(RGB(82, 82, 82));
+                FillRect(deviceContext, &splitRect, splitBrush);
+                DeleteObject(splitBrush);
+            }
+
+            SelectObject(deviceContext, targetPen);
+            Rectangle(deviceContext, targetRect.left, targetRect.top, targetRect.right, targetRect.bottom);
+
+            SelectObject(deviceContext, previousBrush);
+            SelectObject(deviceContext, previousPen);
+            DeleteObject(targetPen);
+            DeleteObject(borderPen);
+            DeleteObject(targetBrush);
+            DeleteObject(panelBrush);
+        }
+
+        /// <summary>
+        /// Visual Studio 風の Dock ガイドアイコンを描画する。
+        /// </summary>
+        /// <param name="window">Dock ガイド window。</param>
+        /// <param name="message">Win32 メッセージ。</param>
+        /// <param name="wParam">メッセージ WPARAM。</param>
+        /// <param name="lParam">メッセージ LPARAM。</param>
+        /// <returns>メッセージ処理結果。</returns>
+        LRESULT CALLBACK DockGuideWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+        {
+            if (WM_PAINT == message)
+            {
+                PAINTSTRUCT paintStruct{};
+                HDC deviceContext = BeginPaint(window, &paintStruct);
+                RECT clientRect{};
+                GetClientRect(window, &clientRect);
+
+                HBRUSH backgroundBrush = CreateSolidBrush(RGB(31, 31, 31));
+                FillRect(deviceContext, &clientRect, backgroundBrush);
+                DeleteObject(backgroundBrush);
+
+                HPEN outlinePen = CreatePen(PS_SOLID, 1, RGB(72, 72, 72));
+                HGDIOBJ previousPen = SelectObject(deviceContext, outlinePen);
+                HGDIOBJ previousBrush = SelectObject(deviceContext, GetStockObject(NULL_BRUSH));
+                Rectangle(deviceContext, 0, 0, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top);
+                SelectObject(deviceContext, previousBrush);
+                SelectObject(deviceContext, previousPen);
+                DeleteObject(outlinePen);
+
+                RECT iconRect = clientRect;
+                InflateRect(&iconRect, -6, -6);
+                DrawDockGuideGlyph(deviceContext, iconRect, GetDockGuideDirection(window));
 
                 EndPaint(window, &paintStruct);
                 return 0;
@@ -74,6 +200,27 @@ namespace Xelqoria::Editor
             windowClass.hInstance = hInstance;
             windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
             windowClass.lpszClassName = DockPreviewWindowClassName;
+            return 0 != RegisterClassW(&windowClass);
+        }
+
+        /// <summary>
+        /// Dock ガイド用 child window class を登録する。
+        /// </summary>
+        /// <param name="hInstance">Windows アプリケーションインスタンス。</param>
+        /// <returns>登録済みまたは登録成功の場合は true。</returns>
+        bool RegisterDockGuideWindowClass(HINSTANCE hInstance)
+        {
+            WNDCLASSW existingClass{};
+            if (GetClassInfoW(hInstance, DockGuideWindowClassName, &existingClass))
+            {
+                return true;
+            }
+
+            WNDCLASSW windowClass{};
+            windowClass.lpfnWndProc = DockGuideWindowProc;
+            windowClass.hInstance = hInstance;
+            windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
+            windowClass.lpszClassName = DockGuideWindowClassName;
             return 0 != RegisterClassW(&windowClass);
         }
 
@@ -227,6 +374,11 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        if (false == RegisterDockGuideWindowClass(hInstance))
+        {
+            return false;
+        }
+
         if (false == RegisterFloatingPanelWindowClass(hInstance, EditorShell::FloatingPanelWindowProc))
         {
             return false;
@@ -255,24 +407,24 @@ namespace Xelqoria::Editor
             L"",
             WS_CHILD | WS_CLIPSIBLINGS);
         const std::array<const wchar_t*, 9> guideTexts{
-            L"↑",
-            L"↓",
-            L"←",
-            L"→",
-            L"□",
-            L"↑",
-            L"↓",
-            L"←",
-            L"→"
+            L"top",
+            L"bottom",
+            L"left",
+            L"right",
+            L"tab",
+            L"top",
+            L"bottom",
+            L"left",
+            L"right"
         };
         for (std::size_t index = 0; index < m_dockGuideWindows.size(); ++index)
         {
             m_dockGuideWindows[index] = CreateChildWindow(
                 parentWindow,
                 hInstance,
-                L"Static",
+                DockGuideWindowClassName,
                 guideTexts[index],
-                WS_CHILD | WS_BORDER | SS_CENTER | SS_CENTERIMAGE);
+                WS_CHILD | WS_CLIPSIBLINGS);
             if (nullptr == m_dockGuideWindows[index])
             {
                 return false;
@@ -1790,8 +1942,8 @@ namespace Xelqoria::Editor
         const DockNodeId hitLeafNodeId = HitTestDockLeaf(cursorClientPoint);
         m_currentGuideTarget.dockNodeId = hitLeafNodeId;
 
-        const int guideSize = ScaleMetric(28);
-        const int guideGap = ScaleMetric(6);
+        const int guideSize = ScaleMetric(40);
+        const int guideGap = ScaleMetric(3);
         if (0 <= hitLeafNodeId && static_cast<std::size_t>(hitLeafNodeId) < m_dockNodes.size())
         {
             const RECT leafRect = m_dockNodes[static_cast<std::size_t>(hitLeafNodeId)].rect;
@@ -2400,6 +2552,21 @@ namespace Xelqoria::Editor
             SWP_NOACTIVATE | SWP_SHOWWINDOW);
         InvalidateRect(m_dockPreviewWindow, nullptr, TRUE);
         UpdateWindow(m_dockPreviewWindow);
+
+        for (HWND guideWindow : m_dockGuideWindows)
+        {
+            if (nullptr != guideWindow && IsWindowVisible(guideWindow))
+            {
+                SetWindowPos(
+                    guideWindow,
+                    HWND_TOP,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            }
+        }
     }
 
     void EditorShell::MoveChildWindowNoRedraw(HWND window, int x, int y, int width, int height) const
