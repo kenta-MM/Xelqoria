@@ -3,6 +3,7 @@
 #include <array>
 #include <chrono>
 #include <commdlg.h>
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <shlobj.h>
@@ -32,6 +33,7 @@ namespace Xelqoria::Editor
         constexpr unsigned ProjectMenuOpenCommandId = 5104;
         constexpr unsigned ProjectMenuSettingsCommandId = 5105;
         constexpr unsigned ProjectMenuResetLayoutCommandId = 5106;
+        constexpr unsigned ProjectMenuStartPlayCommandId = 5107;
 
         [[nodiscard]] std::filesystem::path SelectProjectFile(HWND ownerWindow)
         {
@@ -106,6 +108,54 @@ namespace Xelqoria::Editor
             }
 
             return projectName;
+        }
+
+        /// <summary>
+        /// Script ビルドに使用する C++ コンパイラを取得する。
+        /// </summary>
+        /// <returns>コンパイラ実行ファイルまたはコマンド。</returns>
+        [[nodiscard]] std::filesystem::path GetScriptCompilerExecutable()
+        {
+            wchar_t* configuredCompiler = nullptr;
+            std::size_t configuredCompilerLength = 0;
+            const errno_t environmentResult =
+                _wdupenv_s(&configuredCompiler, &configuredCompilerLength, L"XELQORIA_SCRIPT_COMPILER");
+            if (0 == environmentResult
+                && nullptr != configuredCompiler
+                && 0 < configuredCompilerLength
+                && L'\0' != configuredCompiler[0])
+            {
+                const std::filesystem::path compilerPath = configuredCompiler;
+                free(configuredCompiler);
+                return compilerPath;
+            }
+
+            free(configuredCompiler);
+            return L"cl.exe";
+        }
+
+        /// <summary>
+        /// Script ビルド結果を SceneView 表示用の短い文面へ変換する。
+        /// </summary>
+        /// <param name="buildResult">Script ビルド結果。</param>
+        /// <returns>表示文面。</returns>
+        [[nodiscard]] std::wstring BuildScriptBuildStatusText(const ScriptBuildResult& buildResult)
+        {
+            if (buildResult.succeeded)
+            {
+                return L"再生開始前 Script ビルドに成功しました。";
+            }
+
+            std::wstring text = L"再生開始前 Script ビルドに失敗しました。詳細: ";
+            text += buildResult.diagnostics;
+            constexpr std::size_t MaxLabelLength = 180;
+            if (MaxLabelLength < text.size())
+            {
+                text.resize(MaxLabelLength - 3);
+                text += L"...";
+            }
+
+            return text;
         }
     }
 
@@ -263,6 +313,8 @@ namespace Xelqoria::Editor
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuOpenCommandId, L"プロジェクトを開く");
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSettingsCommandId, L"プロジェクトの設定を開く");
         AppendMenuW(m_projectMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuStartPlayCommandId, L"再生を開始する (F5)");
+        AppendMenuW(m_projectMenu, MF_SEPARATOR, 0, nullptr);
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuResetLayoutCommandId, L"画面レイアウトを初期状態に戻す");
 
         HMENU menuBar = CreateMenu();
@@ -297,6 +349,12 @@ namespace Xelqoria::Editor
             {
                 m_editorShell.ResetDockLayout();
                 SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"画面レイアウトを初期状態に戻しました。");
+            }
+            break;
+        case ProjectMenuStartPlayCommandId:
+            if (m_editorInitialized)
+            {
+                (void)StartEditorPlay();
             }
             break;
         default:
@@ -541,6 +599,35 @@ namespace Xelqoria::Editor
         m_projectDirty = true;
     }
 
+    bool Application::StartEditorPlay()
+    {
+        if (false == m_sceneDocument.GetProjectInfo().has_value())
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"再生開始前 Script ビルドにはプロジェクトが必要です。");
+            return false;
+        }
+
+        const std::filesystem::path projectRootDirectory =
+            m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path();
+        const ScriptBuildResult buildResult = ScriptAssetService::BuildProjectScripts(
+            projectRootDirectory,
+            ScriptBuildOptions{ GetScriptCompilerExecutable() });
+        const std::wstring statusText = BuildScriptBuildStatusText(buildResult);
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), statusText.c_str());
+
+        if (false == buildResult.succeeded)
+        {
+            MessageBoxW(
+                m_window.GetHwnd(),
+                buildResult.diagnostics.c_str(),
+                L"Script ビルドエラー",
+                MB_OK | MB_ICONERROR);
+            return false;
+        }
+
+        return true;
+    }
+
     void Application::ClearProjectDirty()
     {
         m_projectDirty = false;
@@ -600,6 +687,11 @@ namespace Xelqoria::Editor
             m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
             MarkProjectDirty();
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"選択した Scene を読み込みました。");
+        }
+
+        if (inputSnapshot.WasKeyPressed(VK_F5))
+        {
+            (void)StartEditorPlay();
         }
 
         m_assetsPanelController.UpdateDragState(inputSnapshot);
