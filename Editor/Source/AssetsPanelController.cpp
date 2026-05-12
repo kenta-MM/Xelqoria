@@ -247,6 +247,11 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR CreateScriptMenuCommandId = 3;
 
         /// <summary>
+        /// Sprite Asset へ Script Asset を割り当てるコマンド ID を表す。
+        /// </summary>
+        constexpr UINT_PTR AssignScriptMenuCommandId = 4;
+
+        /// <summary>
         /// Assets 項目の削除メニューから実行されたコマンド ID を表す。
         /// </summary>
         constexpr UINT_PTR DeleteEntryMenuCommandId = 2;
@@ -276,6 +281,8 @@ namespace Xelqoria::Editor
             m_createSpriteTargetDirectory.clear();
             m_createScriptRequested = false;
             m_createScriptTargetDirectory.clear();
+            m_assignScriptRequested = false;
+            m_assignScriptSpriteAssetPath.clear();
             EndDragImage();
             RefreshListView();
             RefreshSummaryLabel();
@@ -556,6 +563,17 @@ namespace Xelqoria::Editor
         m_createScriptTargetDirectory.clear();
     }
 
+    bool AssetsPanelController::HasAssignScriptRequest() const
+    {
+        return m_assignScriptRequested;
+    }
+
+    void AssetsPanelController::ClearAssignScriptRequest()
+    {
+        m_assignScriptRequested = false;
+        m_assignScriptSpriteAssetPath.clear();
+    }
+
     const std::filesystem::path& AssetsPanelController::GetCreateSpriteTargetDirectory() const
     {
         return m_createSpriteTargetDirectory;
@@ -564,6 +582,11 @@ namespace Xelqoria::Editor
     const std::filesystem::path& AssetsPanelController::GetCreateScriptTargetDirectory() const
     {
         return m_createScriptTargetDirectory;
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetAssignScriptSpriteAssetPath() const
+    {
+        return m_assignScriptSpriteAssetPath;
     }
 
     void AssetsPanelController::InitializeListView()
@@ -919,6 +942,11 @@ namespace Xelqoria::Editor
             MF_STRING,
             DeleteEntryMenuCommandId,
             entry.isDirectory ? L"フォルダを削除する" : L"ファイルを削除する");
+        if (false == entry.isDirectory && EditorAssetPathUtils::IsSpriteAssetFile(entry.path))
+        {
+            AppendMenuW(popupMenu, MF_SEPARATOR, 0, nullptr);
+            AppendMenuW(popupMenu, MF_STRING, AssignScriptMenuCommandId, L"Scriptを割り当て");
+        }
 
         const UINT command = TrackPopupMenu(
             popupMenu,
@@ -929,6 +957,13 @@ namespace Xelqoria::Editor
             m_assetsListView,
             nullptr);
         DestroyMenu(popupMenu);
+
+        if (AssignScriptMenuCommandId == command)
+        {
+            m_assignScriptRequested = true;
+            m_assignScriptSpriteAssetPath = entry.path;
+            return true;
+        }
 
         if (DeleteEntryMenuCommandId != command)
         {

@@ -47,6 +47,16 @@ namespace Xelqoria::Editor
         [[nodiscard]] static bool IsScriptAssetFile(const std::filesystem::path& path);
 
         /// <summary>
+        /// プロジェクト配下の Script Asset ファイルパスから Script AssetId を生成する。
+        /// </summary>
+        /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
+        /// <param name="assetPath">Script Asset ファイルパス。</param>
+        /// <returns>Script AssetId。生成できない場合は空。</returns>
+        [[nodiscard]] static Core::AssetId BuildScriptAssetId(
+            const std::filesystem::path& projectRootDirectory,
+            const std::filesystem::path& assetPath);
+
+        /// <summary>
         /// Script Asset マニフェストから Editor 管理下の C++ ソースパスを解決する。
         /// </summary>
         /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
@@ -65,5 +75,6 @@ namespace Xelqoria::Editor
         [[nodiscard]] static ScriptAssetCreationResult CreateScriptAsset(
             const std::filesystem::path& projectRootDirectory,
             const std::filesystem::path& targetDirectory);
+
     };
 }

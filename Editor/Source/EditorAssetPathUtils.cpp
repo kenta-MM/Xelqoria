@@ -47,6 +47,11 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
             || extension == L".bmp";
     }
 
+    bool IsSpriteAssetFile(const std::filesystem::path& path)
+    {
+        return path.extension() == L".sprite";
+    }
+
     Core::AssetId BuildTextureAssetId(
         const std::filesystem::path& path,
         const std::filesystem::path& assetsRootDirectory)

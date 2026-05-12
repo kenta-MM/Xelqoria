@@ -172,6 +172,17 @@ namespace Xelqoria::Editor
         void ClearCreateScriptRequest();
 
         /// <summary>
+        /// Sprite Asset への Script 割り当て要求があるかを取得する。
+        /// </summary>
+        /// <returns>割り当て要求がある場合は true。</returns>
+        [[nodiscard]] bool HasAssignScriptRequest() const;
+
+        /// <summary>
+        /// Script 割り当て要求を消費する。
+        /// </summary>
+        void ClearAssignScriptRequest();
+
+        /// <summary>
         /// Sprite アセットファイルの作成先フォルダを取得する。
         /// </summary>
         /// <returns>作成先フォルダ。未指定時は空。</returns>
@@ -182,6 +193,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>作成先フォルダ。未指定時は空。</returns>
         [[nodiscard]] const std::filesystem::path& GetCreateScriptTargetDirectory() const;
+
+        /// <summary>
+        /// Script を割り当てる Sprite Asset ファイルパスを取得する。
+        /// </summary>
+        /// <returns>割り当て先 Sprite Asset ファイルパス。</returns>
+        [[nodiscard]] const std::filesystem::path& GetAssignScriptSpriteAssetPath() const;
 
     private:
         /// <summary>
@@ -361,6 +378,8 @@ namespace Xelqoria::Editor
         std::filesystem::path m_createSpriteTargetDirectory{};
         bool m_createScriptRequested = false;
         std::filesystem::path m_createScriptTargetDirectory{};
+        bool m_assignScriptRequested = false;
+        std::filesystem::path m_assignScriptSpriteAssetPath{};
         bool m_listViewInitialized = false;
         HIMAGELIST m_dragImageList = nullptr;
         bool m_isDragImageVisible = false;

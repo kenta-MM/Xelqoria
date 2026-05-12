@@ -332,11 +332,13 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 
 		const auto spriteAssetLoadResult = Xelqoria::Game::Assets::SpriteAssetLoader::LoadFromText(
 		"# SpriteAsset\n"
-		"textureAssetId = textures/player-idle\n");
+		"textureAssetId = textures/player-idle\n"
+		"scriptAssetId = scripts/Scripts/Player.script\n");
 		EXPECT_TRUE(spriteAssetLoadResult.IsSuccess());
 		ASSERT_TRUE(spriteAssetLoadResult.asset.has_value());
 
 		EXPECT_EQ(spriteAssetLoadResult.asset->textureAssetId, Xelqoria::Core::AssetId("textures/player-idle"));
+		EXPECT_EQ(spriteAssetLoadResult.asset->scriptAssetId, Xelqoria::Core::AssetId("scripts/Scripts/Player.script"));
 
 		const auto editorSpriteAssetLoadResult = Xelqoria::Game::Assets::SpriteAssetLoader::LoadFromText(
 		"magic=XelqoriaSpriteAsset\n"
@@ -348,6 +350,7 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		"hasSpriteComponent=true\n"
 		"spriteAssetRef=sprites/player-idle\n"
 		"textureAssetId=textures/player-idle\n"
+		"scriptAssetId=scripts/Scripts/Player.script\n"
 		"texture.size=64,32\n"
 		"render.visible=true\n"
 		"render.sortOrder=0\n"
@@ -355,6 +358,7 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		EXPECT_TRUE(editorSpriteAssetLoadResult.IsSuccess());
 		ASSERT_TRUE(editorSpriteAssetLoadResult.asset.has_value());
 		EXPECT_EQ(editorSpriteAssetLoadResult.asset->textureAssetId, Xelqoria::Core::AssetId("textures/player-idle"));
+		EXPECT_EQ(editorSpriteAssetLoadResult.asset->scriptAssetId, Xelqoria::Core::AssetId("scripts/Scripts/Player.script"));
 
 		Xelqoria::Game::Assets::SpriteAssetRegistry spriteAssetRegistry;
 		spriteAssetRegistry.RegisterSpriteAsset(

@@ -101,6 +101,13 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool RegisterImageAsset(const std::filesystem::path& imagePath);
 
         /// <summary>
+        /// 指定 Sprite Asset ファイルを SpriteAsset として登録する。
+        /// </summary>
+        /// <param name="spriteAssetPath">登録対象の Sprite Asset ファイルパス。</param>
+        /// <returns>登録に成功した場合は true。</returns>
+        [[nodiscard]] bool RegisterSpriteAssetFile(const std::filesystem::path& spriteAssetPath);
+
+        /// <summary>
         /// Entity の Sprite 情報に対応する Sprite アセットファイルをプロジェクト配下へ作成する。
         /// </summary>
         /// <param name="entity">保存元の Sprite Entity。</param>
@@ -109,6 +116,16 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool CreateSpriteAssetFile(
             const Game::Entity& entity,
             const std::filesystem::path& targetDirectory);
+
+        /// <summary>
+        /// Sprite Asset ファイルへ Script Asset の割り当てを保存する。
+        /// </summary>
+        /// <param name="spriteAssetPath">割り当て先 Sprite Asset ファイルパス。</param>
+        /// <param name="scriptAssetPath">割り当てる Script Asset ファイルパス。</param>
+        /// <returns>保存に成功した場合は true。</returns>
+        [[nodiscard]] bool AssignScriptAssetToSpriteAssetFile(
+            const std::filesystem::path& spriteAssetPath,
+            const std::filesystem::path& scriptAssetPath);
 
         /// <summary>
         /// 現在のプロジェクト配下へ Script Asset と初期 C++ コードを作成する。
