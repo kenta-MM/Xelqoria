@@ -2,8 +2,10 @@
 
 #include <fstream>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 #include "EditorPathSecurity.h"
@@ -87,6 +89,46 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// `key=value` 行から値部分を取得する。
+        /// </summary>
+        /// <param name="line">解析対象行。</param>
+        /// <param name="key">取得対象キー。</param>
+        /// <returns>値。キーが一致しない場合は空。</returns>
+        [[nodiscard]] std::optional<std::string> ReadValue(std::string_view line, std::string_view key)
+        {
+            if (line.size() <= key.size() + 1 || line.substr(0, key.size()) != key || line[key.size()] != '=')
+            {
+                return std::nullopt;
+            }
+
+            return std::string(line.substr(key.size() + 1));
+        }
+
+        /// <summary>
+        /// 引用符付き文字列を復元する。
+        /// </summary>
+        /// <param name="value">復元対象文字列。</param>
+        /// <returns>復元した文字列。失敗時は空。</returns>
+        [[nodiscard]] std::optional<std::string> ParseQuotedString(std::string_view value)
+        {
+            std::istringstream stream{ std::string(value) };
+            std::string parsed{};
+            stream >> std::quoted(parsed);
+            if (false == static_cast<bool>(stream))
+            {
+                return std::nullopt;
+            }
+
+            stream >> std::ws;
+            if (std::char_traits<char>::eof() != stream.peek())
+            {
+                return std::nullopt;
+            }
+
+            return parsed;
+        }
+
+        /// <summary>
         /// Script Asset マニフェストを書き出す。
         /// </summary>
         /// <param name="assetPath">書き出し先 Script Asset ファイル。</param>
@@ -141,6 +183,55 @@ namespace Xelqoria::Editor
     bool ScriptAssetService::IsScriptAssetFile(const std::filesystem::path& path)
     {
         return path.extension() == ScriptAssetExtension;
+    }
+
+    std::optional<std::filesystem::path> ScriptAssetService::ResolveSourcePath(
+        const std::filesystem::path& projectRootDirectory,
+        const std::filesystem::path& assetPath)
+    {
+        if (projectRootDirectory.empty()
+            || assetPath.empty()
+            || false == IsScriptAssetFile(assetPath)
+            || false == EditorPathSecurity::IsPathInsideOrEqual(assetPath, projectRootDirectory))
+        {
+            return std::nullopt;
+        }
+
+        std::ifstream input(assetPath, std::ios::binary);
+        if (false == input.is_open())
+        {
+            return std::nullopt;
+        }
+
+        std::optional<std::string> sourceValue{};
+        std::string line{};
+        while (std::getline(input, line))
+        {
+            if (const auto value = ReadValue(line, "source"))
+            {
+                sourceValue = ParseQuotedString(*value);
+                break;
+            }
+        }
+
+        if (false == sourceValue.has_value())
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path sourceRelativePath = ToWideString(*sourceValue);
+        if (false == EditorPathSecurity::IsSafeRelativePath(sourceRelativePath))
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path sourcePath = projectRootDirectory / sourceRelativePath;
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(sourcePath, projectRootDirectory))
+        {
+            return std::nullopt;
+        }
+
+        return sourcePath;
     }
 
     ScriptAssetCreationResult ScriptAssetService::CreateScriptAsset(

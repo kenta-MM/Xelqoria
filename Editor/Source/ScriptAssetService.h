@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 
 #include "AssetId.h"
 
@@ -44,6 +45,16 @@ namespace Xelqoria::Editor
         /// <param name="path">判定対象パス。</param>
         /// <returns>Script Asset ファイルの場合は true。</returns>
         [[nodiscard]] static bool IsScriptAssetFile(const std::filesystem::path& path);
+
+        /// <summary>
+        /// Script Asset マニフェストから Editor 管理下の C++ ソースパスを解決する。
+        /// </summary>
+        /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
+        /// <param name="assetPath">Script Asset ファイルパス。</param>
+        /// <returns>解決できた C++ ソースパス。失敗時は空。</returns>
+        [[nodiscard]] static std::optional<std::filesystem::path> ResolveSourcePath(
+            const std::filesystem::path& projectRootDirectory,
+            const std::filesystem::path& assetPath);
 
         /// <summary>
         /// Script Asset と初期 C++ コードを作成する。
