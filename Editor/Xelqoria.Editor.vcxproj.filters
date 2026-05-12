@@ -66,6 +66,9 @@
     <ClCompile Include="Source\SceneViewStatusPresenter.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\ScriptAssetService.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.h">
@@ -135,6 +138,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\SceneViewStatusPresenter.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ScriptAssetService.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>
