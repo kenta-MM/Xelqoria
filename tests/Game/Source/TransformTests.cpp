@@ -253,7 +253,8 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		{
 			true,
 			5,
-			0.5f
+			0.5f,
+			{ 0.25f, 0.5f, 0.75f, 0.8f }
 		}
 	});
 		const Xelqoria::Game::EntityId visibleSpriteEntityId = visibleSpriteEntity.GetId();
@@ -273,6 +274,8 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		EXPECT_TRUE(renderItems[0].spriteComponent->renderSettings.visible);
 		EXPECT_EQ(5, renderItems[0].spriteComponent->renderSettings.sortOrder);
 		EXPECT_TRUE(IsEqual(renderItems[0].spriteComponent->renderSettings.opacity, 0.5f));
+		EXPECT_TRUE(IsEqual(renderItems[0].spriteComponent->renderSettings.color[0], 0.25f));
+		EXPECT_TRUE(IsEqual(renderItems[0].spriteComponent->renderSettings.color[3], 0.8f));
 
 		Xelqoria::Game::Entity& backgroundSpriteEntity = scene.CreateEntity();
 		backgroundSpriteEntity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
@@ -354,7 +357,8 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		"texture.size=64,32\n"
 		"render.visible=true\n"
 		"render.sortOrder=0\n"
-		"render.opacity=1.000000\n");
+		"render.opacity=1.000000\n"
+		"render.color=1.000000,1.000000,1.000000,1.000000\n");
 		EXPECT_TRUE(editorSpriteAssetLoadResult.IsSuccess());
 		ASSERT_TRUE(editorSpriteAssetLoadResult.asset.has_value());
 		EXPECT_EQ(editorSpriteAssetLoadResult.asset->textureAssetId, Xelqoria::Core::AssetId("textures/player-idle"));
@@ -386,6 +390,10 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		EXPECT_TRUE(IsEqual(resolvedSprites[0].GetPosition().y, 20.0f));
 		EXPECT_TRUE(IsEqual(resolvedSprites[0].GetScale().x, 2.0f));
 		EXPECT_TRUE(IsEqual(resolvedSprites[0].GetScale().y, 3.0f));
+		EXPECT_TRUE(IsEqual(resolvedSprites[0].GetColor()[0], 0.25f));
+		EXPECT_TRUE(IsEqual(resolvedSprites[0].GetColor()[1], 0.5f));
+		EXPECT_TRUE(IsEqual(resolvedSprites[0].GetColor()[2], 0.75f));
+		EXPECT_TRUE(IsEqual(resolvedSprites[0].GetColor()[3], 0.4f));
 
 		ASSERT_EQ(static_cast<std::size_t>(2), resolveLogs.size());
 		EXPECT_NE(resolveLogs[1].find("resolved entity"), std::string::npos);

@@ -296,7 +296,7 @@ float4 MainPS(PSInput input) : SV_TARGET
         }
     }
 
-    return baseColor;
+    return baseColor * gFillColor;
 }
 )";
 

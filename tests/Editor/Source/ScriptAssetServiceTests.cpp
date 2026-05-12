@@ -59,8 +59,14 @@ TEST(ScriptAssetServiceTests, CreateScriptAssetWritesManifestAndInitialCode)
     EXPECT_NE(std::string::npos, manifest.find("source=\".xelqoria/Scripts/Scripts_NewScript.cpp\"\n"));
 
     const std::string source = ReadTextFile(result.sourcePath);
+    EXPECT_NE(std::string::npos, source.find("#include \"XelqoriaScriptApi.h\""));
     EXPECT_NE(std::string::npos, source.find("void Start()"));
     EXPECT_NE(std::string::npos, source.find("void Update(float deltaTime)"));
+
+    const std::string apiHeader =
+        ReadTextFile(projectRoot / L".xelqoria" / L"Scripts" / L"XelqoriaScriptApi.h");
+    EXPECT_NE(std::string::npos, apiHeader.find("SetSpritePosition"));
+    EXPECT_NE(std::string::npos, apiHeader.find("SetSpriteColor"));
 
     std::filesystem::remove_all(projectRoot);
 }

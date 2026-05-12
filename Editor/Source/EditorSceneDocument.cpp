@@ -507,6 +507,11 @@ namespace Xelqoria::Editor
         text << "render.visible=" << (renderSettings.visible ? "true" : "false") << "\n";
         text << "render.sortOrder=" << renderSettings.sortOrder << "\n";
         text << "render.opacity=" << renderSettings.opacity << "\n";
+        text << "render.color="
+            << renderSettings.color[0] << ","
+            << renderSettings.color[1] << ","
+            << renderSettings.color[2] << ","
+            << renderSettings.color[3] << "\n";
 
         output << text.str();
         return static_cast<bool>(output);

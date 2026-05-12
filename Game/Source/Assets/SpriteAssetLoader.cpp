@@ -147,7 +147,8 @@ namespace Xelqoria::Game::Assets
 						|| key == "texture.size"
 						|| key == "render.visible"
 						|| key == "render.sortOrder"
-						|| key == "render.opacity")) {
+						|| key == "render.opacity"
+						|| key == "render.color")) {
 					// Editor 生成の .sprite は付加メタデータを含むが、実行時 SpriteAsset は textureAssetId のみを使用する。
 				}
 				else {

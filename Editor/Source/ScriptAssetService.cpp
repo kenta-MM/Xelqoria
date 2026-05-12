@@ -21,6 +21,7 @@ namespace Xelqoria::Editor
         constexpr const wchar_t* DefaultScriptName = L"NewScript";
         constexpr const wchar_t* ScriptAssetExtension = L".script";
         constexpr const wchar_t* ManagedScriptsDirectory = L".xelqoria/Scripts";
+        constexpr const wchar_t* ScriptApiHeaderFileName = L"XelqoriaScriptApi.h";
         constexpr const wchar_t* ScriptBuildDirectory = L".xelqoria/ScriptBuild";
 
         /// <summary>
@@ -303,6 +304,99 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// Script から Editor 側 Sprite API を呼び出すための C++ ヘッダを書き出す。
+        /// </summary>
+        /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
+        /// <returns>書き出しに成功した場合は true。</returns>
+        [[nodiscard]] bool WriteScriptApiHeader(const std::filesystem::path& projectRootDirectory)
+        {
+            const std::filesystem::path headerPath =
+                projectRootDirectory / ManagedScriptsDirectory / ScriptApiHeaderFileName;
+            std::error_code errorCode;
+            std::filesystem::create_directories(headerPath.parent_path(), errorCode);
+            if (errorCode)
+            {
+                return false;
+            }
+
+            std::ofstream output(headerPath, std::ios::binary | std::ios::trunc);
+            if (false == output.is_open())
+            {
+                return false;
+            }
+
+            output
+                << "#pragma once\n"
+                << "\n"
+                << "struct XelqoriaScriptSpriteApi\n"
+                << "{\n"
+                << "    void* context;\n"
+                << "    void (*ReportError)(void* context, const char* message);\n"
+                << "    void (*SetPosition)(void* context, float x, float y, float z);\n"
+                << "    void (*SetRotation)(void* context, float x, float y, float z);\n"
+                << "    void (*SetScale)(void* context, float x, float y, float z);\n"
+                << "    void (*SetVisible)(void* context, int visible);\n"
+                << "    void (*SetColor)(void* context, float red, float green, float blue, float alpha);\n"
+                << "};\n"
+                << "\n"
+                << "inline XelqoriaScriptSpriteApi* g_xelqoriaScriptSpriteApi = nullptr;\n"
+                << "\n"
+                << "extern \"C\" __declspec(dllexport) void Xelqoria_SetSpriteApi(XelqoriaScriptSpriteApi* api)\n"
+                << "{\n"
+                << "    g_xelqoriaScriptSpriteApi = api;\n"
+                << "}\n"
+                << "\n"
+                << "inline void ReportScriptError(const char* message)\n"
+                << "{\n"
+                << "    if (nullptr != g_xelqoriaScriptSpriteApi && nullptr != g_xelqoriaScriptSpriteApi->ReportError)\n"
+                << "    {\n"
+                << "        g_xelqoriaScriptSpriteApi->ReportError(g_xelqoriaScriptSpriteApi->context, message);\n"
+                << "    }\n"
+                << "}\n"
+                << "\n"
+                << "inline void SetSpritePosition(float x, float y, float z)\n"
+                << "{\n"
+                << "    if (nullptr != g_xelqoriaScriptSpriteApi && nullptr != g_xelqoriaScriptSpriteApi->SetPosition)\n"
+                << "    {\n"
+                << "        g_xelqoriaScriptSpriteApi->SetPosition(g_xelqoriaScriptSpriteApi->context, x, y, z);\n"
+                << "    }\n"
+                << "}\n"
+                << "\n"
+                << "inline void SetSpriteRotation(float x, float y, float z)\n"
+                << "{\n"
+                << "    if (nullptr != g_xelqoriaScriptSpriteApi && nullptr != g_xelqoriaScriptSpriteApi->SetRotation)\n"
+                << "    {\n"
+                << "        g_xelqoriaScriptSpriteApi->SetRotation(g_xelqoriaScriptSpriteApi->context, x, y, z);\n"
+                << "    }\n"
+                << "}\n"
+                << "\n"
+                << "inline void SetSpriteScale(float x, float y, float z)\n"
+                << "{\n"
+                << "    if (nullptr != g_xelqoriaScriptSpriteApi && nullptr != g_xelqoriaScriptSpriteApi->SetScale)\n"
+                << "    {\n"
+                << "        g_xelqoriaScriptSpriteApi->SetScale(g_xelqoriaScriptSpriteApi->context, x, y, z);\n"
+                << "    }\n"
+                << "}\n"
+                << "\n"
+                << "inline void SetSpriteVisible(bool visible)\n"
+                << "{\n"
+                << "    if (nullptr != g_xelqoriaScriptSpriteApi && nullptr != g_xelqoriaScriptSpriteApi->SetVisible)\n"
+                << "    {\n"
+                << "        g_xelqoriaScriptSpriteApi->SetVisible(g_xelqoriaScriptSpriteApi->context, visible ? 1 : 0);\n"
+                << "    }\n"
+                << "}\n"
+                << "\n"
+                << "inline void SetSpriteColor(float red, float green, float blue, float alpha)\n"
+                << "{\n"
+                << "    if (nullptr != g_xelqoriaScriptSpriteApi && nullptr != g_xelqoriaScriptSpriteApi->SetColor)\n"
+                << "    {\n"
+                << "        g_xelqoriaScriptSpriteApi->SetColor(g_xelqoriaScriptSpriteApi->context, red, green, blue, alpha);\n"
+                << "    }\n"
+                << "}\n";
+            return output.good();
+        }
+
+        /// <summary>
         /// Start / Update を含む初期 C++ コードを書き出す。
         /// </summary>
         /// <param name="sourcePath">書き出し先 C++ ソースファイル。</param>
@@ -316,6 +410,8 @@ namespace Xelqoria::Editor
             }
 
             output
+                << "#include \"" << ToNarrowString(ScriptApiHeaderFileName) << "\"\n"
+                << "\n"
                 << "extern \"C\" __declspec(dllexport) "
                 << "void Start()\n"
                 << "{\n"
@@ -455,6 +551,12 @@ namespace Xelqoria::Editor
             return result;
         }
 
+        if (false == WriteScriptApiHeader(projectRootDirectory))
+        {
+            std::filesystem::remove(assetPath, errorCode);
+            return result;
+        }
+
         if (false == WriteInitialScriptSource(sourcePath))
         {
             std::filesystem::remove(assetPath, errorCode);
@@ -500,6 +602,12 @@ namespace Xelqoria::Editor
         if (errorCode)
         {
             result.diagnostics = L"Script ビルド出力フォルダを作成できません。";
+            return result;
+        }
+
+        if (false == WriteScriptApiHeader(projectRootDirectory))
+        {
+            result.diagnostics = L"Script API ヘッダを作成できません。";
             return result;
         }
 

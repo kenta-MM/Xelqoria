@@ -84,3 +84,72 @@ TEST(ScriptRuntimeSessionTests, BuildInstancePlansSkipsSpritesWithoutScriptAsset
 
     EXPECT_TRUE(plans.empty());
 }
+
+TEST(ScriptRuntimeSessionTests, SpriteApiMethodsUpdateTargetSpriteState)
+{
+    Xelqoria::Game::Scene scene{};
+    Xelqoria::Game::Entity& entity = scene.CreateEntity();
+    entity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+        Xelqoria::Core::AssetId("sprites/player"),
+        {}
+    });
+    const Xelqoria::Game::EntityId entityId = entity.GetId();
+
+    EXPECT_TRUE(Xelqoria::Editor::ScriptRuntimeSession::SetSpritePosition(
+        scene,
+        entityId,
+        10.0f,
+        20.0f,
+        3.0f));
+    EXPECT_TRUE(Xelqoria::Editor::ScriptRuntimeSession::SetSpriteRotation(
+        scene,
+        entityId,
+        1.0f,
+        2.0f,
+        90.0f));
+    EXPECT_TRUE(Xelqoria::Editor::ScriptRuntimeSession::SetSpriteScale(
+        scene,
+        entityId,
+        2.0f,
+        3.0f,
+        1.0f));
+    EXPECT_TRUE(Xelqoria::Editor::ScriptRuntimeSession::SetSpriteVisible(scene, entityId, false));
+    EXPECT_TRUE(Xelqoria::Editor::ScriptRuntimeSession::SetSpriteColor(
+        scene,
+        entityId,
+        0.25f,
+        0.5f,
+        0.75f,
+        0.8f));
+
+    const auto updatedEntity = scene.FindEntity(entityId);
+    ASSERT_TRUE(updatedEntity.has_value());
+    EXPECT_FLOAT_EQ(10.0f, updatedEntity->get().GetTransform().position.x);
+    EXPECT_FLOAT_EQ(20.0f, updatedEntity->get().GetTransform().position.y);
+    EXPECT_FLOAT_EQ(3.0f, updatedEntity->get().GetTransform().position.z);
+    EXPECT_FLOAT_EQ(90.0f, updatedEntity->get().GetTransform().rotation.z);
+    EXPECT_FLOAT_EQ(2.0f, updatedEntity->get().GetTransform().scale.x);
+    EXPECT_FLOAT_EQ(3.0f, updatedEntity->get().GetTransform().scale.y);
+
+    const auto spriteComponent = updatedEntity->get().GetSpriteComponent();
+    ASSERT_TRUE(spriteComponent.has_value());
+    EXPECT_FALSE(spriteComponent->get().renderSettings.visible);
+    EXPECT_FLOAT_EQ(0.25f, spriteComponent->get().renderSettings.color[0]);
+    EXPECT_FLOAT_EQ(0.5f, spriteComponent->get().renderSettings.color[1]);
+    EXPECT_FLOAT_EQ(0.75f, spriteComponent->get().renderSettings.color[2]);
+    EXPECT_FLOAT_EQ(0.8f, spriteComponent->get().renderSettings.color[3]);
+}
+
+TEST(ScriptRuntimeSessionTests, SpriteApiMethodsRejectEntitiesWithoutSpriteComponent)
+{
+    Xelqoria::Game::Scene scene{};
+    const Xelqoria::Game::EntityId entityId = scene.CreateEntity().GetId();
+
+    EXPECT_FALSE(Xelqoria::Editor::ScriptRuntimeSession::SetSpritePosition(
+        scene,
+        entityId,
+        10.0f,
+        20.0f,
+        3.0f));
+    EXPECT_FALSE(Xelqoria::Editor::ScriptRuntimeSession::SetSpriteVisible(scene, entityId, true));
+}

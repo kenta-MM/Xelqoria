@@ -96,10 +96,70 @@ namespace Xelqoria::Editor
         /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
         /// <returns>開始に成功した場合は true。</returns>
         [[nodiscard]] bool Begin(
-            const Game::Scene& scene,
+            Game::Scene& scene,
             const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
             const ScriptBuildResult& buildResult,
             const std::filesystem::path& projectRootDirectory);
+
+        /// <summary>
+        /// Script Sprite API と同じ規則で対象 Sprite の位置を更新する。
+        /// </summary>
+        /// <param name="scene">対象 Scene。</param>
+        /// <param name="entityId">対象 Entity ID。</param>
+        /// <param name="x">X 座標。</param>
+        /// <param name="y">Y 座標。</param>
+        /// <param name="z">Z 座標。</param>
+        /// <returns>更新できた場合は true。</returns>
+        [[nodiscard]] static bool SetSpritePosition(Game::Scene& scene, Game::EntityId entityId, float x, float y, float z);
+
+        /// <summary>
+        /// Script Sprite API と同じ規則で対象 Sprite の回転を更新する。
+        /// </summary>
+        /// <param name="scene">対象 Scene。</param>
+        /// <param name="entityId">対象 Entity ID。</param>
+        /// <param name="x">X 軸回転量。</param>
+        /// <param name="y">Y 軸回転量。</param>
+        /// <param name="z">Z 軸回転量。</param>
+        /// <returns>更新できた場合は true。</returns>
+        [[nodiscard]] static bool SetSpriteRotation(Game::Scene& scene, Game::EntityId entityId, float x, float y, float z);
+
+        /// <summary>
+        /// Script Sprite API と同じ規則で対象 Sprite の拡大率を更新する。
+        /// </summary>
+        /// <param name="scene">対象 Scene。</param>
+        /// <param name="entityId">対象 Entity ID。</param>
+        /// <param name="x">X 軸拡大率。</param>
+        /// <param name="y">Y 軸拡大率。</param>
+        /// <param name="z">Z 軸拡大率。</param>
+        /// <returns>更新できた場合は true。</returns>
+        [[nodiscard]] static bool SetSpriteScale(Game::Scene& scene, Game::EntityId entityId, float x, float y, float z);
+
+        /// <summary>
+        /// Script Sprite API と同じ規則で対象 Sprite の表示状態を更新する。
+        /// </summary>
+        /// <param name="scene">対象 Scene。</param>
+        /// <param name="entityId">対象 Entity ID。</param>
+        /// <param name="visible">表示する場合は true。</param>
+        /// <returns>更新できた場合は true。</returns>
+        [[nodiscard]] static bool SetSpriteVisible(Game::Scene& scene, Game::EntityId entityId, bool visible);
+
+        /// <summary>
+        /// Script Sprite API と同じ規則で対象 Sprite の色を更新する。
+        /// </summary>
+        /// <param name="scene">対象 Scene。</param>
+        /// <param name="entityId">対象 Entity ID。</param>
+        /// <param name="red">赤成分。</param>
+        /// <param name="green">緑成分。</param>
+        /// <param name="blue">青成分。</param>
+        /// <param name="alpha">アルファ成分。</param>
+        /// <returns>更新できた場合は true。</returns>
+        [[nodiscard]] static bool SetSpriteColor(
+            Game::Scene& scene,
+            Game::EntityId entityId,
+            float red,
+            float green,
+            float blue,
+            float alpha);
 
         /// <summary>
         /// Script の Start と Update を実行する。
@@ -127,17 +187,41 @@ namespace Xelqoria::Editor
     private:
         using StartFunction = void (*)();
         using UpdateFunction = void (*)(float);
+        struct ScriptSpriteApi;
+        using SetSpriteApiFunction = void (*)(ScriptSpriteApi*);
+
+        struct ScriptSpriteApi
+        {
+            void* context = nullptr;
+            void (*reportError)(void* context, const char* message) = nullptr;
+            void (*setPosition)(void* context, float x, float y, float z) = nullptr;
+            void (*setRotation)(void* context, float x, float y, float z) = nullptr;
+            void (*setScale)(void* context, float x, float y, float z) = nullptr;
+            void (*setVisible)(void* context, int visible) = nullptr;
+            void (*setColor)(void* context, float red, float green, float blue, float alpha) = nullptr;
+        };
 
         struct ScriptRuntimeInstance
         {
+            ScriptRuntimeSession* owner = nullptr;
+            Game::Scene* scene = nullptr;
             Game::EntityId entityId = 0;
             Core::AssetId scriptAssetId{};
             std::filesystem::path instanceModulePath{};
             HMODULE moduleHandle = nullptr;
             StartFunction start = nullptr;
             UpdateFunction update = nullptr;
+            ScriptSpriteApi api{};
             bool startCalled = false;
+            bool failed = false;
         };
+
+        static void ReportErrorCallback(void* context, const char* message);
+        static void SetPositionCallback(void* context, float x, float y, float z);
+        static void SetRotationCallback(void* context, float x, float y, float z);
+        static void SetScaleCallback(void* context, float x, float y, float z);
+        static void SetVisibleCallback(void* context, int visible);
+        static void SetColorCallback(void* context, float red, float green, float blue, float alpha);
 
         /// <summary>
         /// Script Runtime 診断メッセージを追加する。

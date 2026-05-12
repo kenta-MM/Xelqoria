@@ -727,6 +727,12 @@ namespace Xelqoria::Editor
         }
 
         m_scriptRuntimeSession.Update(deltaTime);
+        if (false == m_scriptRuntimeSession.GetDiagnostics().empty())
+        {
+            const std::wstring runtimeStatusText =
+                BuildScriptRuntimeStatusText(m_scriptRuntimeSession.GetDiagnostics());
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), runtimeStatusText.c_str());
+        }
 
         m_assetsPanelController.UpdateDragState(inputSnapshot);
         m_inspectorPanelController.UpdateTextureDropHighlight(m_assetsPanelController);

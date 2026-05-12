@@ -1,6 +1,7 @@
 #include "ScriptRuntimeSession.h"
 
 #include <algorithm>
+#include <exception>
 #include <filesystem>
 #include <string>
 #include <system_error>
@@ -61,6 +62,28 @@ namespace Xelqoria::Editor
                 });
             return found == buildResult.artifacts.end() ? nullptr : &(*found);
         }
+
+        /// <summary>
+        /// Script Runtime 例外を Editor 表示用メッセージへ変換する。
+        /// </summary>
+        /// <param name="functionName">実行中の Script 関数名。</param>
+        /// <param name="message">例外メッセージ。</param>
+        /// <returns>表示用メッセージ。</returns>
+        [[nodiscard]] std::wstring BuildRuntimeExceptionMessage(
+            const wchar_t* functionName,
+            const char* message)
+        {
+            std::wstring result = L"Script ";
+            result += functionName;
+            result += L" 実行中に例外が発生しました";
+            if (nullptr != message && '\0' != message[0])
+            {
+                result += L": ";
+                result += ToWideString(message);
+            }
+
+            return result;
+        }
     }
 
     ScriptRuntimeSession::~ScriptRuntimeSession()
@@ -108,8 +131,104 @@ namespace Xelqoria::Editor
         return plans;
     }
 
+    bool ScriptRuntimeSession::SetSpritePosition(
+        Game::Scene& scene,
+        Game::EntityId entityId,
+        float x,
+        float y,
+        float z)
+    {
+        const auto entity = scene.FindEntity(entityId);
+        if (false == entity.has_value() || false == entity->get().HasSpriteComponent())
+        {
+            return false;
+        }
+
+        entity->get().GetTransform().SetPosition(x, y, z);
+        return true;
+    }
+
+    bool ScriptRuntimeSession::SetSpriteRotation(
+        Game::Scene& scene,
+        Game::EntityId entityId,
+        float x,
+        float y,
+        float z)
+    {
+        const auto entity = scene.FindEntity(entityId);
+        if (false == entity.has_value() || false == entity->get().HasSpriteComponent())
+        {
+            return false;
+        }
+
+        entity->get().GetTransform().SetRotation(x, y, z);
+        return true;
+    }
+
+    bool ScriptRuntimeSession::SetSpriteScale(
+        Game::Scene& scene,
+        Game::EntityId entityId,
+        float x,
+        float y,
+        float z)
+    {
+        const auto entity = scene.FindEntity(entityId);
+        if (false == entity.has_value() || false == entity->get().HasSpriteComponent())
+        {
+            return false;
+        }
+
+        entity->get().GetTransform().SetScale(x, y, z);
+        return true;
+    }
+
+    bool ScriptRuntimeSession::SetSpriteVisible(
+        Game::Scene& scene,
+        Game::EntityId entityId,
+        bool visible)
+    {
+        const auto entity = scene.FindEntity(entityId);
+        if (false == entity.has_value())
+        {
+            return false;
+        }
+
+        const auto spriteComponent = entity->get().GetSpriteComponent();
+        if (false == spriteComponent.has_value())
+        {
+            return false;
+        }
+
+        spriteComponent->get().renderSettings.visible = visible;
+        return true;
+    }
+
+    bool ScriptRuntimeSession::SetSpriteColor(
+        Game::Scene& scene,
+        Game::EntityId entityId,
+        float red,
+        float green,
+        float blue,
+        float alpha)
+    {
+        const auto entity = scene.FindEntity(entityId);
+        if (false == entity.has_value())
+        {
+            return false;
+        }
+
+        const auto spriteComponent = entity->get().GetSpriteComponent();
+        if (false == spriteComponent.has_value())
+        {
+            return false;
+        }
+
+        spriteComponent->get().renderSettings.color = { red, green, blue, alpha };
+        return true;
+    }
+
     bool ScriptRuntimeSession::Begin(
-        const Game::Scene& scene,
+        Game::Scene& scene,
         const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
         const ScriptBuildResult& buildResult,
         const std::filesystem::path& projectRootDirectory)
@@ -126,6 +245,7 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        m_instances.reserve(plans.size());
         for (const ScriptRuntimeInstancePlan& plan : plans)
         {
             if (false == std::filesystem::exists(plan.sourceModulePath, errorCode) || errorCode)
@@ -164,6 +284,8 @@ namespace Xelqoria::Editor
 
             auto start = reinterpret_cast<StartFunction>(GetProcAddress(moduleHandle, "Start"));
             auto update = reinterpret_cast<UpdateFunction>(GetProcAddress(moduleHandle, "Update"));
+            auto setSpriteApi =
+                reinterpret_cast<SetSpriteApiFunction>(GetProcAddress(moduleHandle, "Xelqoria_SetSpriteApi"));
             if (nullptr == start || nullptr == update)
             {
                 FreeLibrary(moduleHandle);
@@ -175,14 +297,33 @@ namespace Xelqoria::Editor
             }
 
             m_instances.push_back(ScriptRuntimeInstance{
+                this,
+                &scene,
                 plan.entityId,
                 plan.scriptAssetId,
                 plan.instanceModulePath,
                 moduleHandle,
                 start,
                 update,
+                {},
+                false,
                 false
             });
+            ScriptRuntimeInstance& instance = m_instances.back();
+            instance.api = ScriptSpriteApi{
+                &instance,
+                &ScriptRuntimeSession::ReportErrorCallback,
+                &ScriptRuntimeSession::SetPositionCallback,
+                &ScriptRuntimeSession::SetRotationCallback,
+                &ScriptRuntimeSession::SetScaleCallback,
+                &ScriptRuntimeSession::SetVisibleCallback,
+                &ScriptRuntimeSession::SetColorCallback
+            };
+
+            if (nullptr != setSpriteApi)
+            {
+                setSpriteApi(&instance.api);
+            }
         }
 
         m_playing = true;
@@ -198,13 +339,58 @@ namespace Xelqoria::Editor
 
         for (ScriptRuntimeInstance& instance : m_instances)
         {
-            if (false == instance.startCalled)
+            if (instance.failed)
             {
-                instance.start();
-                instance.startCalled = true;
+                continue;
             }
 
-            instance.update(deltaTime);
+            if (false == instance.startCalled)
+            {
+                instance.startCalled = true;
+                try
+                {
+                    instance.start();
+                }
+                catch (const std::exception& exception)
+                {
+                    instance.failed = true;
+                    AddDiagnostic(
+                        instance.entityId,
+                        instance.scriptAssetId,
+                        BuildRuntimeExceptionMessage(L"Start", exception.what()));
+                    continue;
+                }
+                catch (...)
+                {
+                    instance.failed = true;
+                    AddDiagnostic(
+                        instance.entityId,
+                        instance.scriptAssetId,
+                        BuildRuntimeExceptionMessage(L"Start", nullptr));
+                    continue;
+                }
+            }
+
+            try
+            {
+                instance.update(deltaTime);
+            }
+            catch (const std::exception& exception)
+            {
+                instance.failed = true;
+                AddDiagnostic(
+                    instance.entityId,
+                    instance.scriptAssetId,
+                    BuildRuntimeExceptionMessage(L"Update", exception.what()));
+            }
+            catch (...)
+            {
+                instance.failed = true;
+                AddDiagnostic(
+                    instance.entityId,
+                    instance.scriptAssetId,
+                    BuildRuntimeExceptionMessage(L"Update", nullptr));
+            }
         }
     }
 
@@ -244,5 +430,119 @@ namespace Xelqoria::Editor
             std::move(scriptAssetId),
             std::move(message)
         });
+    }
+
+    void ScriptRuntimeSession::ReportErrorCallback(void* context, const char* message)
+    {
+        ScriptRuntimeInstance* instance = static_cast<ScriptRuntimeInstance*>(context);
+        if (nullptr == instance || nullptr == instance->owner)
+        {
+            return;
+        }
+
+        std::wstring diagnostic = L"Script からエラーが報告されました";
+        if (nullptr != message && '\0' != message[0])
+        {
+            diagnostic += L": ";
+            diagnostic += ToWideString(message);
+        }
+
+        instance->failed = true;
+        instance->owner->AddDiagnostic(instance->entityId, instance->scriptAssetId, std::move(diagnostic));
+    }
+
+    void ScriptRuntimeSession::SetPositionCallback(void* context, float x, float y, float z)
+    {
+        ScriptRuntimeInstance* instance = static_cast<ScriptRuntimeInstance*>(context);
+        if (nullptr == instance || nullptr == instance->owner || nullptr == instance->scene)
+        {
+            return;
+        }
+
+        if (false == SetSpritePosition(*instance->scene, instance->entityId, x, y, z))
+        {
+            instance->failed = true;
+            instance->owner->AddDiagnostic(
+                instance->entityId,
+                instance->scriptAssetId,
+                L"Script Sprite API の位置操作対象が見つかりません。");
+        }
+    }
+
+    void ScriptRuntimeSession::SetRotationCallback(void* context, float x, float y, float z)
+    {
+        ScriptRuntimeInstance* instance = static_cast<ScriptRuntimeInstance*>(context);
+        if (nullptr == instance || nullptr == instance->owner || nullptr == instance->scene)
+        {
+            return;
+        }
+
+        if (false == SetSpriteRotation(*instance->scene, instance->entityId, x, y, z))
+        {
+            instance->failed = true;
+            instance->owner->AddDiagnostic(
+                instance->entityId,
+                instance->scriptAssetId,
+                L"Script Sprite API の回転操作対象が見つかりません。");
+        }
+    }
+
+    void ScriptRuntimeSession::SetScaleCallback(void* context, float x, float y, float z)
+    {
+        ScriptRuntimeInstance* instance = static_cast<ScriptRuntimeInstance*>(context);
+        if (nullptr == instance || nullptr == instance->owner || nullptr == instance->scene)
+        {
+            return;
+        }
+
+        if (false == SetSpriteScale(*instance->scene, instance->entityId, x, y, z))
+        {
+            instance->failed = true;
+            instance->owner->AddDiagnostic(
+                instance->entityId,
+                instance->scriptAssetId,
+                L"Script Sprite API のスケール操作対象が見つかりません。");
+        }
+    }
+
+    void ScriptRuntimeSession::SetVisibleCallback(void* context, int visible)
+    {
+        ScriptRuntimeInstance* instance = static_cast<ScriptRuntimeInstance*>(context);
+        if (nullptr == instance || nullptr == instance->owner || nullptr == instance->scene)
+        {
+            return;
+        }
+
+        if (false == SetSpriteVisible(*instance->scene, instance->entityId, 0 != visible))
+        {
+            instance->failed = true;
+            instance->owner->AddDiagnostic(
+                instance->entityId,
+                instance->scriptAssetId,
+                L"Script Sprite API の表示操作対象が見つかりません。");
+        }
+    }
+
+    void ScriptRuntimeSession::SetColorCallback(
+        void* context,
+        float red,
+        float green,
+        float blue,
+        float alpha)
+    {
+        ScriptRuntimeInstance* instance = static_cast<ScriptRuntimeInstance*>(context);
+        if (nullptr == instance || nullptr == instance->owner || nullptr == instance->scene)
+        {
+            return;
+        }
+
+        if (false == SetSpriteColor(*instance->scene, instance->entityId, red, green, blue, alpha))
+        {
+            instance->failed = true;
+            instance->owner->AddDiagnostic(
+                instance->entityId,
+                instance->scriptAssetId,
+                L"Script Sprite API の色操作対象が見つかりません。");
+        }
     }
 }
