@@ -161,10 +161,27 @@ namespace Xelqoria::Editor
         void ClearCreateSpriteRequest();
 
         /// <summary>
+        /// Assets 空白右クリックから Script 作成が要求されたかを取得する。
+        /// </summary>
+        /// <returns>Script 作成要求がある場合は true。</returns>
+        [[nodiscard]] bool HasCreateScriptRequest() const;
+
+        /// <summary>
+        /// Script 作成要求を消費する。
+        /// </summary>
+        void ClearCreateScriptRequest();
+
+        /// <summary>
         /// Sprite アセットファイルの作成先フォルダを取得する。
         /// </summary>
         /// <returns>作成先フォルダ。未指定時は空。</returns>
         [[nodiscard]] const std::filesystem::path& GetCreateSpriteTargetDirectory() const;
+
+        /// <summary>
+        /// Script Asset ファイルの作成先フォルダを取得する。
+        /// </summary>
+        /// <returns>作成先フォルダ。未指定時は空。</returns>
+        [[nodiscard]] const std::filesystem::path& GetCreateScriptTargetDirectory() const;
 
     private:
         /// <summary>
@@ -241,10 +258,10 @@ namespace Xelqoria::Editor
         /// <summary>
         /// Assets 空白またはフォルダ用の作成メニューを表示する。
         /// </summary>
-        /// <param name="targetDirectory">Sprite 作成先フォルダ。</param>
+        /// <param name="targetDirectory">作成先フォルダ。</param>
         /// <param name="screenPoint">メニュー表示位置のスクリーン座標。</param>
         /// <returns>操作を処理した場合は true。</returns>
-        [[nodiscard]] bool ShowCreateSpriteContextMenu(
+        [[nodiscard]] bool ShowCreateAssetContextMenu(
             const std::filesystem::path& targetDirectory,
             POINT screenPoint);
 
@@ -335,6 +352,8 @@ namespace Xelqoria::Editor
         bool m_assetDragReleasedThisFrame = false;
         bool m_createSpriteRequested = false;
         std::filesystem::path m_createSpriteTargetDirectory{};
+        bool m_createScriptRequested = false;
+        std::filesystem::path m_createScriptTargetDirectory{};
         bool m_listViewInitialized = false;
         HIMAGELIST m_dragImageList = nullptr;
         bool m_isDragImageVisible = false;

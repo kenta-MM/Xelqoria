@@ -12,6 +12,7 @@
 #include "EditorProject.h"
 #include "IGraphicsContext.h"
 #include "Scene.h"
+#include "ScriptAssetService.h"
 #include "TextureAssetRegistry.h"
 
 namespace Xelqoria::Editor
@@ -107,6 +108,14 @@ namespace Xelqoria::Editor
         /// <returns>作成または既存ファイル確認に成功した場合は true。</returns>
         [[nodiscard]] bool CreateSpriteAssetFile(
             const Game::Entity& entity,
+            const std::filesystem::path& targetDirectory);
+
+        /// <summary>
+        /// 現在のプロジェクト配下へ Script Asset と初期 C++ コードを作成する。
+        /// </summary>
+        /// <param name="targetDirectory">Script Asset 作成先フォルダ。空またはプロジェクト外の場合は作成しない。</param>
+        /// <returns>Script Asset 作成結果。</returns>
+        [[nodiscard]] ScriptAssetCreationResult CreateScriptAssetFile(
             const std::filesystem::path& targetDirectory);
 
         /// <summary>

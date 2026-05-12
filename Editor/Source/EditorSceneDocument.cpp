@@ -25,6 +25,7 @@
 #include "EditorAssetPathUtils.h"
 #include "EditorPathSecurity.h"
 #include "EditorStringUtils.h"
+#include "ScriptAssetService.h"
 
 namespace Xelqoria::Editor
 {
@@ -373,6 +374,19 @@ namespace Xelqoria::Editor
 
         output << text.str();
         return static_cast<bool>(output);
+    }
+
+    ScriptAssetCreationResult EditorSceneDocument::CreateScriptAssetFile(
+        const std::filesystem::path& targetDirectory)
+    {
+        if (false == m_project.GetInfo().has_value())
+        {
+            return {};
+        }
+
+        return ScriptAssetService::CreateScriptAsset(
+            m_project.GetInfo()->projectFilePath.parent_path(),
+            targetDirectory);
     }
 
     const std::optional<EditorProjectInfo>& EditorSceneDocument::GetProjectInfo() const

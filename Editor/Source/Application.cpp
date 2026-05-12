@@ -619,6 +619,25 @@ namespace Xelqoria::Editor
             }
         }
 
+        if (true == m_assetsPanelController.HasCreateScriptRequest())
+        {
+            const std::filesystem::path createScriptTargetDirectory =
+                m_assetsPanelController.GetCreateScriptTargetDirectory();
+            m_assetsPanelController.ClearCreateScriptRequest();
+
+            const ScriptAssetCreationResult createScriptResult =
+                m_sceneDocument.CreateScriptAssetFile(createScriptTargetDirectory);
+            if (true == createScriptResult.succeeded)
+            {
+                m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset を作成しました。");
+            }
+            else
+            {
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset の作成に失敗しました。");
+            }
+        }
+
         if (true == m_hierarchyPanelController.SyncSelection())
         {
             RefreshEditorPanels(canAddSpriteComponent, true);

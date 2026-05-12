@@ -241,6 +241,11 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR CreateSpriteMenuCommandId = 1;
 
         /// <summary>
+        /// Assets の右クリックメニューから Script Asset を作成するコマンド ID を表す。
+        /// </summary>
+        constexpr UINT_PTR CreateScriptMenuCommandId = 3;
+
+        /// <summary>
         /// Assets 項目の削除メニューから実行されたコマンド ID を表す。
         /// </summary>
         constexpr UINT_PTR DeleteEntryMenuCommandId = 2;
@@ -268,6 +273,8 @@ namespace Xelqoria::Editor
             m_canPlaceDraggingAssetInScene = false;
             m_createSpriteRequested = false;
             m_createSpriteTargetDirectory.clear();
+            m_createScriptRequested = false;
+            m_createScriptTargetDirectory.clear();
             EndDragImage();
             RefreshListView();
             RefreshSummaryLabel();
@@ -354,7 +361,7 @@ namespace Xelqoria::Editor
                 return false;
             }
 
-            return ShowCreateSpriteContextMenu(createSpriteTargetDirectory, menuPoint);
+            return ShowCreateAssetContextMenu(createSpriteTargetDirectory, menuPoint);
         }
 
         if (notifyHeader->code == LVN_KEYDOWN)
@@ -537,9 +544,25 @@ namespace Xelqoria::Editor
         m_createSpriteTargetDirectory.clear();
     }
 
+    bool AssetsPanelController::HasCreateScriptRequest() const
+    {
+        return m_createScriptRequested;
+    }
+
+    void AssetsPanelController::ClearCreateScriptRequest()
+    {
+        m_createScriptRequested = false;
+        m_createScriptTargetDirectory.clear();
+    }
+
     const std::filesystem::path& AssetsPanelController::GetCreateSpriteTargetDirectory() const
     {
         return m_createSpriteTargetDirectory;
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetCreateScriptTargetDirectory() const
+    {
+        return m_createScriptTargetDirectory;
     }
 
     void AssetsPanelController::InitializeListView()
@@ -874,7 +897,7 @@ namespace Xelqoria::Editor
         return DeleteEntry(entryIndex);
     }
 
-    bool AssetsPanelController::ShowCreateSpriteContextMenu(
+    bool AssetsPanelController::ShowCreateAssetContextMenu(
         const std::filesystem::path& targetDirectory,
         POINT screenPoint)
     {
@@ -895,6 +918,7 @@ namespace Xelqoria::Editor
         }
 
         AppendMenuW(popupMenu, MF_STRING, CreateSpriteMenuCommandId, L"Spriteを作成");
+        AppendMenuW(popupMenu, MF_STRING, CreateScriptMenuCommandId, L"Scriptを作成");
 
         const UINT command = TrackPopupMenu(
             popupMenu,
@@ -906,14 +930,26 @@ namespace Xelqoria::Editor
             nullptr);
         DestroyMenu(popupMenu);
 
-        if (CreateSpriteMenuCommandId != command)
+        if (CreateSpriteMenuCommandId == command)
+        {
+            m_createSpriteRequested = true;
+            m_createSpriteTargetDirectory = targetDirectory;
+            return true;
+        }
+
+        if (CreateScriptMenuCommandId == command)
+        {
+            m_createScriptRequested = true;
+            m_createScriptTargetDirectory = targetDirectory;
+            return true;
+        }
+
+        if (0 != command)
         {
             return false;
         }
 
-        m_createSpriteRequested = true;
-        m_createSpriteTargetDirectory = targetDirectory;
-        return true;
+        return false;
     }
 
     bool AssetsPanelController::DeleteEntry(std::size_t entryIndex)
