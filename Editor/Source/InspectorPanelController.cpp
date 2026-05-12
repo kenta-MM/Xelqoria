@@ -26,20 +26,34 @@ namespace Xelqoria::Editor
         m_spriteRefLabel = shell.GetSpriteRefLabel();
         m_spriteRefDropHighlight = shell.GetSpriteRefDropHighlight();
         m_spriteRefEdit = shell.GetSpriteRefEdit();
+        m_scriptAssetLabel = shell.GetScriptAssetLabel();
+        m_scriptAssetEdit = shell.GetScriptAssetEdit();
+        m_scriptCreateButton = shell.GetScriptCreateButton();
+        m_scriptAssignButton = shell.GetScriptAssignButton();
+        m_scriptClearButton = shell.GetScriptClearButton();
         m_spriteComponentActionButton = shell.GetSpriteComponentActionButton();
     }
 
     void InspectorPanelController::Refresh(
         const Game::Scene* scene,
         std::optional<Game::EntityId> selectedEntityId,
-        bool canAddSpriteComponent)
+        bool canAddSpriteComponent,
+        const Game::Assets::ISpriteAssetResolver& spriteAssetResolver)
     {
         if (false == selectedEntityId.has_value() || nullptr == scene)
         {
             SetWindowTextW(m_inspectorSummaryLabel, L"Inspector: no entity selected");
             SetWindowTextW(m_spriteRefEdit, L"");
+            SetWindowTextW(m_scriptAssetEdit, L"");
+            ShowWindow(m_scriptAssetLabel, SW_HIDE);
+            ShowWindow(m_scriptAssetEdit, SW_HIDE);
+            ShowWindow(m_scriptCreateButton, SW_HIDE);
+            ShowWindow(m_scriptAssignButton, SW_HIDE);
+            ShowWindow(m_scriptClearButton, SW_HIDE);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
+            m_lastScriptAssetId = {};
+            m_lastScriptDisplayText.clear();
             return;
         }
 
@@ -48,8 +62,16 @@ namespace Xelqoria::Editor
         {
             SetWindowTextW(m_inspectorSummaryLabel, L"Inspector: selected entity not found");
             SetWindowTextW(m_spriteRefEdit, L"");
+            SetWindowTextW(m_scriptAssetEdit, L"");
+            ShowWindow(m_scriptAssetLabel, SW_HIDE);
+            ShowWindow(m_scriptAssetEdit, SW_HIDE);
+            ShowWindow(m_scriptCreateButton, SW_HIDE);
+            ShowWindow(m_scriptAssignButton, SW_HIDE);
+            ShowWindow(m_scriptClearButton, SW_HIDE);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
+            m_lastScriptAssetId = {};
+            m_lastScriptDisplayText.clear();
             return;
         }
 
@@ -87,12 +109,38 @@ namespace Xelqoria::Editor
             m_lastSpriteRefAssetId = spriteComponent->get().spriteAssetRef;
             m_lastSpriteRefDisplayText = FormatTextureDisplayText(m_lastSpriteRefAssetId);
             SetWindowTextW(m_spriteRefEdit, m_lastSpriteRefDisplayText.c_str());
+
+            const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(m_lastSpriteRefAssetId);
+            m_lastScriptAssetId = spriteAsset.has_value() ? spriteAsset->scriptAssetId : Core::AssetId{};
+            m_lastScriptDisplayText = FormatScriptDisplayText(m_lastScriptAssetId);
+            const InspectorScriptActionState scriptActionState = ComputeScriptActionState(
+                true,
+                m_lastSpriteRefAssetId,
+                spriteAsset.has_value(),
+                m_lastScriptAssetId);
+            ShowWindow(m_scriptAssetLabel, scriptActionState.showScriptControls ? SW_SHOW : SW_HIDE);
+            ShowWindow(m_scriptAssetEdit, scriptActionState.showScriptControls ? SW_SHOW : SW_HIDE);
+            ShowWindow(m_scriptCreateButton, scriptActionState.showScriptControls ? SW_SHOW : SW_HIDE);
+            ShowWindow(m_scriptAssignButton, scriptActionState.showScriptControls ? SW_SHOW : SW_HIDE);
+            ShowWindow(m_scriptClearButton, scriptActionState.showScriptControls ? SW_SHOW : SW_HIDE);
+            EnableWindow(m_scriptCreateButton, scriptActionState.enableCreateButton ? TRUE : FALSE);
+            EnableWindow(m_scriptAssignButton, scriptActionState.enableAssignButton ? TRUE : FALSE);
+            EnableWindow(m_scriptClearButton, scriptActionState.enableClearButton ? TRUE : FALSE);
+            SetWindowTextW(m_scriptAssetEdit, m_lastScriptDisplayText.c_str());
         }
         else
         {
             SetWindowTextW(m_spriteRefEdit, L"");
+            SetWindowTextW(m_scriptAssetEdit, L"");
+            ShowWindow(m_scriptAssetLabel, SW_HIDE);
+            ShowWindow(m_scriptAssetEdit, SW_HIDE);
+            ShowWindow(m_scriptCreateButton, SW_HIDE);
+            ShowWindow(m_scriptAssignButton, SW_HIDE);
+            ShowWindow(m_scriptClearButton, SW_HIDE);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
+            m_lastScriptAssetId = {};
+            m_lastScriptDisplayText.clear();
         }
 
         wchar_t summaryText[128]{};
@@ -109,7 +157,8 @@ namespace Xelqoria::Editor
         Game::Scene* scene,
         std::optional<Game::EntityId> selectedEntityId,
         bool canAddSpriteComponent,
-        const Core::InputSnapshot& inputSnapshot)
+        const Core::InputSnapshot& inputSnapshot,
+        const Game::Assets::ISpriteAssetResolver& spriteAssetResolver)
     {
         InspectorApplyResult result{};
         if (false == selectedEntityId.has_value() || nullptr == scene)
@@ -119,7 +168,7 @@ namespace Xelqoria::Editor
 
         if (m_lastInspectorEntityId != selectedEntityId)
         {
-            Refresh(scene, selectedEntityId, canAddSpriteComponent);
+            Refresh(scene, selectedEntityId, canAddSpriteComponent, spriteAssetResolver);
         }
 
         const auto entity = scene->FindEntity(*selectedEntityId);
@@ -166,9 +215,37 @@ namespace Xelqoria::Editor
             }
         }
 
+        auto spriteComponent = entity->get().GetSpriteComponent();
+        if (true == spriteComponent.has_value())
+        {
+            const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(spriteComponent->get().spriteAssetRef);
+            const Core::AssetId scriptAssetId = spriteAsset.has_value() ? spriteAsset->scriptAssetId : Core::AssetId{};
+            const InspectorScriptActionState scriptActionState = ComputeScriptActionState(
+                true,
+                spriteComponent->get().spriteAssetRef,
+                spriteAsset.has_value(),
+                scriptAssetId);
+
+            if (scriptActionState.enableCreateButton && true == ConsumeButtonClick(m_scriptCreateButton, inputSnapshot))
+            {
+                result.scriptAction = InspectorScriptAction::Create;
+                result.scriptTargetSpriteAssetId = spriteComponent->get().spriteAssetRef;
+            }
+            else if (scriptActionState.enableAssignButton && true == ConsumeButtonClick(m_scriptAssignButton, inputSnapshot))
+            {
+                result.scriptAction = InspectorScriptAction::Assign;
+                result.scriptTargetSpriteAssetId = spriteComponent->get().spriteAssetRef;
+            }
+            else if (scriptActionState.enableClearButton && true == ConsumeButtonClick(m_scriptClearButton, inputSnapshot))
+            {
+                result.scriptAction = InspectorScriptAction::Clear;
+                result.scriptTargetSpriteAssetId = spriteComponent->get().spriteAssetRef;
+            }
+        }
+
         if (result.changed)
         {
-            Refresh(scene, selectedEntityId, canAddSpriteComponent);
+            Refresh(scene, selectedEntityId, canAddSpriteComponent, spriteAssetResolver);
         }
 
         return result;
@@ -177,7 +254,8 @@ namespace Xelqoria::Editor
     InspectorApplyResult InspectorPanelController::ApplyTextureDrop(
         Game::Scene* scene,
         std::optional<Game::EntityId> selectedEntityId,
-        const AssetsPanelController& assetsPanelController)
+        const AssetsPanelController& assetsPanelController,
+        const Game::Assets::ISpriteAssetResolver& spriteAssetResolver)
     {
         InspectorApplyResult result{};
         if (nullptr == scene
@@ -209,7 +287,7 @@ namespace Xelqoria::Editor
 
         spriteComponent->get().spriteAssetRef = droppedSpriteAssetId;
         result.changed = true;
-        Refresh(scene, selectedEntityId, true);
+        Refresh(scene, selectedEntityId, true, spriteAssetResolver);
         return result;
     }
 

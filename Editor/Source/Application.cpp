@@ -851,7 +851,8 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetScene(),
             m_hierarchyPanelController.GetSelectedEntityId(),
             canAddSpriteComponent,
-            inputSnapshot);
+            inputSnapshot,
+            m_sceneDocument.GetSpriteAssetRegistry());
         if (true == inspectorResult.changed)
         {
             PersistSceneChanges(
@@ -860,6 +861,65 @@ namespace Xelqoria::Editor
                 true);
             RefreshEditorPanels(canAddSpriteComponent, false);
             RefreshSceneViewSelectionStatus();
+        }
+
+        if (InspectorScriptAction::None != inspectorResult.scriptAction)
+        {
+            bool scriptActionSucceeded = false;
+            switch (inspectorResult.scriptAction)
+            {
+            case InspectorScriptAction::Create:
+            {
+                const ScriptAssetCreationResult createResult =
+                    m_sceneDocument.CreateAndAssignScriptAssetToSpriteAsset(inspectorResult.scriptTargetSpriteAssetId);
+                scriptActionSucceeded = createResult.succeeded;
+                SetWindowTextW(
+                    m_editorShell.GetSceneViewPlanLabel(),
+                    scriptActionSucceeded
+                        ? L"Script Asset を作成し、Sprite Asset に割り当てました。"
+                        : L"Script Asset の作成または割り当てに失敗しました。");
+                break;
+            }
+            case InspectorScriptAction::Assign:
+            {
+                const std::filesystem::path projectRootDirectory =
+                    m_sceneDocument.GetProjectInfo().has_value()
+                    ? m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path()
+                    : std::filesystem::path{};
+                const std::filesystem::path scriptAssetPath =
+                    SelectScriptAssetFile(m_window.GetHwnd(), projectRootDirectory);
+                if (false == scriptAssetPath.empty())
+                {
+                    scriptActionSucceeded = m_sceneDocument.AssignScriptAssetToSpriteAsset(
+                        inspectorResult.scriptTargetSpriteAssetId,
+                        scriptAssetPath);
+                    SetWindowTextW(
+                        m_editorShell.GetSceneViewPlanLabel(),
+                        scriptActionSucceeded
+                            ? L"Sprite Asset に Script Asset を割り当てました。"
+                            : L"Script Asset の割り当てに失敗しました。");
+                }
+                break;
+            }
+            case InspectorScriptAction::Clear:
+                scriptActionSucceeded =
+                    m_sceneDocument.ClearScriptAssetFromSpriteAsset(inspectorResult.scriptTargetSpriteAssetId);
+                SetWindowTextW(
+                    m_editorShell.GetSceneViewPlanLabel(),
+                    scriptActionSucceeded
+                        ? L"Sprite Asset の Script Asset 割り当てを解除しました。"
+                        : L"Script Asset 割り当て解除に失敗しました。");
+                break;
+            case InspectorScriptAction::None:
+            default:
+                break;
+            }
+
+            if (scriptActionSucceeded)
+            {
+                m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                RefreshEditorPanels(canAddSpriteComponent, false);
+            }
         }
 
         if (true == m_assetsPanelController.WasDragReleasedThisFrame()
@@ -871,7 +931,8 @@ namespace Xelqoria::Editor
         const InspectorApplyResult textureDropResult = m_inspectorPanelController.ApplyTextureDrop(
             m_sceneDocument.GetScene(),
             m_hierarchyPanelController.GetSelectedEntityId(),
-            m_assetsPanelController);
+            m_assetsPanelController,
+            m_sceneDocument.GetSpriteAssetRegistry());
         if (true == textureDropResult.changed)
         {
             PersistSceneChanges(
@@ -970,7 +1031,8 @@ namespace Xelqoria::Editor
         m_inspectorPanelController.Refresh(
             m_sceneDocument.GetScene(),
             m_hierarchyPanelController.GetSelectedEntityId(),
-            canAddSpriteComponent);
+            canAddSpriteComponent,
+            m_sceneDocument.GetSpriteAssetRegistry());
     }
 
     void Application::RefreshSceneViewSelectionStatus()

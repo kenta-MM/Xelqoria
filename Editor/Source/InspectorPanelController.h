@@ -8,6 +8,8 @@
 #include <string_view>
 
 #include "AssetId.h"
+#include "Assets/ISpriteAssetResolver.h"
+#include "Assets/SpriteAsset.h"
 #include "EditorStringUtils.h"
 #include "EditorShell.h"
 #include "InputSystem.h"
@@ -19,6 +21,17 @@ namespace Xelqoria::Editor
     class AssetsPanelController;
 
     /// <summary>
+    /// Inspector から要求された Script 操作種別を表す。
+    /// </summary>
+    enum class InspectorScriptAction
+    {
+        None = 0,
+        Create,
+        Assign,
+        Clear
+    };
+
+    /// <summary>
     /// Inspector で行われた編集適用結果を表す。
     /// </summary>
     struct InspectorApplyResult
@@ -27,6 +40,16 @@ namespace Xelqoria::Editor
         /// Scene に変更が加わったかを表す。
         /// </summary>
         bool changed = false;
+
+        /// <summary>
+        /// Script Asset に対する操作要求を表す。
+        /// </summary>
+        InspectorScriptAction scriptAction = InspectorScriptAction::None;
+
+        /// <summary>
+        /// Script 操作対象の SpriteAssetId を表す。
+        /// </summary>
+        Core::AssetId scriptTargetSpriteAssetId{};
     };
 
     /// <summary>
@@ -56,6 +79,32 @@ namespace Xelqoria::Editor
     };
 
     /// <summary>
+    /// Script 操作 UI の表示状態を表す。
+    /// </summary>
+    struct InspectorScriptActionState
+    {
+        /// <summary>
+        /// Script 操作 UI を表示するかを表す。
+        /// </summary>
+        bool showScriptControls = false;
+
+        /// <summary>
+        /// Script 作成ボタンを有効化するかを表す。
+        /// </summary>
+        bool enableCreateButton = false;
+
+        /// <summary>
+        /// Script 割り当てボタンを有効化するかを表す。
+        /// </summary>
+        bool enableAssignButton = false;
+
+        /// <summary>
+        /// Script 解除ボタンを有効化するかを表す。
+        /// </summary>
+        bool enableClearButton = false;
+    };
+
+    /// <summary>
     /// Inspector パネルの表示同期と入力反映を管理する。
     /// </summary>
     class InspectorPanelController
@@ -76,7 +125,8 @@ namespace Xelqoria::Editor
         void Refresh(
             const Game::Scene* scene,
             std::optional<Game::EntityId> selectedEntityId,
-            bool canAddSpriteComponent);
+            bool canAddSpriteComponent,
+            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver);
 
         /// <summary>
         /// Inspector 入力値を現在選択中 Entity へ反映する。
@@ -90,7 +140,8 @@ namespace Xelqoria::Editor
             Game::Scene* scene,
             std::optional<Game::EntityId> selectedEntityId,
             bool canAddSpriteComponent,
-            const Core::InputSnapshot& inputSnapshot);
+            const Core::InputSnapshot& inputSnapshot,
+            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver);
 
         /// <summary>
         /// Assets から Texture 欄へドロップされた画像を SpriteComponent へ反映する。
@@ -102,7 +153,8 @@ namespace Xelqoria::Editor
         InspectorApplyResult ApplyTextureDrop(
             Game::Scene* scene,
             std::optional<Game::EntityId> selectedEntityId,
-            const AssetsPanelController& assetsPanelController);
+            const AssetsPanelController& assetsPanelController,
+            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver);
 
         /// <summary>
         /// Texture 欄のドロップ先ハイライトを現在のドラッグ状態へ同期する。
@@ -138,6 +190,61 @@ namespace Xelqoria::Editor
             }
 
             return relativePath;
+        }
+
+        /// <summary>
+        /// ScriptAssetId から Script 欄に表示するファイル名を取得する。
+        /// </summary>
+        /// <param name="scriptAssetId">表示対象の ScriptAssetId。</param>
+        /// <returns>Script 欄表示文字列。</returns>
+        [[nodiscard]] static std::wstring FormatScriptDisplayText(const Core::AssetId& scriptAssetId)
+        {
+            if (scriptAssetId.IsEmpty())
+            {
+                return L"None";
+            }
+
+            std::string scriptRefValue = scriptAssetId.GetValue();
+            constexpr std::string_view scriptAssetPrefix = "scripts/";
+            if (scriptRefValue.starts_with(scriptAssetPrefix))
+            {
+                scriptRefValue = scriptRefValue.substr(scriptAssetPrefix.size());
+            }
+
+            const std::wstring relativePath = ToWideString(scriptRefValue);
+            const std::filesystem::path displayPath(relativePath);
+            const std::wstring fileName = displayPath.filename().wstring();
+            if (false == fileName.empty())
+            {
+                return fileName;
+            }
+
+            return relativePath;
+        }
+
+        /// <summary>
+        /// Script 操作 UI の表示状態を計算する。
+        /// </summary>
+        /// <param name="hasSpriteComponent">Entity が SpriteComponent を保持しているか。</param>
+        /// <param name="spriteAssetRef">SpriteComponent が参照する SpriteAssetId。</param>
+        /// <param name="spriteAssetResolved">SpriteAsset を解決できた場合は true。</param>
+        /// <param name="scriptAssetId">現在割り当てられている ScriptAssetId。</param>
+        /// <returns>Script 操作 UI 表示状態。</returns>
+        [[nodiscard]] static InspectorScriptActionState ComputeScriptActionState(
+            bool hasSpriteComponent,
+            const Core::AssetId& spriteAssetRef,
+            bool spriteAssetResolved,
+            const Core::AssetId& scriptAssetId)
+        {
+            const bool canEditScript = hasSpriteComponent
+                && false == spriteAssetRef.IsEmpty()
+                && true == spriteAssetResolved;
+            return InspectorScriptActionState{
+                hasSpriteComponent,
+                canEditScript,
+                canEditScript,
+                canEditScript && false == scriptAssetId.IsEmpty()
+            };
         }
 
         /// <summary>
@@ -212,10 +319,17 @@ namespace Xelqoria::Editor
         HWND m_spriteRefLabel = nullptr;
         HWND m_spriteRefDropHighlight = nullptr;
         HWND m_spriteRefEdit = nullptr;
+        HWND m_scriptAssetLabel = nullptr;
+        HWND m_scriptAssetEdit = nullptr;
+        HWND m_scriptCreateButton = nullptr;
+        HWND m_scriptAssignButton = nullptr;
+        HWND m_scriptClearButton = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
         std::optional<Game::EntityId> m_lastInspectorEntityId{};
         Core::AssetId m_lastSpriteRefAssetId{};
         std::wstring m_lastSpriteRefDisplayText{};
+        Core::AssetId m_lastScriptAssetId{};
+        std::wstring m_lastScriptDisplayText{};
         bool m_wasLeftMouseButtonDown = false;
         HWND m_pressedButtonHandle = nullptr;
         bool m_isTextureDropHighlightVisible = false;

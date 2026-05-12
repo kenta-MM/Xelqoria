@@ -32,6 +32,53 @@ TEST(InspectorPanelControllerTests, FormatTextureDisplayTextShowsNestedFileNameO
     EXPECT_EQ(L"タイトルなし.png", displayText);
 }
 
+TEST(InspectorPanelControllerTests, FormatScriptDisplayTextShowsFileNameOrNone)
+{
+    EXPECT_EQ(
+        L"Player.script",
+        Xelqoria::Editor::InspectorPanelController::FormatScriptDisplayText(
+            Xelqoria::Core::AssetId("scripts/Scripts/Player.script")));
+    EXPECT_EQ(
+        L"None",
+        Xelqoria::Editor::InspectorPanelController::FormatScriptDisplayText({}));
+}
+
+TEST(InspectorPanelControllerTests, ComputeScriptActionStateReflectsSpriteAndScriptAvailability)
+{
+    const auto unavailableState =
+        Xelqoria::Editor::InspectorPanelController::ComputeScriptActionState(
+            false,
+            {},
+            false,
+            {});
+    EXPECT_FALSE(unavailableState.showScriptControls);
+    EXPECT_FALSE(unavailableState.enableCreateButton);
+    EXPECT_FALSE(unavailableState.enableAssignButton);
+    EXPECT_FALSE(unavailableState.enableClearButton);
+
+    const auto unresolvedState =
+        Xelqoria::Editor::InspectorPanelController::ComputeScriptActionState(
+            true,
+            Xelqoria::Core::AssetId("sprites/player.sprite"),
+            false,
+            {});
+    EXPECT_TRUE(unresolvedState.showScriptControls);
+    EXPECT_FALSE(unresolvedState.enableCreateButton);
+    EXPECT_FALSE(unresolvedState.enableAssignButton);
+    EXPECT_FALSE(unresolvedState.enableClearButton);
+
+    const auto assignedState =
+        Xelqoria::Editor::InspectorPanelController::ComputeScriptActionState(
+            true,
+            Xelqoria::Core::AssetId("sprites/player.sprite"),
+            true,
+            Xelqoria::Core::AssetId("scripts/Player.script"));
+    EXPECT_TRUE(assignedState.showScriptControls);
+    EXPECT_TRUE(assignedState.enableCreateButton);
+    EXPECT_TRUE(assignedState.enableAssignButton);
+    EXPECT_TRUE(assignedState.enableClearButton);
+}
+
 TEST(InspectorPanelControllerTests, ComputeActionStateShowsEnabledRemoveWhenSpriteComponentAttached)
 {
     const auto actionState =

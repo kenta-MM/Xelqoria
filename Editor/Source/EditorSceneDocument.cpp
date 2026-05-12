@@ -397,6 +397,50 @@ namespace Xelqoria::Editor
         return true;
     }
 
+    std::optional<std::filesystem::path> EditorSceneDocument::ResolveSpriteAssetPath(
+        const Core::AssetId& spriteAssetId) const
+    {
+        if (false == m_project.GetInfo().has_value() || spriteAssetId.IsEmpty())
+        {
+            return std::nullopt;
+        }
+
+        const auto registered = std::find(
+            m_registeredSpriteAssetIds.begin(),
+            m_registeredSpriteAssetIds.end(),
+            spriteAssetId);
+        if (registered == m_registeredSpriteAssetIds.end())
+        {
+            return std::nullopt;
+        }
+
+        constexpr std::string_view spriteAssetPrefix = "sprites/";
+        const std::string& assetValue = spriteAssetId.GetValue();
+        if (false == std::string_view(assetValue).starts_with(spriteAssetPrefix))
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path relativePath =
+            ToWideString(std::string_view(assetValue).substr(spriteAssetPrefix.size()));
+        if (relativePath.empty()
+            || false == EditorPathSecurity::IsSafeRelativePath(relativePath)
+            || false == EditorAssetPathUtils::IsSpriteAssetFile(relativePath))
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        const std::filesystem::path spriteAssetPath = rootDirectory / relativePath;
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(spriteAssetPath, rootDirectory)
+            || false == std::filesystem::exists(spriteAssetPath))
+        {
+            return std::nullopt;
+        }
+
+        return spriteAssetPath;
+    }
+
     bool EditorSceneDocument::CreateSpriteAssetFile(
         const Game::Entity& entity,
         const std::filesystem::path& targetDirectory)
@@ -551,6 +595,7 @@ namespace Xelqoria::Editor
         std::ostringstream buffer;
         buffer << input.rdbuf();
         const std::string source = buffer.str();
+        input.close();
         const auto loadResult = Game::Assets::SpriteAssetLoader::LoadFromText(source);
         if (false == loadResult.IsSuccess() || false == loadResult.asset.has_value())
         {
@@ -568,8 +613,86 @@ namespace Xelqoria::Editor
         {
             return false;
         }
+        output.close();
 
         return RegisterSpriteAssetFile(spriteAssetPath);
+    }
+
+    bool EditorSceneDocument::AssignScriptAssetToSpriteAsset(
+        const Core::AssetId& spriteAssetId,
+        const std::filesystem::path& scriptAssetPath)
+    {
+        const auto spriteAssetPath = ResolveSpriteAssetPath(spriteAssetId);
+        if (false == spriteAssetPath.has_value())
+        {
+            return false;
+        }
+
+        return AssignScriptAssetToSpriteAssetFile(*spriteAssetPath, scriptAssetPath);
+    }
+
+    bool EditorSceneDocument::ClearScriptAssetFromSpriteAsset(const Core::AssetId& spriteAssetId)
+    {
+        const auto spriteAssetPath = ResolveSpriteAssetPath(spriteAssetId);
+        if (false == spriteAssetPath.has_value())
+        {
+            return false;
+        }
+
+        std::ifstream input(*spriteAssetPath, std::ios::binary);
+        if (false == input.is_open())
+        {
+            return false;
+        }
+
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+        const std::string source = buffer.str();
+        input.close();
+        const auto loadResult = Game::Assets::SpriteAssetLoader::LoadFromText(source);
+        if (false == loadResult.IsSuccess() || false == loadResult.asset.has_value())
+        {
+            return false;
+        }
+
+        std::ofstream output(*spriteAssetPath, std::ios::binary | std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return false;
+        }
+
+        output << ReplaceSpriteAssetScriptAssetId(source, {});
+        if (false == static_cast<bool>(output))
+        {
+            return false;
+        }
+        output.close();
+
+        return RegisterSpriteAssetFile(*spriteAssetPath);
+    }
+
+    ScriptAssetCreationResult EditorSceneDocument::CreateAndAssignScriptAssetToSpriteAsset(
+        const Core::AssetId& spriteAssetId)
+    {
+        ScriptAssetCreationResult result{};
+        const auto spriteAssetPath = ResolveSpriteAssetPath(spriteAssetId);
+        if (false == spriteAssetPath.has_value())
+        {
+            return result;
+        }
+
+        result = CreateScriptAssetFile(spriteAssetPath->parent_path());
+        if (false == result.succeeded)
+        {
+            return result;
+        }
+
+        if (false == AssignScriptAssetToSpriteAssetFile(*spriteAssetPath, result.assetPath))
+        {
+            result.succeeded = false;
+        }
+
+        return result;
     }
 
     ScriptAssetCreationResult EditorSceneDocument::CreateScriptAssetFile(
