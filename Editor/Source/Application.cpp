@@ -18,6 +18,7 @@
 #include "InspectorPanelController.h"
 #include "SceneEditingOperations.h"
 #include "SceneViewInteractionTypes.h"
+#include "ScriptAssetService.h"
 #include <Entity.h>
 #include <cstdint>
 
@@ -49,6 +50,28 @@ namespace Xelqoria::Editor
 
             return {};
         }
+
+        [[nodiscard]] std::filesystem::path SelectScriptAssetFile(
+            HWND ownerWindow,
+            const std::filesystem::path& initialDirectory)
+        {
+            std::array<wchar_t, MAX_PATH> filePath{};
+            OPENFILENAMEW openFileName{};
+            openFileName.lStructSize = sizeof(openFileName);
+            openFileName.hwndOwner = ownerWindow;
+            openFileName.lpstrFilter = L"Xelqoria Script Asset (*.script)\0*.script\0All Files (*.*)\0*.*\0";
+            openFileName.lpstrFile = filePath.data();
+            openFileName.nMaxFile = static_cast<DWORD>(filePath.size());
+            openFileName.lpstrInitialDir = initialDirectory.empty() ? nullptr : initialDirectory.c_str();
+            openFileName.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+            if (GetOpenFileNameW(&openFileName))
+            {
+                return filePath.data();
+            }
+
+            return {};
+        }
+
 
         [[nodiscard]] std::filesystem::path SelectFolder(HWND ownerWindow, const wchar_t* title)
         {
@@ -635,6 +658,32 @@ namespace Xelqoria::Editor
             else
             {
                 SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset の作成に失敗しました。");
+            }
+        }
+
+        if (true == m_assetsPanelController.HasAssignScriptRequest())
+        {
+            const std::filesystem::path spriteAssetPath =
+                m_assetsPanelController.GetAssignScriptSpriteAssetPath();
+            m_assetsPanelController.ClearAssignScriptRequest();
+
+            const std::filesystem::path projectRootDirectory =
+                m_sceneDocument.GetProjectInfo().has_value()
+                ? m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path()
+                : std::filesystem::path{};
+            const std::filesystem::path scriptAssetPath =
+                SelectScriptAssetFile(m_window.GetHwnd(), projectRootDirectory);
+            if (false == scriptAssetPath.empty())
+            {
+                if (true == m_sceneDocument.AssignScriptAssetToSpriteAssetFile(spriteAssetPath, scriptAssetPath))
+                {
+                    m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                    SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Sprite Asset に Script Asset を割り当てました。");
+                }
+                else
+                {
+                    SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset の割り当てに失敗しました。");
+                }
             }
         }
 

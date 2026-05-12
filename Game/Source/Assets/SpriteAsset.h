@@ -13,5 +13,10 @@ namespace Xelqoria::Game::Assets
 		/// スプライトに関連付けるテクスチャアセット識別子を表す。
 		/// </summary>
 		Core::AssetId textureAssetId{};
+
+		/// <summary>
+		/// スプライトに関連付ける Script Asset 識別子を表す。
+		/// </summary>
+		Core::AssetId scriptAssetId{};
 	};
 }

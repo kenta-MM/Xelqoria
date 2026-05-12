@@ -185,6 +185,29 @@ namespace Xelqoria::Editor
         return path.extension() == ScriptAssetExtension;
     }
 
+    Core::AssetId ScriptAssetService::BuildScriptAssetId(
+        const std::filesystem::path& projectRootDirectory,
+        const std::filesystem::path& assetPath)
+    {
+        if (projectRootDirectory.empty()
+            || assetPath.empty()
+            || false == IsScriptAssetFile(assetPath)
+            || false == EditorPathSecurity::IsPathInsideOrEqual(assetPath, projectRootDirectory))
+        {
+            return {};
+        }
+
+        std::error_code errorCode;
+        const std::filesystem::path relativeAssetPath =
+            std::filesystem::relative(assetPath, projectRootDirectory, errorCode);
+        if (errorCode || false == EditorPathSecurity::IsSafeRelativePath(relativeAssetPath))
+        {
+            return {};
+        }
+
+        return Xelqoria::Editor::BuildScriptAssetId(relativeAssetPath);
+    }
+
     std::optional<std::filesystem::path> ScriptAssetService::ResolveSourcePath(
         const std::filesystem::path& projectRootDirectory,
         const std::filesystem::path& assetPath)
@@ -291,7 +314,8 @@ namespace Xelqoria::Editor
         result.succeeded = true;
         result.assetPath = assetPath;
         result.sourcePath = sourcePath;
-        result.scriptAssetId = BuildScriptAssetId(relativeAssetPath);
+        result.scriptAssetId = Xelqoria::Editor::BuildScriptAssetId(relativeAssetPath);
         return result;
     }
+
 }

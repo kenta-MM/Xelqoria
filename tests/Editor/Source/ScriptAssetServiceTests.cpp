@@ -23,6 +23,7 @@ namespace
         buffer << input.rdbuf();
         return buffer.str();
     }
+
 }
 
 TEST(ScriptAssetServiceTests, CreateScriptAssetWritesManifestAndInitialCode)
@@ -48,6 +49,25 @@ TEST(ScriptAssetServiceTests, CreateScriptAssetWritesManifestAndInitialCode)
     const std::string source = ReadTextFile(result.sourcePath);
     EXPECT_NE(std::string::npos, source.find("void Start()"));
     EXPECT_NE(std::string::npos, source.find("void Update(float deltaTime)"));
+
+    std::filesystem::remove_all(projectRoot);
+}
+
+TEST(ScriptAssetServiceTests, BuildScriptAssetIdUsesProjectRelativeScriptPath)
+{
+    const std::filesystem::path projectRoot = MakeTempDirectory(L"XelqoriaScriptAssetServiceTests_AssetId");
+    const std::filesystem::path scriptDirectory = projectRoot / L"Scripts";
+    std::filesystem::create_directories(scriptDirectory);
+    const std::filesystem::path scriptPath = scriptDirectory / L"Player.script";
+    {
+        std::ofstream output(scriptPath, std::ios::binary | std::ios::trunc);
+        output << "magic=XelqoriaScriptAsset\n";
+    }
+
+    const Xelqoria::Core::AssetId scriptAssetId =
+        Xelqoria::Editor::ScriptAssetService::BuildScriptAssetId(projectRoot, scriptPath);
+
+    EXPECT_EQ("scripts/Scripts/Player.script", scriptAssetId.GetValue());
 
     std::filesystem::remove_all(projectRoot);
 }
