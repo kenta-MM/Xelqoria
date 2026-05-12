@@ -222,6 +222,13 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool TryOpenEntry(std::size_t entryIndex);
 
         /// <summary>
+        /// Script Asset の管理 C++ ソースを関連付けられたアプリケーションで開く。
+        /// </summary>
+        /// <param name="entry">対象 Script Asset 項目。</param>
+        /// <returns>処理対象の Script Asset だった場合は true。</returns>
+        [[nodiscard]] bool TryOpenScriptAssetSource(const AssetListEntry& entry);
+
+        /// <summary>
         /// 現在選択しているフォルダ項目を開く。
         /// </summary>
         /// <returns>フォルダ移動した場合は true。</returns>

@@ -15,6 +15,7 @@
 
 #include "EditorAssetPathUtils.h"
 #include "EditorPathSecurity.h"
+#include "ScriptAssetService.h"
 
 namespace Xelqoria::Editor
 {
@@ -753,7 +754,7 @@ namespace Xelqoria::Editor
         const AssetListEntry entry = m_visibleEntries[entryIndex];
         if (false == entry.isDirectory)
         {
-            return false;
+            return TryOpenScriptAssetSource(entry);
         }
 
         if (entry.isParentLink && m_currentDirectory == m_assetsRootDirectory)
@@ -778,6 +779,46 @@ namespace Xelqoria::Editor
         RebuildVisibleEntries();
         RefreshListView();
         RefreshSummaryLabel();
+        return true;
+    }
+
+    bool AssetsPanelController::TryOpenScriptAssetSource(const AssetListEntry& entry)
+    {
+        if (entry.isDirectory
+            || entry.isParentLink
+            || false == ScriptAssetService::IsScriptAssetFile(entry.path)
+            || false == EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory))
+        {
+            return false;
+        }
+
+        const auto sourcePath = ScriptAssetService::ResolveSourcePath(m_assetsRootDirectory, entry.path);
+        if (false == sourcePath.has_value() || false == std::filesystem::exists(*sourcePath))
+        {
+            MessageBoxW(
+                m_assetsListView,
+                L"Script Asset に対応する C++ コードファイルを開けませんでした。",
+                L"Assets",
+                MB_OK | MB_ICONERROR);
+            return true;
+        }
+
+        const HINSTANCE executeResult = ShellExecuteW(
+            m_assetsListView,
+            L"open",
+            sourcePath->c_str(),
+            nullptr,
+            sourcePath->parent_path().c_str(),
+            SW_SHOWNORMAL);
+        if (reinterpret_cast<INT_PTR>(executeResult) <= 32)
+        {
+            MessageBoxW(
+                m_assetsListView,
+                L"Visual Studio または関連付けられたエディタを起動できませんでした。",
+                L"Assets",
+                MB_OK | MB_ICONERROR);
+        }
+
         return true;
     }
 

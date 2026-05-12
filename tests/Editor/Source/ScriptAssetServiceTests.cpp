@@ -86,3 +86,41 @@ TEST(ScriptAssetServiceTests, CreateScriptAssetRejectsOutsideTargetDirectory)
     std::filesystem::remove_all(projectRoot);
     std::filesystem::remove_all(outsideRoot);
 }
+
+TEST(ScriptAssetServiceTests, ResolveSourcePathReadsManagedCodePathFromManifest)
+{
+    const std::filesystem::path projectRoot = MakeTempDirectory(L"XelqoriaScriptAssetServiceTests_Resolve");
+    const std::filesystem::path targetDirectory = projectRoot / L"Assets";
+    std::filesystem::create_directories(targetDirectory);
+
+    const Xelqoria::Editor::ScriptAssetCreationResult created =
+        Xelqoria::Editor::ScriptAssetService::CreateScriptAsset(projectRoot, targetDirectory);
+
+    ASSERT_TRUE(created.succeeded);
+    const auto sourcePath =
+        Xelqoria::Editor::ScriptAssetService::ResolveSourcePath(projectRoot, created.assetPath);
+
+    ASSERT_TRUE(sourcePath.has_value());
+    EXPECT_EQ(created.sourcePath, *sourcePath);
+
+    std::filesystem::remove_all(projectRoot);
+}
+
+TEST(ScriptAssetServiceTests, ResolveSourcePathRejectsUnsafeManifestSource)
+{
+    const std::filesystem::path projectRoot = MakeTempDirectory(L"XelqoriaScriptAssetServiceTests_UnsafeSource");
+    const std::filesystem::path assetPath = projectRoot / L"Unsafe.script";
+    {
+        std::ofstream output(assetPath, std::ios::binary | std::ios::trunc);
+        output << "magic=XelqoriaScriptAsset\n";
+        output << "version=1\n";
+        output << "source=\"../Outside.cpp\"\n";
+    }
+
+    const auto sourcePath =
+        Xelqoria::Editor::ScriptAssetService::ResolveSourcePath(projectRoot, assetPath);
+
+    EXPECT_FALSE(sourcePath.has_value());
+
+    std::filesystem::remove_all(projectRoot);
+}
