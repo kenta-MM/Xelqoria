@@ -248,6 +248,7 @@ namespace Xelqoria::Editor
             Refresh(scene, selectedEntityId, canAddSpriteComponent, spriteAssetResolver);
         }
 
+        FinishButtonClickTracking(inputSnapshot);
         return result;
     }
 
@@ -293,13 +294,24 @@ namespace Xelqoria::Editor
 
     void InspectorPanelController::UpdateTextureDropHighlight(const AssetsPanelController& assetsPanelController)
     {
-        const bool shouldShow = IsTextureDropTargetHovered(assetsPanelController);
-        if (shouldShow == m_isTextureDropHighlightVisible)
+        HWND targetEdit = nullptr;
+        if (true == IsTextureDropTargetHovered(assetsPanelController))
+        {
+            targetEdit = m_spriteRefEdit;
+        }
+        else if (true == IsScriptDropTargetHovered(assetsPanelController))
+        {
+            targetEdit = m_scriptAssetEdit;
+        }
+
+        const bool shouldShow = nullptr != targetEdit;
+        if (shouldShow == m_isDropHighlightVisible && targetEdit == m_dropHighlightTargetEdit)
         {
             return;
         }
 
-        m_isTextureDropHighlightVisible = shouldShow;
+        m_isDropHighlightVisible = shouldShow;
+        m_dropHighlightTargetEdit = targetEdit;
         if (nullptr == m_spriteRefDropHighlight)
         {
             return;
@@ -308,14 +320,19 @@ namespace Xelqoria::Editor
         ShowWindow(m_spriteRefDropHighlight, shouldShow ? SW_SHOW : SW_HIDE);
         if (shouldShow)
         {
+            RECT targetRect{};
+            HWND parentWindow = GetParent(m_spriteRefDropHighlight);
+            GetWindowRect(targetEdit, &targetRect);
+            MapWindowPoints(nullptr, parentWindow, reinterpret_cast<POINT*>(&targetRect), 2);
+            InflateRect(&targetRect, 2, 2);
             SetWindowPos(
                 m_spriteRefDropHighlight,
-                m_spriteRefEdit,
-                0,
-                0,
-                0,
-                0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                targetEdit,
+                targetRect.left,
+                targetRect.top,
+                targetRect.right - targetRect.left,
+                targetRect.bottom - targetRect.top,
+                SWP_NOACTIVATE);
             InvalidateRect(m_spriteRefDropHighlight, nullptr, TRUE);
         }
     }
@@ -350,11 +367,20 @@ namespace Xelqoria::Editor
         if (false == isLeftMouseButtonDown && true == m_wasLeftMouseButtonDown)
         {
             clicked = m_pressedButtonHandle == buttonHandle && true == isCursorInsideButton;
+        }
+
+        return clicked;
+    }
+
+    void InspectorPanelController::FinishButtonClickTracking(const Core::InputSnapshot& inputSnapshot)
+    {
+        const bool isLeftMouseButtonDown = inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left);
+        if (false == isLeftMouseButtonDown && true == m_wasLeftMouseButtonDown)
+        {
             m_pressedButtonHandle = nullptr;
         }
 
         m_wasLeftMouseButtonDown = isLeftMouseButtonDown;
-        return clicked;
     }
 
     bool InspectorPanelController::IsTextureDropTargetHovered(const AssetsPanelController& assetsPanelController) const
@@ -375,5 +401,28 @@ namespace Xelqoria::Editor
         RECT textureRect{};
         GetWindowRect(m_spriteRefEdit, &textureRect);
         return PtInRect(&textureRect, cursorPoint) != FALSE;
+    }
+
+    bool InspectorPanelController::IsScriptDropTargetHovered(const AssetsPanelController& assetsPanelController) const
+    {
+        const bool hasScriptDrag = assetsPanelController.IsDragActive()
+            || assetsPanelController.WasDragReleasedThisFrame();
+        if (false == hasScriptDrag
+            || true == assetsPanelController.GetDraggingScriptAssetId().IsEmpty()
+            || nullptr == m_scriptAssetEdit
+            || nullptr == m_scriptAssignButton
+            || false == IsWindowVisible(m_scriptAssetEdit)
+            || false == IsWindowEnabled(m_scriptAssetEdit)
+            || false == IsWindowEnabled(m_scriptAssignButton))
+        {
+            return false;
+        }
+
+        POINT cursorPoint{};
+        GetCursorPos(&cursorPoint);
+
+        RECT scriptRect{};
+        GetWindowRect(m_scriptAssetEdit, &scriptRect);
+        return PtInRect(&scriptRect, cursorPoint) != FALSE;
     }
 }

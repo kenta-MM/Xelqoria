@@ -163,6 +163,13 @@ namespace Xelqoria::Editor
         void UpdateTextureDropHighlight(const AssetsPanelController& assetsPanelController);
 
         /// <summary>
+        /// 現在のカーソル位置が Script ドロップ対象内かを取得する。
+        /// </summary>
+        /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
+        /// <returns>ドロップ対象内の場合は true。</returns>
+        [[nodiscard]] bool IsScriptDropTargetHovered(const AssetsPanelController& assetsPanelController) const;
+
+        /// <summary>
         /// 直前反映 Entity の追跡状態を破棄する。
         /// </summary>
         void ResetTrackedEntity();
@@ -306,6 +313,12 @@ namespace Xelqoria::Editor
         bool ConsumeButtonClick(HWND buttonHandle, const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
+        /// ボタン押下追跡を現在フレームの入力状態へ進める。
+        /// </summary>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
+        void FinishButtonClickTracking(const Core::InputSnapshot& inputSnapshot);
+
+        /// <summary>
         /// 現在のカーソル位置が Texture ドロップ対象内かを取得する。
         /// </summary>
         /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
@@ -332,6 +345,7 @@ namespace Xelqoria::Editor
         std::wstring m_lastScriptDisplayText{};
         bool m_wasLeftMouseButtonDown = false;
         HWND m_pressedButtonHandle = nullptr;
-        bool m_isTextureDropHighlightVisible = false;
+        bool m_isDropHighlightVisible = false;
+        HWND m_dropHighlightTargetEdit = nullptr;
     };
 }

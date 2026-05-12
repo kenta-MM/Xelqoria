@@ -943,6 +943,35 @@ namespace Xelqoria::Editor
             RefreshSceneViewSelectionStatus();
         }
 
+        if (true == m_assetsPanelController.WasDragReleasedThisFrame()
+            && false == m_assetsPanelController.GetDraggingScriptAssetId().IsEmpty()
+            && true == m_inspectorPanelController.IsScriptDropTargetHovered(m_assetsPanelController))
+        {
+            const auto selectedEntityId = m_hierarchyPanelController.GetSelectedEntityId();
+            const Game::Scene* scene = m_sceneDocument.GetScene();
+            const auto entity = nullptr != scene && true == selectedEntityId.has_value()
+                ? scene->FindEntity(*selectedEntityId)
+                : std::optional<std::reference_wrapper<const Game::Entity>>{};
+            const auto spriteComponent = entity.has_value()
+                ? entity->get().GetSpriteComponent()
+                : std::optional<std::reference_wrapper<const Game::SpriteComponent>>{};
+            const bool scriptDropSucceeded = spriteComponent.has_value()
+                && true == m_sceneDocument.AssignScriptAssetToSpriteAsset(
+                    spriteComponent->get().spriteAssetRef,
+                    m_assetsPanelController.GetDraggingScriptAssetPath());
+
+            if (true == scriptDropSucceeded)
+            {
+                m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                RefreshEditorPanels(canAddSpriteComponent, false);
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Sprite Asset に Script Asset を割り当てました。");
+            }
+            else
+            {
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset の割り当てに失敗しました。");
+            }
+        }
+
         const SceneViewInteractionResult interactionResult = m_sceneViewController.UpdateInteraction(
             m_sceneDocument.GetScene(),
             m_sceneDocument.GetSpriteAssetRegistry(),
