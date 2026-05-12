@@ -14,6 +14,7 @@
 #include "ProjectPanelController.h"
 #include "SceneViewController.h"
 #include "SceneViewRenderer.h"
+#include "ScriptRuntimeSession.h"
 #include "StartupScreenController.h"
 #include "RecentProjectsStore.h"
 
@@ -215,6 +216,7 @@ namespace Xelqoria::Editor
         ProjectPanelController m_projectPanelController{};
         SceneViewController m_sceneViewController{};
         SceneViewRenderer m_sceneViewRenderer{};
+        ScriptRuntimeSession m_scriptRuntimeSession{};
         EditorCommandController m_editorCommandController{};
     };
 }

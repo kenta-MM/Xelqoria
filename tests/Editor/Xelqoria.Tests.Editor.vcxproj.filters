@@ -27,7 +27,13 @@
     <ClCompile Include="..\..\Editor\Source\ScriptAssetService.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Editor\Source\ScriptRuntimeSession.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\ScriptAssetServiceTests.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ScriptRuntimeSessionTests.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
