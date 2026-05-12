@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <string>
 
 #include <gtest/gtest.h>
 
@@ -24,6 +25,17 @@ namespace
         return buffer.str();
     }
 
+    void WriteFakeCompiler(
+        const std::filesystem::path& path,
+        const std::string& outputText,
+        int exitCode)
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output
+            << "@echo off\r\n"
+            << "echo " << outputText << "\r\n"
+            << "exit /B " << exitCode << "\r\n";
+    }
 }
 
 TEST(ScriptAssetServiceTests, CreateScriptAssetWritesManifestAndInitialCode)
@@ -141,6 +153,59 @@ TEST(ScriptAssetServiceTests, ResolveSourcePathRejectsUnsafeManifestSource)
         Xelqoria::Editor::ScriptAssetService::ResolveSourcePath(projectRoot, assetPath);
 
     EXPECT_FALSE(sourcePath.has_value());
+
+    std::filesystem::remove_all(projectRoot);
+}
+
+TEST(ScriptAssetServiceTests, BuildProjectScriptsCompilesResolvedManagedSources)
+{
+    const std::filesystem::path projectRoot = MakeTempDirectory(L"XelqoriaScriptAssetServiceTests_BuildSuccess");
+    const std::filesystem::path targetDirectory = projectRoot / L"Assets";
+    std::filesystem::create_directories(targetDirectory);
+
+    const Xelqoria::Editor::ScriptAssetCreationResult created =
+        Xelqoria::Editor::ScriptAssetService::CreateScriptAsset(projectRoot, targetDirectory);
+    ASSERT_TRUE(created.succeeded);
+
+    const std::filesystem::path fakeCompilerPath = projectRoot / L"FakeCompiler.cmd";
+    WriteFakeCompiler(fakeCompilerPath, "fake compile ok", 0);
+
+    const Xelqoria::Editor::ScriptBuildResult buildResult =
+        Xelqoria::Editor::ScriptAssetService::BuildProjectScripts(
+            projectRoot,
+            Xelqoria::Editor::ScriptBuildOptions{ fakeCompilerPath });
+
+    EXPECT_TRUE(buildResult.succeeded);
+    ASSERT_EQ(static_cast<std::size_t>(1), buildResult.sourcePaths.size());
+    EXPECT_EQ(created.sourcePath, buildResult.sourcePaths[0]);
+    EXPECT_NE(std::wstring::npos, buildResult.diagnostics.find(L"fake compile ok"));
+
+    std::filesystem::remove_all(projectRoot);
+}
+
+TEST(ScriptAssetServiceTests, BuildProjectScriptsReportsCompilerOutputOnFailure)
+{
+    const std::filesystem::path projectRoot = MakeTempDirectory(L"XelqoriaScriptAssetServiceTests_BuildFailure");
+    const std::filesystem::path targetDirectory = projectRoot / L"Assets";
+    std::filesystem::create_directories(targetDirectory);
+
+    const Xelqoria::Editor::ScriptAssetCreationResult created =
+        Xelqoria::Editor::ScriptAssetService::CreateScriptAsset(projectRoot, targetDirectory);
+    ASSERT_TRUE(created.succeeded);
+
+    const std::filesystem::path fakeCompilerPath = projectRoot / L"FakeCompiler.cmd";
+    WriteFakeCompiler(fakeCompilerPath, "script compile failed", 2);
+
+    const Xelqoria::Editor::ScriptBuildResult buildResult =
+        Xelqoria::Editor::ScriptAssetService::BuildProjectScripts(
+            projectRoot,
+            Xelqoria::Editor::ScriptBuildOptions{ fakeCompilerPath });
+
+    EXPECT_FALSE(buildResult.succeeded);
+    ASSERT_EQ(static_cast<std::size_t>(1), buildResult.sourcePaths.size());
+    EXPECT_EQ(created.sourcePath, buildResult.sourcePaths[0]);
+    EXPECT_NE(std::wstring::npos, buildResult.diagnostics.find(L"script compile failed"));
+    EXPECT_NE(std::wstring::npos, buildResult.diagnostics.find(L"終了コード"));
 
     std::filesystem::remove_all(projectRoot);
 }

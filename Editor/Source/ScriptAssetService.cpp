@@ -1,5 +1,8 @@
 #include "ScriptAssetService.h"
 
+#include <algorithm>
+#include <array>
+#include <cstdio>
 #include <fstream>
 #include <iomanip>
 #include <optional>
@@ -18,6 +21,7 @@ namespace Xelqoria::Editor
         constexpr const wchar_t* DefaultScriptName = L"NewScript";
         constexpr const wchar_t* ScriptAssetExtension = L".script";
         constexpr const wchar_t* ManagedScriptsDirectory = L".xelqoria/Scripts";
+        constexpr const wchar_t* ScriptBuildDirectory = L".xelqoria/ScriptBuild";
 
         /// <summary>
         /// Script Asset の既定名から未使用ファイルパスを取得する。
@@ -61,6 +65,119 @@ namespace Xelqoria::Editor
             }
 
             return value;
+        }
+
+        /// <summary>
+        /// コマンドライン引数として渡す文字列を引用符で囲む。
+        /// </summary>
+        /// <param name="value">引用符で囲む値。</param>
+        /// <returns>コマンドライン向け文字列。</returns>
+        [[nodiscard]] std::wstring QuoteCommandArgument(const std::filesystem::path& value)
+        {
+            std::wstring quoted = L"\"";
+            for (const wchar_t character : value.wstring())
+            {
+                if (L'"' == character)
+                {
+                    quoted += L'\\';
+                }
+
+                quoted += character;
+            }
+
+            quoted += L"\"";
+            return quoted;
+        }
+
+        /// <summary>
+        /// 外部コマンドを実行して標準出力と標準エラーを取得する。
+        /// </summary>
+        /// <param name="commandLine">実行するコマンドライン。</param>
+        /// <param name="output">取得した出力。</param>
+        /// <returns>プロセス終了コード。起動失敗時は -1。</returns>
+        [[nodiscard]] int RunCommandAndCaptureOutput(const std::wstring& commandLine, std::wstring& output)
+        {
+#if defined(_WIN32)
+            FILE* pipe = _popen(ToNarrowString(commandLine).c_str(), "r");
+            if (nullptr == pipe)
+            {
+                output += L"コンパイラ プロセスを開始できませんでした。\n";
+                return -1;
+            }
+
+            std::array<char, 512> buffer{};
+            while (nullptr != fgets(buffer.data(), static_cast<int>(buffer.size()), pipe))
+            {
+                output += ToWideString(buffer.data());
+            }
+
+            return _pclose(pipe);
+#else
+            (void)commandLine;
+            output += L"Script ビルドは Windows Editor でのみ実行できます。\n";
+            return -1;
+#endif
+        }
+
+        /// <summary>
+        /// Script Asset ファイルをプロジェクト配下から列挙する。
+        /// </summary>
+        /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
+        /// <returns>Script Asset ファイル一覧。</returns>
+        [[nodiscard]] std::vector<std::filesystem::path> EnumerateScriptAssetFiles(
+            const std::filesystem::path& projectRootDirectory)
+        {
+            std::vector<std::filesystem::path> assetPaths{};
+            std::error_code errorCode;
+            for (const std::filesystem::directory_entry& entry :
+                std::filesystem::recursive_directory_iterator(projectRootDirectory, errorCode))
+            {
+                if (errorCode)
+                {
+                    break;
+                }
+
+                if (entry.is_regular_file(errorCode)
+                    && false == static_cast<bool>(errorCode)
+                    && entry.path().extension() == ScriptAssetExtension)
+                {
+                    assetPaths.push_back(entry.path());
+                }
+            }
+
+            std::sort(assetPaths.begin(), assetPaths.end());
+            return assetPaths;
+        }
+
+        /// <summary>
+        /// コンパイル出力先 object ファイルパスを作成する。
+        /// </summary>
+        /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
+        /// <param name="sourcePath">コンパイル対象ソース。</param>
+        /// <param name="index">同名回避用インデックス。</param>
+        /// <returns>object ファイルパス。</returns>
+        [[nodiscard]] std::filesystem::path BuildObjectPath(
+            const std::filesystem::path& projectRootDirectory,
+            const std::filesystem::path& sourcePath,
+            std::size_t index)
+        {
+            std::error_code errorCode;
+            std::filesystem::path relativeSourcePath =
+                std::filesystem::relative(sourcePath, projectRootDirectory, errorCode);
+            if (errorCode || relativeSourcePath.empty())
+            {
+                relativeSourcePath = sourcePath.filename();
+            }
+
+            std::wstring objectStem = SanitizeManagedCodeStem(relativeSourcePath.generic_wstring());
+            if (objectStem.empty())
+            {
+                objectStem = L"Script";
+            }
+
+            return projectRootDirectory
+                / ScriptBuildDirectory
+                / (std::to_wstring(index) + L"_" + objectStem + L".obj");
         }
 
         /// <summary>
@@ -315,6 +432,108 @@ namespace Xelqoria::Editor
         result.assetPath = assetPath;
         result.sourcePath = sourcePath;
         result.scriptAssetId = Xelqoria::Editor::BuildScriptAssetId(relativeAssetPath);
+        return result;
+    }
+
+    ScriptBuildResult ScriptAssetService::BuildProjectScripts(
+        const std::filesystem::path& projectRootDirectory,
+        const ScriptBuildOptions& options)
+    {
+        ScriptBuildResult result{};
+        if (projectRootDirectory.empty())
+        {
+            result.diagnostics = L"Script ビルド対象のプロジェクトが開かれていません。";
+            return result;
+        }
+
+        std::error_code errorCode;
+        if (false == std::filesystem::is_directory(projectRootDirectory, errorCode) || errorCode)
+        {
+            result.diagnostics = L"Script ビルド対象のプロジェクトルートを確認できません。";
+            return result;
+        }
+
+        const std::vector<std::filesystem::path> scriptAssetPaths =
+            EnumerateScriptAssetFiles(projectRootDirectory);
+        if (scriptAssetPaths.empty())
+        {
+            result.succeeded = true;
+            result.diagnostics = L"Script Asset はありません。";
+            return result;
+        }
+
+        const std::filesystem::path buildDirectory = projectRootDirectory / ScriptBuildDirectory;
+        std::filesystem::create_directories(buildDirectory, errorCode);
+        if (errorCode)
+        {
+            result.diagnostics = L"Script ビルド出力フォルダを作成できません。";
+            return result;
+        }
+
+        std::wostringstream diagnostics{};
+        bool allSucceeded = true;
+        std::size_t compiledCount = 0;
+        for (const std::filesystem::path& scriptAssetPath : scriptAssetPaths)
+        {
+            const std::optional<std::filesystem::path> sourcePath =
+                ResolveSourcePath(projectRootDirectory, scriptAssetPath);
+            if (false == sourcePath.has_value())
+            {
+                allSucceeded = false;
+                diagnostics << L"[Script] " << scriptAssetPath.wstring()
+                    << L": 管理 C++ ソースの参照を解決できません。\n";
+                continue;
+            }
+
+            if (false == std::filesystem::exists(*sourcePath, errorCode) || errorCode)
+            {
+                allSucceeded = false;
+                diagnostics << L"[Script] " << scriptAssetPath.wstring()
+                    << L": 管理 C++ ソースが見つかりません: " << sourcePath->wstring() << L"\n";
+                continue;
+            }
+
+            result.sourcePaths.push_back(*sourcePath);
+            const std::filesystem::path objectPath =
+                BuildObjectPath(projectRootDirectory, *sourcePath, compiledCount);
+            ++compiledCount;
+
+            const std::wstring commandLine =
+                L"call "
+                + QuoteCommandArgument(options.compilerExecutable)
+                + L" /nologo /EHsc /std:c++20 /c "
+                + QuoteCommandArgument(*sourcePath)
+                + L" /Fo"
+                + QuoteCommandArgument(objectPath)
+                + L" 2>&1";
+
+            std::wstring compilerOutput{};
+            const int exitCode = RunCommandAndCaptureOutput(commandLine, compilerOutput);
+            diagnostics << L"[Script] " << sourcePath->wstring() << L"\n";
+            if (false == compilerOutput.empty())
+            {
+                diagnostics << compilerOutput;
+                if (compilerOutput.back() != L'\n')
+                {
+                    diagnostics << L"\n";
+                }
+            }
+
+            if (0 != exitCode)
+            {
+                allSucceeded = false;
+                diagnostics << L"終了コード: " << exitCode << L"\n";
+            }
+        }
+
+        result.succeeded = allSucceeded;
+        if (allSucceeded)
+        {
+            diagnostics << L"Script ビルドに成功しました。対象: "
+                << result.sourcePaths.size() << L" 件";
+        }
+
+        result.diagnostics = diagnostics.str();
         return result;
     }
 

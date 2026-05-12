@@ -129,6 +129,12 @@ namespace Xelqoria::Editor
         void MarkProjectDirty();
 
         /// <summary>
+        /// Editor 再生開始前に Script をビルドする。
+        /// </summary>
+        /// <returns>再生開始前ビルドに成功した場合は true。</returns>
+        [[nodiscard]] bool StartEditorPlay();
+
+        /// <summary>
         /// Scene の未保存変更が保存されたことを記録する。
         /// </summary>
         void ClearProjectDirty();

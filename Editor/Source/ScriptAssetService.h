@@ -2,6 +2,8 @@
 
 #include <filesystem>
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "AssetId.h"
 
@@ -31,6 +33,38 @@ namespace Xelqoria::Editor
         /// 作成した Script Asset の識別子を表す。
         /// </summary>
         Core::AssetId scriptAssetId{};
+    };
+
+    /// <summary>
+    /// Script 管理 C++ ソースのビルド設定を表す。
+    /// </summary>
+    struct ScriptBuildOptions
+    {
+        /// <summary>
+        /// C++ コンパイラ実行ファイルまたはコマンドを表す。
+        /// </summary>
+        std::filesystem::path compilerExecutable = L"cl.exe";
+    };
+
+    /// <summary>
+    /// Script 管理 C++ ソースのビルド結果を表す。
+    /// </summary>
+    struct ScriptBuildResult
+    {
+        /// <summary>
+        /// ビルドに成功したかを表す。
+        /// </summary>
+        bool succeeded = false;
+
+        /// <summary>
+        /// ビルド対象になった C++ ソースファイル一覧を表す。
+        /// </summary>
+        std::vector<std::filesystem::path> sourcePaths{};
+
+        /// <summary>
+        /// Editor に表示するビルド診断メッセージを表す。
+        /// </summary>
+        std::wstring diagnostics{};
     };
 
     /// <summary>
@@ -75,6 +109,16 @@ namespace Xelqoria::Editor
         [[nodiscard]] static ScriptAssetCreationResult CreateScriptAsset(
             const std::filesystem::path& projectRootDirectory,
             const std::filesystem::path& targetDirectory);
+
+        /// <summary>
+        /// プロジェクト配下の Script Asset が参照する管理 C++ ソースをビルドする。
+        /// </summary>
+        /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
+        /// <param name="options">ビルド設定。</param>
+        /// <returns>ビルド結果。診断にはコンパイル出力を含む。</returns>
+        [[nodiscard]] static ScriptBuildResult BuildProjectScripts(
+            const std::filesystem::path& projectRootDirectory,
+            const ScriptBuildOptions& options = {});
 
     };
 }
