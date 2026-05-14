@@ -12,6 +12,7 @@
 #include "EditorProject.h"
 #include "IGraphicsContext.h"
 #include "Scene.h"
+#include "ScriptAssetService.h"
 #include "TextureAssetRegistry.h"
 
 namespace Xelqoria::Editor
@@ -100,6 +101,21 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool RegisterImageAsset(const std::filesystem::path& imagePath);
 
         /// <summary>
+        /// 指定 Sprite Asset ファイルを SpriteAsset として登録する。
+        /// </summary>
+        /// <param name="spriteAssetPath">登録対象の Sprite Asset ファイルパス。</param>
+        /// <returns>登録に成功した場合は true。</returns>
+        [[nodiscard]] bool RegisterSpriteAssetFile(const std::filesystem::path& spriteAssetPath);
+
+        /// <summary>
+        /// SpriteAssetId から対応する Sprite Asset ファイルパスを解決する。
+        /// </summary>
+        /// <param name="spriteAssetId">解決対象 SpriteAssetId。</param>
+        /// <returns>Sprite Asset ファイルパス。解決できない場合は空。</returns>
+        [[nodiscard]] std::optional<std::filesystem::path> ResolveSpriteAssetPath(
+            const Core::AssetId& spriteAssetId) const;
+
+        /// <summary>
         /// Entity の Sprite 情報に対応する Sprite アセットファイルをプロジェクト配下へ作成する。
         /// </summary>
         /// <param name="entity">保存元の Sprite Entity。</param>
@@ -107,6 +123,59 @@ namespace Xelqoria::Editor
         /// <returns>作成または既存ファイル確認に成功した場合は true。</returns>
         [[nodiscard]] bool CreateSpriteAssetFile(
             const Game::Entity& entity,
+            const std::filesystem::path& targetDirectory);
+
+        /// <summary>
+        /// Entity の SpriteComponent が実体 `.sprite` を参照するようにし、必要なら Sprite アセットファイルを作成する。
+        /// </summary>
+        /// <param name="entity">更新対象の Sprite Entity。</param>
+        /// <param name="targetDirectory">作成先フォルダ。空またはプロジェクト外の場合は Assets 直下。</param>
+        /// <returns>参照先 SpriteAssetId。作成または更新できない場合は空。</returns>
+        [[nodiscard]] std::optional<Core::AssetId> EnsureSpriteAssetFileForEntity(
+            Game::Entity& entity,
+            const std::filesystem::path& targetDirectory);
+
+        /// <summary>
+        /// Sprite Asset ファイルへ Script Asset の割り当てを保存する。
+        /// </summary>
+        /// <param name="spriteAssetPath">割り当て先 Sprite Asset ファイルパス。</param>
+        /// <param name="scriptAssetPath">割り当てる Script Asset ファイルパス。</param>
+        /// <returns>保存に成功した場合は true。</returns>
+        [[nodiscard]] bool AssignScriptAssetToSpriteAssetFile(
+            const std::filesystem::path& spriteAssetPath,
+            const std::filesystem::path& scriptAssetPath);
+
+        /// <summary>
+        /// SpriteAssetId で指定した Sprite Asset へ Script Asset を割り当てる。
+        /// </summary>
+        /// <param name="spriteAssetId">割り当て先 SpriteAssetId。</param>
+        /// <param name="scriptAssetPath">割り当てる Script Asset ファイルパス。</param>
+        /// <returns>保存に成功した場合は true。</returns>
+        [[nodiscard]] bool AssignScriptAssetToSpriteAsset(
+            const Core::AssetId& spriteAssetId,
+            const std::filesystem::path& scriptAssetPath);
+
+        /// <summary>
+        /// SpriteAssetId で指定した Sprite Asset の Script Asset 割り当てを解除する。
+        /// </summary>
+        /// <param name="spriteAssetId">解除対象 SpriteAssetId。</param>
+        /// <returns>保存に成功した場合は true。</returns>
+        [[nodiscard]] bool ClearScriptAssetFromSpriteAsset(const Core::AssetId& spriteAssetId);
+
+        /// <summary>
+        /// SpriteAssetId で指定した Sprite Asset と同じフォルダへ Script Asset を作成し割り当てる。
+        /// </summary>
+        /// <param name="spriteAssetId">割り当て先 SpriteAssetId。</param>
+        /// <returns>Script Asset 作成結果。割り当て失敗時は succeeded=false。</returns>
+        [[nodiscard]] ScriptAssetCreationResult CreateAndAssignScriptAssetToSpriteAsset(
+            const Core::AssetId& spriteAssetId);
+
+        /// <summary>
+        /// 現在のプロジェクト配下へ Script Asset と初期 C++ コードを作成する。
+        /// </summary>
+        /// <param name="targetDirectory">Script Asset 作成先フォルダ。空またはプロジェクト外の場合は作成しない。</param>
+        /// <returns>Script Asset 作成結果。</returns>
+        [[nodiscard]] ScriptAssetCreationResult CreateScriptAssetFile(
             const std::filesystem::path& targetDirectory);
 
         /// <summary>

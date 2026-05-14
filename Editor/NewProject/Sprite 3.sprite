@@ -1,13 +1,19 @@
 magic=XelqoriaSpriteAsset
 version=1
 name="Sprite 3"
-transform.position=0.000000,0.000000,0.000000
+transform.position=256.000000,151.000000,0.000000
 transform.rotation=0.000000,0.000000,0.000000
-transform.scale=1.000000,1.000000,1.000000
+transform.scale=0.850000,0.850000,1.000000
 hasSpriteComponent=true
-spriteAssetRef=
-textureAssetId=
-texture.size=0,0
+spriteAssetRef=sprites/タイトルなし.png
+textureAssetId=textures/タイトルなし.png
+scriptAssetId=scripts/NewScript1.script
+texture.size=1516,797
 render.visible=true
 render.sortOrder=0
 render.opacity=1.000000
+render.color=1.000000,1.000000,1.000000,1.000000
+
+
+
+

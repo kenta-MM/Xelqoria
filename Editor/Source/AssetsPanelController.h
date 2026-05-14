@@ -126,6 +126,18 @@ namespace Xelqoria::Editor
         [[nodiscard]] const std::filesystem::path& GetDraggingImagePath() const;
 
         /// <summary>
+        /// 現在ドラッグ中の ScriptAssetId を取得する。
+        /// </summary>
+        /// <returns>ドラッグ中 ScriptAssetId。</returns>
+        [[nodiscard]] const Core::AssetId& GetDraggingScriptAssetId() const;
+
+        /// <summary>
+        /// 現在ドラッグ中の Script Asset ファイルパスを取得する。
+        /// </summary>
+        /// <returns>ドラッグ中 Script Asset ファイルパス。</returns>
+        [[nodiscard]] const std::filesystem::path& GetDraggingScriptAssetPath() const;
+
+        /// <summary>
         /// ドラッグ中かを取得する。
         /// </summary>
         /// <returns>ドラッグ中の場合は true。</returns>
@@ -161,10 +173,44 @@ namespace Xelqoria::Editor
         void ClearCreateSpriteRequest();
 
         /// <summary>
+        /// Assets 空白右クリックから Script 作成が要求されたかを取得する。
+        /// </summary>
+        /// <returns>Script 作成要求がある場合は true。</returns>
+        [[nodiscard]] bool HasCreateScriptRequest() const;
+
+        /// <summary>
+        /// Script 作成要求を消費する。
+        /// </summary>
+        void ClearCreateScriptRequest();
+
+        /// <summary>
+        /// Sprite Asset への Script 割り当て要求があるかを取得する。
+        /// </summary>
+        /// <returns>割り当て要求がある場合は true。</returns>
+        [[nodiscard]] bool HasAssignScriptRequest() const;
+
+        /// <summary>
+        /// Script 割り当て要求を消費する。
+        /// </summary>
+        void ClearAssignScriptRequest();
+
+        /// <summary>
         /// Sprite アセットファイルの作成先フォルダを取得する。
         /// </summary>
         /// <returns>作成先フォルダ。未指定時は空。</returns>
         [[nodiscard]] const std::filesystem::path& GetCreateSpriteTargetDirectory() const;
+
+        /// <summary>
+        /// Script Asset ファイルの作成先フォルダを取得する。
+        /// </summary>
+        /// <returns>作成先フォルダ。未指定時は空。</returns>
+        [[nodiscard]] const std::filesystem::path& GetCreateScriptTargetDirectory() const;
+
+        /// <summary>
+        /// Script を割り当てる Sprite Asset ファイルパスを取得する。
+        /// </summary>
+        /// <returns>割り当て先 Sprite Asset ファイルパス。</returns>
+        [[nodiscard]] const std::filesystem::path& GetAssignScriptSpriteAssetPath() const;
 
     private:
         /// <summary>
@@ -205,6 +251,13 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool TryOpenEntry(std::size_t entryIndex);
 
         /// <summary>
+        /// Script Asset の管理 C++ ソースを関連付けられたアプリケーションで開く。
+        /// </summary>
+        /// <param name="entry">対象 Script Asset 項目。</param>
+        /// <returns>処理対象の Script Asset だった場合は true。</returns>
+        [[nodiscard]] bool TryOpenScriptAssetSource(const AssetListEntry& entry);
+
+        /// <summary>
         /// 現在選択しているフォルダ項目を開く。
         /// </summary>
         /// <returns>フォルダ移動した場合は true。</returns>
@@ -241,10 +294,10 @@ namespace Xelqoria::Editor
         /// <summary>
         /// Assets 空白またはフォルダ用の作成メニューを表示する。
         /// </summary>
-        /// <param name="targetDirectory">Sprite 作成先フォルダ。</param>
+        /// <param name="targetDirectory">作成先フォルダ。</param>
         /// <param name="screenPoint">メニュー表示位置のスクリーン座標。</param>
         /// <returns>操作を処理した場合は true。</returns>
-        [[nodiscard]] bool ShowCreateSpriteContextMenu(
+        [[nodiscard]] bool ShowCreateAssetContextMenu(
             const std::filesystem::path& targetDirectory,
             POINT screenPoint);
 
@@ -327,7 +380,9 @@ namespace Xelqoria::Editor
         Core::AssetId m_selectedSpriteAssetId{};
         Core::AssetId m_draggingSpriteAssetId{};
         Core::AssetId m_draggingTextureAssetId{};
+        Core::AssetId m_draggingScriptAssetId{};
         std::filesystem::path m_draggingImagePath{};
+        std::filesystem::path m_draggingScriptAssetPath{};
         ULONGLONG m_lastClickTick = 0;
         int m_lastClickedIndex = -1;
         bool m_isAssetDragActive = false;
@@ -335,6 +390,10 @@ namespace Xelqoria::Editor
         bool m_assetDragReleasedThisFrame = false;
         bool m_createSpriteRequested = false;
         std::filesystem::path m_createSpriteTargetDirectory{};
+        bool m_createScriptRequested = false;
+        std::filesystem::path m_createScriptTargetDirectory{};
+        bool m_assignScriptRequested = false;
+        std::filesystem::path m_assignScriptSpriteAssetPath{};
         bool m_listViewInitialized = false;
         HIMAGELIST m_dragImageList = nullptr;
         bool m_isDragImageVisible = false;

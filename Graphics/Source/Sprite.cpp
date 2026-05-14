@@ -64,6 +64,16 @@ namespace Xelqoria::Graphics
 		return m_rotationDegrees;
 	}
 
+	void Sprite::SetColor(float red, float green, float blue, float alpha)
+	{
+		m_color = { red, green, blue, alpha };
+	}
+
+	const std::array<float, 4>& Sprite::GetColor() const
+	{
+		return m_color;
+	}
+
 	void Sprite::SetOutlineEnabled(bool enabled)
 	{
 		m_outlineEnabled = enabled;

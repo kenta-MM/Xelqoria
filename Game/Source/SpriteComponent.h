@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include "AssetId.h"
@@ -35,6 +36,11 @@ namespace Xelqoria::Game
 		/// スプライト全体に適用する不透明度を表す。
 		/// </summary>
 		float opacity = 1.0f;
+
+		/// <summary>
+		/// スプライト全体に乗算する色を RGBA 順で表す。
+		/// </summary>
+		std::array<float, 4> color{ 1.0f, 1.0f, 1.0f, 1.0f };
 	};
 
 	/// <summary>

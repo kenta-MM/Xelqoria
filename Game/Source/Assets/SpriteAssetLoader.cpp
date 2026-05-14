@@ -58,6 +58,7 @@ namespace Xelqoria::Game::Assets
 		SpriteAsset asset{};
 		bool hasEditorSpriteAssetMagic = false;
 		bool hasTextureAssetId = false;
+		bool hasScriptAssetId = false;
 		std::size_t lineNumber = 0;
 		std::size_t cursor = 0;
 
@@ -123,6 +124,18 @@ namespace Xelqoria::Game::Assets
 					asset.textureAssetId = Core::AssetId(value);
 					hasTextureAssetId = true;
 				}
+				else if (key == "scriptAssetId") {
+					if (hasScriptAssetId) {
+						return MakeError(
+							SpriteAssetLoadErrorCode::DuplicateField,
+							lineNumber,
+							key,
+							"scriptAssetId が重複しています。");
+					}
+
+					asset.scriptAssetId = Core::AssetId(value);
+					hasScriptAssetId = true;
+				}
 				else if (hasEditorSpriteAssetMagic
 					&& (key == "version"
 						|| key == "name"
@@ -134,7 +147,8 @@ namespace Xelqoria::Game::Assets
 						|| key == "texture.size"
 						|| key == "render.visible"
 						|| key == "render.sortOrder"
-						|| key == "render.opacity")) {
+						|| key == "render.opacity"
+						|| key == "render.color")) {
 					// Editor 生成の .sprite は付加メタデータを含むが、実行時 SpriteAsset は textureAssetId のみを使用する。
 				}
 				else {

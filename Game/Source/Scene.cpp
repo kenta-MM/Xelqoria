@@ -86,6 +86,11 @@ namespace Xelqoria::Game
 			sprite.SetPosition(renderItem.transform->position.x, renderItem.transform->position.y);
 			sprite.SetScale(renderItem.transform->scale.x, renderItem.transform->scale.y);
 			sprite.SetRotationDegrees(renderItem.transform->rotation.z);
+			sprite.SetColor(
+				renderItem.spriteComponent->renderSettings.color[0],
+				renderItem.spriteComponent->renderSettings.color[1],
+				renderItem.spriteComponent->renderSettings.color[2],
+				renderItem.spriteComponent->renderSettings.color[3] * renderItem.spriteComponent->renderSettings.opacity);
 
 			std::ostringstream message;
 			message << "Scene::ResolveSceneSprites resolved entity " << renderItem.entityId

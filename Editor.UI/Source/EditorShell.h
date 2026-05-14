@@ -133,6 +133,36 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSpriteRefDropHighlight() const;
 
         /// <summary>
+        /// Script Asset ラベルを取得する。
+        /// </summary>
+        /// <returns>Script Asset ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetScriptAssetLabel() const;
+
+        /// <summary>
+        /// Script Asset 表示欄を取得する。
+        /// </summary>
+        /// <returns>Script Asset 表示欄の HWND。</returns>
+        [[nodiscard]] HWND GetScriptAssetEdit() const;
+
+        /// <summary>
+        /// Script Asset 作成ボタンを取得する。
+        /// </summary>
+        /// <returns>Script Asset 作成ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetScriptCreateButton() const;
+
+        /// <summary>
+        /// Script Asset 割り当てボタンを取得する。
+        /// </summary>
+        /// <returns>Script Asset 割り当てボタンの HWND。</returns>
+        [[nodiscard]] HWND GetScriptAssignButton() const;
+
+        /// <summary>
+        /// Script Asset 割り当て解除ボタンを取得する。
+        /// </summary>
+        /// <returns>Script Asset 割り当て解除ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetScriptClearButton() const;
+
+        /// <summary>
         /// SpriteComponent 操作ボタンを取得する。
         /// </summary>
         /// <returns>SpriteComponent 操作用ボタンの HWND。</returns>
@@ -583,7 +613,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 51> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 56> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -690,6 +720,11 @@ namespace Xelqoria::Editor
         HWND m_spriteRefLabel = nullptr;
         HWND m_spriteRefDropHighlight = nullptr;
         HWND m_spriteRefEdit = nullptr;
+        HWND m_scriptAssetLabel = nullptr;
+        HWND m_scriptAssetEdit = nullptr;
+        HWND m_scriptCreateButton = nullptr;
+        HWND m_scriptAssignButton = nullptr;
+        HWND m_scriptClearButton = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
         std::uint32_t m_sceneViewWidth = 0;
         std::uint32_t m_sceneViewHeight = 0;
