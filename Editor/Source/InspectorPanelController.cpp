@@ -107,10 +107,13 @@ namespace Xelqoria::Editor
         if (true == hasSpriteComponent)
         {
             m_lastSpriteRefAssetId = spriteComponent->get().spriteAssetRef;
-            m_lastSpriteRefDisplayText = FormatTextureDisplayText(m_lastSpriteRefAssetId);
+            const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(m_lastSpriteRefAssetId);
+            const Core::AssetId textureAssetId = spriteAsset.has_value()
+                ? spriteAsset->textureAssetId
+                : Core::AssetId{};
+            m_lastSpriteRefDisplayText = FormatTextureDisplayText(textureAssetId);
             SetWindowTextW(m_spriteRefEdit, m_lastSpriteRefDisplayText.c_str());
 
-            const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(m_lastSpriteRefAssetId);
             m_lastScriptAssetId = spriteAsset.has_value() ? spriteAsset->scriptAssetId : Core::AssetId{};
             m_lastScriptDisplayText = FormatScriptDisplayText(m_lastScriptAssetId);
             const InspectorScriptActionState scriptActionState = ComputeScriptActionState(
@@ -289,6 +292,41 @@ namespace Xelqoria::Editor
         spriteComponent->get().spriteAssetRef = droppedSpriteAssetId;
         result.changed = true;
         Refresh(scene, selectedEntityId, true, spriteAssetResolver);
+        return result;
+    }
+
+    InspectorApplyResult InspectorPanelController::ApplyScriptDrop(
+        const Game::Scene* scene,
+        std::optional<Game::EntityId> selectedEntityId,
+        const AssetsPanelController& assetsPanelController) const
+    {
+        InspectorApplyResult result{};
+        if (nullptr == scene
+            || false == selectedEntityId.has_value()
+            || true == assetsPanelController.GetDraggingScriptAssetId().IsEmpty()
+            || true == assetsPanelController.GetDraggingScriptAssetPath().empty()
+            || false == assetsPanelController.WasDragReleasedThisFrame()
+            || false == IsScriptDropTargetHovered(assetsPanelController))
+        {
+            return result;
+        }
+
+        const auto entity = scene->FindEntity(*selectedEntityId);
+        if (false == entity.has_value())
+        {
+            return result;
+        }
+
+        const auto spriteComponent = entity->get().GetSpriteComponent();
+        if (false == spriteComponent.has_value()
+            || true == spriteComponent->get().spriteAssetRef.IsEmpty())
+        {
+            return result;
+        }
+
+        result.scriptAction = InspectorScriptAction::AssignDropped;
+        result.scriptTargetSpriteAssetId = spriteComponent->get().spriteAssetRef;
+        result.droppedScriptAssetPath = assetsPanelController.GetDraggingScriptAssetPath();
         return result;
     }
 

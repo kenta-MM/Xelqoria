@@ -106,6 +106,45 @@ namespace Xelqoria::Editor
 
             return output.str();
         }
+
+        /// <summary>
+        /// Sprite アセットファイルの出力先パスを Entity 名と作成先から解決する。
+        /// </summary>
+        /// <param name="rootDirectory">プロジェクトルートディレクトリ。</param>
+        /// <param name="entityName">Sprite Entity 名。</param>
+        /// <param name="targetDirectory">作成先フォルダ。</param>
+        /// <returns>出力先パス。解決できない場合は空。</returns>
+        [[nodiscard]] std::optional<std::filesystem::path> BuildSpriteAssetFilePath(
+            const std::filesystem::path& rootDirectory,
+            const std::string& entityName,
+            const std::filesystem::path& targetDirectory)
+        {
+            if (rootDirectory.empty()
+                || entityName.empty()
+                || false == EditorPathSecurity::IsValidProjectName(ToWideString(entityName)))
+            {
+                return std::nullopt;
+            }
+
+            std::filesystem::path outputDirectory = rootDirectory;
+            std::error_code errorCode;
+            if (false == targetDirectory.empty()
+                && std::filesystem::is_directory(targetDirectory, errorCode)
+                && false == static_cast<bool>(errorCode)
+                && EditorPathSecurity::IsPathInsideOrEqual(targetDirectory, rootDirectory))
+            {
+                const std::filesystem::path relativeTargetDirectory =
+                    std::filesystem::relative(targetDirectory, rootDirectory, errorCode);
+                if (false == static_cast<bool>(errorCode)
+                    && false == relativeTargetDirectory.empty()
+                    && EditorPathSecurity::IsSafeRelativePath(relativeTargetDirectory))
+                {
+                    outputDirectory = targetDirectory;
+                }
+            }
+
+            return outputDirectory / (ToWideString(entityName) + L".sprite");
+        }
     }
 
     bool EditorSceneDocument::Initialize(RHI::IGraphicsContext& graphicsContext)
@@ -451,35 +490,19 @@ namespace Xelqoria::Editor
         }
 
         const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
-        std::filesystem::path outputDirectory = rootDirectory;
-        std::error_code errorCode;
-        if (false == targetDirectory.empty()
-            && std::filesystem::is_directory(targetDirectory, errorCode)
-            && false == static_cast<bool>(errorCode)
-            && EditorPathSecurity::IsPathInsideOrEqual(targetDirectory, rootDirectory))
+        const auto spriteAssetPath = BuildSpriteAssetFilePath(rootDirectory, entity.GetName(), targetDirectory);
+        if (false == spriteAssetPath.has_value())
         {
-            const std::filesystem::path relativeTargetDirectory =
-                std::filesystem::relative(targetDirectory, rootDirectory, errorCode);
-            if (false == static_cast<bool>(errorCode)
-                && false == relativeTargetDirectory.empty()
-                && EditorPathSecurity::IsSafeRelativePath(relativeTargetDirectory))
-            {
-                outputDirectory = targetDirectory;
-            }
+            return false;
         }
 
-        std::filesystem::create_directories(outputDirectory, errorCode);
+        std::error_code errorCode;
+        std::filesystem::create_directories(spriteAssetPath->parent_path(), errorCode);
         if (errorCode)
         {
             return false;
         }
 
-        if (false == EditorPathSecurity::IsValidProjectName(ToWideString(entity.GetName())))
-        {
-            return false;
-        }
-
-        const std::filesystem::path spriteAssetPath = outputDirectory / (ToWideString(entity.GetName()) + L".sprite");
         const Game::Transform& transform = entity.GetTransform();
         const auto spriteComponent = entity.GetSpriteComponent();
         Core::AssetId spriteAssetRef{};
@@ -508,9 +531,9 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (scriptAssetId.IsEmpty() && std::filesystem::exists(spriteAssetPath))
+        if (scriptAssetId.IsEmpty() && std::filesystem::exists(*spriteAssetPath))
         {
-            std::ifstream existingInput(spriteAssetPath, std::ios::binary);
+            std::ifstream existingInput(*spriteAssetPath, std::ios::binary);
             if (existingInput.is_open())
             {
                 std::ostringstream buffer;
@@ -523,7 +546,7 @@ namespace Xelqoria::Editor
             }
         }
 
-        std::ofstream output(spriteAssetPath, std::ios::binary | std::ios::trunc);
+        std::ofstream output(*spriteAssetPath, std::ios::binary | std::ios::trunc);
         if (false == output.is_open())
         {
             return false;
@@ -558,7 +581,53 @@ namespace Xelqoria::Editor
             << renderSettings.color[3] << "\n";
 
         output << text.str();
-        return static_cast<bool>(output);
+        if (false == static_cast<bool>(output))
+        {
+            return false;
+        }
+        output.close();
+
+        return RegisterSpriteAssetFile(*spriteAssetPath);
+    }
+
+    std::optional<Core::AssetId> EditorSceneDocument::EnsureSpriteAssetFileForEntity(
+        Game::Entity& entity,
+        const std::filesystem::path& targetDirectory)
+    {
+        const auto spriteComponent = entity.GetSpriteComponent();
+        if (false == m_project.GetInfo().has_value()
+            || false == spriteComponent.has_value()
+            || true == entity.GetName().empty())
+        {
+            return std::nullopt;
+        }
+
+        if (ResolveSpriteAssetPath(spriteComponent->get().spriteAssetRef).has_value())
+        {
+            return spriteComponent->get().spriteAssetRef;
+        }
+
+        if (false == CreateSpriteAssetFile(entity, targetDirectory))
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        const auto spriteAssetPath = BuildSpriteAssetFilePath(rootDirectory, entity.GetName(), targetDirectory);
+        if (false == spriteAssetPath.has_value())
+        {
+            return std::nullopt;
+        }
+
+        const Core::AssetId spriteAssetId =
+            EditorAssetPathUtils::BuildSpriteAssetId(*spriteAssetPath, rootDirectory);
+        if (spriteAssetId.IsEmpty())
+        {
+            return std::nullopt;
+        }
+
+        spriteComponent->get().spriteAssetRef = spriteAssetId;
+        return spriteAssetId;
     }
 
     bool EditorSceneDocument::AssignScriptAssetToSpriteAssetFile(

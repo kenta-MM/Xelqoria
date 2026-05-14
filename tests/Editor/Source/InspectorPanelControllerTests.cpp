@@ -18,7 +18,7 @@ TEST(InspectorPanelControllerTests, FormatTextureDisplayTextShowsFileNameOnly)
 {
     const std::wstring displayText =
         Xelqoria::Editor::InspectorPanelController::FormatTextureDisplayText(
-            Xelqoria::Core::AssetId("sprites/タイトルなし.png"));
+            Xelqoria::Core::AssetId("textures/タイトルなし.png"));
 
     EXPECT_EQ(L"タイトルなし.png", displayText);
 }
@@ -27,9 +27,18 @@ TEST(InspectorPanelControllerTests, FormatTextureDisplayTextShowsNestedFileNameO
 {
     const std::wstring displayText =
         Xelqoria::Editor::InspectorPanelController::FormatTextureDisplayText(
-            Xelqoria::Core::AssetId("sprites/Images/タイトルなし.png"));
+            Xelqoria::Core::AssetId("textures/Images/タイトルなし.png"));
 
     EXPECT_EQ(L"タイトルなし.png", displayText);
+}
+
+TEST(InspectorPanelControllerTests, FormatTextureDisplayTextKeepsSpriteAssetFileNameOutOfTextureField)
+{
+    const std::wstring displayText =
+        Xelqoria::Editor::InspectorPanelController::FormatTextureDisplayText(
+            Xelqoria::Core::AssetId("textures/Characters/Player.png"));
+
+    EXPECT_EQ(L"Player.png", displayText);
 }
 
 TEST(InspectorPanelControllerTests, FormatScriptDisplayTextShowsFileNameOrNone)

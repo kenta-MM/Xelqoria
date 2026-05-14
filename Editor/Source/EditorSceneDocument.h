@@ -126,6 +126,16 @@ namespace Xelqoria::Editor
             const std::filesystem::path& targetDirectory);
 
         /// <summary>
+        /// Entity の SpriteComponent が実体 `.sprite` を参照するようにし、必要なら Sprite アセットファイルを作成する。
+        /// </summary>
+        /// <param name="entity">更新対象の Sprite Entity。</param>
+        /// <param name="targetDirectory">作成先フォルダ。空またはプロジェクト外の場合は Assets 直下。</param>
+        /// <returns>参照先 SpriteAssetId。作成または更新できない場合は空。</returns>
+        [[nodiscard]] std::optional<Core::AssetId> EnsureSpriteAssetFileForEntity(
+            Game::Entity& entity,
+            const std::filesystem::path& targetDirectory);
+
+        /// <summary>
         /// Sprite Asset ファイルへ Script Asset の割り当てを保存する。
         /// </summary>
         /// <param name="spriteAssetPath">割り当て先 Sprite Asset ファイルパス。</param>

@@ -194,6 +194,16 @@ namespace Xelqoria::Editor
             bool pushHistory);
 
         /// <summary>
+        /// 選択中 Sprite が Script 保存可能な `.sprite` を参照するようにする。
+        /// </summary>
+        /// <param name="requestedSpriteAssetId">Inspector 操作時点の SpriteAssetId。</param>
+        /// <param name="sceneChanged">SpriteComponent 参照を変更した場合は true。</param>
+        /// <returns>Script 操作に使う SpriteAssetId。準備できない場合は空。</returns>
+        [[nodiscard]] std::optional<Core::AssetId> EnsureSelectedSpriteAssetFileForScript(
+            const Core::AssetId& requestedSpriteAssetId,
+            bool& sceneChanged);
+
+        /// <summary>
         /// 現在のプロジェクトを最近使った一覧へ記録する。
         /// </summary>
         void RecordCurrentProject();

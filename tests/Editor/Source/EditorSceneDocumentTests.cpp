@@ -111,3 +111,41 @@ TEST(EditorSceneDocumentTests, CreateAndAssignScriptAssetToSpriteAssetWritesScri
 
     std::filesystem::remove_all(parentDirectory);
 }
+
+TEST(EditorSceneDocumentTests, EnsureSpriteAssetFileForEntityCreatesFileAndRepointsImageSpriteRef)
+{
+    const std::filesystem::path parentDirectory =
+        MakeTempDirectory(L"XelqoriaEditorSceneDocumentTests_EnsureSpriteAssetFile");
+    Xelqoria::Editor::EditorSceneDocument document = MakeProjectDocument(parentDirectory);
+    Xelqoria::Game::Scene* scene = document.GetScene();
+    ASSERT_NE(nullptr, scene);
+
+    auto& entity = scene->CreateEntity();
+    entity.SetName("Player");
+    entity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+        Xelqoria::Core::AssetId("sprites/player.png"),
+        {
+            true,
+            0,
+            1.0f
+        }
+    });
+    document.GetSpriteAssetRegistry().RegisterSpriteAsset(
+        Xelqoria::Core::AssetId("sprites/player.png"),
+        Xelqoria::Game::Assets::SpriteAsset{ Xelqoria::Core::AssetId("textures/player.png") });
+
+    const std::optional<Xelqoria::Core::AssetId> spriteAssetId =
+        document.EnsureSpriteAssetFileForEntity(entity, {});
+
+    ASSERT_TRUE(spriteAssetId.has_value());
+    EXPECT_EQ(Xelqoria::Core::AssetId("sprites/Player.sprite"), *spriteAssetId);
+    ASSERT_TRUE(entity.GetSpriteComponent().has_value());
+    EXPECT_EQ(*spriteAssetId, entity.GetSpriteComponent()->get().spriteAssetRef);
+
+    const auto spriteAsset = document.GetSpriteAssetRegistry().ResolveSpriteAsset(*spriteAssetId);
+    ASSERT_TRUE(spriteAsset.has_value());
+    EXPECT_EQ(Xelqoria::Core::AssetId("textures/player.png"), spriteAsset->textureAssetId);
+    EXPECT_TRUE(std::filesystem::exists(parentDirectory / L"ScriptInspectorProject" / L"Player.sprite"));
+
+    std::filesystem::remove_all(parentDirectory);
+}

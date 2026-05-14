@@ -28,6 +28,7 @@ namespace Xelqoria::Editor
         None = 0,
         Create,
         Assign,
+        AssignDropped,
         Clear
     };
 
@@ -50,6 +51,11 @@ namespace Xelqoria::Editor
         /// Script 操作対象の SpriteAssetId を表す。
         /// </summary>
         Core::AssetId scriptTargetSpriteAssetId{};
+
+        /// <summary>
+        /// ドロップされた Script Asset ファイルパスを表す。
+        /// </summary>
+        std::filesystem::path droppedScriptAssetPath{};
     };
 
     /// <summary>
@@ -157,6 +163,18 @@ namespace Xelqoria::Editor
             const Game::Assets::ISpriteAssetResolver& spriteAssetResolver);
 
         /// <summary>
+        /// Assets から Script 欄へドロップされた Script Asset を SpriteAsset へ割り当てる要求に変換する。
+        /// </summary>
+        /// <param name="scene">参照対象の Scene。</param>
+        /// <param name="selectedEntityId">現在選択中の EntityId。</param>
+        /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
+        /// <returns>適用結果。</returns>
+        [[nodiscard]] InspectorApplyResult ApplyScriptDrop(
+            const Game::Scene* scene,
+            std::optional<Game::EntityId> selectedEntityId,
+            const AssetsPanelController& assetsPanelController) const;
+
+        /// <summary>
         /// Texture 欄のドロップ先ハイライトを現在のドラッグ状態へ同期する。
         /// </summary>
         /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
@@ -175,20 +193,20 @@ namespace Xelqoria::Editor
         void ResetTrackedEntity();
 
         /// <summary>
-        /// SpriteAssetId から Texture 欄に表示するファイル名を取得する。
+        /// TextureAssetId から Texture 欄に表示するファイル名を取得する。
         /// </summary>
-        /// <param name="spriteAssetId">表示対象の SpriteAssetId。</param>
+        /// <param name="textureAssetId">表示対象の TextureAssetId。</param>
         /// <returns>Texture 欄表示文字列。</returns>
-        [[nodiscard]] static std::wstring FormatTextureDisplayText(const Core::AssetId& spriteAssetId)
+        [[nodiscard]] static std::wstring FormatTextureDisplayText(const Core::AssetId& textureAssetId)
         {
-            std::string spriteRefValue = spriteAssetId.GetValue();
-            constexpr std::string_view spriteAssetPrefix = "sprites/";
-            if (spriteRefValue.starts_with(spriteAssetPrefix))
+            std::string textureRefValue = textureAssetId.GetValue();
+            constexpr std::string_view textureAssetPrefix = "textures/";
+            if (textureRefValue.starts_with(textureAssetPrefix))
             {
-                spriteRefValue = spriteRefValue.substr(spriteAssetPrefix.size());
+                textureRefValue = textureRefValue.substr(textureAssetPrefix.size());
             }
 
-            const std::wstring relativePath = ToWideString(spriteRefValue);
+            const std::wstring relativePath = ToWideString(textureRefValue);
             const std::filesystem::path displayPath(relativePath);
             const std::wstring fileName = displayPath.filename().wstring();
             if (false == fileName.empty())
