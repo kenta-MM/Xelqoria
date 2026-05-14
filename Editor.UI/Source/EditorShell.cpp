@@ -926,11 +926,12 @@ namespace Xelqoria::Editor
             hInstance,
             L"Edit",
             L"",
-            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_CENTER);
         if (nullptr == m_logFilterEdit)
         {
             return false;
         }
+        SendMessageW(m_logFilterEdit, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(L"検索フィルタ"));
 
         m_logListBox = CreateChildWindow(
             parentWindow,
@@ -1314,9 +1315,7 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutLogOutputPanelInRect(const RECT& panelRect)
     {
         const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
-        const int tabHeight = ScaleMetric(28);
-        const int rowHeight = ScaleMetric(28);
+        const int rowHeight = ScaleMetric(32);
         const int gap = ScaleMetric(8);
         const int panelLeft = static_cast<int>(panelRect.left);
         const int panelTop = static_cast<int>(panelRect.top);
@@ -1326,15 +1325,19 @@ namespace Xelqoria::Editor
         const int height = panelBottom - panelTop;
         const int innerWidth = (std::max)(0, width - outerPadding * 2);
         const int buttonWidth = ScaleMetric(72);
-        const int toolbarTop = panelTop + groupHeaderHeight + tabHeight + gap;
-        const int filterLeft = panelLeft + outerPadding + buttonWidth * 2 + gap * 2;
-        const int filterWidth = (std::max)(0, panelRight - outerPadding - filterLeft);
+        const int tabWidth = (std::min)(innerWidth, ScaleMetric(420));
+        const int tabLeft = (std::max)(panelLeft + outerPadding, panelRight - outerPadding - tabWidth);
+        const int toolbarTop = panelTop + outerPadding;
+        const int filterLeft = panelLeft + outerPadding + buttonWidth + gap;
+        const int filterRight = tabLeft - gap;
+        const int filterWidth = (std::max)(0, filterRight - filterLeft);
         const int listTop = toolbarTop + rowHeight + gap;
 
         MoveChildWindowNoRedraw(m_logOutputPanel, panelLeft, panelTop, width, height);
-        MoveChildWindowNoRedraw(m_logOutputTabControl, panelLeft + outerPadding, panelTop + groupHeaderHeight, innerWidth, tabHeight);
+        MoveChildWindowNoRedraw(m_logOutputTabControl, tabLeft, toolbarTop, tabWidth, rowHeight);
         MoveChildWindowNoRedraw(m_logClearButton, panelLeft + outerPadding, toolbarTop, buttonWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_logCopyButton, panelLeft + outerPadding + buttonWidth + gap, toolbarTop, buttonWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_logCopyButton, panelLeft, panelTop, 0, 0);
+        ShowWindow(m_logCopyButton, SW_HIDE);
         MoveChildWindowNoRedraw(m_logFilterEdit, filterLeft, toolbarTop, filterWidth, rowHeight);
         MoveChildWindowNoRedraw(
             m_logListBox,
@@ -1777,10 +1780,11 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::LogOutput:
-            for (HWND control : { m_logOutputPanel, m_logOutputTabControl, m_logClearButton, m_logCopyButton, m_logFilterEdit, m_logListBox })
+            for (HWND control : { m_logOutputPanel, m_logOutputTabControl, m_logClearButton, m_logFilterEdit, m_logListBox })
             {
                 ShowWindow(control, showCommand);
             }
+            ShowWindow(m_logCopyButton, SW_HIDE);
             break;
         default:
             break;
