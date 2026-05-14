@@ -177,7 +177,11 @@ TEST(ScriptAssetServiceTests, BuildProjectScriptsCompilesResolvedManagedSources)
 
     EXPECT_TRUE(buildResult.succeeded);
     ASSERT_EQ(static_cast<std::size_t>(1), buildResult.sourcePaths.size());
+    ASSERT_EQ(static_cast<std::size_t>(1), buildResult.artifacts.size());
     EXPECT_EQ(created.sourcePath, buildResult.sourcePaths[0]);
+    EXPECT_EQ(created.scriptAssetId, buildResult.artifacts[0].scriptAssetId);
+    EXPECT_EQ(created.sourcePath, buildResult.artifacts[0].sourcePath);
+    EXPECT_EQ(L".dll", buildResult.artifacts[0].modulePath.extension().wstring());
     EXPECT_NE(std::wstring::npos, buildResult.diagnostics.find(L"fake compile ok"));
 
     std::filesystem::remove_all(projectRoot);

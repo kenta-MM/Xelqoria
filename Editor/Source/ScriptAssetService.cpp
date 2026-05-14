@@ -181,6 +181,37 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// Script 実行モジュールの出力先パスを作成する。
+        /// </summary>
+        /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
+        /// <param name="sourcePath">コンパイル対象ソース。</param>
+        /// <param name="index">同名回避用インデックス。</param>
+        /// <returns>実行モジュールファイルパス。</returns>
+        [[nodiscard]] std::filesystem::path BuildModulePath(
+            const std::filesystem::path& projectRootDirectory,
+            const std::filesystem::path& sourcePath,
+            std::size_t index)
+        {
+            std::error_code errorCode;
+            std::filesystem::path relativeSourcePath =
+                std::filesystem::relative(sourcePath, projectRootDirectory, errorCode);
+            if (errorCode || relativeSourcePath.empty())
+            {
+                relativeSourcePath = sourcePath.filename();
+            }
+
+            std::wstring moduleStem = SanitizeManagedCodeStem(relativeSourcePath.generic_wstring());
+            if (moduleStem.empty())
+            {
+                moduleStem = L"Script";
+            }
+
+            return projectRootDirectory
+                / ScriptBuildDirectory
+                / (std::to_wstring(index) + L"_" + moduleStem + L".dll");
+        }
+
+        /// <summary>
         /// Script Asset への相対パスから管理 C++ ソースの相対パスを構築する。
         /// </summary>
         /// <param name="relativeAssetPath">プロジェクトルート基準の Script Asset パス。</param>
@@ -285,10 +316,12 @@ namespace Xelqoria::Editor
             }
 
             output
+                << "extern \"C\" __declspec(dllexport) "
                 << "void Start()\n"
                 << "{\n"
                 << "}\n"
                 << "\n"
+                << "extern \"C\" __declspec(dllexport) "
                 << "void Update(float deltaTime)\n"
                 << "{\n"
                 << "    (void)deltaTime;\n"
@@ -475,6 +508,15 @@ namespace Xelqoria::Editor
         std::size_t compiledCount = 0;
         for (const std::filesystem::path& scriptAssetPath : scriptAssetPaths)
         {
+            const Core::AssetId scriptAssetId = BuildScriptAssetId(projectRootDirectory, scriptAssetPath);
+            if (scriptAssetId.IsEmpty())
+            {
+                allSucceeded = false;
+                diagnostics << L"[Script] " << scriptAssetPath.wstring()
+                    << L": Script AssetId を生成できません。\n";
+                continue;
+            }
+
             const std::optional<std::filesystem::path> sourcePath =
                 ResolveSourcePath(projectRootDirectory, scriptAssetPath);
             if (false == sourcePath.has_value())
@@ -496,15 +538,19 @@ namespace Xelqoria::Editor
             result.sourcePaths.push_back(*sourcePath);
             const std::filesystem::path objectPath =
                 BuildObjectPath(projectRootDirectory, *sourcePath, compiledCount);
+            const std::filesystem::path modulePath =
+                BuildModulePath(projectRootDirectory, *sourcePath, compiledCount);
             ++compiledCount;
 
             const std::wstring commandLine =
                 L"call "
                 + QuoteCommandArgument(options.compilerExecutable)
-                + L" /nologo /EHsc /std:c++20 /c "
+                + L" /nologo /EHsc /std:c++20 /LD "
                 + QuoteCommandArgument(*sourcePath)
                 + L" /Fo"
                 + QuoteCommandArgument(objectPath)
+                + L" /Fe"
+                + QuoteCommandArgument(modulePath)
                 + L" 2>&1";
 
             std::wstring compilerOutput{};
@@ -523,6 +569,14 @@ namespace Xelqoria::Editor
             {
                 allSucceeded = false;
                 diagnostics << L"終了コード: " << exitCode << L"\n";
+            }
+            else
+            {
+                result.artifacts.push_back(ScriptBuildArtifact{
+                    scriptAssetId,
+                    *sourcePath,
+                    modulePath
+                });
             }
         }
 

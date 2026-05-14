@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <functional>
 #include <shlobj.h>
+#include <span>
 #include <string>
 
 #include "GraphicsAPI.h"
@@ -148,6 +149,31 @@ namespace Xelqoria::Editor
 
             std::wstring text = L"再生開始前 Script ビルドに失敗しました。詳細: ";
             text += buildResult.diagnostics;
+            constexpr std::size_t MaxLabelLength = 180;
+            if (MaxLabelLength < text.size())
+            {
+                text.resize(MaxLabelLength - 3);
+                text += L"...";
+            }
+
+            return text;
+        }
+
+        /// <summary>
+        /// Script Runtime 診断を短い表示文面へ変換する。
+        /// </summary>
+        /// <param name="diagnostics">Script Runtime 診断一覧。</param>
+        /// <returns>表示文面。</returns>
+        [[nodiscard]] std::wstring BuildScriptRuntimeStatusText(
+            std::span<const ScriptRuntimeDiagnostic> diagnostics)
+        {
+            if (diagnostics.empty())
+            {
+                return L"Script 再生を開始しました。";
+            }
+
+            std::wstring text = L"Script 再生開始時に問題が発生しました。詳細: ";
+            text += diagnostics.front().message;
             constexpr std::size_t MaxLabelLength = 180;
             if (MaxLabelLength < text.size())
             {
@@ -601,7 +627,7 @@ namespace Xelqoria::Editor
 
     bool Application::StartEditorPlay()
     {
-        if (false == m_sceneDocument.GetProjectInfo().has_value())
+        if (false == m_sceneDocument.GetProjectInfo().has_value() || nullptr == m_sceneDocument.GetScene())
         {
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"再生開始前 Script ビルドにはプロジェクトが必要です。");
             return false;
@@ -625,7 +651,15 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        return true;
+        const bool runtimeStarted = m_scriptRuntimeSession.Begin(
+            *m_sceneDocument.GetScene(),
+            m_sceneDocument.GetSpriteAssetRegistry(),
+            buildResult,
+            projectRootDirectory);
+        const std::wstring runtimeStatusText =
+            BuildScriptRuntimeStatusText(m_scriptRuntimeSession.GetDiagnostics());
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), runtimeStatusText.c_str());
+        return runtimeStarted;
     }
 
     void Application::ClearProjectDirty()
@@ -640,8 +674,6 @@ namespace Xelqoria::Editor
 
     void Application::Update(float deltaTime)
     {
-        (void)deltaTime;
-
         m_inputSystem.Update();
         const Core::InputSnapshot& inputSnapshot = m_inputSystem.GetSnapshot();
 
@@ -693,6 +725,8 @@ namespace Xelqoria::Editor
         {
             (void)StartEditorPlay();
         }
+
+        m_scriptRuntimeSession.Update(deltaTime);
 
         m_assetsPanelController.UpdateDragState(inputSnapshot);
         m_inspectorPanelController.UpdateTextureDropHighlight(m_assetsPanelController);

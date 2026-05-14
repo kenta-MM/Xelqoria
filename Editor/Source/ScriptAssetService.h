@@ -47,6 +47,27 @@ namespace Xelqoria::Editor
     };
 
     /// <summary>
+    /// Script ビルドで生成された実行用モジュールを表す。
+    /// </summary>
+    struct ScriptBuildArtifact
+    {
+        /// <summary>
+        /// 対応する Script Asset 識別子を表す。
+        /// </summary>
+        Core::AssetId scriptAssetId{};
+
+        /// <summary>
+        /// ビルド対象になった C++ ソースファイルを表す。
+        /// </summary>
+        std::filesystem::path sourcePath{};
+
+        /// <summary>
+        /// 実行時にロードするモジュールファイルを表す。
+        /// </summary>
+        std::filesystem::path modulePath{};
+    };
+
+    /// <summary>
     /// Script 管理 C++ ソースのビルド結果を表す。
     /// </summary>
     struct ScriptBuildResult
@@ -60,6 +81,11 @@ namespace Xelqoria::Editor
         /// ビルド対象になった C++ ソースファイル一覧を表す。
         /// </summary>
         std::vector<std::filesystem::path> sourcePaths{};
+
+        /// <summary>
+        /// ビルドにより生成された Script 実行モジュール一覧を表す。
+        /// </summary>
+        std::vector<ScriptBuildArtifact> artifacts{};
 
         /// <summary>
         /// Editor に表示するビルド診断メッセージを表す。
