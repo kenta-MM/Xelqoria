@@ -445,7 +445,8 @@ namespace Xelqoria::Editor
         const bool initialized = InitializeHierarchyPanel(parentWindow, hInstance)
             && InitializeAssetsPanel(parentWindow, hInstance)
             && InitializeInspectorPanel(parentWindow, hInstance)
-            && InitializeSceneViewPanel(parentWindow, hInstance);
+            && InitializeSceneViewPanel(parentWindow, hInstance)
+            && InitializeLogOutputPanel(parentWindow, hInstance);
         if (initialized)
         {
             SyncDockTabs();
@@ -460,6 +461,7 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(EditorPanelId::Assets);
         DestroyFloatingWindow(EditorPanelId::SceneView);
         DestroyFloatingWindow(EditorPanelId::Inspector);
+        DestroyFloatingWindow(EditorPanelId::LogOutput);
 
         for (HWND tabControl : m_dynamicDockTabs)
         {
@@ -473,7 +475,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 56> controls = CollectControls();
+            const std::array<HWND, 62> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -867,6 +869,78 @@ namespace Xelqoria::Editor
         return nullptr != m_sceneViewSizeLabel;
     }
 
+    bool EditorShell::InitializeLogOutputPanel(HWND parentWindow, HINSTANCE hInstance)
+    {
+        constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE | BS_GROUPBOX;
+        m_logOutputPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"", panelStyle);
+        if (nullptr == m_logOutputPanel)
+        {
+            return false;
+        }
+
+        m_logOutputTabControl = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            WC_TABCONTROLW,
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS);
+        if (nullptr == m_logOutputTabControl)
+        {
+            return false;
+        }
+
+        const std::array<const wchar_t*, 3> tabNames{ L"ゲームログ", L"ビルドログ", L"エディタログ" };
+        for (std::size_t index = 0; index < tabNames.size(); ++index)
+        {
+            TCITEMW item{};
+            item.mask = TCIF_TEXT;
+            item.pszText = const_cast<LPWSTR>(tabNames[index]);
+            TabCtrl_InsertItem(m_logOutputTabControl, static_cast<int>(index), &item);
+        }
+        TabCtrl_SetCurSel(m_logOutputTabControl, 0);
+
+        m_logClearButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"Clear",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_logClearButton)
+        {
+            return false;
+        }
+
+        m_logCopyButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"Copy",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_logCopyButton)
+        {
+            return false;
+        }
+
+        m_logFilterEdit = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Edit",
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+        if (nullptr == m_logFilterEdit)
+        {
+            return false;
+        }
+
+        m_logListBox = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"ListBox",
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
+        return nullptr != m_logListBox;
+    }
+
     void EditorShell::LayoutDockArea(DockAreaId dockAreaId, const RECT& areaRect)
     {
         HWND tabControl = GetDockAreaTabControl(dockAreaId);
@@ -921,6 +995,9 @@ namespace Xelqoria::Editor
             case EditorPanelId::Inspector:
                 LayoutInspectorPanelInRect(panelRect);
                 break;
+            case EditorPanelId::LogOutput:
+                LayoutLogOutputPanelInRect(panelRect);
+                break;
             default:
                 break;
             }
@@ -949,6 +1026,12 @@ namespace Xelqoria::Editor
         sceneViewNode.tabControl = m_centerDockTab;
         const DockNodeId sceneViewNodeId = AddDockNode(std::move(sceneViewNode));
 
+        DockNode logOutputNode{};
+        logOutputNode.kind = DockNodeKind::Leaf;
+        logOutputNode.panels = { EditorPanelId::LogOutput };
+        logOutputNode.tabControl = CreateAdditionalDockTabControl(m_parentWindow);
+        const DockNodeId logOutputNodeId = AddDockNode(std::move(logOutputNode));
+
         DockNode inspectorNode{};
         inspectorNode.kind = DockNodeKind::Leaf;
         inspectorNode.panels = { EditorPanelId::Inspector };
@@ -963,11 +1046,19 @@ namespace Xelqoria::Editor
         leftColumnNode.secondChild = assetsNodeId;
         const DockNodeId leftColumnNodeId = AddDockNode(leftColumnNode);
 
+        DockNode centerColumnNode{};
+        centerColumnNode.kind = DockNodeKind::Split;
+        centerColumnNode.splitOrientation = DockSplitOrientation::Vertical;
+        centerColumnNode.splitRatio = 0.70f;
+        centerColumnNode.firstChild = sceneViewNodeId;
+        centerColumnNode.secondChild = logOutputNodeId;
+        const DockNodeId centerColumnNodeId = AddDockNode(centerColumnNode);
+
         DockNode centerRightNode{};
         centerRightNode.kind = DockNodeKind::Split;
         centerRightNode.splitOrientation = DockSplitOrientation::Horizontal;
         centerRightNode.splitRatio = 0.84f;
-        centerRightNode.firstChild = sceneViewNodeId;
+        centerRightNode.firstChild = centerColumnNodeId;
         centerRightNode.secondChild = inspectorNodeId;
         const DockNodeId centerRightNodeId = AddDockNode(centerRightNode);
 
@@ -1075,6 +1166,9 @@ namespace Xelqoria::Editor
                 break;
             case EditorPanelId::Inspector:
                 LayoutInspectorPanelInRect(panelRect);
+                break;
+            case EditorPanelId::LogOutput:
+                LayoutLogOutputPanelInRect(panelRect);
                 break;
             default:
                 break;
@@ -1197,26 +1291,57 @@ namespace Xelqoria::Editor
 
     void EditorShell::LayoutSceneViewPanelInRect(const RECT& panelRect)
     {
-        const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
-        const int labelHeight = ScaleMetric(24);
-        const int panelSpacing = ScaleMetric(12);
+        const int borderInset = ScaleMetric(4);
         const int width = panelRect.right - panelRect.left;
         const int height = panelRect.bottom - panelRect.top;
-        const int innerWidth = (std::max)(0, width - outerPadding * 2);
-        const int projectSceneListTop = panelRect.top + groupHeaderHeight + labelHeight * 2 + ScaleMetric(8);
-        const int projectSceneListHeight = ScaleMetric(96);
-        const int sceneHostHeight = (std::max)(
-            0,
-            height - groupHeaderHeight - labelHeight * 4 - projectSceneListHeight - outerPadding * 3 - panelSpacing);
+        const int sceneHostWidth = (std::max)(0, width - borderInset * 2);
+        const int sceneHostHeight = (std::max)(0, height - borderInset * 2);
 
         MoveChildWindowNoRedraw(m_sceneViewPanel, panelRect.left, panelRect.top, width, height);
-        MoveChildWindowNoRedraw(m_sceneViewPlanLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
-        MoveChildWindowNoRedraw(m_projectSummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight + labelHeight + ScaleMetric(4), innerWidth, labelHeight);
-        MoveChildWindowNoRedraw(m_projectSceneListBox, panelRect.left + outerPadding, projectSceneListTop, innerWidth, projectSceneListHeight);
-        MoveChildWindowNoRedraw(m_projectSceneDetailLabel, panelRect.left + outerPadding, projectSceneListTop + projectSceneListHeight + ScaleMetric(6), innerWidth, labelHeight);
-        MoveChildWindowNoRedraw(m_sceneViewHost, panelRect.left + outerPadding, projectSceneListTop + projectSceneListHeight + labelHeight + panelSpacing, innerWidth, sceneHostHeight);
-        MoveChildWindowNoRedraw(m_sceneViewSizeLabel, panelRect.left + outerPadding, projectSceneListTop + projectSceneListHeight + labelHeight + panelSpacing + sceneHostHeight + ScaleMetric(6), innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_projectSummaryLabel, panelRect.left, panelRect.top, 0, 0);
+        MoveChildWindowNoRedraw(m_projectSceneListBox, panelRect.left, panelRect.top, 0, 0);
+        MoveChildWindowNoRedraw(m_projectSceneDetailLabel, panelRect.left, panelRect.top, 0, 0);
+        MoveChildWindowNoRedraw(m_sceneViewPlanLabel, panelRect.left, panelRect.top, 0, 0);
+        MoveChildWindowNoRedraw(m_sceneViewSizeLabel, panelRect.left, panelRect.top, 0, 0);
+        MoveChildWindowNoRedraw(
+            m_sceneViewHost,
+            panelRect.left + borderInset,
+            panelRect.top + borderInset,
+            sceneHostWidth,
+            sceneHostHeight);
+    }
+
+    void EditorShell::LayoutLogOutputPanelInRect(const RECT& panelRect)
+    {
+        const int outerPadding = ScaleMetric(12);
+        const int groupHeaderHeight = ScaleMetric(26);
+        const int tabHeight = ScaleMetric(28);
+        const int rowHeight = ScaleMetric(28);
+        const int gap = ScaleMetric(8);
+        const int panelLeft = static_cast<int>(panelRect.left);
+        const int panelTop = static_cast<int>(panelRect.top);
+        const int panelRight = static_cast<int>(panelRect.right);
+        const int panelBottom = static_cast<int>(panelRect.bottom);
+        const int width = panelRight - panelLeft;
+        const int height = panelBottom - panelTop;
+        const int innerWidth = (std::max)(0, width - outerPadding * 2);
+        const int buttonWidth = ScaleMetric(72);
+        const int toolbarTop = panelTop + groupHeaderHeight + tabHeight + gap;
+        const int filterLeft = panelLeft + outerPadding + buttonWidth * 2 + gap * 2;
+        const int filterWidth = (std::max)(0, panelRight - outerPadding - filterLeft);
+        const int listTop = toolbarTop + rowHeight + gap;
+
+        MoveChildWindowNoRedraw(m_logOutputPanel, panelLeft, panelTop, width, height);
+        MoveChildWindowNoRedraw(m_logOutputTabControl, panelLeft + outerPadding, panelTop + groupHeaderHeight, innerWidth, tabHeight);
+        MoveChildWindowNoRedraw(m_logClearButton, panelLeft + outerPadding, toolbarTop, buttonWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_logCopyButton, panelLeft + outerPadding + buttonWidth + gap, toolbarTop, buttonWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_logFilterEdit, filterLeft, toolbarTop, filterWidth, rowHeight);
+        MoveChildWindowNoRedraw(
+            m_logListBox,
+            panelLeft + outerPadding,
+            listTop,
+            innerWidth,
+            (std::max)(0, panelBottom - outerPadding - listTop));
     }
 
     void EditorShell::LayoutHierarchyPanel(const LayoutMetrics& metrics)
@@ -1431,11 +1556,12 @@ namespace Xelqoria::Editor
 
     void EditorShell::SendGroupBoxesToBack()
     {
-        const std::array<HWND, 4> groupBoxes{
+        const std::array<HWND, 5> groupBoxes{
             m_hierarchyPanel,
             m_assetsPanel,
             m_inspectorPanel,
-            m_sceneViewPanel
+            m_sceneViewPanel,
+            m_logOutputPanel
         };
 
         for (HWND groupBox : groupBoxes)
@@ -1606,10 +1732,12 @@ namespace Xelqoria::Editor
         SetPanelParent(EditorPanelId::Assets, m_parentWindow);
         SetPanelParent(EditorPanelId::SceneView, m_parentWindow);
         SetPanelParent(EditorPanelId::Inspector, m_parentWindow);
+        SetPanelParent(EditorPanelId::LogOutput, m_parentWindow);
         DestroyFloatingWindow(EditorPanelId::Hierarchy);
         DestroyFloatingWindow(EditorPanelId::Assets);
         DestroyFloatingWindow(EditorPanelId::SceneView);
         DestroyFloatingWindow(EditorPanelId::Inspector);
+        DestroyFloatingWindow(EditorPanelId::LogOutput);
         SyncDockTabs();
         m_layoutInitialized = false;
     }
@@ -1632,13 +1760,24 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::SceneView:
-            for (HWND control : { m_sceneViewPanel, m_sceneViewPlanLabel, m_projectSummaryLabel, m_projectSceneListBox, m_projectSceneDetailLabel, m_sceneViewHost, m_sceneViewSizeLabel })
+            for (HWND control : { m_sceneViewPanel, m_sceneViewHost })
+            {
+                ShowWindow(control, showCommand);
+            }
+            ShowWindow(m_sceneViewPlanLabel, SW_HIDE);
+            ShowWindow(m_projectSummaryLabel, SW_HIDE);
+            ShowWindow(m_projectSceneListBox, SW_HIDE);
+            ShowWindow(m_projectSceneDetailLabel, SW_HIDE);
+            ShowWindow(m_sceneViewSizeLabel, SW_HIDE);
+            break;
+        case EditorPanelId::Inspector:
+            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefDropHighlight, m_spriteRefEdit, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton })
             {
                 ShowWindow(control, showCommand);
             }
             break;
-        case EditorPanelId::Inspector:
-            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefDropHighlight, m_spriteRefEdit, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton })
+        case EditorPanelId::LogOutput:
+            for (HWND control : { m_logOutputPanel, m_logOutputTabControl, m_logClearButton, m_logCopyButton, m_logFilterEdit, m_logListBox })
             {
                 ShowWindow(control, showCommand);
             }
@@ -1690,6 +1829,12 @@ namespace Xelqoria::Editor
                 setParent(control);
             }
             break;
+        case EditorPanelId::LogOutput:
+            for (HWND control : { m_logOutputPanel, m_logOutputTabControl, m_logClearButton, m_logCopyButton, m_logFilterEdit, m_logListBox })
+            {
+                setParent(control);
+            }
+            break;
         default:
             break;
         }
@@ -1712,6 +1857,9 @@ namespace Xelqoria::Editor
         case EditorPanelId::Inspector:
             panelWindow = m_inspectorPanel;
             break;
+        case EditorPanelId::LogOutput:
+            panelWindow = m_logOutputPanel;
+            break;
         default:
             break;
         }
@@ -1728,7 +1876,7 @@ namespace Xelqoria::Editor
 
     std::optional<EditorShell::EditorPanelId> EditorShell::HitTestPanelCaption(POINT cursorScreenPoint) const
     {
-        for (EditorPanelId panelId : { EditorPanelId::Hierarchy, EditorPanelId::Assets, EditorPanelId::SceneView, EditorPanelId::Inspector })
+        for (EditorPanelId panelId : { EditorPanelId::Hierarchy, EditorPanelId::Assets, EditorPanelId::SceneView, EditorPanelId::Inspector, EditorPanelId::LogOutput })
         {
             const RECT captionRect = GetPanelCaptionRect(panelId);
             if (PtInRect(&captionRect, cursorScreenPoint))
@@ -2466,6 +2614,9 @@ namespace Xelqoria::Editor
         case EditorPanelId::Inspector:
             LayoutInspectorPanelInRect(panelRect);
             break;
+        case EditorPanelId::LogOutput:
+            LayoutLogOutputPanelInRect(panelRect);
+            break;
         default:
             break;
         }
@@ -2543,6 +2694,8 @@ namespace Xelqoria::Editor
             return m_sceneViewFloatingWindow;
         case EditorPanelId::Inspector:
             return m_inspectorFloatingWindow;
+        case EditorPanelId::LogOutput:
+            return m_logOutputFloatingWindow;
         default:
             return m_sceneViewFloatingWindow;
         }
@@ -2710,6 +2863,8 @@ namespace Xelqoria::Editor
             return L"SceneView";
         case EditorPanelId::Inspector:
             return L"Inspector";
+        case EditorPanelId::LogOutput:
+            return L"LogOutput";
         default:
             return L"Panel";
         }
@@ -2864,7 +3019,7 @@ namespace Xelqoria::Editor
                 RDW_INVALIDATE | RDW_ERASE | RDW_ERASENOW | RDW_UPDATENOW | RDW_ALLCHILDREN | RDW_FRAME);
         }
 
-        const std::array<HWND, 56> controls = CollectControls();
+        const std::array<HWND, 62> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -2934,7 +3089,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 56> controls = CollectControls();
+        const std::array<HWND, 62> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -2952,7 +3107,7 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 56> EditorShell::CollectControls() const
+    std::array<HWND, 62> EditorShell::CollectControls() const
     {
         return {
             m_leftTopDockTab,
@@ -2979,6 +3134,12 @@ namespace Xelqoria::Editor
             m_projectSceneDetailLabel,
             m_sceneViewHost,
             m_sceneViewSizeLabel,
+            m_logOutputPanel,
+            m_logOutputTabControl,
+            m_logClearButton,
+            m_logCopyButton,
+            m_logFilterEdit,
+            m_logListBox,
             m_assetsListView,
             m_assetsSummaryLabel,
             m_hierarchySummaryLabel,
@@ -3213,6 +3374,31 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetSceneViewHost() const
     {
         return m_sceneViewHost;
+    }
+
+    HWND EditorShell::GetLogOutputTabControl() const
+    {
+        return m_logOutputTabControl;
+    }
+
+    HWND EditorShell::GetLogClearButton() const
+    {
+        return m_logClearButton;
+    }
+
+    HWND EditorShell::GetLogCopyButton() const
+    {
+        return m_logCopyButton;
+    }
+
+    HWND EditorShell::GetLogFilterEdit() const
+    {
+        return m_logFilterEdit;
+    }
+
+    HWND EditorShell::GetLogListBox() const
+    {
+        return m_logListBox;
     }
 
     std::uint32_t EditorShell::GetSceneViewWidth() const

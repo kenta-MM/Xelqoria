@@ -28,6 +28,7 @@
     <ClCompile Include="Source\Entry.cpp" />
     <ClCompile Include="Source\HierarchyPanelController.cpp" />
     <ClCompile Include="Source\InspectorPanelController.cpp" />
+    <ClCompile Include="Source\LogOutputPanelController.cpp" />
     <ClCompile Include="Source\ProjectPanelController.cpp" />
     <ClCompile Include="Source\RecentProjectsStore.cpp" />
     <ClCompile Include="Source\RenderBackendBootstrap.cpp" />
@@ -54,6 +55,7 @@
     <ClInclude Include="Source\EditorCamera2D.h" />
     <ClInclude Include="Source\HierarchyPanelController.h" />
     <ClInclude Include="Source\InspectorPanelController.h" />
+    <ClInclude Include="Source\LogOutputPanelController.h" />
     <ClInclude Include="Source\ProjectPanelController.h" />
     <ClInclude Include="Source\RecentProjectsStore.h" />
     <ClInclude Include="Source\RenderBackendBootstrap.h" />

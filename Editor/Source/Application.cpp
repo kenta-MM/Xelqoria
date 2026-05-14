@@ -335,6 +335,7 @@ namespace Xelqoria::Editor
         m_assetsPanelController.Bind(m_editorShell);
         m_hierarchyPanelController.Bind(m_editorShell);
         m_inspectorPanelController.Bind(m_editorShell);
+        m_logOutputPanelController.Bind(m_editorShell);
         m_projectPanelController.Bind(m_editorShell);
         m_sceneViewController.Bind(m_editorShell);
 
@@ -365,6 +366,7 @@ namespace Xelqoria::Editor
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
         RefreshEditorPanels(canAddSpriteComponent, false);
         RefreshSceneViewSelectionStatus();
+        AppendEditorLog(L"Editor ワークスペースを初期化しました。");
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         m_editorInitialized = true;
         RedrawWindow(m_window.GetHwnd(), nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
@@ -473,6 +475,7 @@ namespace Xelqoria::Editor
         if (false == m_sceneDocument.CreateProject(projectName, projectParentDirectory))
         {
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクト作成に失敗しました。");
+            AppendEditorLog(L"プロジェクト作成に失敗しました。");
             return false;
         }
 
@@ -481,6 +484,7 @@ namespace Xelqoria::Editor
         m_sceneDocument.RefreshProjectAssetRegistries();
         m_projectPanelController.Refresh(m_sceneDocument);
         ClearProjectDirty();
+        AppendEditorLog(L"プロジェクトを作成しました。");
         return true;
     }
 
@@ -497,6 +501,7 @@ namespace Xelqoria::Editor
         if (false == m_sceneDocument.OpenProject(projectFilePath))
         {
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを開けませんでした。");
+            AppendEditorLog(L"プロジェクトを開けませんでした。");
             return false;
         }
 
@@ -507,6 +512,7 @@ namespace Xelqoria::Editor
         m_projectPanelController.Refresh(m_sceneDocument);
         ApplySelectionChange(std::nullopt, canAddSpriteComponent, true, true);
         ClearProjectDirty();
+        AppendEditorLog(L"プロジェクトを開きました。");
         return true;
     }
 
@@ -534,6 +540,7 @@ namespace Xelqoria::Editor
         if (false == m_sceneDocument.CreateProject(projectName, parentDirectory))
         {
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクト作成に失敗しました。");
+            AppendEditorLog(L"プロジェクト作成に失敗しました。");
             return;
         }
 
@@ -545,6 +552,7 @@ namespace Xelqoria::Editor
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         ClearProjectDirty();
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを作成しました。");
+        AppendEditorLog(L"プロジェクトを作成しました。");
     }
 
     void Application::OpenProjectFromMenu()
@@ -570,6 +578,7 @@ namespace Xelqoria::Editor
         if (false == m_sceneDocument.OpenProject(projectFilePath))
         {
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを開けませんでした。");
+            AppendEditorLog(L"プロジェクトを開けませんでした。");
             return;
         }
 
@@ -581,6 +590,7 @@ namespace Xelqoria::Editor
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         ClearProjectDirty();
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを開きました。");
+        AppendEditorLog(L"プロジェクトを開きました。");
     }
 
     bool Application::SaveProjectFromMenu()
@@ -593,6 +603,7 @@ namespace Xelqoria::Editor
         if (false == m_sceneDocument.Save())
         {
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトの保存に失敗しました。");
+            AppendEditorLog(L"プロジェクトの保存に失敗しました。");
             return false;
         }
 
@@ -600,6 +611,7 @@ namespace Xelqoria::Editor
         m_projectPanelController.Refresh(m_sceneDocument);
         ClearProjectDirty();
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを保存しました。");
+        AppendEditorLog(L"プロジェクトを保存しました。");
         return true;
     }
 
@@ -625,6 +637,7 @@ namespace Xelqoria::Editor
         if (false == m_sceneDocument.SaveProjectAs(projectName, parentDirectory))
         {
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトの別名保存に失敗しました。");
+            AppendEditorLog(L"プロジェクトの別名保存に失敗しました。");
             return;
         }
 
@@ -634,6 +647,7 @@ namespace Xelqoria::Editor
         m_projectPanelController.Refresh(m_sceneDocument);
         ClearProjectDirty();
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを別名で保存しました。");
+        AppendEditorLog(L"プロジェクトを別名で保存しました。");
     }
 
     bool Application::ConfirmSaveIfDirty()
@@ -671,6 +685,7 @@ namespace Xelqoria::Editor
         if (false == m_sceneDocument.GetProjectInfo().has_value() || nullptr == m_sceneDocument.GetScene())
         {
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"再生開始前 Script ビルドにはプロジェクトが必要です。");
+            AppendBuildLog(L"再生開始前 Script ビルドにはプロジェクトが必要です。");
             return false;
         }
 
@@ -684,6 +699,11 @@ namespace Xelqoria::Editor
             });
         const std::wstring statusText = BuildScriptBuildStatusText(buildResult);
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), statusText.c_str());
+        AppendBuildLog(statusText);
+        if (false == buildResult.diagnostics.empty())
+        {
+            AppendBuildLog(buildResult.diagnostics);
+        }
 
         if (false == buildResult.succeeded)
         {
@@ -703,6 +723,7 @@ namespace Xelqoria::Editor
         const std::wstring runtimeStatusText =
             BuildScriptRuntimeStatusText(m_scriptRuntimeSession.GetDiagnostics());
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), runtimeStatusText.c_str());
+        AppendGameLog(runtimeStatusText);
         return runtimeStarted;
     }
 
@@ -744,6 +765,7 @@ namespace Xelqoria::Editor
         }
 
         (void)m_editorShell.UpdateDocking(m_window.GetHwnd(), inputSnapshot);
+        m_logOutputPanelController.Update(inputSnapshot);
         const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
         if (true == sceneViewSizeChanged)
         {
@@ -763,6 +785,7 @@ namespace Xelqoria::Editor
             m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
             MarkProjectDirty();
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"選択した Scene を読み込みました。");
+            AppendEditorLog(L"選択した Scene を読み込みました。");
         }
 
         if (inputSnapshot.WasKeyPressed(VK_F5))
@@ -776,6 +799,7 @@ namespace Xelqoria::Editor
             const std::wstring runtimeStatusText =
                 BuildScriptRuntimeStatusText(m_scriptRuntimeSession.GetDiagnostics());
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), runtimeStatusText.c_str());
+            AppendGameLog(runtimeStatusText);
         }
 
         m_assetsPanelController.UpdateDragState(inputSnapshot);
@@ -830,10 +854,12 @@ namespace Xelqoria::Editor
             {
                 m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
                 SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset を作成しました。");
+                AppendEditorLog(L"Script Asset を作成しました。");
             }
             else
             {
                 SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset の作成に失敗しました。");
+                AppendEditorLog(L"Script Asset の作成に失敗しました。");
             }
         }
 
@@ -855,10 +881,12 @@ namespace Xelqoria::Editor
                 {
                     m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
                     SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Sprite Asset に Script Asset を割り当てました。");
+                    AppendEditorLog(L"Sprite Asset に Script Asset を割り当てました。");
                 }
                 else
                 {
                     SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset の割り当てに失敗しました。");
+                    AppendEditorLog(L"Script Asset の割り当てに失敗しました。");
                 }
             }
         }
@@ -1058,10 +1086,12 @@ namespace Xelqoria::Editor
                 m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
                 RefreshEditorPanels(canAddSpriteComponent, false);
                 SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Sprite Asset に Script Asset を割り当てました。");
+                AppendEditorLog(L"Sprite Asset に Script Asset を割り当てました。");
             }
             else
             {
                 SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset の割り当てに失敗しました。");
+                AppendEditorLog(L"Script Asset の割り当てに失敗しました。");
             }
         }
 
@@ -1191,12 +1221,14 @@ namespace Xelqoria::Editor
             }
 
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), successMessage);
+            AppendEditorLog(successMessage);
             m_projectPanelController.Refresh(m_sceneDocument);
             ClearProjectDirty();
             return true;
         }
 
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), failureMessage);
+        AppendEditorLog(failureMessage);
         MarkProjectDirty();
         return false;
     }
@@ -1253,5 +1285,25 @@ namespace Xelqoria::Editor
         {
             (void)m_recentProjectsStore.Record(*m_sceneDocument.GetProjectInfo());
         }
+    }
+
+    void Application::AppendEditorLog(const wchar_t* message)
+    {
+        if (nullptr == message)
+        {
+            return;
+        }
+
+        m_logOutputPanelController.Append(LogOutputCategory::Editor, message);
+    }
+
+    void Application::AppendGameLog(const std::wstring& message)
+    {
+        m_logOutputPanelController.Append(LogOutputCategory::Game, message);
+    }
+
+    void Application::AppendBuildLog(const std::wstring& message)
+    {
+        m_logOutputPanelController.Append(LogOutputCategory::Build, message);
     }
 }
