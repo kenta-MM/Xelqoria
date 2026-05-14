@@ -91,6 +91,40 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// Script コンパイル用コマンドラインを構築する。
+        /// </summary>
+        /// <param name="options">Script ビルド設定。</param>
+        /// <param name="sourcePath">コンパイル対象ソース。</param>
+        /// <param name="objectPath">出力 object パス。</param>
+        /// <param name="modulePath">出力 DLL パス。</param>
+        /// <returns>実行するコマンドライン。</returns>
+        [[nodiscard]] std::wstring BuildScriptCompileCommandLine(
+            const ScriptBuildOptions& options,
+            const std::filesystem::path& sourcePath,
+            const std::filesystem::path& objectPath,
+            const std::filesystem::path& modulePath)
+        {
+            std::wstring commandLine{};
+            if (false == options.environmentSetupBatch.empty())
+            {
+                commandLine += L"call ";
+                commandLine += QuoteCommandArgument(options.environmentSetupBatch);
+                commandLine += L" -arch=amd64 >nul && ";
+            }
+
+            commandLine += L"call ";
+            commandLine += QuoteCommandArgument(options.compilerExecutable);
+            commandLine += L" /nologo /EHsc /std:c++20 /LD ";
+            commandLine += QuoteCommandArgument(sourcePath);
+            commandLine += L" /Fo";
+            commandLine += QuoteCommandArgument(objectPath);
+            commandLine += L" /Fe";
+            commandLine += QuoteCommandArgument(modulePath);
+            commandLine += L" 2>&1";
+            return commandLine;
+        }
+
+        /// <summary>
         /// 外部コマンドを実行して標準出力と標準エラーを取得する。
         /// </summary>
         /// <param name="commandLine">実行するコマンドライン。</param>
@@ -651,15 +685,7 @@ namespace Xelqoria::Editor
             ++compiledCount;
 
             const std::wstring commandLine =
-                L"call "
-                + QuoteCommandArgument(options.compilerExecutable)
-                + L" /nologo /EHsc /std:c++20 /LD "
-                + QuoteCommandArgument(*sourcePath)
-                + L" /Fo"
-                + QuoteCommandArgument(objectPath)
-                + L" /Fe"
-                + QuoteCommandArgument(modulePath)
-                + L" 2>&1";
+                BuildScriptCompileCommandLine(options, *sourcePath, objectPath, modulePath);
 
             std::wstring compilerOutput{};
             const int exitCode = RunCommandAndCaptureOutput(commandLine, compilerOutput);

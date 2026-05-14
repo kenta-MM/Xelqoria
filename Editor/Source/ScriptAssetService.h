@@ -44,6 +44,11 @@ namespace Xelqoria::Editor
         /// C++ コンパイラ実行ファイルまたはコマンドを表す。
         /// </summary>
         std::filesystem::path compilerExecutable = L"cl.exe";
+
+        /// <summary>
+        /// コンパイラ実行前に呼び出す開発環境セットアップバッチを表す。
+        /// </summary>
+        std::filesystem::path environmentSetupBatch{};
     };
 
     /// <summary>

@@ -136,6 +136,47 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// Visual Studio の開発者環境セットアップバッチを取得する。
+        /// </summary>
+        /// <returns>VsDevCmd.bat のパス。見つからない場合は空。</returns>
+        [[nodiscard]] std::filesystem::path GetScriptEnvironmentSetupBatch()
+        {
+            wchar_t* configuredBatch = nullptr;
+            std::size_t configuredBatchLength = 0;
+            const errno_t environmentResult =
+                _wdupenv_s(&configuredBatch, &configuredBatchLength, L"XELQORIA_SCRIPT_ENVIRONMENT");
+            if (0 == environmentResult
+                && nullptr != configuredBatch
+                && 0 < configuredBatchLength
+                && L'\0' != configuredBatch[0])
+            {
+                const std::filesystem::path batchPath = configuredBatch;
+                free(configuredBatch);
+                return batchPath;
+            }
+
+            free(configuredBatch);
+
+            const std::array<std::filesystem::path, 4> candidates{
+                L"C:/Program Files/Microsoft Visual Studio/18/Community/Common7/Tools/VsDevCmd.bat",
+                L"C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/Tools/VsDevCmd.bat",
+                L"C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/Common7/Tools/VsDevCmd.bat",
+                L"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/Tools/VsDevCmd.bat"
+            };
+
+            for (const std::filesystem::path& candidate : candidates)
+            {
+                std::error_code errorCode;
+                if (std::filesystem::exists(candidate, errorCode) && false == static_cast<bool>(errorCode))
+                {
+                    return candidate;
+                }
+            }
+
+            return {};
+        }
+
+        /// <summary>
         /// Script ビルド結果を SceneView 表示用の短い文面へ変換する。
         /// </summary>
         /// <param name="buildResult">Script ビルド結果。</param>
@@ -637,7 +678,10 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path();
         const ScriptBuildResult buildResult = ScriptAssetService::BuildProjectScripts(
             projectRootDirectory,
-            ScriptBuildOptions{ GetScriptCompilerExecutable() });
+            ScriptBuildOptions{
+                GetScriptCompilerExecutable(),
+                GetScriptEnvironmentSetupBatch()
+            });
         const std::wstring statusText = BuildScriptBuildStatusText(buildResult);
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), statusText.c_str());
 
