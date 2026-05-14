@@ -46,7 +46,8 @@ namespace Xelqoria::Graphics
             quadTransform,
             sprite.IsOutlineEnabled(),
             sprite.GetOutlineThickness(),
-            sprite.GetOutlineColor());
+            sprite.GetOutlineColor(),
+            sprite.GetColor());
         ApplyQuadRenderConstants(*m_context, quadRenderConstants);
 
         // 1スプライトを2三角形(6頂点)で描画する前提。

@@ -119,12 +119,14 @@ namespace Xelqoria::Graphics
     /// <param name="outlineEnabled">外枠描画を有効にする場合は true。</param>
     /// <param name="outlineThickness">外枠太さ。</param>
     /// <param name="outlineColor">RGBA 順の外枠色。</param>
+    /// <param name="fillColor">RGBA 順の色乗算値。</param>
     /// <returns>Quad 描画定数。</returns>
     [[nodiscard]] inline QuadRenderConstants MakeTexturedQuadTransform(
         const SpriteQuadTransform& quadTransform,
         bool outlineEnabled,
         float outlineThickness,
-        const std::array<float, 4>& outlineColor)
+        const std::array<float, 4>& outlineColor,
+        const std::array<float, 4>& fillColor)
     {
         QuadRenderConstants result{};
         result.scaleX = quadTransform.scaleX;
@@ -136,6 +138,7 @@ namespace Xelqoria::Graphics
         result.outlineEnabled = outlineEnabled ? 1.0f : 0.0f;
         result.outlineThickness = outlineThickness;
         result.outlineColor = outlineColor;
+        result.fillColor = fillColor;
         result.textureEnabled = 1.0f;
         return result;
     }

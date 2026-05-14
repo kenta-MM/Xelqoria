@@ -91,6 +91,21 @@ namespace Xelqoria::Graphics
 		float GetRotationDegrees() const;
 
 		/// <summary>
+		/// スプライトの色乗算値を設定する。
+		/// </summary>
+		/// <param name="red">赤成分。</param>
+		/// <param name="green">緑成分。</param>
+		/// <param name="blue">青成分。</param>
+		/// <param name="alpha">アルファ成分。</param>
+		void SetColor(float red, float green, float blue, float alpha);
+
+		/// <summary>
+		/// スプライトの色乗算値を取得する。
+		/// </summary>
+		/// <returns>RGBA 順の色乗算値。</returns>
+		const std::array<float, 4>& GetColor() const;
+
+		/// <summary>
 		/// スプライト外枠描画の有効状態を設定する。
 		/// </summary>
 		/// <param name="enabled">外枠描画を有効にする場合は true。</param>
@@ -135,6 +150,7 @@ namespace Xelqoria::Graphics
 		Xelqoria::Math::Vector2 m_position{};
 		Xelqoria::Math::Vector2 m_scale{ 1.0f, 1.0f };
 		float m_rotationDegrees = 0.0f;
+		std::array<float, 4> m_color{ 1.0f, 1.0f, 1.0f, 1.0f };
 		bool m_outlineEnabled = false;
 		float m_outlineThickness = 1.0f;
 		std::array<float, 4> m_outlineColor{ 1.0f, 1.0f, 0.0f, 1.0f };

@@ -126,6 +126,18 @@ namespace Xelqoria::Editor
         [[nodiscard]] const std::filesystem::path& GetDraggingImagePath() const;
 
         /// <summary>
+        /// 現在ドラッグ中の ScriptAssetId を取得する。
+        /// </summary>
+        /// <returns>ドラッグ中 ScriptAssetId。</returns>
+        [[nodiscard]] const Core::AssetId& GetDraggingScriptAssetId() const;
+
+        /// <summary>
+        /// 現在ドラッグ中の Script Asset ファイルパスを取得する。
+        /// </summary>
+        /// <returns>ドラッグ中 Script Asset ファイルパス。</returns>
+        [[nodiscard]] const std::filesystem::path& GetDraggingScriptAssetPath() const;
+
+        /// <summary>
         /// ドラッグ中かを取得する。
         /// </summary>
         /// <returns>ドラッグ中の場合は true。</returns>
@@ -368,7 +380,9 @@ namespace Xelqoria::Editor
         Core::AssetId m_selectedSpriteAssetId{};
         Core::AssetId m_draggingSpriteAssetId{};
         Core::AssetId m_draggingTextureAssetId{};
+        Core::AssetId m_draggingScriptAssetId{};
         std::filesystem::path m_draggingImagePath{};
+        std::filesystem::path m_draggingScriptAssetPath{};
         ULONGLONG m_lastClickTick = 0;
         int m_lastClickedIndex = -1;
         bool m_isAssetDragActive = false;

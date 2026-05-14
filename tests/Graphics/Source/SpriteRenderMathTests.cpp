@@ -56,12 +56,15 @@ TEST(SpriteRenderMathTests, SpriteStoresRenderStateAndComputesQuadTransform)
     sprite.SetPosition(160.0f, -90.0f);
     sprite.SetScale(2.0f, 0.5f);
     sprite.SetRotationDegrees(90.0f);
+    sprite.SetColor(0.25f, 0.5f, 0.75f, 0.8f);
 
     EXPECT_TRUE(IsEqual(sprite.GetPosition().x, 160.0f));
     EXPECT_TRUE(IsEqual(sprite.GetPosition().y, -90.0f));
     EXPECT_TRUE(IsEqual(sprite.GetScale().x, 2.0f));
     EXPECT_TRUE(IsEqual(sprite.GetScale().y, 0.5f));
     EXPECT_TRUE(IsEqual(sprite.GetRotationDegrees(), 90.0f));
+    EXPECT_TRUE(IsEqual(sprite.GetColor()[0], 0.25f));
+    EXPECT_TRUE(IsEqual(sprite.GetColor()[3], 0.8f));
 
     const auto quadTransform = Xelqoria::Graphics::ComputeSpriteQuadTransform(sprite, 1280, 720);
     EXPECT_TRUE(IsEqual(quadTransform.scaleX, 0.2f));

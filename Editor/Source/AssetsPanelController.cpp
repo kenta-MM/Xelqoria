@@ -275,7 +275,9 @@ namespace Xelqoria::Editor
             m_selectedSpriteAssetId = {};
             m_draggingSpriteAssetId = {};
             m_draggingTextureAssetId = {};
+            m_draggingScriptAssetId = {};
             m_draggingImagePath.clear();
+            m_draggingScriptAssetPath.clear();
             m_canPlaceDraggingAssetInScene = false;
             m_createSpriteRequested = false;
             m_createSpriteTargetDirectory.clear();
@@ -452,8 +454,10 @@ namespace Xelqoria::Editor
             && EditorAssetPathUtils::IsTextureImageFile(hitEntry.path))
         {
             m_draggingImagePath = hitEntry.path;
+            m_draggingScriptAssetPath.clear();
             m_draggingTextureAssetId = EditorAssetPathUtils::BuildTextureAssetId(hitEntry.path, m_assetsRootDirectory);
             m_draggingSpriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(hitEntry.path, m_assetsRootDirectory);
+            m_draggingScriptAssetId = {};
             m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
             m_canPlaceDraggingAssetInScene = false;
             if (m_isAssetDragActive)
@@ -461,11 +465,29 @@ namespace Xelqoria::Editor
                 BeginDragImage(hitEntry.path, hitEntry.iconIndex, inputSnapshot.GetCursorScreenPoint());
             }
         }
+        else if (false == hitEntry.isDirectory
+            && EditorPathSecurity::IsPathInsideOrEqual(hitEntry.path, m_assetsRootDirectory)
+            && ScriptAssetService::IsScriptAssetFile(hitEntry.path))
+        {
+            m_draggingImagePath.clear();
+            m_draggingTextureAssetId = {};
+            m_draggingSpriteAssetId = {};
+            m_draggingScriptAssetPath = hitEntry.path;
+            m_draggingScriptAssetId = ScriptAssetService::BuildScriptAssetId(m_assetsRootDirectory, hitEntry.path);
+            m_isAssetDragActive = false == m_draggingScriptAssetId.IsEmpty();
+            m_canPlaceDraggingAssetInScene = false;
+            if (m_isAssetDragActive)
+            {
+                BeginDragPreview(hitEntry.path, inputSnapshot.GetCursorScreenPoint());
+            }
+        }
         else
         {
             m_draggingImagePath.clear();
             m_draggingTextureAssetId = {};
             m_draggingSpriteAssetId = {};
+            m_draggingScriptAssetPath.clear();
+            m_draggingScriptAssetId = {};
             m_isAssetDragActive = false;
             m_canPlaceDraggingAssetInScene = false;
             EndDragImage();
@@ -487,7 +509,9 @@ namespace Xelqoria::Editor
     {
         m_draggingSpriteAssetId = {};
         m_draggingTextureAssetId = {};
+        m_draggingScriptAssetId = {};
         m_draggingImagePath.clear();
+        m_draggingScriptAssetPath.clear();
         m_canPlaceDraggingAssetInScene = false;
         EndDragImage();
         RefreshSummaryLabel();
@@ -511,6 +535,16 @@ namespace Xelqoria::Editor
     const std::filesystem::path& AssetsPanelController::GetDraggingImagePath() const
     {
         return m_draggingImagePath;
+    }
+
+    const Core::AssetId& AssetsPanelController::GetDraggingScriptAssetId() const
+    {
+        return m_draggingScriptAssetId;
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetDraggingScriptAssetPath() const
+    {
+        return m_draggingScriptAssetPath;
     }
 
     bool AssetsPanelController::IsDragActive() const
@@ -1072,7 +1106,7 @@ namespace Xelqoria::Editor
             m_selectedSpriteAssetId = {};
         }
 
-        if (m_draggingImagePath == entry.path)
+        if (m_draggingImagePath == entry.path || m_draggingScriptAssetPath == entry.path)
         {
             CompleteReleasedDrag();
         }

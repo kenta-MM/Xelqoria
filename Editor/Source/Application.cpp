@@ -136,6 +136,47 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// Visual Studio の開発者環境セットアップバッチを取得する。
+        /// </summary>
+        /// <returns>VsDevCmd.bat のパス。見つからない場合は空。</returns>
+        [[nodiscard]] std::filesystem::path GetScriptEnvironmentSetupBatch()
+        {
+            wchar_t* configuredBatch = nullptr;
+            std::size_t configuredBatchLength = 0;
+            const errno_t environmentResult =
+                _wdupenv_s(&configuredBatch, &configuredBatchLength, L"XELQORIA_SCRIPT_ENVIRONMENT");
+            if (0 == environmentResult
+                && nullptr != configuredBatch
+                && 0 < configuredBatchLength
+                && L'\0' != configuredBatch[0])
+            {
+                const std::filesystem::path batchPath = configuredBatch;
+                free(configuredBatch);
+                return batchPath;
+            }
+
+            free(configuredBatch);
+
+            const std::array<std::filesystem::path, 4> candidates{
+                L"C:/Program Files/Microsoft Visual Studio/18/Community/Common7/Tools/VsDevCmd.bat",
+                L"C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/Tools/VsDevCmd.bat",
+                L"C:/Program Files (x86)/Microsoft Visual Studio/18/BuildTools/Common7/Tools/VsDevCmd.bat",
+                L"C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/Tools/VsDevCmd.bat"
+            };
+
+            for (const std::filesystem::path& candidate : candidates)
+            {
+                std::error_code errorCode;
+                if (std::filesystem::exists(candidate, errorCode) && false == static_cast<bool>(errorCode))
+                {
+                    return candidate;
+                }
+            }
+
+            return {};
+        }
+
+        /// <summary>
         /// Script ビルド結果を SceneView 表示用の短い文面へ変換する。
         /// </summary>
         /// <param name="buildResult">Script ビルド結果。</param>
@@ -637,7 +678,10 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path();
         const ScriptBuildResult buildResult = ScriptAssetService::BuildProjectScripts(
             projectRootDirectory,
-            ScriptBuildOptions{ GetScriptCompilerExecutable() });
+            ScriptBuildOptions{
+                GetScriptCompilerExecutable(),
+                GetScriptEnvironmentSetupBatch()
+            });
         const std::wstring statusText = BuildScriptBuildStatusText(buildResult);
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), statusText.c_str());
 
@@ -727,6 +771,12 @@ namespace Xelqoria::Editor
         }
 
         m_scriptRuntimeSession.Update(deltaTime);
+        if (false == m_scriptRuntimeSession.GetDiagnostics().empty())
+        {
+            const std::wstring runtimeStatusText =
+                BuildScriptRuntimeStatusText(m_scriptRuntimeSession.GetDiagnostics());
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), runtimeStatusText.c_str());
+        }
 
         m_assetsPanelController.UpdateDragState(inputSnapshot);
         m_inspectorPanelController.UpdateTextureDropHighlight(m_assetsPanelController);
@@ -845,7 +895,8 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetScene(),
             m_hierarchyPanelController.GetSelectedEntityId(),
             canAddSpriteComponent,
-            inputSnapshot);
+            inputSnapshot,
+            m_sceneDocument.GetSpriteAssetRegistry());
         if (true == inspectorResult.changed)
         {
             PersistSceneChanges(
@@ -854,6 +905,108 @@ namespace Xelqoria::Editor
                 true);
             RefreshEditorPanels(canAddSpriteComponent, false);
             RefreshSceneViewSelectionStatus();
+        }
+
+        if (InspectorScriptAction::None != inspectorResult.scriptAction)
+        {
+            bool scriptActionSucceeded = false;
+            bool scriptActionChangedScene = false;
+            switch (inspectorResult.scriptAction)
+            {
+            case InspectorScriptAction::Create:
+            {
+                const std::optional<Core::AssetId> scriptTargetSpriteAssetId =
+                    EnsureSelectedSpriteAssetFileForScript(
+                        inspectorResult.scriptTargetSpriteAssetId,
+                        scriptActionChangedScene);
+                const ScriptAssetCreationResult createResult =
+                    scriptTargetSpriteAssetId.has_value()
+                    ? m_sceneDocument.CreateAndAssignScriptAssetToSpriteAsset(*scriptTargetSpriteAssetId)
+                    : ScriptAssetCreationResult{};
+                scriptActionSucceeded = createResult.succeeded;
+                SetWindowTextW(
+                    m_editorShell.GetSceneViewPlanLabel(),
+                    scriptActionSucceeded
+                        ? L"Script Asset を作成し、Sprite Asset に割り当てました。"
+                        : L"Script Asset の作成または割り当てに失敗しました。");
+                break;
+            }
+            case InspectorScriptAction::Assign:
+            {
+                const std::filesystem::path projectRootDirectory =
+                    m_sceneDocument.GetProjectInfo().has_value()
+                    ? m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path()
+                    : std::filesystem::path{};
+                const std::filesystem::path scriptAssetPath =
+                    SelectScriptAssetFile(m_window.GetHwnd(), projectRootDirectory);
+                if (false == scriptAssetPath.empty())
+                {
+                    const std::optional<Core::AssetId> scriptTargetSpriteAssetId =
+                        EnsureSelectedSpriteAssetFileForScript(
+                            inspectorResult.scriptTargetSpriteAssetId,
+                            scriptActionChangedScene);
+                    scriptActionSucceeded = scriptTargetSpriteAssetId.has_value()
+                        && m_sceneDocument.AssignScriptAssetToSpriteAsset(
+                            *scriptTargetSpriteAssetId,
+                            scriptAssetPath);
+                    SetWindowTextW(
+                        m_editorShell.GetSceneViewPlanLabel(),
+                        scriptActionSucceeded
+                            ? L"Sprite Asset に Script Asset を割り当てました。"
+                            : L"Script Asset の割り当てに失敗しました。");
+                }
+                break;
+            }
+            case InspectorScriptAction::AssignDropped:
+            {
+                const std::optional<Core::AssetId> scriptTargetSpriteAssetId =
+                    EnsureSelectedSpriteAssetFileForScript(
+                        inspectorResult.scriptTargetSpriteAssetId,
+                        scriptActionChangedScene);
+                scriptActionSucceeded = scriptTargetSpriteAssetId.has_value()
+                    && m_sceneDocument.AssignScriptAssetToSpriteAsset(
+                        *scriptTargetSpriteAssetId,
+                        inspectorResult.droppedScriptAssetPath);
+                SetWindowTextW(
+                    m_editorShell.GetSceneViewPlanLabel(),
+                    scriptActionSucceeded
+                        ? L"Sprite Asset に Script Asset を割り当てました。"
+                        : L"Script Asset の割り当てに失敗しました。");
+                break;
+            }
+            case InspectorScriptAction::Clear:
+            {
+                const std::optional<Core::AssetId> scriptTargetSpriteAssetId =
+                    EnsureSelectedSpriteAssetFileForScript(
+                        inspectorResult.scriptTargetSpriteAssetId,
+                        scriptActionChangedScene);
+                scriptActionSucceeded = scriptTargetSpriteAssetId.has_value()
+                    && m_sceneDocument.ClearScriptAssetFromSpriteAsset(*scriptTargetSpriteAssetId);
+                SetWindowTextW(
+                    m_editorShell.GetSceneViewPlanLabel(),
+                    scriptActionSucceeded
+                        ? L"Sprite Asset の Script Asset 割り当てを解除しました。"
+                        : L"Script Asset 割り当て解除に失敗しました。");
+                break;
+            }
+            case InspectorScriptAction::None:
+            default:
+                break;
+            }
+
+            if (scriptActionSucceeded)
+            {
+                if (scriptActionChangedScene)
+                {
+                    (void)PersistSceneChanges(
+                        L"Sprite の Script 設定を Scene へ保存しました。",
+                        L"Script 設定は反映されましたが、Scene の保存に失敗しました。",
+                        true);
+                }
+
+                m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                RefreshEditorPanels(canAddSpriteComponent, false);
+            }
         }
 
         if (true == m_assetsPanelController.WasDragReleasedThisFrame()
@@ -865,7 +1018,8 @@ namespace Xelqoria::Editor
         const InspectorApplyResult textureDropResult = m_inspectorPanelController.ApplyTextureDrop(
             m_sceneDocument.GetScene(),
             m_hierarchyPanelController.GetSelectedEntityId(),
-            m_assetsPanelController);
+            m_assetsPanelController,
+            m_sceneDocument.GetSpriteAssetRegistry());
         if (true == textureDropResult.changed)
         {
             PersistSceneChanges(
@@ -874,6 +1028,41 @@ namespace Xelqoria::Editor
                 true);
             RefreshEditorPanels(canAddSpriteComponent, false);
             RefreshSceneViewSelectionStatus();
+        }
+
+        const InspectorApplyResult scriptDropResult = m_inspectorPanelController.ApplyScriptDrop(
+            m_sceneDocument.GetScene(),
+            m_hierarchyPanelController.GetSelectedEntityId(),
+            m_assetsPanelController);
+        if (InspectorScriptAction::AssignDropped == scriptDropResult.scriptAction)
+        {
+            bool scriptDropChangedScene = false;
+            const std::optional<Core::AssetId> scriptDropTargetSpriteAssetId =
+                EnsureSelectedSpriteAssetFileForScript(
+                    scriptDropResult.scriptTargetSpriteAssetId,
+                    scriptDropChangedScene);
+            const bool scriptDropSucceeded = scriptDropTargetSpriteAssetId.has_value()
+                && m_sceneDocument.AssignScriptAssetToSpriteAsset(
+                    *scriptDropTargetSpriteAssetId,
+                    scriptDropResult.droppedScriptAssetPath);
+            if (true == scriptDropSucceeded)
+            {
+                if (scriptDropChangedScene)
+                {
+                    (void)PersistSceneChanges(
+                        L"Sprite の Script 設定を Scene へ保存しました。",
+                        L"Script 設定は反映されましたが、Scene の保存に失敗しました。",
+                        true);
+                }
+
+                m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                RefreshEditorPanels(canAddSpriteComponent, false);
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Sprite Asset に Script Asset を割り当てました。");
+            }
+            else
+            {
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script Asset の割り当てに失敗しました。");
+            }
         }
 
         const SceneViewInteractionResult interactionResult = m_sceneViewController.UpdateInteraction(
@@ -964,7 +1153,8 @@ namespace Xelqoria::Editor
         m_inspectorPanelController.Refresh(
             m_sceneDocument.GetScene(),
             m_hierarchyPanelController.GetSelectedEntityId(),
-            canAddSpriteComponent);
+            canAddSpriteComponent,
+            m_sceneDocument.GetSpriteAssetRegistry());
     }
 
     void Application::RefreshSceneViewSelectionStatus()
@@ -1009,6 +1199,52 @@ namespace Xelqoria::Editor
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), failureMessage);
         MarkProjectDirty();
         return false;
+    }
+
+    std::optional<Core::AssetId> Application::EnsureSelectedSpriteAssetFileForScript(
+        const Core::AssetId& requestedSpriteAssetId,
+        bool& sceneChanged)
+    {
+        sceneChanged = false;
+        if (requestedSpriteAssetId.IsEmpty())
+        {
+            return std::nullopt;
+        }
+
+        if (m_sceneDocument.ResolveSpriteAssetPath(requestedSpriteAssetId).has_value())
+        {
+            return requestedSpriteAssetId;
+        }
+
+        Game::Scene* scene = m_sceneDocument.GetScene();
+        const std::optional<Game::EntityId> selectedEntityId = m_hierarchyPanelController.GetSelectedEntityId();
+        if (nullptr == scene || false == selectedEntityId.has_value())
+        {
+            return std::nullopt;
+        }
+
+        const auto entity = scene->FindEntity(*selectedEntityId);
+        if (false == entity.has_value())
+        {
+            return std::nullopt;
+        }
+
+        const auto spriteComponent = entity->get().GetSpriteComponent();
+        if (false == spriteComponent.has_value()
+            || spriteComponent->get().spriteAssetRef != requestedSpriteAssetId)
+        {
+            return std::nullopt;
+        }
+
+        const std::optional<Core::AssetId> ensuredSpriteAssetId =
+            m_sceneDocument.EnsureSpriteAssetFileForEntity(entity->get(), {});
+        if (false == ensuredSpriteAssetId.has_value())
+        {
+            return std::nullopt;
+        }
+
+        sceneChanged = *ensuredSpriteAssetId != requestedSpriteAssetId;
+        return ensuredSpriteAssetId;
     }
 
     void Application::RecordCurrentProject()
