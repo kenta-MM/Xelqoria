@@ -175,6 +175,24 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSceneViewSizeLabel() const;
 
         /// <summary>
+        /// Script ビルド後に再生を開始するボタンを取得する。
+        /// </summary>
+        /// <returns>ビルドして開始ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetBuildAndPlayButton() const;
+
+        /// <summary>
+        /// Script 再生を停止または再開するボタンを取得する。
+        /// </summary>
+        /// <returns>停止/再開ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetPauseResumePlayButton() const;
+
+        /// <summary>
+        /// Script 再生を終了するボタンを取得する。
+        /// </summary>
+        /// <returns>終了ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetEndPlayButton() const;
+
+        /// <summary>
         /// SceneView 説明ラベルを取得する。
         /// </summary>
         /// <returns>SceneView 説明ラベルの HWND。</returns>
@@ -654,7 +672,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 62> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 65> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -746,6 +764,9 @@ namespace Xelqoria::Editor
         HWND m_projectSceneDetailLabel = nullptr;
         HWND m_sceneViewHost = nullptr;
         HWND m_sceneViewSizeLabel = nullptr;
+        HWND m_buildAndPlayButton = nullptr;
+        HWND m_pauseResumePlayButton = nullptr;
+        HWND m_endPlayButton = nullptr;
         HWND m_logOutputPanel = nullptr;
         HWND m_logOutputTabControl = nullptr;
         HWND m_logClearButton = nullptr;

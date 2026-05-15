@@ -10,6 +10,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <Windows.h>
 
 #include "EditorPathSecurity.h"
 #include "EditorStringUtils.h"
@@ -133,20 +134,92 @@ namespace Xelqoria::Editor
         [[nodiscard]] int RunCommandAndCaptureOutput(const std::wstring& commandLine, std::wstring& output)
         {
 #if defined(_WIN32)
-            FILE* pipe = _popen(ToNarrowString(commandLine).c_str(), "r");
-            if (nullptr == pipe)
+            SECURITY_ATTRIBUTES securityAttributes{};
+            securityAttributes.nLength = sizeof(securityAttributes);
+            securityAttributes.bInheritHandle = TRUE;
+
+            HANDLE readPipe = nullptr;
+            HANDLE writePipe = nullptr;
+            if (FALSE == CreatePipe(&readPipe, &writePipe, &securityAttributes, 0))
             {
                 output += L"コンパイラ プロセスを開始できませんでした。\n";
                 return -1;
             }
 
-            std::array<char, 512> buffer{};
-            while (nullptr != fgets(buffer.data(), static_cast<int>(buffer.size()), pipe))
+            if (FALSE == SetHandleInformation(readPipe, HANDLE_FLAG_INHERIT, 0))
             {
+                CloseHandle(readPipe);
+                CloseHandle(writePipe);
+                output += L"コンパイラ出力の読み取り準備に失敗しました。\n";
+                return -1;
+            }
+
+            STARTUPINFOW startupInfo{};
+            startupInfo.cb = sizeof(startupInfo);
+            startupInfo.dwFlags = STARTF_USESTDHANDLES;
+            startupInfo.hStdOutput = writePipe;
+            startupInfo.hStdError = writePipe;
+            startupInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+
+            PROCESS_INFORMATION processInfo{};
+            std::wstring shellCommandLine = L"cmd.exe /S /C \"";
+            for (const wchar_t character : commandLine)
+            {
+                if (L'"' == character)
+                {
+                    shellCommandLine += L'"';
+                }
+
+                shellCommandLine += character;
+            }
+            shellCommandLine += L"\"";
+            std::vector<wchar_t> mutableCommandLine(shellCommandLine.begin(), shellCommandLine.end());
+            mutableCommandLine.push_back(L'\0');
+
+            const BOOL processStarted = CreateProcessW(
+                nullptr,
+                mutableCommandLine.data(),
+                nullptr,
+                nullptr,
+                TRUE,
+                CREATE_NO_WINDOW,
+                nullptr,
+                nullptr,
+                &startupInfo,
+                &processInfo);
+            CloseHandle(writePipe);
+            if (FALSE == processStarted)
+            {
+                CloseHandle(readPipe);
+                output += L"コンパイラ プロセスを開始できませんでした。\n";
+                return -1;
+            }
+
+            std::array<char, 512> buffer{};
+            DWORD bytesRead = 0;
+            while (ReadFile(
+                readPipe,
+                buffer.data(),
+                static_cast<DWORD>(buffer.size() - 1),
+                &bytesRead,
+                nullptr)
+                && 0 < bytesRead)
+            {
+                buffer[static_cast<std::size_t>(bytesRead)] = '\0';
                 output += ToWideString(buffer.data());
             }
 
-            return _pclose(pipe);
+            WaitForSingleObject(processInfo.hProcess, INFINITE);
+            DWORD exitCode = 0;
+            if (FALSE == GetExitCodeProcess(processInfo.hProcess, &exitCode))
+            {
+                exitCode = static_cast<DWORD>(-1);
+            }
+
+            CloseHandle(processInfo.hThread);
+            CloseHandle(processInfo.hProcess);
+            CloseHandle(readPipe);
+            return static_cast<int>(exitCode);
 #else
             (void)commandLine;
             output += L"Script ビルドは Windows Editor でのみ実行できます。\n";

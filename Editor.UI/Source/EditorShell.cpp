@@ -475,7 +475,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 62> controls = CollectControls();
+            const std::array<HWND, 65> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -866,7 +866,40 @@ namespace Xelqoria::Editor
             L"Static",
             L"SceneView size: pending",
             WS_CHILD | WS_VISIBLE);
-        return nullptr != m_sceneViewSizeLabel;
+        if (nullptr == m_sceneViewSizeLabel)
+        {
+            return false;
+        }
+
+        m_buildAndPlayButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"ビルドして開始",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_buildAndPlayButton)
+        {
+            return false;
+        }
+
+        m_pauseResumePlayButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"停止",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_pauseResumePlayButton)
+        {
+            return false;
+        }
+
+        m_endPlayButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"終了",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        return nullptr != m_endPlayButton;
     }
 
     bool EditorShell::InitializeLogOutputPanel(HWND parentWindow, HINSTANCE hInstance)
@@ -1293,10 +1326,16 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutSceneViewPanelInRect(const RECT& panelRect)
     {
         const int borderInset = ScaleMetric(4);
+        const int toolbarHeight = ScaleMetric(36);
+        const int toolbarGap = ScaleMetric(8);
+        const int buttonGap = ScaleMetric(8);
+        const int buttonWidth = ScaleMetric(120);
         const int width = panelRect.right - panelRect.left;
         const int height = panelRect.bottom - panelRect.top;
         const int sceneHostWidth = (std::max)(0, width - borderInset * 2);
-        const int sceneHostHeight = (std::max)(0, height - borderInset * 2);
+        const int sceneHostTop = panelRect.top + borderInset + toolbarHeight + toolbarGap;
+        const int panelBottom = static_cast<int>(panelRect.bottom);
+        const int sceneHostHeight = (std::max)(0, panelBottom - borderInset - sceneHostTop);
 
         MoveChildWindowNoRedraw(m_sceneViewPanel, panelRect.left, panelRect.top, width, height);
         MoveChildWindowNoRedraw(m_projectSummaryLabel, panelRect.left, panelRect.top, 0, 0);
@@ -1305,9 +1344,27 @@ namespace Xelqoria::Editor
         MoveChildWindowNoRedraw(m_sceneViewPlanLabel, panelRect.left, panelRect.top, 0, 0);
         MoveChildWindowNoRedraw(m_sceneViewSizeLabel, panelRect.left, panelRect.top, 0, 0);
         MoveChildWindowNoRedraw(
-            m_sceneViewHost,
+            m_buildAndPlayButton,
             panelRect.left + borderInset,
             panelRect.top + borderInset,
+            buttonWidth,
+            toolbarHeight);
+        MoveChildWindowNoRedraw(
+            m_pauseResumePlayButton,
+            panelRect.left + borderInset + buttonWidth + buttonGap,
+            panelRect.top + borderInset,
+            buttonWidth,
+            toolbarHeight);
+        MoveChildWindowNoRedraw(
+            m_endPlayButton,
+            panelRect.left + borderInset + (buttonWidth + buttonGap) * 2,
+            panelRect.top + borderInset,
+            buttonWidth,
+            toolbarHeight);
+        MoveChildWindowNoRedraw(
+            m_sceneViewHost,
+            panelRect.left + borderInset,
+            sceneHostTop,
             sceneHostWidth,
             sceneHostHeight);
     }
@@ -1763,7 +1820,7 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::SceneView:
-            for (HWND control : { m_sceneViewPanel, m_sceneViewHost })
+            for (HWND control : { m_sceneViewPanel, m_sceneViewHost, m_buildAndPlayButton, m_pauseResumePlayButton, m_endPlayButton })
             {
                 ShowWindow(control, showCommand);
             }
@@ -1822,7 +1879,7 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::SceneView:
-            for (HWND control : { m_sceneViewPanel, m_sceneViewPlanLabel, m_projectSummaryLabel, m_projectSceneListBox, m_projectSceneDetailLabel, m_sceneViewHost, m_sceneViewSizeLabel })
+            for (HWND control : { m_sceneViewPanel, m_sceneViewPlanLabel, m_projectSummaryLabel, m_projectSceneListBox, m_projectSceneDetailLabel, m_sceneViewHost, m_sceneViewSizeLabel, m_buildAndPlayButton, m_pauseResumePlayButton, m_endPlayButton })
             {
                 setParent(control);
             }
@@ -3023,7 +3080,7 @@ namespace Xelqoria::Editor
                 RDW_INVALIDATE | RDW_ERASE | RDW_ERASENOW | RDW_UPDATENOW | RDW_ALLCHILDREN | RDW_FRAME);
         }
 
-        const std::array<HWND, 62> controls = CollectControls();
+        const std::array<HWND, 65> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -3093,7 +3150,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 62> controls = CollectControls();
+        const std::array<HWND, 65> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -3111,7 +3168,7 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 62> EditorShell::CollectControls() const
+    std::array<HWND, 65> EditorShell::CollectControls() const
     {
         return {
             m_leftTopDockTab,
@@ -3138,6 +3195,9 @@ namespace Xelqoria::Editor
             m_projectSceneDetailLabel,
             m_sceneViewHost,
             m_sceneViewSizeLabel,
+            m_buildAndPlayButton,
+            m_pauseResumePlayButton,
+            m_endPlayButton,
             m_logOutputPanel,
             m_logOutputTabControl,
             m_logClearButton,
@@ -3353,6 +3413,21 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetSceneViewSizeLabel() const
     {
         return m_sceneViewSizeLabel;
+    }
+
+    HWND EditorShell::GetBuildAndPlayButton() const
+    {
+        return m_buildAndPlayButton;
+    }
+
+    HWND EditorShell::GetPauseResumePlayButton() const
+    {
+        return m_pauseResumePlayButton;
+    }
+
+    HWND EditorShell::GetEndPlayButton() const
+    {
+        return m_endPlayButton;
     }
 
     HWND EditorShell::GetSceneViewPlanLabel() const

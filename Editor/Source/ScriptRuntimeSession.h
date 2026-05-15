@@ -168,6 +168,16 @@ namespace Xelqoria::Editor
         void Update(float deltaTime);
 
         /// <summary>
+        /// Script 実行セッションを一時停止する。
+        /// </summary>
+        void Pause();
+
+        /// <summary>
+        /// 一時停止中の Script 実行セッションを再開する。
+        /// </summary>
+        void Resume();
+
+        /// <summary>
         /// Script 実行セッションを終了する。
         /// </summary>
         void End();
@@ -177,6 +187,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>再生中の場合は true。</returns>
         [[nodiscard]] bool IsPlaying() const;
+
+        /// <summary>
+        /// Script 実行セッションが一時停止中かを取得する。
+        /// </summary>
+        /// <returns>一時停止中の場合は true。</returns>
+        [[nodiscard]] bool IsPaused() const;
 
         /// <summary>
         /// Script Runtime 診断メッセージを取得する。
@@ -237,5 +253,6 @@ namespace Xelqoria::Editor
         std::vector<ScriptRuntimeInstance> m_instances{};
         std::vector<ScriptRuntimeDiagnostic> m_diagnostics{};
         bool m_playing = false;
+        bool m_paused = false;
     };
 }
