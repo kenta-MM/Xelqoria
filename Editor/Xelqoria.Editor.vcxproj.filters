@@ -33,6 +33,9 @@
     <ClCompile Include="Source\InspectorPanelController.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\LogOutputPanelController.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\ProjectPanelController.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -105,6 +108,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\InspectorPanelController.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\LogOutputPanelController.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\ProjectPanelController.h">

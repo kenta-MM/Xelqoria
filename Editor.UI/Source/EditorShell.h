@@ -205,6 +205,36 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSceneViewHost() const;
 
         /// <summary>
+        /// LogOutput タブを取得する。
+        /// </summary>
+        /// <returns>LogOutput TabControl の HWND。</returns>
+        [[nodiscard]] HWND GetLogOutputTabControl() const;
+
+        /// <summary>
+        /// LogOutput クリアボタンを取得する。
+        /// </summary>
+        /// <returns>LogOutput クリアボタンの HWND。</returns>
+        [[nodiscard]] HWND GetLogClearButton() const;
+
+        /// <summary>
+        /// LogOutput コピー ボタンを取得する。
+        /// </summary>
+        /// <returns>LogOutput コピー ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetLogCopyButton() const;
+
+        /// <summary>
+        /// LogOutput フィルタ入力欄を取得する。
+        /// </summary>
+        /// <returns>LogOutput フィルタ入力欄の HWND。</returns>
+        [[nodiscard]] HWND GetLogFilterEdit() const;
+
+        /// <summary>
+        /// LogOutput 一覧を取得する。
+        /// </summary>
+        /// <returns>LogOutput ListBox の HWND。</returns>
+        [[nodiscard]] HWND GetLogListBox() const;
+
+        /// <summary>
         /// 現在の SceneView 幅を取得する。
         /// </summary>
         /// <returns>SceneView 幅。</returns>
@@ -242,7 +272,8 @@ namespace Xelqoria::Editor
             Hierarchy,
             Assets,
             SceneView,
-            Inspector
+            Inspector,
+            LogOutput
         };
 
         enum class DockAreaId
@@ -316,6 +347,11 @@ namespace Xelqoria::Editor
         bool InitializeSceneViewPanel(HWND parentWindow, HINSTANCE hInstance);
 
         /// <summary>
+        /// LogOutput パネル用 child window 群を生成する。
+        /// </summary>
+        bool InitializeLogOutputPanel(HWND parentWindow, HINSTANCE hInstance);
+
+        /// <summary>
         /// Hierarchy パネルをレイアウトする。
         /// </summary>
         void LayoutHierarchyPanel(const LayoutMetrics& metrics);
@@ -354,6 +390,11 @@ namespace Xelqoria::Editor
         /// 指定矩形へ SceneView パネルをレイアウトする。
         /// </summary>
         void LayoutSceneViewPanelInRect(const RECT& panelRect);
+
+        /// <summary>
+        /// 指定矩形へ LogOutput パネルをレイアウトする。
+        /// </summary>
+        void LayoutLogOutputPanelInRect(const RECT& panelRect);
 
         /// <summary>
         /// DockArea に割り当てられたパネルをタブ付き領域として配置する。
@@ -613,7 +654,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 56> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 62> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -694,6 +735,7 @@ namespace Xelqoria::Editor
         HWND m_assetsFloatingWindow = nullptr;
         HWND m_sceneViewFloatingWindow = nullptr;
         HWND m_inspectorFloatingWindow = nullptr;
+        HWND m_logOutputFloatingWindow = nullptr;
         HWND m_hierarchyPanel = nullptr;
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;
@@ -704,6 +746,12 @@ namespace Xelqoria::Editor
         HWND m_projectSceneDetailLabel = nullptr;
         HWND m_sceneViewHost = nullptr;
         HWND m_sceneViewSizeLabel = nullptr;
+        HWND m_logOutputPanel = nullptr;
+        HWND m_logOutputTabControl = nullptr;
+        HWND m_logClearButton = nullptr;
+        HWND m_logCopyButton = nullptr;
+        HWND m_logFilterEdit = nullptr;
+        HWND m_logListBox = nullptr;
         HWND m_assetsListView = nullptr;
         HWND m_assetsSummaryLabel = nullptr;
         HWND m_hierarchySummaryLabel = nullptr;

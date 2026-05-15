@@ -11,6 +11,7 @@
 #include "EditorShell.h"
 #include "HierarchyPanelController.h"
 #include "InspectorPanelController.h"
+#include "LogOutputPanelController.h"
 #include "ProjectPanelController.h"
 #include "SceneViewController.h"
 #include "SceneViewRenderer.h"
@@ -208,6 +209,24 @@ namespace Xelqoria::Editor
         /// </summary>
         void RecordCurrentProject();
 
+        /// <summary>
+        /// エディタ操作ログを追加する。
+        /// </summary>
+        /// <param name="message">追加するログ文面。</param>
+        void AppendEditorLog(const wchar_t* message);
+
+        /// <summary>
+        /// ゲーム実行ログを追加する。
+        /// </summary>
+        /// <param name="message">追加するログ文面。</param>
+        void AppendGameLog(const std::wstring& message);
+
+        /// <summary>
+        /// ビルドログを追加する。
+        /// </summary>
+        /// <param name="message">追加するログ文面。</param>
+        void AppendBuildLog(const std::wstring& message);
+
     private:
         HINSTANCE m_hInstance = nullptr;
         Core::Window m_window{};
@@ -223,6 +242,7 @@ namespace Xelqoria::Editor
         AssetsPanelController m_assetsPanelController{};
         HierarchyPanelController m_hierarchyPanelController{};
         InspectorPanelController m_inspectorPanelController{};
+        LogOutputPanelController m_logOutputPanelController{};
         ProjectPanelController m_projectPanelController{};
         SceneViewController m_sceneViewController{};
         SceneViewRenderer m_sceneViewRenderer{};
