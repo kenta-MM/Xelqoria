@@ -269,7 +269,8 @@ namespace Xelqoria::Editor
         /// ビルドログを追加する。
         /// </summary>
         /// <param name="message">追加するログ文面。</param>
-        void AppendBuildLog(const std::wstring& message);
+        /// <param name="isError">エラーログとして表示する場合は true。</param>
+        void AppendBuildLog(const std::wstring& message, bool isError = false);
 
     private:
         HINSTANCE m_hInstance = nullptr;

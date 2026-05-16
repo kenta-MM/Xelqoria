@@ -298,6 +298,11 @@ namespace Xelqoria::Editor
 
                 return m_assetsPanelController.HandleNotify(notifyParameter);
             });
+        m_window.SetDrawItemHandler(
+            [this](LPARAM drawItemParameter)
+            {
+                return m_logOutputPanelController.HandleDrawItem(drawItemParameter);
+            });
         m_window.SetCloseRequestHandler(
             [this]()
             {
@@ -757,19 +762,15 @@ namespace Xelqoria::Editor
 
         const std::wstring statusText = BuildScriptBuildStatusText(buildResult);
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), statusText.c_str());
-        AppendBuildLog(statusText);
+        AppendBuildLog(statusText, false == buildResult.succeeded);
         if (false == buildResult.diagnostics.empty())
         {
-            AppendBuildLog(buildResult.diagnostics);
+            AppendBuildLog(buildResult.diagnostics, false == buildResult.succeeded);
         }
 
         if (false == buildResult.succeeded)
         {
-            MessageBoxW(
-                m_window.GetHwnd(),
-                buildResult.diagnostics.c_str(),
-                L"Script ビルドエラー",
-                MB_OK | MB_ICONERROR);
+            m_logOutputPanelController.SelectCategory(LogOutputCategory::Build);
             RefreshEditorPlayControls();
             return;
         }
@@ -1455,8 +1456,8 @@ namespace Xelqoria::Editor
         m_logOutputPanelController.Append(LogOutputCategory::Game, message);
     }
 
-    void Application::AppendBuildLog(const std::wstring& message)
+    void Application::AppendBuildLog(const std::wstring& message, bool isError)
     {
-        m_logOutputPanelController.Append(LogOutputCategory::Build, message);
+        m_logOutputPanelController.Append(LogOutputCategory::Build, message, isError);
     }
 }

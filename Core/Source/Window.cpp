@@ -110,6 +110,11 @@ namespace Xelqoria::Core
         m_notifyHandler = std::move(handler);
     }
 
+    void Window::SetDrawItemHandler(std::function<bool(LPARAM)> handler)
+    {
+        m_drawItemHandler = std::move(handler);
+    }
+
     void Window::SetCloseRequestHandler(std::function<bool()> handler)
     {
         m_closeRequestHandler = std::move(handler);
@@ -175,6 +180,13 @@ namespace Xelqoria::Core
             if (m_notifyHandler && m_notifyHandler(lp))
             {
                 return 0;
+            }
+            break;
+
+        case WM_DRAWITEM:
+            if (m_drawItemHandler && m_drawItemHandler(lp))
+            {
+                return TRUE;
             }
             break;
 

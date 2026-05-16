@@ -64,7 +64,7 @@ namespace Xelqoria::Editor
         RefreshVisibleRows();
     }
 
-    void LogOutputPanelController::Append(LogOutputCategory category, std::wstring message)
+    void LogOutputPanelController::Append(LogOutputCategory category, std::wstring message, bool isError)
     {
         const std::size_t index = ToLogIndex(category);
         if (m_logs.size() <= index)
@@ -72,11 +72,24 @@ namespace Xelqoria::Editor
             return;
         }
 
-        m_logs[index].push_back(std::move(message));
+        m_logs[index].push_back(LogOutputEntry{ std::move(message), isError });
         if (GetActiveCategory() == category)
         {
             RefreshVisibleRows();
         }
+    }
+
+    void LogOutputPanelController::SelectCategory(LogOutputCategory category)
+    {
+        if (nullptr == m_tabControl)
+        {
+            return;
+        }
+
+        const int tabIndex = static_cast<int>(ToLogIndex(category));
+        TabCtrl_SetCurSel(m_tabControl, tabIndex);
+        m_lastActiveTab = tabIndex;
+        RefreshVisibleRows();
     }
 
     void LogOutputPanelController::Update(const Core::InputSnapshot& inputSnapshot)
@@ -114,6 +127,67 @@ namespace Xelqoria::Editor
         m_buttonInputState.wasLeftMouseButtonDown = frameInput.isLeftMouseButtonDown;
     }
 
+    bool LogOutputPanelController::HandleDrawItem(LPARAM drawItemParameter) const
+    {
+        const DRAWITEMSTRUCT* drawItem = reinterpret_cast<const DRAWITEMSTRUCT*>(drawItemParameter);
+        if (nullptr == drawItem || ODT_LISTBOX != drawItem->CtlType || drawItem->hwndItem != m_listBox)
+        {
+            return false;
+        }
+
+        if (static_cast<UINT>(-1) == drawItem->itemID)
+        {
+            return true;
+        }
+
+        const bool isSelected = 0 != (drawItem->itemState & ODS_SELECTED);
+        const COLORREF backgroundColor = GetSysColor(isSelected ? COLOR_HIGHLIGHT : COLOR_WINDOW);
+        const COLORREF textColor =
+            0 != drawItem->itemData
+                ? RGB(190, 0, 0)
+                : GetSysColor(isSelected ? COLOR_HIGHLIGHTTEXT : COLOR_WINDOWTEXT);
+
+        HBRUSH backgroundBrush = CreateSolidBrush(backgroundColor);
+        FillRect(drawItem->hDC, &drawItem->rcItem, backgroundBrush);
+        DeleteObject(backgroundBrush);
+
+        const LRESULT textLength = SendMessageW(
+            drawItem->hwndItem,
+            LB_GETTEXTLEN,
+            static_cast<WPARAM>(drawItem->itemID),
+            0);
+        if (0 <= textLength)
+        {
+            std::wstring text(static_cast<std::size_t>(textLength) + 1u, L'\0');
+            SendMessageW(
+                drawItem->hwndItem,
+                LB_GETTEXT,
+                static_cast<WPARAM>(drawItem->itemID),
+                reinterpret_cast<LPARAM>(text.data()));
+            text.resize(static_cast<std::size_t>(textLength));
+
+            RECT textRect = drawItem->rcItem;
+            textRect.left += 2;
+            const COLORREF previousTextColor = SetTextColor(drawItem->hDC, textColor);
+            const int previousBackgroundMode = SetBkMode(drawItem->hDC, TRANSPARENT);
+            DrawTextW(
+                drawItem->hDC,
+                text.c_str(),
+                static_cast<int>(text.size()),
+                &textRect,
+                DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+            SetBkMode(drawItem->hDC, previousBackgroundMode);
+            SetTextColor(drawItem->hDC, previousTextColor);
+        }
+
+        if (0 != (drawItem->itemState & ODS_FOCUS))
+        {
+            DrawFocusRect(drawItem->hDC, &drawItem->rcItem);
+        }
+
+        return true;
+    }
+
     void LogOutputPanelController::RefreshVisibleRows()
     {
         if (nullptr == m_listBox)
@@ -122,13 +196,22 @@ namespace Xelqoria::Editor
         }
 
         SendMessageW(m_listBox, LB_RESETCONTENT, 0, 0);
-        const std::vector<std::wstring>& logs = m_logs[ToLogIndex(GetActiveCategory())];
+        const std::vector<LogOutputEntry>& logs = m_logs[ToLogIndex(GetActiveCategory())];
         const std::wstring filterText = GetFilterText();
-        for (const std::wstring& log : logs)
+        for (const LogOutputEntry& log : logs)
         {
-            if (ContainsFilter(log, filterText))
+            if (ContainsFilter(log.message, filterText))
             {
-                SendMessageW(m_listBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(log.c_str()));
+                const LRESULT itemIndex =
+                    SendMessageW(m_listBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(log.message.c_str()));
+                if (LB_ERR != itemIndex && LB_ERRSPACE != itemIndex)
+                {
+                    SendMessageW(
+                        m_listBox,
+                        LB_SETITEMDATA,
+                        static_cast<WPARAM>(itemIndex),
+                        static_cast<LPARAM>(log.isError ? 1 : 0));
+                }
             }
         }
 
