@@ -38,5 +38,11 @@ namespace Xelqoria::Platform
         /// </summary>
         /// <returns>現在のスクリーン座標。</returns>
         [[nodiscard]] virtual Point GetCursorScreenPosition() const = 0;
+
+        /// <summary>
+        /// 現在フレームのマウスホイール差分を取得する。
+        /// </summary>
+        /// <returns>マウスホイール差分。</returns>
+        [[nodiscard]] virtual int GetMouseWheelDelta() const = 0;
     };
 }

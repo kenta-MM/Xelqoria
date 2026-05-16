@@ -23,6 +23,7 @@
 #include "SceneEditingOperations.h"
 #include "SceneViewInteractionTypes.h"
 #include "ScriptAssetService.h"
+#include "Win32PlatformFactory.h"
 #include <Entity.h>
 #include <cstdint>
 
@@ -272,7 +273,12 @@ namespace Xelqoria::Editor
         constexpr auto clientHeight = 900u;
 
         const std::wstring title = L"Xelqoria Editor";
-        if (false == m_window.Create(m_hInstance, title.c_str(), clientWidth, clientHeight))
+        m_window.SetPlatformWindow(
+            Platform::Win32::CreateWin32Window(m_hInstance),
+            Platform::Win32::CreateWin32EventLoop());
+        m_inputSystem.SetPlatformInput(Platform::Win32::CreateWin32Input());
+
+        if (false == m_window.Create(title.c_str(), clientWidth, clientHeight))
         {
             return false;
         }
@@ -289,19 +295,19 @@ namespace Xelqoria::Editor
                 HandleProjectMenuCommand(commandId);
             });
         m_window.SetNotifyHandler(
-            [this](LPARAM notifyParameter)
+            [this](Platform::NativeMessageParameter notifyParameter)
             {
-                if (m_editorShell.HandleNotify(notifyParameter))
+                if (m_editorShell.HandleNotify(static_cast<LPARAM>(notifyParameter)))
                 {
                     return true;
                 }
 
-                return m_assetsPanelController.HandleNotify(notifyParameter);
+                return m_assetsPanelController.HandleNotify(static_cast<LPARAM>(notifyParameter));
             });
         m_window.SetDrawItemHandler(
-            [this](LPARAM drawItemParameter)
+            [this](Platform::NativeMessageParameter drawItemParameter)
             {
-                return m_logOutputPanelController.HandleDrawItem(drawItemParameter);
+                return m_logOutputPanelController.HandleDrawItem(static_cast<LPARAM>(drawItemParameter));
             });
         m_window.SetCloseRequestHandler(
             [this]()
@@ -348,7 +354,7 @@ namespace Xelqoria::Editor
         m_pauseResumePlayButton = m_editorShell.GetPauseResumePlayButton();
         m_endPlayButton = m_editorShell.GetEndPlayButton();
 
-        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
+        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(GetMainWindowHandle());
         if (true == sceneViewSizeChanged)
         {
             m_sceneViewController.OnViewportChanged(
@@ -379,7 +385,7 @@ namespace Xelqoria::Editor
         AppendEditorLog(L"Editor ワークスペースを初期化しました。");
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         m_editorInitialized = true;
-        RedrawWindow(m_window.GetHwnd(), nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+        RedrawWindow(GetMainWindowHandle(), nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
         return true;
     }
 
@@ -396,7 +402,7 @@ namespace Xelqoria::Editor
 
         HMENU menuBar = CreateMenu();
         AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_projectMenu), L"プロジェクト");
-        SetMenu(m_window.GetHwnd(), menuBar);
+        SetMenu(GetMainWindowHandle(), menuBar);
     }
 
     void Application::HandleProjectMenuCommand(unsigned commandId)
@@ -447,11 +453,11 @@ namespace Xelqoria::Editor
 
         if (false == m_editorInitialized)
         {
-            m_startupScreenController.UpdateLayout(m_window.GetHwnd());
+            m_startupScreenController.UpdateLayout(GetMainWindowHandle());
             return;
         }
 
-        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
+        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(GetMainWindowHandle());
         if (sceneViewSizeChanged)
         {
             m_sceneViewController.OnViewportChanged(
@@ -525,7 +531,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path parentDirectory = SelectFolder(m_window.GetHwnd(), L"プロジェクトの保存先フォルダを選択");
+        const std::filesystem::path parentDirectory = SelectFolder(GetMainWindowHandle(), L"プロジェクトの保存先フォルダを選択");
         if (parentDirectory.empty())
         {
             return;
@@ -564,7 +570,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path projectFilePath = SelectProjectFile(m_window.GetHwnd());
+        const std::filesystem::path projectFilePath = SelectProjectFile(GetMainWindowHandle());
         if (projectFilePath.empty())
         {
             return;
@@ -624,7 +630,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path parentDirectory = SelectFolder(m_window.GetHwnd(), L"別名保存先フォルダを選択");
+        const std::filesystem::path parentDirectory = SelectFolder(GetMainWindowHandle(), L"別名保存先フォルダを選択");
         if (parentDirectory.empty())
         {
             return;
@@ -660,7 +666,7 @@ namespace Xelqoria::Editor
         }
 
         const int result = MessageBoxW(
-            m_window.GetHwnd(),
+            GetMainWindowHandle(),
             L"プロジェクトを保存しますか？",
             L"保存確認",
             MB_YESNOCANCEL | MB_ICONQUESTION);
@@ -857,7 +863,7 @@ namespace Xelqoria::Editor
     {
         const HierarchyButtonFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
-            inputSnapshot.GetCursorScreenPoint()
+            ToWin32Point(inputSnapshot.GetCursorScreenPoint())
         };
 
         if (TryConsumeHierarchyButtonClick(m_buildAndPlayButton, frameInput, m_editorPlayButtonInputState))
@@ -901,7 +907,7 @@ namespace Xelqoria::Editor
 
         if (false == m_editorInitialized)
         {
-            m_startupScreenController.UpdateLayout(m_window.GetHwnd());
+            m_startupScreenController.UpdateLayout(GetMainWindowHandle());
             m_startupScreenController.Update(inputSnapshot);
             if (m_startupScreenController.HasCreateRequest())
             {
@@ -921,9 +927,9 @@ namespace Xelqoria::Editor
             return;
         }
 
-        (void)m_editorShell.UpdateDocking(m_window.GetHwnd(), inputSnapshot);
+        (void)m_editorShell.UpdateDocking(GetMainWindowHandle(), inputSnapshot);
         m_logOutputPanelController.Update(inputSnapshot);
-        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
+        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(GetMainWindowHandle());
         if (true == sceneViewSizeChanged)
         {
             m_sceneViewController.OnViewportChanged(
@@ -1028,7 +1034,7 @@ namespace Xelqoria::Editor
                 ? m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path()
                 : std::filesystem::path{};
             const std::filesystem::path scriptAssetPath =
-                SelectScriptAssetFile(m_window.GetHwnd(), projectRootDirectory);
+                SelectScriptAssetFile(GetMainWindowHandle(), projectRootDirectory);
             if (false == scriptAssetPath.empty())
             {
                 if (true == m_sceneDocument.AssignScriptAssetToSpriteAssetFile(spriteAssetPath, scriptAssetPath))
@@ -1120,7 +1126,7 @@ namespace Xelqoria::Editor
                     ? m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path()
                     : std::filesystem::path{};
                 const std::filesystem::path scriptAssetPath =
-                    SelectScriptAssetFile(m_window.GetHwnd(), projectRootDirectory);
+                    SelectScriptAssetFile(GetMainWindowHandle(), projectRootDirectory);
                 if (false == scriptAssetPath.empty())
                 {
                     const std::optional<Core::AssetId> scriptTargetSpriteAssetId =
@@ -1324,6 +1330,11 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.GetSelectedEntityId(),
             m_sceneViewController.GetEditMode(),
             m_sceneViewController.GetDragPreviewState());
+    }
+
+    HWND Application::GetMainWindowHandle() const
+    {
+        return reinterpret_cast<HWND>(m_window.GetHwnd());
     }
 
     void Application::RefreshEditorPanels(bool canAddSpriteComponent, bool resetTrackedEntity)

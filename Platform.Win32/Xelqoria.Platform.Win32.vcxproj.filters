@@ -6,8 +6,34 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Win32EventLoop.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Win32Input.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Win32PlatformAnchor.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Win32PlatformFactory.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Win32Window.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Win32EventLoop.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Win32Input.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Win32PlatformFactory.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Win32Window.h">
+      <Filter>Source</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
