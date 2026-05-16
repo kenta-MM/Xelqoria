@@ -92,6 +92,86 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// 文字列を指定コードページからワイド文字列へ変換する。
+        /// </summary>
+        /// <param name="value">変換対象バイト列。</param>
+        /// <param name="codePage">Windows コードページ。</param>
+        /// <param name="flags">MultiByteToWideChar に渡すフラグ。</param>
+        /// <returns>変換結果。失敗時は空。</returns>
+        [[nodiscard]] std::wstring ConvertProcessOutput(
+            std::string_view value,
+            UINT codePage,
+            DWORD flags)
+        {
+            if (value.empty())
+            {
+                return {};
+            }
+
+            const int wideLength = MultiByteToWideChar(
+                codePage,
+                flags,
+                value.data(),
+                static_cast<int>(value.size()),
+                nullptr,
+                0);
+            if (wideLength <= 0)
+            {
+                return {};
+            }
+
+            std::wstring result(static_cast<std::size_t>(wideLength), L'\0');
+            const int convertedLength = MultiByteToWideChar(
+                codePage,
+                flags,
+                value.data(),
+                static_cast<int>(value.size()),
+                result.data(),
+                wideLength);
+            if (convertedLength <= 0)
+            {
+                return {};
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 外部プロセス出力を表示用ワイド文字列へ変換する。
+        /// </summary>
+        /// <param name="value">標準出力または標準エラーから取得したバイト列。</param>
+        /// <returns>表示用ワイド文字列。</returns>
+        [[nodiscard]] std::wstring DecodeProcessOutput(std::string_view value)
+        {
+            std::wstring decoded = ConvertProcessOutput(value, CP_UTF8, MB_ERR_INVALID_CHARS);
+            if (false == decoded.empty())
+            {
+                return decoded;
+            }
+
+            const std::array<UINT, 3> fallbackCodePages{
+                GetConsoleOutputCP(),
+                GetOEMCP(),
+                GetACP()
+            };
+            for (const UINT codePage : fallbackCodePages)
+            {
+                if (0 == codePage || CP_UTF8 == codePage)
+                {
+                    continue;
+                }
+
+                decoded = ConvertProcessOutput(value, codePage, 0);
+                if (false == decoded.empty())
+                {
+                    return decoded;
+                }
+            }
+
+            return std::wstring(value.begin(), value.end());
+        }
+
+        /// <summary>
         /// Script コンパイル用コマンドラインを構築する。
         /// </summary>
         /// <param name="options">Script ビルド設定。</param>
@@ -162,16 +242,8 @@ namespace Xelqoria::Editor
             startupInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
 
             PROCESS_INFORMATION processInfo{};
-            std::wstring shellCommandLine = L"cmd.exe /S /C \"";
-            for (const wchar_t character : commandLine)
-            {
-                if (L'"' == character)
-                {
-                    shellCommandLine += L'"';
-                }
-
-                shellCommandLine += character;
-            }
+            std::wstring shellCommandLine = L"cmd.exe /D /S /C \"";
+            shellCommandLine += commandLine;
             shellCommandLine += L"\"";
             std::vector<wchar_t> mutableCommandLine(shellCommandLine.begin(), shellCommandLine.end());
             mutableCommandLine.push_back(L'\0');
@@ -196,18 +268,19 @@ namespace Xelqoria::Editor
             }
 
             std::array<char, 512> buffer{};
+            std::string processOutput{};
             DWORD bytesRead = 0;
             while (ReadFile(
                 readPipe,
                 buffer.data(),
-                static_cast<DWORD>(buffer.size() - 1),
+                static_cast<DWORD>(buffer.size()),
                 &bytesRead,
                 nullptr)
                 && 0 < bytesRead)
             {
-                buffer[static_cast<std::size_t>(bytesRead)] = '\0';
-                output += ToWideString(buffer.data());
+                processOutput.append(buffer.data(), static_cast<std::size_t>(bytesRead));
             }
+            output += DecodeProcessOutput(processOutput);
 
             WaitForSingleObject(processInfo.hProcess, INFINITE);
             DWORD exitCode = 0;
@@ -689,14 +762,30 @@ namespace Xelqoria::Editor
         }
 
         std::error_code errorCode;
-        if (false == std::filesystem::is_directory(projectRootDirectory, errorCode) || errorCode)
+        std::filesystem::path normalizedProjectRootDirectory =
+            std::filesystem::absolute(projectRootDirectory, errorCode);
+        if (errorCode)
+        {
+            normalizedProjectRootDirectory = projectRootDirectory;
+            errorCode.clear();
+        }
+
+        const std::filesystem::path canonicalProjectRootDirectory =
+            std::filesystem::weakly_canonical(normalizedProjectRootDirectory, errorCode);
+        if (false == static_cast<bool>(errorCode))
+        {
+            normalizedProjectRootDirectory = canonicalProjectRootDirectory;
+        }
+        errorCode.clear();
+
+        if (false == std::filesystem::is_directory(normalizedProjectRootDirectory, errorCode) || errorCode)
         {
             result.diagnostics = L"Script ビルド対象のプロジェクトルートを確認できません。";
             return result;
         }
 
         const std::vector<std::filesystem::path> scriptAssetPaths =
-            EnumerateScriptAssetFiles(projectRootDirectory);
+            EnumerateScriptAssetFiles(normalizedProjectRootDirectory);
         if (scriptAssetPaths.empty())
         {
             result.succeeded = true;
@@ -704,7 +793,7 @@ namespace Xelqoria::Editor
             return result;
         }
 
-        const std::filesystem::path buildDirectory = projectRootDirectory / ScriptBuildDirectory;
+        const std::filesystem::path buildDirectory = normalizedProjectRootDirectory / ScriptBuildDirectory;
         std::filesystem::create_directories(buildDirectory, errorCode);
         if (errorCode)
         {
@@ -712,7 +801,7 @@ namespace Xelqoria::Editor
             return result;
         }
 
-        if (false == WriteScriptApiHeader(projectRootDirectory))
+        if (false == WriteScriptApiHeader(normalizedProjectRootDirectory))
         {
             result.diagnostics = L"Script API ヘッダを作成できません。";
             return result;
@@ -723,7 +812,7 @@ namespace Xelqoria::Editor
         std::size_t compiledCount = 0;
         for (const std::filesystem::path& scriptAssetPath : scriptAssetPaths)
         {
-            const Core::AssetId scriptAssetId = BuildScriptAssetId(projectRootDirectory, scriptAssetPath);
+            const Core::AssetId scriptAssetId = BuildScriptAssetId(normalizedProjectRootDirectory, scriptAssetPath);
             if (scriptAssetId.IsEmpty())
             {
                 allSucceeded = false;
@@ -733,7 +822,7 @@ namespace Xelqoria::Editor
             }
 
             const std::optional<std::filesystem::path> sourcePath =
-                ResolveSourcePath(projectRootDirectory, scriptAssetPath);
+                ResolveSourcePath(normalizedProjectRootDirectory, scriptAssetPath);
             if (false == sourcePath.has_value())
             {
                 allSucceeded = false;
@@ -752,9 +841,9 @@ namespace Xelqoria::Editor
 
             result.sourcePaths.push_back(*sourcePath);
             const std::filesystem::path objectPath =
-                BuildObjectPath(projectRootDirectory, *sourcePath, compiledCount);
+                BuildObjectPath(normalizedProjectRootDirectory, *sourcePath, compiledCount);
             const std::filesystem::path modulePath =
-                BuildModulePath(projectRootDirectory, *sourcePath, compiledCount);
+                BuildModulePath(normalizedProjectRootDirectory, *sourcePath, compiledCount);
             ++compiledCount;
 
             const std::wstring commandLine =
