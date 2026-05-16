@@ -33,6 +33,7 @@
     <ClCompile Include="Source\Assets\SpriteAssetRegistry.cpp" />
     <ClCompile Include="Source\Assets\SpriteAssetLoader.cpp" />
     <ClCompile Include="Source\Entity.cpp" />
+    <ClCompile Include="Source\Physics2D.cpp" />
     <ClCompile Include="Source\Scene.cpp" />
     <ClCompile Include="Source\SceneTextReader.cpp" />
     <ClCompile Include="Source\SceneTextWriter.cpp" />
@@ -45,6 +46,7 @@
     <ClInclude Include="Source\Assets\SpriteAssetLoader.h" />
     <ClInclude Include="Source\Assets\SpriteAssetRegistry.h" />
     <ClInclude Include="Source\Entity.h" />
+    <ClInclude Include="Source\Physics2D.h" />
     <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\SceneSaveFormat.h" />
     <ClInclude Include="Source\SceneSerializer.h" />
