@@ -19,6 +19,7 @@ namespace Xelqoria::Editor
         constexpr const wchar_t* DockPreviewWindowClassName = L"XelqoriaDockPreviewWindow";
         constexpr const wchar_t* DockGuideWindowClassName = L"XelqoriaDockGuideWindow";
         constexpr const wchar_t* FloatingPanelWindowClassName = L"XelqoriaFloatingPanelWindow";
+        constexpr ULONGLONG DockPanelDragDelayMilliseconds = 200;
 
         /// <summary>
         /// Dock 先プレビューの青い配置範囲を描画する。
@@ -1672,18 +1673,38 @@ namespace Xelqoria::Editor
             }
             else
             {
-                const std::optional<EditorPanelId> hitPanel = HitTestPanelCaption(cursorScreenPoint);
+                const std::optional<EditorPanelId> hitPanel = HitTestDockTab(cursorScreenPoint);
                 if (hitPanel.has_value())
                 {
-                    m_dragKind = DockDragKind::Panel;
-                    m_dragPanelId = hitPanel;
+                    m_pendingDockDragPanelId = hitPanel;
                     m_dragStartScreenPoint = cursorScreenPoint;
+                    m_pendingDockDragStartTick = GetTickCount64();
+                    SetCapture(parentWindow);
                 }
             }
         }
 
         if (inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left))
         {
+            if (DockDragKind::None == m_dragKind && m_pendingDockDragPanelId.has_value())
+            {
+                const int dragThresholdX = (std::max)(ScaleMetric(4), GetSystemMetrics(SM_CXDRAG));
+                const int dragThresholdY = (std::max)(ScaleMetric(4), GetSystemMetrics(SM_CYDRAG));
+                const bool movedEnough =
+                    dragThresholdX <= std::abs(cursorScreenPoint.x - m_dragStartScreenPoint.x)
+                    || dragThresholdY <= std::abs(cursorScreenPoint.y - m_dragStartScreenPoint.y);
+                const bool heldLongEnough =
+                    DockPanelDragDelayMilliseconds <= GetTickCount64() - m_pendingDockDragStartTick;
+                if (movedEnough && heldLongEnough)
+                {
+                    m_dragKind = DockDragKind::Panel;
+                    m_dragPanelId = m_pendingDockDragPanelId;
+                    m_pendingDockDragPanelId.reset();
+                    m_currentGuideTarget = DockGuideTarget{};
+                    m_hasDockPreview = false;
+                }
+            }
+
             if (DockDragKind::Panel == m_dragKind && m_dragPanelId.has_value())
             {
                 UpdateDockGuideWindows(parentWindow, cursorScreenPoint);
@@ -1724,6 +1745,8 @@ namespace Xelqoria::Editor
 
             m_dragKind = DockDragKind::None;
             m_dragPanelId.reset();
+            m_pendingDockDragPanelId.reset();
+            m_pendingDockDragStartTick = 0;
             m_dragSplitNodeId = -1;
             m_hasDockPreview = false;
             ReleaseCapture();
@@ -1782,6 +1805,8 @@ namespace Xelqoria::Editor
         m_dynamicDockTabs.clear();
         m_hasDockPreview = false;
         m_currentGuideTarget = DockGuideTarget{};
+        m_pendingDockDragPanelId.reset();
+        m_pendingDockDragStartTick = 0;
         BuildInitialDockTree();
         HideDockGuideWindows();
         UpdateDockPreviewWindow(m_parentWindow);
@@ -1975,6 +2000,41 @@ namespace Xelqoria::Editor
             {
                 return dockNode.panels[static_cast<std::size_t>(activeIndex)];
             }
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<EditorShell::EditorPanelId> EditorShell::HitTestDockTab(POINT cursorScreenPoint) const
+    {
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Leaf != dockNode.kind || dockNode.panels.empty())
+            {
+                continue;
+            }
+
+            HWND tabControl = dockNode.tabControl;
+            if (nullptr == tabControl || false == IsWindowVisible(tabControl))
+            {
+                continue;
+            }
+
+            POINT cursorClientPoint = cursorScreenPoint;
+            ScreenToClient(tabControl, &cursorClientPoint);
+
+            TCHITTESTINFO hitTestInfo{};
+            hitTestInfo.pt = cursorClientPoint;
+            const int tabIndex = TabCtrl_HitTest(tabControl, &hitTestInfo);
+            if (tabIndex < 0 || tabIndex >= static_cast<int>(dockNode.panels.size()))
+            {
+                continue;
+            }
+
+            return dockNode.panels[static_cast<std::size_t>(tabIndex)];
         }
 
         return std::nullopt;

@@ -530,6 +530,11 @@ namespace Xelqoria::Editor
         [[nodiscard]] std::optional<EditorPanelId> HitTestPanelCaption(POINT cursorScreenPoint) const;
 
         /// <summary>
+        /// カーソル位置にある Dock タブ項目のパネルを返す。
+        /// </summary>
+        [[nodiscard]] std::optional<EditorPanelId> HitTestDockTab(POINT cursorScreenPoint) const;
+
+        /// <summary>
         /// カーソル位置から Dock 先領域を判定する。
         /// </summary>
         [[nodiscard]] DockAreaId HitTestDockArea(HWND parentWindow, POINT cursorScreenPoint) const;
@@ -813,9 +818,11 @@ namespace Xelqoria::Editor
         int m_leftTopHeight = 280;
         DockDragKind m_dragKind = DockDragKind::None;
         std::optional<EditorPanelId> m_dragPanelId{};
+        std::optional<EditorPanelId> m_pendingDockDragPanelId{};
         bool m_hasDockPreview = false;
         RECT m_dockPreviewRect{};
         POINT m_dragStartScreenPoint{};
+        ULONGLONG m_pendingDockDragStartTick = 0;
         DockNodeId m_dragSplitNodeId = -1;
         float m_dragStartSplitRatio = 0.5f;
         int m_dragStartLeftPaneWidth = 0;
