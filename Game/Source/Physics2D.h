@@ -1,8 +1,17 @@
 #pragma once
 #include "Vector2.h"
 
+#include <cstdint>
+#include <unordered_map>
+#include <vector>
+
 namespace Xelqoria::Game
 {
+	/// <summary>
+	/// Physics2D のコライダー識別子を表す。
+	/// </summary>
+	using PhysicsColliderId2D = std::uint32_t;
+
 	/// <summary>
 	/// 2D の軸平行矩形コライダーを表す。
 	/// </summary>
@@ -38,6 +47,79 @@ namespace Xelqoria::Game
 		/// 法線方向へ押し戻す必要がある距離。
 		/// </summary>
 		float penetrationDepth = 0.0f;
+	};
+
+	/// <summary>
+	/// 空間分割で抽出された当たり判定候補ペアを表す。
+	/// </summary>
+	struct PotentialCollisionPair2D
+	{
+		/// <summary>
+		/// 小さい方のコライダー識別子。
+		/// </summary>
+		PhysicsColliderId2D first = 0;
+
+		/// <summary>
+		/// 大きい方のコライダー識別子。
+		/// </summary>
+		PhysicsColliderId2D second = 0;
+	};
+
+	/// <summary>
+	/// 2D 当たり判定向けの spatial hash 空間分割を提供する。
+	/// </summary>
+	class PhysicsSpatialHash2D
+	{
+	public:
+		/// <summary>
+		/// spatial hash を生成する。
+		/// </summary>
+		/// <param name="cellSize">1セルの幅と高さ。0 以下の場合は 1 として扱う。</param>
+		explicit PhysicsSpatialHash2D(float cellSize);
+
+		/// <summary>
+		/// 登録済みコライダーをすべて削除する。
+		/// </summary>
+		void Clear();
+
+		/// <summary>
+		/// コライダーを重なるセルへ登録する。
+		/// </summary>
+		/// <param name="id">登録するコライダー識別子。</param>
+		/// <param name="collider">登録する AABB コライダー。</param>
+		void Insert(PhysicsColliderId2D id, const AabbCollider2D& collider);
+
+		/// <summary>
+		/// 同じセルを共有する当たり判定候補ペアを取得する。
+		/// </summary>
+		/// <returns>候補ペア一覧。同じペアは1回だけ返る。</returns>
+		[[nodiscard]] std::vector<PotentialCollisionPair2D> QueryPotentialPairs() const;
+
+	private:
+		struct CellKey
+		{
+			int x = 0;
+			int y = 0;
+
+			[[nodiscard]] bool operator==(const CellKey& other) const
+			{
+				return x == other.x && y == other.y;
+			}
+		};
+
+		struct CellKeyHasher
+		{
+			[[nodiscard]] std::size_t operator()(const CellKey& key) const;
+		};
+
+		struct CellEntry
+		{
+			PhysicsColliderId2D id = 0;
+			AabbCollider2D collider{};
+		};
+
+		float m_cellSize = 1.0f;
+		std::unordered_map<CellKey, std::vector<CellEntry>, CellKeyHasher> m_cells{};
 	};
 
 	/// <summary>

@@ -88,3 +88,30 @@ TEST(Physics2DTests, RestitutionDoesNotApplyWhenAlreadyMovingAway)
 	EXPECT_TRUE(IsEqual(resolvedVelocity.x, -3.0f));
 	EXPECT_TRUE(IsEqual(resolvedVelocity.y, 4.0f));
 }
+
+TEST(Physics2DTests, SpatialHashReturnsOnlyNearbyPotentialPairs)
+{
+	Xelqoria::Game::PhysicsSpatialHash2D spatialHash(2.0f);
+	spatialHash.Insert(1, Xelqoria::Game::AabbCollider2D{ { 0.0f, 0.0f }, { 0.5f, 0.5f } });
+	spatialHash.Insert(2, Xelqoria::Game::AabbCollider2D{ { 0.75f, 0.0f }, { 0.5f, 0.5f } });
+	spatialHash.Insert(3, Xelqoria::Game::AabbCollider2D{ { 100.0f, 100.0f }, { 0.5f, 0.5f } });
+
+	const std::vector<Xelqoria::Game::PotentialCollisionPair2D> pairs = spatialHash.QueryPotentialPairs();
+
+	ASSERT_EQ(pairs.size(), 1u);
+	EXPECT_EQ(pairs[0].first, 1u);
+	EXPECT_EQ(pairs[0].second, 2u);
+}
+
+TEST(Physics2DTests, SpatialHashRemovesDuplicatePairsAcrossCells)
+{
+	Xelqoria::Game::PhysicsSpatialHash2D spatialHash(1.0f);
+	spatialHash.Insert(1, Xelqoria::Game::AabbCollider2D{ { 0.5f, 0.5f }, { 1.0f, 1.0f } });
+	spatialHash.Insert(2, Xelqoria::Game::AabbCollider2D{ { 0.75f, 0.75f }, { 1.0f, 1.0f } });
+
+	const std::vector<Xelqoria::Game::PotentialCollisionPair2D> pairs = spatialHash.QueryPotentialPairs();
+
+	ASSERT_EQ(pairs.size(), 1u);
+	EXPECT_EQ(pairs[0].first, 1u);
+	EXPECT_EQ(pairs[0].second, 2u);
+}
