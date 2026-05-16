@@ -20,6 +20,9 @@
     <ClCompile Include="Source\Entity.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Physics2D.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Scene.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -50,6 +53,9 @@
       <Filter>Source\Assets</Filter>
     </ClInclude>
     <ClInclude Include="Source\Entity.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Physics2D.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene.h">
