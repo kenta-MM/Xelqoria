@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AssetId.h"
+#include "SpriteDrawInput.h"
 #include "Vector2.h"
 
 #include <array>
@@ -143,6 +144,12 @@ namespace Xelqoria::Graphics
 		/// </summary>
 		/// <returns>RGBA 順の外枠色。</returns>
 		const std::array<float, 4>& GetOutlineColor() const;
+
+		/// <summary>
+		/// SpriteRenderer が受け取る共通 Sprite 入力データへ変換する。
+		/// </summary>
+		/// <returns>現在の Sprite 状態から作成した共通描画入力。</returns>
+		[[nodiscard]] SpriteDrawInput ToDrawInput() const;
 
 	private:
 		std::shared_ptr<Texture2D> m_texture;

@@ -8,6 +8,7 @@ namespace Xelqoria::RHI
 namespace Xelqoria::Graphics
 {
     class Sprite;
+    struct SpriteDrawInput;
 
     /// <summary>
     /// Sprite を描画するレンダラー。
@@ -33,6 +34,12 @@ namespace Xelqoria::Graphics
         void Draw(const Sprite& sprite);
 
         /// <summary>
+        /// 共通 Sprite 入力データを描画キューへ追加する。
+        /// </summary>
+        /// <param name="input">描画対象の共通 Sprite 入力データ。</param>
+        void Draw(const SpriteDrawInput& input);
+
+        /// <summary>
         /// 描画バッチを終了して送信する。
         /// </summary>
         void End();
@@ -41,4 +48,14 @@ namespace Xelqoria::Graphics
         RHI::IGraphicsContext* m_context = nullptr;
         bool m_isDrawing = false;
     };
+
+    /// <summary>
+    /// CPU SpriteBatch として利用する Sprite 描画 API を表す。
+    /// </summary>
+    using SpriteBatch = SpriteRenderer;
+
+    /// <summary>
+    /// GPU InstancedSpriteRenderer として利用する Sprite 描画 API を表す。
+    /// </summary>
+    using InstancedSpriteRenderer = SpriteRenderer;
 }
