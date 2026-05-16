@@ -28,6 +28,7 @@
     <ClInclude Include="Source\ITextureAssetResolver.h" />
     <ClInclude Include="Source\QuadTransformFactory.h" />
     <ClInclude Include="Source\Sprite.h" />
+    <ClInclude Include="Source\SpriteCulling.h" />
     <ClInclude Include="Source\SpriteDrawInput.h" />
     <ClInclude Include="Source\SpriteRenderMath.h" />
     <ClInclude Include="Source\SpriteRenderer.h" />
