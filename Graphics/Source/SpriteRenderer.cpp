@@ -3,6 +3,7 @@
 #include "SpriteRenderMath.h"
 #include "QuadTransformFactory.h"
 #include "Sprite.h"
+#include "SpriteDrawInput.h"
 #include "Texture2D.h"
 #include "IGraphicsContext.h"
 
@@ -20,12 +21,17 @@ namespace Xelqoria::Graphics
 
     void SpriteRenderer::Draw(const Sprite& sprite)
     {
+        Draw(sprite.ToDrawInput());
+    }
+
+    void SpriteRenderer::Draw(const SpriteDrawInput& input)
+    {
         if (!m_isDrawing || !m_context)
         {
             return;
         }
 
-        const auto texture = sprite.GetTexture();
+        const auto texture = input.texture;
         if (!texture)
         {
             return;
@@ -39,15 +45,15 @@ namespace Xelqoria::Graphics
 
         m_context->BindTexture(0, rhiTexture.get());
         const SpriteQuadTransform quadTransform = ComputeSpriteQuadTransform(
-            sprite,
+            input,
             m_context->GetViewportWidth(),
             m_context->GetViewportHeight());
         const QuadRenderConstants quadRenderConstants = MakeTexturedQuadTransform(
             quadTransform,
-            sprite.IsOutlineEnabled(),
-            sprite.GetOutlineThickness(),
-            sprite.GetOutlineColor(),
-            sprite.GetColor());
+            input.outlineEnabled,
+            input.outlineThickness,
+            input.outlineColor,
+            input.color);
         ApplyQuadRenderConstants(*m_context, quadRenderConstants);
 
         // 1スプライトを2三角形(6頂点)で描画する前提。
