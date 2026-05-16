@@ -3540,6 +3540,15 @@ namespace Xelqoria::Editor
         return m_sceneViewHost;
     }
 
+    SceneViewSurface EditorShell::GetSceneViewSurface() const
+    {
+        return SceneViewSurface{
+            m_sceneViewHost,
+            m_sceneViewWidth,
+            m_sceneViewHeight
+        };
+    }
+
     HWND EditorShell::GetLogOutputTabControl() const
     {
         return m_logOutputTabControl;

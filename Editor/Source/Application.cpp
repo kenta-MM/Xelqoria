@@ -347,11 +347,12 @@ namespace Xelqoria::Editor
                 m_editorShell.GetSceneViewHeight());
         }
 
+        const SceneViewSurface sceneViewSurface = m_editorShell.GetSceneViewSurface();
         if (false == m_sceneViewRenderer.Initialize(
                 m_hInstance,
-                m_editorShell.GetSceneViewHost(),
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight(),
+                static_cast<HWND>(sceneViewSurface.nativeWindow),
+                sceneViewSurface.width,
+                sceneViewSurface.height,
                 api))
         {
             return false;

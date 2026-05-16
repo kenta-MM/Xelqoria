@@ -8,6 +8,7 @@
 
 #include "ICursor.h"
 #include "InputSystem.h"
+#include "SceneViewSurface.h"
 
 namespace Xelqoria::Editor
 {
@@ -223,6 +224,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>SceneView host の HWND。</returns>
         [[nodiscard]] HWND GetSceneViewHost() const;
+
+        /// <summary>
+        /// SceneView / Game Preview の描画先境界を取得する。
+        /// </summary>
+        /// <returns>描画先 surface。</returns>
+        [[nodiscard]] SceneViewSurface GetSceneViewSurface() const;
 
         /// <summary>
         /// LogOutput タブを取得する。
