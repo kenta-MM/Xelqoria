@@ -103,4 +103,19 @@ namespace Xelqoria::Graphics
 	{
 		return m_outlineColor;
 	}
+
+	SpriteDrawInput Sprite::ToDrawInput() const
+	{
+		return SpriteDrawInput{
+			m_texture,
+			m_textureAssetId,
+			m_position,
+			m_scale,
+			m_rotationDegrees,
+			m_color,
+			m_outlineEnabled,
+			m_outlineThickness,
+			m_outlineColor
+		};
+	}
 }
