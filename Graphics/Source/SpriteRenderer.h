@@ -1,5 +1,9 @@
 #pragma once
 
+#include <optional>
+
+#include "SpriteCulling.h"
+
 namespace Xelqoria::RHI
 {
     class IGraphicsContext;
@@ -40,12 +44,24 @@ namespace Xelqoria::Graphics
         void Draw(const SpriteDrawInput& input);
 
         /// <summary>
+        /// Sprite 描画で使用するカリング範囲を設定する。
+        /// </summary>
+        /// <param name="cullRect">描画対象として扱う範囲。</param>
+        void SetCullingRect(const SpriteCullRect& cullRect);
+
+        /// <summary>
+        /// 明示的に設定したカリング範囲を解除し、ビューポート範囲を使用する。
+        /// </summary>
+        void ClearCullingRect();
+
+        /// <summary>
         /// 描画バッチを終了して送信する。
         /// </summary>
         void End();
 
     private:
         RHI::IGraphicsContext* m_context = nullptr;
+        std::optional<SpriteCullRect> m_cullingRect{};
         bool m_isDrawing = false;
     };
 

@@ -9,6 +9,7 @@
 #include "ITexture.h"
 #include "QuadTransformFactory.h"
 #include "Sprite.h"
+#include "SpriteCulling.h"
 #include "SpriteDrawInput.h"
 #include "SpriteRenderMath.h"
 #include "SpriteRenderer.h"
@@ -228,6 +229,59 @@ TEST(SpriteRenderMathTests, SpriteRendererDrawsCommonDrawInput)
     EXPECT_TRUE(IsEqual(context.lastConstants[7], 4.0f));
     EXPECT_TRUE(IsEqual(context.lastConstants[12], 0.25f));
     EXPECT_TRUE(IsEqual(context.lastConstants[15], 0.8f));
+}
+
+TEST(SpriteRenderMathTests, SpriteCullingRejectsSpritesOutsideViewport)
+{
+    auto renderTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+    renderTexture->SetRHITexture(std::make_shared<FakeTexture>(64, 32));
+
+    Xelqoria::Graphics::SpriteDrawInput visibleInput{};
+    visibleInput.texture = renderTexture;
+    visibleInput.position = { 300.0f, 0.0f };
+
+    Xelqoria::Graphics::SpriteDrawInput hiddenInput = visibleInput;
+    hiddenInput.position = { 400.0f, 0.0f };
+
+    const Xelqoria::Graphics::SpriteCullRect viewportRect = Xelqoria::Graphics::MakeViewportCullRect(640, 480);
+    EXPECT_TRUE(Xelqoria::Graphics::IsSpriteVisible(visibleInput, viewportRect));
+    EXPECT_FALSE(Xelqoria::Graphics::IsSpriteVisible(hiddenInput, viewportRect));
+}
+
+TEST(SpriteRenderMathTests, SpriteBatchAndInstancedRendererUseCommonCulling)
+{
+    auto renderTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+    renderTexture->SetRHITexture(std::make_shared<FakeTexture>(64, 32));
+
+    Xelqoria::Graphics::SpriteDrawInput input{};
+    input.texture = renderTexture;
+    input.position = { 250.0f, 0.0f };
+
+    FakeGraphicsContext context{};
+    context.Resize(640, 480);
+
+    Xelqoria::Graphics::SpriteBatch spriteBatch(context);
+    Xelqoria::Graphics::InstancedSpriteRenderer& instancedSpriteRenderer = spriteBatch;
+    const Xelqoria::Graphics::SpriteCullRect narrowRect{
+        -100.0f,
+        -100.0f,
+        100.0f,
+        100.0f
+    };
+
+    spriteBatch.SetCullingRect(narrowRect);
+    spriteBatch.Begin();
+    instancedSpriteRenderer.Draw(input);
+    spriteBatch.End();
+
+    EXPECT_EQ(context.drawCount, 0u);
+
+    spriteBatch.ClearCullingRect();
+    spriteBatch.Begin();
+    instancedSpriteRenderer.Draw(input);
+    spriteBatch.End();
+
+    EXPECT_EQ(context.drawCount, 1u);
 }
 
 TEST(SpriteRenderMathTests, TextureRegistryAndTexture2DHandleResolvedAndMissingTextures)
