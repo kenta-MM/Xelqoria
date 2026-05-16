@@ -36,6 +36,29 @@ namespace
             << "echo " << outputText << "\r\n"
             << "exit /B " << exitCode << "\r\n";
     }
+
+    void WriteSourceLookupFakeCompiler(const std::filesystem::path& path)
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output
+            << "@echo off\r\n"
+            << "cd /d \"%TEMP%\"\r\n"
+            << ":arg_loop\r\n"
+            << "if \"%~1\"==\"\" goto missing\r\n"
+            << "if /I \"%~x1\"==\".cpp\" goto check_source\r\n"
+            << "shift\r\n"
+            << "goto arg_loop\r\n"
+            << ":check_source\r\n"
+            << "if exist \"%~1\" (\r\n"
+            << "  echo source found\r\n"
+            << "  exit /B 0\r\n"
+            << ")\r\n"
+            << "echo source missing: %~1\r\n"
+            << "exit /B 7\r\n"
+            << ":missing\r\n"
+            << "echo source argument missing\r\n"
+            << "exit /B 8\r\n";
+    }
 }
 
 TEST(ScriptAssetServiceTests, CreateScriptAssetWritesManifestAndInitialCode)
@@ -191,6 +214,38 @@ TEST(ScriptAssetServiceTests, BuildProjectScriptsCompilesResolvedManagedSources)
     EXPECT_NE(std::wstring::npos, buildResult.diagnostics.find(L"fake compile ok"));
 
     std::filesystem::remove_all(projectRoot);
+}
+
+TEST(ScriptAssetServiceTests, BuildProjectScriptsUsesAbsoluteCompilerPathsForRelativeProjectRoot)
+{
+    const std::filesystem::path parentDirectory =
+        MakeTempDirectory(L"XelqoriaScriptAssetServiceTests_RelativeRootParent");
+    const std::filesystem::path projectRoot = parentDirectory / L"Project";
+    const std::filesystem::path targetDirectory = projectRoot / L"Assets";
+    std::filesystem::create_directories(targetDirectory);
+
+    const Xelqoria::Editor::ScriptAssetCreationResult created =
+        Xelqoria::Editor::ScriptAssetService::CreateScriptAsset(projectRoot, targetDirectory);
+    ASSERT_TRUE(created.succeeded);
+
+    const std::filesystem::path fakeCompilerPath = parentDirectory / L"FakeCompiler.cmd";
+    WriteSourceLookupFakeCompiler(fakeCompilerPath);
+
+    const std::filesystem::path previousCurrentPath = std::filesystem::current_path();
+    std::filesystem::current_path(parentDirectory);
+    const Xelqoria::Editor::ScriptBuildResult buildResult =
+        Xelqoria::Editor::ScriptAssetService::BuildProjectScripts(
+            std::filesystem::path(L"Project"),
+            Xelqoria::Editor::ScriptBuildOptions{ fakeCompilerPath });
+    std::filesystem::current_path(previousCurrentPath);
+
+    EXPECT_TRUE(buildResult.succeeded) << buildResult.diagnostics;
+    ASSERT_EQ(static_cast<std::size_t>(1), buildResult.sourcePaths.size());
+    EXPECT_TRUE(buildResult.sourcePaths[0].is_absolute());
+    EXPECT_EQ(created.sourcePath, buildResult.sourcePaths[0]);
+    EXPECT_NE(std::wstring::npos, buildResult.diagnostics.find(L"source found")) << buildResult.diagnostics;
+
+    std::filesystem::remove_all(parentDirectory);
 }
 
 TEST(ScriptAssetServiceTests, BuildProjectScriptsReportsCompilerOutputOnFailure)

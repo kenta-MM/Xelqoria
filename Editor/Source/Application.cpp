@@ -4,6 +4,7 @@
 #include <chrono>
 #include <commdlg.h>
 #include <cstdlib>
+#include <exception>
 #include <filesystem>
 #include <functional>
 #include <shlobj.h>
@@ -17,6 +18,7 @@
 #include <optional>
 #include <InputSystem.h>
 #include "EditorCommandController.h"
+#include "EditorStringUtils.h"
 #include "InspectorPanelController.h"
 #include "SceneEditingOperations.h"
 #include "SceneViewInteractionTypes.h"
@@ -34,7 +36,6 @@ namespace Xelqoria::Editor
         constexpr unsigned ProjectMenuOpenCommandId = 5104;
         constexpr unsigned ProjectMenuSettingsCommandId = 5105;
         constexpr unsigned ProjectMenuResetLayoutCommandId = 5106;
-        constexpr unsigned ProjectMenuStartPlayCommandId = 5107;
 
         [[nodiscard]] std::filesystem::path SelectProjectFile(HWND ownerWindow)
         {
@@ -297,6 +298,11 @@ namespace Xelqoria::Editor
 
                 return m_assetsPanelController.HandleNotify(notifyParameter);
             });
+        m_window.SetDrawItemHandler(
+            [this](LPARAM drawItemParameter)
+            {
+                return m_logOutputPanelController.HandleDrawItem(drawItemParameter);
+            });
         m_window.SetCloseRequestHandler(
             [this]()
             {
@@ -338,6 +344,9 @@ namespace Xelqoria::Editor
         m_logOutputPanelController.Bind(m_editorShell);
         m_projectPanelController.Bind(m_editorShell);
         m_sceneViewController.Bind(m_editorShell);
+        m_buildAndPlayButton = m_editorShell.GetBuildAndPlayButton();
+        m_pauseResumePlayButton = m_editorShell.GetPauseResumePlayButton();
+        m_endPlayButton = m_editorShell.GetEndPlayButton();
 
         const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
         if (true == sceneViewSizeChanged)
@@ -366,6 +375,7 @@ namespace Xelqoria::Editor
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
         RefreshEditorPanels(canAddSpriteComponent, false);
         RefreshSceneViewSelectionStatus();
+        RefreshEditorPlayControls();
         AppendEditorLog(L"Editor ワークスペースを初期化しました。");
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         m_editorInitialized = true;
@@ -381,8 +391,6 @@ namespace Xelqoria::Editor
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSaveAsCommandId, L"プロジェクトを別名で保存する");
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuOpenCommandId, L"プロジェクトを開く");
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSettingsCommandId, L"プロジェクトの設定を開く");
-        AppendMenuW(m_projectMenu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuStartPlayCommandId, L"再生を開始する (F5)");
         AppendMenuW(m_projectMenu, MF_SEPARATOR, 0, nullptr);
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuResetLayoutCommandId, L"画面レイアウトを初期状態に戻す");
 
@@ -418,12 +426,6 @@ namespace Xelqoria::Editor
             {
                 m_editorShell.ResetDockLayout();
                 SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"画面レイアウトを初期状態に戻しました。");
-            }
-            break;
-        case ProjectMenuStartPlayCommandId:
-            if (m_editorInitialized)
-            {
-                (void)StartEditorPlay();
             }
             break;
         default:
@@ -682,36 +684,109 @@ namespace Xelqoria::Editor
 
     bool Application::StartEditorPlay()
     {
+        if (m_scriptBuildInProgress || m_scriptRuntimeSession.IsPlaying())
+        {
+            return false;
+        }
+
+        StartEditorPlayBuild();
+        return m_scriptBuildInProgress;
+    }
+
+    void Application::StartEditorPlayBuild()
+    {
+        if (m_scriptBuildInProgress || m_scriptRuntimeSession.IsPlaying())
+        {
+            return;
+        }
+
         if (false == m_sceneDocument.GetProjectInfo().has_value() || nullptr == m_sceneDocument.GetScene())
         {
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"再生開始前 Script ビルドにはプロジェクトが必要です。");
             AppendBuildLog(L"再生開始前 Script ビルドにはプロジェクトが必要です。");
-            return false;
+            return;
         }
 
         const std::filesystem::path projectRootDirectory =
             m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path();
-        const ScriptBuildResult buildResult = ScriptAssetService::BuildProjectScripts(
-            projectRootDirectory,
-            ScriptBuildOptions{
-                GetScriptCompilerExecutable(),
-                GetScriptEnvironmentSetupBatch()
+        const ScriptBuildOptions buildOptions{
+            GetScriptCompilerExecutable(),
+            GetScriptEnvironmentSetupBatch()
+        };
+        m_scriptBuildProjectRootDirectory = projectRootDirectory;
+        m_scriptBuildInProgress = true;
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script ビルドをバックグラウンドで開始しました。");
+        AppendBuildLog(L"Script ビルドをバックグラウンドで開始しました。");
+        RefreshEditorPlayControls();
+        m_scriptBuildFuture = std::async(
+            std::launch::async,
+            [projectRootDirectory, buildOptions]()
+            {
+                return ScriptAssetService::BuildProjectScripts(projectRootDirectory, buildOptions);
             });
+    }
+
+    void Application::PollEditorPlayBuild()
+    {
+        if (false == m_scriptBuildInProgress || false == m_scriptBuildFuture.valid())
+        {
+            return;
+        }
+
+        if (m_scriptBuildFuture.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        {
+            return;
+        }
+
+        ScriptBuildResult buildResult{};
+        try
+        {
+            buildResult = m_scriptBuildFuture.get();
+        }
+        catch (const std::exception& exception)
+        {
+            buildResult.succeeded = false;
+            buildResult.diagnostics = L"Script ビルド中に例外が発生しました: ";
+            buildResult.diagnostics += ToWideString(exception.what());
+        }
+        catch (...)
+        {
+            buildResult.succeeded = false;
+            buildResult.diagnostics = L"Script ビルド中に不明な例外が発生しました。";
+        }
+
+        m_scriptBuildInProgress = false;
+        const std::filesystem::path projectRootDirectory =
+            m_scriptBuildProjectRootDirectory.value_or(std::filesystem::path{});
+        m_scriptBuildProjectRootDirectory.reset();
+
         const std::wstring statusText = BuildScriptBuildStatusText(buildResult);
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), statusText.c_str());
-        AppendBuildLog(statusText);
+        AppendBuildLog(statusText, false == buildResult.succeeded);
         if (false == buildResult.diagnostics.empty())
         {
-            AppendBuildLog(buildResult.diagnostics);
+            AppendBuildLog(buildResult.diagnostics, false == buildResult.succeeded);
         }
 
         if (false == buildResult.succeeded)
         {
-            MessageBoxW(
-                m_window.GetHwnd(),
-                buildResult.diagnostics.c_str(),
-                L"Script ビルドエラー",
-                MB_OK | MB_ICONERROR);
+            m_logOutputPanelController.SelectCategory(LogOutputCategory::Build);
+            RefreshEditorPlayControls();
+            return;
+        }
+
+        (void)BeginEditorPlayRuntime(buildResult, projectRootDirectory);
+        RefreshEditorPlayControls();
+    }
+
+    bool Application::BeginEditorPlayRuntime(
+        const ScriptBuildResult& buildResult,
+        const std::filesystem::path& projectRootDirectory)
+    {
+        if (nullptr == m_sceneDocument.GetScene())
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script 再生には Scene が必要です。");
+            AppendGameLog(L"Script 再生には Scene が必要です。");
             return false;
         }
 
@@ -725,6 +800,88 @@ namespace Xelqoria::Editor
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), runtimeStatusText.c_str());
         AppendGameLog(runtimeStatusText);
         return runtimeStarted;
+    }
+
+    void Application::ToggleEditorPlayPause()
+    {
+        if (false == m_scriptRuntimeSession.IsPlaying())
+        {
+            return;
+        }
+
+        if (m_scriptRuntimeSession.IsPaused())
+        {
+            m_scriptRuntimeSession.Resume();
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script 再生を再開しました。");
+            AppendGameLog(L"Script 再生を再開しました。");
+        }
+        else
+        {
+            m_scriptRuntimeSession.Pause();
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script 再生を停止しました。");
+            AppendGameLog(L"Script 再生を停止しました。");
+        }
+
+        RefreshEditorPlayControls();
+    }
+
+    void Application::EndEditorPlay()
+    {
+        if (false == m_scriptRuntimeSession.IsPlaying())
+        {
+            return;
+        }
+
+        m_scriptRuntimeSession.End();
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Script 再生を終了しました。");
+        AppendGameLog(L"Script 再生を終了しました。");
+        RefreshEditorPlayControls();
+    }
+
+    void Application::RefreshEditorPlayControls()
+    {
+        if (nullptr == m_buildAndPlayButton || nullptr == m_pauseResumePlayButton || nullptr == m_endPlayButton)
+        {
+            return;
+        }
+
+        const bool isPlaying = m_scriptRuntimeSession.IsPlaying();
+        EnableWindow(m_buildAndPlayButton, false == m_scriptBuildInProgress && false == isPlaying ? TRUE : FALSE);
+        EnableWindow(m_pauseResumePlayButton, isPlaying ? TRUE : FALSE);
+        EnableWindow(m_endPlayButton, isPlaying ? TRUE : FALSE);
+        SetWindowTextW(m_buildAndPlayButton, m_scriptBuildInProgress ? L"ビルド中" : L"ビルドして開始");
+        SetWindowTextW(m_pauseResumePlayButton, m_scriptRuntimeSession.IsPaused() ? L"再開" : L"停止");
+    }
+
+    void Application::UpdateEditorPlayControls(const Core::InputSnapshot& inputSnapshot)
+    {
+        const HierarchyButtonFrameInput frameInput{
+            inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
+            inputSnapshot.GetCursorScreenPoint()
+        };
+
+        if (TryConsumeHierarchyButtonClick(m_buildAndPlayButton, frameInput, m_editorPlayButtonInputState))
+        {
+            (void)StartEditorPlay();
+            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+        }
+        else if (TryConsumeHierarchyButtonClick(m_pauseResumePlayButton, frameInput, m_editorPlayButtonInputState))
+        {
+            ToggleEditorPlayPause();
+            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+        }
+        else if (TryConsumeHierarchyButtonClick(m_endPlayButton, frameInput, m_editorPlayButtonInputState))
+        {
+            EndEditorPlay();
+            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+        }
+
+        if (false == frameInput.isLeftMouseButtonDown && true == m_editorPlayButtonInputState.wasLeftMouseButtonDown)
+        {
+            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+        }
+
+        m_editorPlayButtonInputState.wasLeftMouseButtonDown = frameInput.isLeftMouseButtonDown;
     }
 
     void Application::ClearProjectDirty()
@@ -778,6 +935,8 @@ namespace Xelqoria::Editor
         }
 
         m_assetsPanelController.SyncSelection();
+        UpdateEditorPlayControls(inputSnapshot);
+        PollEditorPlayBuild();
         if (true == m_projectPanelController.Update(m_sceneDocument))
         {
             const bool canAddSpriteComponentAfterSceneLoad = m_assetsPanelController.HasVisibleSpriteAssets();
@@ -786,11 +945,6 @@ namespace Xelqoria::Editor
             MarkProjectDirty();
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"選択した Scene を読み込みました。");
             AppendEditorLog(L"選択した Scene を読み込みました。");
-        }
-
-        if (inputSnapshot.WasKeyPressed(VK_F5))
-        {
-            (void)StartEditorPlay();
         }
 
         m_scriptRuntimeSession.Update(deltaTime);
@@ -1302,8 +1456,8 @@ namespace Xelqoria::Editor
         m_logOutputPanelController.Append(LogOutputCategory::Game, message);
     }
 
-    void Application::AppendBuildLog(const std::wstring& message)
+    void Application::AppendBuildLog(const std::wstring& message, bool isError)
     {
-        m_logOutputPanelController.Append(LogOutputCategory::Build, message);
+        m_logOutputPanelController.Append(LogOutputCategory::Build, message, isError);
     }
 }

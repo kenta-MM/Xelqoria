@@ -327,12 +327,13 @@ namespace Xelqoria::Editor
         }
 
         m_playing = true;
+        m_paused = false;
         return m_diagnostics.empty();
     }
 
     void ScriptRuntimeSession::Update(float deltaTime)
     {
-        if (false == m_playing)
+        if (false == m_playing || true == m_paused)
         {
             return;
         }
@@ -394,6 +395,22 @@ namespace Xelqoria::Editor
         }
     }
 
+    void ScriptRuntimeSession::Pause()
+    {
+        if (m_playing)
+        {
+            m_paused = true;
+        }
+    }
+
+    void ScriptRuntimeSession::Resume()
+    {
+        if (m_playing)
+        {
+            m_paused = false;
+        }
+    }
+
     void ScriptRuntimeSession::End()
     {
         for (ScriptRuntimeInstance& instance : m_instances)
@@ -408,11 +425,17 @@ namespace Xelqoria::Editor
         m_instances.clear();
         m_diagnostics.clear();
         m_playing = false;
+        m_paused = false;
     }
 
     bool ScriptRuntimeSession::IsPlaying() const
     {
         return m_playing;
+    }
+
+    bool ScriptRuntimeSession::IsPaused() const
+    {
+        return m_paused;
     }
 
     std::span<const ScriptRuntimeDiagnostic> ScriptRuntimeSession::GetDiagnostics() const

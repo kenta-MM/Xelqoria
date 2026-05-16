@@ -2,6 +2,9 @@
 
 #include <Windows.h>
 #include <cstdint>
+#include <filesystem>
+#include <future>
+#include <optional>
 
 #include "AssetsPanelController.h"
 #include "InputSystem.h"
@@ -137,6 +140,47 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool StartEditorPlay();
 
         /// <summary>
+        /// Editor 再生開始前 Script ビルドをバックグラウンドで開始する。
+        /// </summary>
+        void StartEditorPlayBuild();
+
+        /// <summary>
+        /// バックグラウンド Script ビルドの完了を確認する。
+        /// </summary>
+        void PollEditorPlayBuild();
+
+        /// <summary>
+        /// ビルド完了後に Script Runtime を開始する。
+        /// </summary>
+        /// <param name="buildResult">Script ビルド結果。</param>
+        /// <param name="projectRootDirectory">プロジェクトルートディレクトリ。</param>
+        /// <returns>Runtime 開始に成功した場合は true。</returns>
+        [[nodiscard]] bool BeginEditorPlayRuntime(
+            const ScriptBuildResult& buildResult,
+            const std::filesystem::path& projectRootDirectory);
+
+        /// <summary>
+        /// Editor 再生を停止または再開する。
+        /// </summary>
+        void ToggleEditorPlayPause();
+
+        /// <summary>
+        /// Editor 再生を終了する。
+        /// </summary>
+        void EndEditorPlay();
+
+        /// <summary>
+        /// Editor 再生操作ボタンの表示状態を更新する。
+        /// </summary>
+        void RefreshEditorPlayControls();
+
+        /// <summary>
+        /// Editor 再生操作ボタンの入力を処理する。
+        /// </summary>
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
+        void UpdateEditorPlayControls(const Core::InputSnapshot& inputSnapshot);
+
+        /// <summary>
         /// Scene の未保存変更が保存されたことを記録する。
         /// </summary>
         void ClearProjectDirty();
@@ -225,7 +269,8 @@ namespace Xelqoria::Editor
         /// ビルドログを追加する。
         /// </summary>
         /// <param name="message">追加するログ文面。</param>
-        void AppendBuildLog(const std::wstring& message);
+        /// <param name="isError">エラーログとして表示する場合は true。</param>
+        void AppendBuildLog(const std::wstring& message, bool isError = false);
 
     private:
         HINSTANCE m_hInstance = nullptr;
@@ -248,5 +293,12 @@ namespace Xelqoria::Editor
         SceneViewRenderer m_sceneViewRenderer{};
         ScriptRuntimeSession m_scriptRuntimeSession{};
         EditorCommandController m_editorCommandController{};
+        std::future<ScriptBuildResult> m_scriptBuildFuture{};
+        std::optional<std::filesystem::path> m_scriptBuildProjectRootDirectory{};
+        HierarchyButtonInputState m_editorPlayButtonInputState{};
+        HWND m_buildAndPlayButton = nullptr;
+        HWND m_pauseResumePlayButton = nullptr;
+        HWND m_endPlayButton = nullptr;
+        bool m_scriptBuildInProgress = false;
     };
 }

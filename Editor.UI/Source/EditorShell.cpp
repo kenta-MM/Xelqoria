@@ -19,6 +19,7 @@ namespace Xelqoria::Editor
         constexpr const wchar_t* DockPreviewWindowClassName = L"XelqoriaDockPreviewWindow";
         constexpr const wchar_t* DockGuideWindowClassName = L"XelqoriaDockGuideWindow";
         constexpr const wchar_t* FloatingPanelWindowClassName = L"XelqoriaFloatingPanelWindow";
+        constexpr ULONGLONG DockPanelDragDelayMilliseconds = 200;
 
         /// <summary>
         /// Dock 先プレビューの青い配置範囲を描画する。
@@ -475,7 +476,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 62> controls = CollectControls();
+            const std::array<HWND, 65> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -866,7 +867,40 @@ namespace Xelqoria::Editor
             L"Static",
             L"SceneView size: pending",
             WS_CHILD | WS_VISIBLE);
-        return nullptr != m_sceneViewSizeLabel;
+        if (nullptr == m_sceneViewSizeLabel)
+        {
+            return false;
+        }
+
+        m_buildAndPlayButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"ビルドして開始",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_buildAndPlayButton)
+        {
+            return false;
+        }
+
+        m_pauseResumePlayButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"停止",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_pauseResumePlayButton)
+        {
+            return false;
+        }
+
+        m_endPlayButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"終了",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        return nullptr != m_endPlayButton;
     }
 
     bool EditorShell::InitializeLogOutputPanel(HWND parentWindow, HINSTANCE hInstance)
@@ -938,7 +972,7 @@ namespace Xelqoria::Editor
             hInstance,
             L"ListBox",
             L"",
-            WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
+            WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_BORDER);
         return nullptr != m_logListBox;
     }
 
@@ -1293,10 +1327,16 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutSceneViewPanelInRect(const RECT& panelRect)
     {
         const int borderInset = ScaleMetric(4);
+        const int toolbarHeight = ScaleMetric(36);
+        const int toolbarGap = ScaleMetric(8);
+        const int buttonGap = ScaleMetric(8);
+        const int buttonWidth = ScaleMetric(120);
         const int width = panelRect.right - panelRect.left;
         const int height = panelRect.bottom - panelRect.top;
         const int sceneHostWidth = (std::max)(0, width - borderInset * 2);
-        const int sceneHostHeight = (std::max)(0, height - borderInset * 2);
+        const int sceneHostTop = panelRect.top + borderInset + toolbarHeight + toolbarGap;
+        const int panelBottom = static_cast<int>(panelRect.bottom);
+        const int sceneHostHeight = (std::max)(0, panelBottom - borderInset - sceneHostTop);
 
         MoveChildWindowNoRedraw(m_sceneViewPanel, panelRect.left, panelRect.top, width, height);
         MoveChildWindowNoRedraw(m_projectSummaryLabel, panelRect.left, panelRect.top, 0, 0);
@@ -1305,9 +1345,27 @@ namespace Xelqoria::Editor
         MoveChildWindowNoRedraw(m_sceneViewPlanLabel, panelRect.left, panelRect.top, 0, 0);
         MoveChildWindowNoRedraw(m_sceneViewSizeLabel, panelRect.left, panelRect.top, 0, 0);
         MoveChildWindowNoRedraw(
-            m_sceneViewHost,
+            m_buildAndPlayButton,
             panelRect.left + borderInset,
             panelRect.top + borderInset,
+            buttonWidth,
+            toolbarHeight);
+        MoveChildWindowNoRedraw(
+            m_pauseResumePlayButton,
+            panelRect.left + borderInset + buttonWidth + buttonGap,
+            panelRect.top + borderInset,
+            buttonWidth,
+            toolbarHeight);
+        MoveChildWindowNoRedraw(
+            m_endPlayButton,
+            panelRect.left + borderInset + (buttonWidth + buttonGap) * 2,
+            panelRect.top + borderInset,
+            buttonWidth,
+            toolbarHeight);
+        MoveChildWindowNoRedraw(
+            m_sceneViewHost,
+            panelRect.left + borderInset,
+            sceneHostTop,
             sceneHostWidth,
             sceneHostHeight);
     }
@@ -1615,18 +1673,38 @@ namespace Xelqoria::Editor
             }
             else
             {
-                const std::optional<EditorPanelId> hitPanel = HitTestPanelCaption(cursorScreenPoint);
+                const std::optional<EditorPanelId> hitPanel = HitTestDockTab(cursorScreenPoint);
                 if (hitPanel.has_value())
                 {
-                    m_dragKind = DockDragKind::Panel;
-                    m_dragPanelId = hitPanel;
+                    m_pendingDockDragPanelId = hitPanel;
                     m_dragStartScreenPoint = cursorScreenPoint;
+                    m_pendingDockDragStartTick = GetTickCount64();
+                    SetCapture(parentWindow);
                 }
             }
         }
 
         if (inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left))
         {
+            if (DockDragKind::None == m_dragKind && m_pendingDockDragPanelId.has_value())
+            {
+                const int dragThresholdX = (std::max)(ScaleMetric(4), GetSystemMetrics(SM_CXDRAG));
+                const int dragThresholdY = (std::max)(ScaleMetric(4), GetSystemMetrics(SM_CYDRAG));
+                const bool movedEnough =
+                    dragThresholdX <= std::abs(cursorScreenPoint.x - m_dragStartScreenPoint.x)
+                    || dragThresholdY <= std::abs(cursorScreenPoint.y - m_dragStartScreenPoint.y);
+                const bool heldLongEnough =
+                    DockPanelDragDelayMilliseconds <= GetTickCount64() - m_pendingDockDragStartTick;
+                if (movedEnough && heldLongEnough)
+                {
+                    m_dragKind = DockDragKind::Panel;
+                    m_dragPanelId = m_pendingDockDragPanelId;
+                    m_pendingDockDragPanelId.reset();
+                    m_currentGuideTarget = DockGuideTarget{};
+                    m_hasDockPreview = false;
+                }
+            }
+
             if (DockDragKind::Panel == m_dragKind && m_dragPanelId.has_value())
             {
                 UpdateDockGuideWindows(parentWindow, cursorScreenPoint);
@@ -1667,6 +1745,8 @@ namespace Xelqoria::Editor
 
             m_dragKind = DockDragKind::None;
             m_dragPanelId.reset();
+            m_pendingDockDragPanelId.reset();
+            m_pendingDockDragStartTick = 0;
             m_dragSplitNodeId = -1;
             m_hasDockPreview = false;
             ReleaseCapture();
@@ -1725,6 +1805,8 @@ namespace Xelqoria::Editor
         m_dynamicDockTabs.clear();
         m_hasDockPreview = false;
         m_currentGuideTarget = DockGuideTarget{};
+        m_pendingDockDragPanelId.reset();
+        m_pendingDockDragStartTick = 0;
         BuildInitialDockTree();
         HideDockGuideWindows();
         UpdateDockPreviewWindow(m_parentWindow);
@@ -1763,7 +1845,7 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::SceneView:
-            for (HWND control : { m_sceneViewPanel, m_sceneViewHost })
+            for (HWND control : { m_sceneViewPanel, m_sceneViewHost, m_buildAndPlayButton, m_pauseResumePlayButton, m_endPlayButton })
             {
                 ShowWindow(control, showCommand);
             }
@@ -1822,7 +1904,7 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::SceneView:
-            for (HWND control : { m_sceneViewPanel, m_sceneViewPlanLabel, m_projectSummaryLabel, m_projectSceneListBox, m_projectSceneDetailLabel, m_sceneViewHost, m_sceneViewSizeLabel })
+            for (HWND control : { m_sceneViewPanel, m_sceneViewPlanLabel, m_projectSummaryLabel, m_projectSceneListBox, m_projectSceneDetailLabel, m_sceneViewHost, m_sceneViewSizeLabel, m_buildAndPlayButton, m_pauseResumePlayButton, m_endPlayButton })
             {
                 setParent(control);
             }
@@ -1918,6 +2000,41 @@ namespace Xelqoria::Editor
             {
                 return dockNode.panels[static_cast<std::size_t>(activeIndex)];
             }
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<EditorShell::EditorPanelId> EditorShell::HitTestDockTab(POINT cursorScreenPoint) const
+    {
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Leaf != dockNode.kind || dockNode.panels.empty())
+            {
+                continue;
+            }
+
+            HWND tabControl = dockNode.tabControl;
+            if (nullptr == tabControl || false == IsWindowVisible(tabControl))
+            {
+                continue;
+            }
+
+            POINT cursorClientPoint = cursorScreenPoint;
+            ScreenToClient(tabControl, &cursorClientPoint);
+
+            TCHITTESTINFO hitTestInfo{};
+            hitTestInfo.pt = cursorClientPoint;
+            const int tabIndex = TabCtrl_HitTest(tabControl, &hitTestInfo);
+            if (tabIndex < 0 || tabIndex >= static_cast<int>(dockNode.panels.size()))
+            {
+                continue;
+            }
+
+            return dockNode.panels[static_cast<std::size_t>(tabIndex)];
         }
 
         return std::nullopt;
@@ -3023,7 +3140,7 @@ namespace Xelqoria::Editor
                 RDW_INVALIDATE | RDW_ERASE | RDW_ERASENOW | RDW_UPDATENOW | RDW_ALLCHILDREN | RDW_FRAME);
         }
 
-        const std::array<HWND, 62> controls = CollectControls();
+        const std::array<HWND, 65> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -3093,7 +3210,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 62> controls = CollectControls();
+        const std::array<HWND, 65> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -3111,7 +3228,7 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 62> EditorShell::CollectControls() const
+    std::array<HWND, 65> EditorShell::CollectControls() const
     {
         return {
             m_leftTopDockTab,
@@ -3138,6 +3255,9 @@ namespace Xelqoria::Editor
             m_projectSceneDetailLabel,
             m_sceneViewHost,
             m_sceneViewSizeLabel,
+            m_buildAndPlayButton,
+            m_pauseResumePlayButton,
+            m_endPlayButton,
             m_logOutputPanel,
             m_logOutputTabControl,
             m_logClearButton,
@@ -3353,6 +3473,21 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetSceneViewSizeLabel() const
     {
         return m_sceneViewSizeLabel;
+    }
+
+    HWND EditorShell::GetBuildAndPlayButton() const
+    {
+        return m_buildAndPlayButton;
+    }
+
+    HWND EditorShell::GetPauseResumePlayButton() const
+    {
+        return m_pauseResumePlayButton;
+    }
+
+    HWND EditorShell::GetEndPlayButton() const
+    {
+        return m_endPlayButton;
     }
 
     HWND EditorShell::GetSceneViewPlanLabel() const
