@@ -852,22 +852,22 @@ namespace Xelqoria::Editor
 
     void Application::UpdateEditorPlayControls(const Core::InputSnapshot& inputSnapshot)
     {
-        const HierarchyButtonFrameInput frameInput{
+        const ButtonClickFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
             ToWin32Point(inputSnapshot.GetCursorScreenPoint())
         };
 
-        if (TryConsumeHierarchyButtonClick(m_buildAndPlayButton, frameInput, m_editorPlayButtonInputState))
+        if (TryConsumeButtonClick(m_buildAndPlayButton, frameInput, m_editorPlayButtonInputState))
         {
             (void)StartEditorPlay();
             m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
         }
-        else if (TryConsumeHierarchyButtonClick(m_pauseResumePlayButton, frameInput, m_editorPlayButtonInputState))
+        else if (TryConsumeButtonClick(m_pauseResumePlayButton, frameInput, m_editorPlayButtonInputState))
         {
             ToggleEditorPlayPause();
             m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
         }
-        else if (TryConsumeHierarchyButtonClick(m_endPlayButton, frameInput, m_editorPlayButtonInputState))
+        else if (TryConsumeButtonClick(m_endPlayButton, frameInput, m_editorPlayButtonInputState))
         {
             EndEditorPlay();
             m_editorPlayButtonInputState.pressedButtonHandle = nullptr;

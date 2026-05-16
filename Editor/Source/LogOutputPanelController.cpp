@@ -78,17 +78,17 @@ namespace Xelqoria::Editor
             RefreshVisibleRows();
         }
 
-        const HierarchyButtonFrameInput frameInput{
+        const ButtonClickFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
             ToWin32Point(inputSnapshot.GetCursorScreenPoint())
         };
-        if (TryConsumeHierarchyButtonClick(m_clearButton, frameInput, m_buttonInputState))
+        if (TryConsumeButtonClick(m_clearButton, frameInput, m_buttonInputState))
         {
             m_logs[ToLogIndex(GetActiveCategory())].clear();
             RefreshVisibleRows();
             m_buttonInputState.pressedButtonHandle = nullptr;
         }
-        else if (TryConsumeHierarchyButtonClick(m_copyButton, frameInput, m_buttonInputState))
+        else if (TryConsumeButtonClick(m_copyButton, frameInput, m_buttonInputState))
         {
             CopySelectedRow();
             m_buttonInputState.pressedButtonHandle = nullptr;

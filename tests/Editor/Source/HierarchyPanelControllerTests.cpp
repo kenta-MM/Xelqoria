@@ -62,20 +62,20 @@ TEST(HierarchyPanelControllerTests, PressingAndReleasingInsideSameButtonProduces
     HWND buttonHandle = CreateTestButtonWindow(kWindowClassName, 100);
     ASSERT_NE(nullptr, buttonHandle);
 
-    Xelqoria::Editor::HierarchyButtonInputState inputState{};
+    Xelqoria::Editor::ButtonClickInputState inputState{};
 
-    Xelqoria::Editor::HierarchyButtonFrameInput pressFrame{
+    Xelqoria::Editor::ButtonClickFrameInput pressFrame{
         true,
         POINT{ 110, 110 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(buttonHandle, pressFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(buttonHandle, pressFrame, inputState));
     inputState.wasLeftMouseButtonDown = pressFrame.isLeftMouseButtonDown;
 
-    Xelqoria::Editor::HierarchyButtonFrameInput releaseFrame{
+    Xelqoria::Editor::ButtonClickFrameInput releaseFrame{
         false,
         POINT{ 110, 110 }
     };
-    EXPECT_TRUE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(buttonHandle, releaseFrame, inputState));
+    EXPECT_TRUE(Xelqoria::Editor::TryConsumeButtonClick(buttonHandle, releaseFrame, inputState));
 
     DestroyWindow(buttonHandle);
 }
@@ -89,20 +89,20 @@ TEST(HierarchyPanelControllerTests, ReleasingOutsideButtonDoesNotProduceClick)
     HWND buttonHandle = CreateTestButtonWindow(kWindowClassName, 100);
     ASSERT_NE(nullptr, buttonHandle);
 
-    Xelqoria::Editor::HierarchyButtonInputState inputState{};
+    Xelqoria::Editor::ButtonClickInputState inputState{};
 
-    Xelqoria::Editor::HierarchyButtonFrameInput pressFrame{
+    Xelqoria::Editor::ButtonClickFrameInput pressFrame{
         true,
         POINT{ 110, 110 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(buttonHandle, pressFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(buttonHandle, pressFrame, inputState));
     inputState.wasLeftMouseButtonDown = pressFrame.isLeftMouseButtonDown;
 
-    Xelqoria::Editor::HierarchyButtonFrameInput releaseFrame{
+    Xelqoria::Editor::ButtonClickFrameInput releaseFrame{
         false,
         POINT{ 10, 10 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(buttonHandle, releaseFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(buttonHandle, releaseFrame, inputState));
 
     DestroyWindow(buttonHandle);
 }
@@ -118,22 +118,22 @@ TEST(HierarchyPanelControllerTests, AnotherButtonCanStillConsumeReleaseAfterCrea
     ASSERT_NE(nullptr, createButtonHandle);
     ASSERT_NE(nullptr, duplicateButtonHandle);
 
-    Xelqoria::Editor::HierarchyButtonInputState inputState{};
+    Xelqoria::Editor::ButtonClickInputState inputState{};
 
-    Xelqoria::Editor::HierarchyButtonFrameInput pressFrame{
+    Xelqoria::Editor::ButtonClickFrameInput pressFrame{
         true,
         POINT{ 230, 110 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(createButtonHandle, pressFrame, inputState));
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(duplicateButtonHandle, pressFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(createButtonHandle, pressFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(duplicateButtonHandle, pressFrame, inputState));
     inputState.wasLeftMouseButtonDown = pressFrame.isLeftMouseButtonDown;
 
-    Xelqoria::Editor::HierarchyButtonFrameInput releaseFrame{
+    Xelqoria::Editor::ButtonClickFrameInput releaseFrame{
         false,
         POINT{ 230, 110 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(createButtonHandle, releaseFrame, inputState));
-    EXPECT_TRUE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(duplicateButtonHandle, releaseFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(createButtonHandle, releaseFrame, inputState));
+    EXPECT_TRUE(Xelqoria::Editor::TryConsumeButtonClick(duplicateButtonHandle, releaseFrame, inputState));
 
     DestroyWindow(duplicateButtonHandle);
     DestroyWindow(createButtonHandle);

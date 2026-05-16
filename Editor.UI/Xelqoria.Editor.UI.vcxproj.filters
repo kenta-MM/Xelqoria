@@ -11,6 +11,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\ButtonClickInput.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\EditorShell.h">
       <Filter>Source</Filter>
     </ClInclude>
