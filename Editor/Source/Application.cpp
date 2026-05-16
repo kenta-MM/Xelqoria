@@ -2,18 +2,14 @@
 
 #include <array>
 #include <chrono>
-#include <commdlg.h>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <functional>
-#include <shlobj.h>
 #include <span>
 #include <string>
 
 #include "GraphicsAPI.h"
-#include <ShlObj_core.h>
-#include <shtypes.h>
 #include <Windows.h>
 #include <optional>
 #include <InputSystem.h>
@@ -38,68 +34,61 @@ namespace Xelqoria::Editor
         constexpr unsigned ProjectMenuSettingsCommandId = 5105;
         constexpr unsigned ProjectMenuResetLayoutCommandId = 5106;
 
-        [[nodiscard]] std::filesystem::path SelectProjectFile(HWND ownerWindow)
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
         {
-            std::array<wchar_t, MAX_PATH> filePath{};
-            OPENFILENAMEW openFileName{};
-            openFileName.lStructSize = sizeof(openFileName);
-            openFileName.hwndOwner = ownerWindow;
-            openFileName.lpstrFilter = L"Xelqoria Project (*.proj)\0*.proj\0All Files (*.*)\0*.*\0";
-            openFileName.lpstrFile = filePath.data();
-            openFileName.nMaxFile = static_cast<DWORD>(filePath.size());
-            openFileName.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-            if (GetOpenFileNameW(&openFileName))
-            {
-                return filePath.data();
-            }
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
 
-            return {};
+        [[nodiscard]] std::filesystem::path SelectProjectFile(
+            Platform::IFileDialog& fileDialog,
+            HWND ownerWindow)
+        {
+            const std::optional<std::filesystem::path> filePath =
+                fileDialog.OpenFile(
+                    Platform::FileDialogOptions{
+                        ownerWindow,
+                        {},
+                        {
+                            Platform::FileDialogFilter{ L"Xelqoria Project (*.proj)", L"*.proj" },
+                            Platform::FileDialogFilter{ L"All Files (*.*)", L"*.*" }
+                        },
+                        {}
+                    });
+            return filePath.value_or(std::filesystem::path{});
         }
 
         [[nodiscard]] std::filesystem::path SelectScriptAssetFile(
+            Platform::IFileDialog& fileDialog,
             HWND ownerWindow,
             const std::filesystem::path& initialDirectory)
         {
-            std::array<wchar_t, MAX_PATH> filePath{};
-            OPENFILENAMEW openFileName{};
-            openFileName.lStructSize = sizeof(openFileName);
-            openFileName.hwndOwner = ownerWindow;
-            openFileName.lpstrFilter = L"Xelqoria Script Asset (*.script)\0*.script\0All Files (*.*)\0*.*\0";
-            openFileName.lpstrFile = filePath.data();
-            openFileName.nMaxFile = static_cast<DWORD>(filePath.size());
-            openFileName.lpstrInitialDir = initialDirectory.empty() ? nullptr : initialDirectory.c_str();
-            openFileName.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-            if (GetOpenFileNameW(&openFileName))
-            {
-                return filePath.data();
-            }
-
-            return {};
+            const std::optional<std::filesystem::path> filePath =
+                fileDialog.OpenFile(
+                    Platform::FileDialogOptions{
+                        ownerWindow,
+                        {},
+                        {
+                            Platform::FileDialogFilter{ L"Xelqoria Script Asset (*.script)", L"*.script" },
+                            Platform::FileDialogFilter{ L"All Files (*.*)", L"*.*" }
+                        },
+                        initialDirectory
+                    });
+            return filePath.value_or(std::filesystem::path{});
         }
 
 
-        [[nodiscard]] std::filesystem::path SelectFolder(HWND ownerWindow, const wchar_t* title)
+        [[nodiscard]] std::filesystem::path SelectFolder(
+            Platform::IFileDialog& fileDialog,
+            HWND ownerWindow,
+            const wchar_t* title)
         {
-            BROWSEINFOW browseInfo{};
-            browseInfo.hwndOwner = ownerWindow;
-            browseInfo.lpszTitle = title;
-            browseInfo.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-
-            PIDLIST_ABSOLUTE itemList = SHBrowseForFolderW(&browseInfo);
-            if (nullptr == itemList)
-            {
-                return {};
-            }
-
-            std::filesystem::path folderPath{};
-            std::array<wchar_t, MAX_PATH> selectedPath{};
-            if (SHGetPathFromIDListW(itemList, selectedPath.data()))
-            {
-                folderPath = selectedPath.data();
-            }
-
-            CoTaskMemFree(itemList);
-            return folderPath;
+            const std::optional<std::filesystem::path> folderPath =
+                fileDialog.OpenFolder(
+                    Platform::FolderDialogOptions{
+                        ownerWindow,
+                        title
+                    });
+            return folderPath.value_or(std::filesystem::path{});
         }
 
         [[nodiscard]] std::wstring BuildNewProjectName(const std::filesystem::path& parentDirectory)
@@ -320,12 +309,12 @@ namespace Xelqoria::Editor
                 HandleWindowResized(width, height);
             });
 
-        if (false == m_startupScreenController.Initialize(m_window.GetHwnd(), m_hInstance))
+        if (false == m_startupScreenController.Initialize(GetMainWindowHandle(), m_hInstance, m_fileDialog))
         {
             return false;
         }
 
-        m_startupScreenController.UpdateLayout(m_window.GetHwnd());
+        m_startupScreenController.UpdateLayout(GetMainWindowHandle());
         m_window.Show();
         return true;
     }
@@ -339,7 +328,7 @@ namespace Xelqoria::Editor
 
         constexpr RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D11;
 
-        if (false == m_editorShell.Initialize(m_window.GetHwnd(), m_hInstance))
+        if (false == m_editorShell.Initialize(GetMainWindowHandle(), m_hInstance, m_cursor))
         {
             return false;
         }
@@ -347,7 +336,7 @@ namespace Xelqoria::Editor
         m_assetsPanelController.Bind(m_editorShell);
         m_hierarchyPanelController.Bind(m_editorShell);
         m_inspectorPanelController.Bind(m_editorShell);
-        m_logOutputPanelController.Bind(m_editorShell);
+        m_logOutputPanelController.Bind(m_editorShell, m_clipboard);
         m_projectPanelController.Bind(m_editorShell);
         m_sceneViewController.Bind(m_editorShell);
         m_buildAndPlayButton = m_editorShell.GetBuildAndPlayButton();
@@ -531,7 +520,8 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path parentDirectory = SelectFolder(GetMainWindowHandle(), L"プロジェクトの保存先フォルダを選択");
+        const std::filesystem::path parentDirectory =
+            SelectFolder(m_fileDialog, GetMainWindowHandle(), L"プロジェクトの保存先フォルダを選択");
         if (parentDirectory.empty())
         {
             return;
@@ -570,7 +560,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path projectFilePath = SelectProjectFile(GetMainWindowHandle());
+        const std::filesystem::path projectFilePath = SelectProjectFile(m_fileDialog, GetMainWindowHandle());
         if (projectFilePath.empty())
         {
             return;
@@ -630,7 +620,8 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path parentDirectory = SelectFolder(GetMainWindowHandle(), L"別名保存先フォルダを選択");
+        const std::filesystem::path parentDirectory =
+            SelectFolder(m_fileDialog, GetMainWindowHandle(), L"別名保存先フォルダを選択");
         if (parentDirectory.empty())
         {
             return;
@@ -1034,7 +1025,7 @@ namespace Xelqoria::Editor
                 ? m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path()
                 : std::filesystem::path{};
             const std::filesystem::path scriptAssetPath =
-                SelectScriptAssetFile(GetMainWindowHandle(), projectRootDirectory);
+                SelectScriptAssetFile(m_fileDialog, GetMainWindowHandle(), projectRootDirectory);
             if (false == scriptAssetPath.empty())
             {
                 if (true == m_sceneDocument.AssignScriptAssetToSpriteAssetFile(spriteAssetPath, scriptAssetPath))
@@ -1126,7 +1117,7 @@ namespace Xelqoria::Editor
                     ? m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path()
                     : std::filesystem::path{};
                 const std::filesystem::path scriptAssetPath =
-                    SelectScriptAssetFile(GetMainWindowHandle(), projectRootDirectory);
+                    SelectScriptAssetFile(m_fileDialog, GetMainWindowHandle(), projectRootDirectory);
                 if (false == scriptAssetPath.empty())
                 {
                     const std::optional<Core::AssetId> scriptTargetSpriteAssetId =

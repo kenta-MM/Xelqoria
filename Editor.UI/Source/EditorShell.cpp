@@ -373,8 +373,9 @@ namespace Xelqoria::Editor
         int sceneHostHeight = 0;
     };
 
-    bool EditorShell::Initialize(HWND parentWindow, HINSTANCE hInstance)
+    bool EditorShell::Initialize(HWND parentWindow, HINSTANCE hInstance, Platform::ICursor& cursor)
     {
+        m_cursor = &cursor;
         if (false == RegisterDockPreviewWindowClass(hInstance))
         {
             return false;
@@ -1722,7 +1723,13 @@ namespace Xelqoria::Editor
             else if (DockDragKind::HorizontalSplitter == m_dragKind || DockDragKind::VerticalSplitter == m_dragKind)
             {
                 changed = UpdateDockSplitterDrag(parentWindow, cursorScreenPoint) || changed;
-                SetCursor(LoadCursorW(nullptr, DockDragKind::HorizontalSplitter == m_dragKind ? IDC_SIZEWE : IDC_SIZENS));
+                if (nullptr != m_cursor)
+                {
+                    m_cursor->SetShape(
+                        DockDragKind::HorizontalSplitter == m_dragKind
+                            ? Platform::CursorShape::HorizontalResize
+                            : Platform::CursorShape::VerticalResize);
+                }
             }
         }
         else if (DockDragKind::None == m_dragKind)
@@ -1731,7 +1738,13 @@ namespace Xelqoria::Editor
             if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_dockNodes.size())
             {
                 const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
-                SetCursor(LoadCursorW(nullptr, DockSplitOrientation::Horizontal == splitNode.splitOrientation ? IDC_SIZEWE : IDC_SIZENS));
+                if (nullptr != m_cursor)
+                {
+                    m_cursor->SetShape(
+                        DockSplitOrientation::Horizontal == splitNode.splitOrientation
+                            ? Platform::CursorShape::HorizontalResize
+                            : Platform::CursorShape::VerticalResize);
+                }
             }
         }
 

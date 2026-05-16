@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "EditorProject.h"
+#include "IFileDialog.h"
 #include "InputSystem.h"
 #include "RecentProjectsStore.h"
 
@@ -23,7 +24,7 @@ namespace Xelqoria::Editor
         /// <param name="parentWindow">親ウィンドウ。</param>
         /// <param name="hInstance">アプリケーションインスタンス。</param>
         /// <returns>初期化に成功した場合は true。</returns>
-        bool Initialize(HWND parentWindow, HINSTANCE hInstance);
+        bool Initialize(HWND parentWindow, HINSTANCE hInstance, Platform::IFileDialog& fileDialog);
 
         /// <summary>
         /// StartupScreenController が所有する UI リソースを破棄する。
@@ -174,6 +175,7 @@ namespace Xelqoria::Editor
         HWND m_recentLabel = nullptr;
         HWND m_recentListBox = nullptr;
         RecentProjectsStore m_recentProjectsStore{};
+        Platform::IFileDialog* m_fileDialog = nullptr;
         std::vector<EditorProjectInfo> m_recentProjects{};
         bool m_createRequested = false;
         bool m_wasLeftMouseDown = false;

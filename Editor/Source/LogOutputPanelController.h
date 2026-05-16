@@ -7,6 +7,7 @@
 
 #include "EditorShell.h"
 #include "HierarchyPanelController.h"
+#include "IClipboard.h"
 #include "InputSystem.h"
 
 namespace Xelqoria::Editor
@@ -31,7 +32,7 @@ namespace Xelqoria::Editor
         /// EditorShell の HWND 群へ接続する。
         /// </summary>
         /// <param name="shell">接続先の EditorShell。</param>
-        void Bind(const EditorShell& shell);
+        void Bind(const EditorShell& shell, Platform::IClipboard& clipboard);
 
         /// <summary>
         /// 指定カテゴリへログ行を追加する。
@@ -98,6 +99,7 @@ namespace Xelqoria::Editor
         HWND m_copyButton = nullptr;
         HWND m_filterEdit = nullptr;
         HWND m_listBox = nullptr;
+        Platform::IClipboard* m_clipboard = nullptr;
         std::array<std::vector<LogOutputEntry>, 3> m_logs{};
         HierarchyButtonInputState m_buttonInputState{};
         int m_lastActiveTab = 0;

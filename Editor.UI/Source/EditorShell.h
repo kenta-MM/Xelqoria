@@ -6,6 +6,7 @@
 #include <optional>
 #include <vector>
 
+#include "ICursor.h"
 #include "InputSystem.h"
 
 namespace Xelqoria::Editor
@@ -21,8 +22,9 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <param name="parentWindow">親となる Editor メインウィンドウ。</param>
         /// <param name="hInstance">Windows アプリケーションのインスタンスハンドル。</param>
+        /// <param name="cursor">カーソル形状を切り替える Platform 実装。</param>
         /// <returns>生成に成功した場合は true。</returns>
-        bool Initialize(HWND parentWindow, HINSTANCE hInstance);
+        bool Initialize(HWND parentWindow, HINSTANCE hInstance, Platform::ICursor& cursor);
 
         /// <summary>
         /// EditorShell が所有する UI リソースを破棄する。
@@ -832,5 +834,6 @@ namespace Xelqoria::Editor
         int m_lastLayoutClientWidth = 0;
         int m_lastLayoutClientHeight = 0;
         UINT m_lastLayoutDpi = 0;
+        Platform::ICursor* m_cursor = nullptr;
     };
 }

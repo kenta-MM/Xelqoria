@@ -6,7 +6,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Win32Clipboard.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Win32Cursor.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Win32EventLoop.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Win32FileDialog.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Win32Input.cpp">
@@ -23,7 +32,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Win32Clipboard.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Win32Cursor.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Win32EventLoop.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Win32FileDialog.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\Win32Input.h">
