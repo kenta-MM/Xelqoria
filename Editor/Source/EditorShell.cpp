@@ -8,7 +8,10 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cwchar>
+#include <fstream>
 #include <iterator>
+#include <string>
+#include <system_error>
 #include <utility>
 
 namespace Xelqoria::Editor
@@ -20,6 +23,68 @@ namespace Xelqoria::Editor
         constexpr const wchar_t* DockGuideWindowClassName = L"XelqoriaDockGuideWindow";
         constexpr const wchar_t* FloatingPanelWindowClassName = L"XelqoriaFloatingPanelWindow";
         constexpr ULONGLONG DockPanelDragDelayMilliseconds = 200;
+
+        struct SavedDockNode
+        {
+            bool isLeaf = true;
+            bool isHorizontalSplit = true;
+            float splitRatio = 0.5f;
+            int firstChild = -1;
+            int secondChild = -1;
+            int activeTabIndex = 0;
+            std::wstring tabKey{};
+            std::vector<EditorShell::EditorPanelId> panels{};
+        };
+
+        struct SavedFloatingGroup
+        {
+            RECT rect{};
+            int activeTabIndex = 0;
+            std::vector<EditorShell::EditorPanelId> panels{};
+        };
+
+        [[nodiscard]] constexpr std::array<EditorShell::EditorPanelId, 5> GetAllEditorPanels()
+        {
+            return {
+                EditorShell::EditorPanelId::Hierarchy,
+                EditorShell::EditorPanelId::Assets,
+                EditorShell::EditorPanelId::SceneView,
+                EditorShell::EditorPanelId::Inspector,
+                EditorShell::EditorPanelId::LogOutput
+            };
+        }
+
+        [[nodiscard]] const wchar_t* GetPanelLayoutName(EditorShell::EditorPanelId panelId)
+        {
+            switch (panelId)
+            {
+            case EditorShell::EditorPanelId::Hierarchy:
+                return L"Hierarchy";
+            case EditorShell::EditorPanelId::Assets:
+                return L"Assets";
+            case EditorShell::EditorPanelId::SceneView:
+                return L"SceneView";
+            case EditorShell::EditorPanelId::Inspector:
+                return L"Inspector";
+            case EditorShell::EditorPanelId::LogOutput:
+                return L"LogOutput";
+            default:
+                return L"SceneView";
+            }
+        }
+
+        [[nodiscard]] std::optional<EditorShell::EditorPanelId> TryParsePanelLayoutName(const std::wstring& name)
+        {
+            for (EditorShell::EditorPanelId panelId : GetAllEditorPanels())
+            {
+                if (name == GetPanelLayoutName(panelId))
+                {
+                    return panelId;
+                }
+            }
+
+            return std::nullopt;
+        }
 
         [[nodiscard]] POINT ToWin32Point(Platform::Point point)
         {
@@ -1967,6 +2032,266 @@ namespace Xelqoria::Editor
         m_layoutInitialized = false;
     }
 
+    bool EditorShell::SaveLayout(const std::filesystem::path& layoutPath) const
+    {
+        std::error_code errorCode;
+        std::filesystem::create_directories(layoutPath.parent_path(), errorCode);
+        if (errorCode)
+        {
+            return false;
+        }
+
+        std::wofstream output(layoutPath, std::ios::binary | std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return false;
+        }
+
+        output << L"XelqoriaEditorLayout 1\n";
+        output << L"Root " << m_rootDockNodeId << L'\n';
+        output << L"Nodes " << m_dockNodes.size() << L'\n';
+        for (std::size_t index = 0; index < m_dockNodes.size(); ++index)
+        {
+            const DockNode& dockNode = m_dockNodes[index];
+            output << L"Node "
+                << index << L' '
+                << (DockNodeKind::Leaf == dockNode.kind ? L"Leaf" : L"Split") << L' '
+                << (DockSplitOrientation::Horizontal == dockNode.splitOrientation ? L"Horizontal" : L"Vertical") << L' '
+                << dockNode.splitRatio << L' '
+                << dockNode.firstChild << L' '
+                << dockNode.secondChild << L' '
+                << dockNode.activeTabIndex << L' '
+                << GetDockTabLayoutKey(dockNode.tabControl) << L' '
+                << dockNode.panels.size();
+            for (EditorPanelId panelId : dockNode.panels)
+            {
+                output << L' ' << GetPanelLayoutName(panelId);
+            }
+            output << L'\n';
+        }
+
+        output << L"Floating " << m_floatingPanelGroups.size() << L'\n';
+        for (const FloatingPanelGroup& group : m_floatingPanelGroups)
+        {
+            RECT windowRect{};
+            if (nullptr != group.window)
+            {
+                GetWindowRect(group.window, &windowRect);
+            }
+
+            output << L"FloatingGroup "
+                << windowRect.left << L' '
+                << windowRect.top << L' '
+                << windowRect.right << L' '
+                << windowRect.bottom << L' '
+                << group.activeTabIndex << L' '
+                << group.panels.size();
+            for (EditorPanelId panelId : group.panels)
+            {
+                output << L' ' << GetPanelLayoutName(panelId);
+            }
+            output << L'\n';
+        }
+
+        return output.good();
+    }
+
+    bool EditorShell::LoadLayout(const std::filesystem::path& layoutPath)
+    {
+        if (nullptr == m_parentWindow)
+        {
+            return false;
+        }
+
+        std::wifstream input(layoutPath, std::ios::binary);
+        if (false == input.is_open())
+        {
+            return false;
+        }
+
+        std::wstring signature{};
+        int version = 0;
+        input >> signature >> version;
+        if (L"XelqoriaEditorLayout" != signature || 1 != version)
+        {
+            return false;
+        }
+
+        std::wstring section{};
+        DockNodeId rootDockNodeId = -1;
+        input >> section >> rootDockNodeId;
+        if (L"Root" != section)
+        {
+            return false;
+        }
+
+        std::size_t nodeCount = 0;
+        input >> section >> nodeCount;
+        if (L"Nodes" != section || 0 == nodeCount)
+        {
+            return false;
+        }
+
+        std::vector<SavedDockNode> savedNodes(nodeCount);
+        for (std::size_t index = 0; index < nodeCount; ++index)
+        {
+            std::wstring nodeToken{};
+            std::size_t savedIndex = 0;
+            std::wstring kind{};
+            std::wstring orientation{};
+            std::size_t panelCount = 0;
+            input >> nodeToken
+                >> savedIndex
+                >> kind
+                >> orientation
+                >> savedNodes[index].splitRatio
+                >> savedNodes[index].firstChild
+                >> savedNodes[index].secondChild
+                >> savedNodes[index].activeTabIndex
+                >> savedNodes[index].tabKey
+                >> panelCount;
+            if (L"Node" != nodeToken || savedIndex != index)
+            {
+                return false;
+            }
+
+            savedNodes[index].isLeaf = L"Leaf" == kind;
+            savedNodes[index].isHorizontalSplit = L"Horizontal" == orientation;
+            for (std::size_t panelIndex = 0; panelIndex < panelCount; ++panelIndex)
+            {
+                std::wstring panelName{};
+                input >> panelName;
+                const std::optional<EditorPanelId> panelId = TryParsePanelLayoutName(panelName);
+                if (panelId.has_value())
+                {
+                    savedNodes[index].panels.push_back(*panelId);
+                }
+            }
+        }
+
+        std::size_t floatingGroupCount = 0;
+        input >> section >> floatingGroupCount;
+        if (L"Floating" != section)
+        {
+            return false;
+        }
+
+        std::vector<SavedFloatingGroup> savedFloatingGroups{};
+        savedFloatingGroups.reserve(floatingGroupCount);
+        for (std::size_t index = 0; index < floatingGroupCount; ++index)
+        {
+            std::wstring groupToken{};
+            SavedFloatingGroup group{};
+            std::size_t panelCount = 0;
+            input >> groupToken
+                >> group.rect.left
+                >> group.rect.top
+                >> group.rect.right
+                >> group.rect.bottom
+                >> group.activeTabIndex
+                >> panelCount;
+            if (L"FloatingGroup" != groupToken)
+            {
+                return false;
+            }
+
+            for (std::size_t panelIndex = 0; panelIndex < panelCount; ++panelIndex)
+            {
+                std::wstring panelName{};
+                input >> panelName;
+                const std::optional<EditorPanelId> panelId = TryParsePanelLayoutName(panelName);
+                if (panelId.has_value())
+                {
+                    group.panels.push_back(*panelId);
+                }
+            }
+            if (false == group.panels.empty())
+            {
+                savedFloatingGroups.push_back(std::move(group));
+            }
+        }
+
+        ResetDockLayout();
+        for (HWND tabControl : m_dynamicDockTabs)
+        {
+            if (nullptr != tabControl)
+            {
+                DestroyWindow(tabControl);
+            }
+        }
+        m_dynamicDockTabs.clear();
+        m_logOutputDockTab = nullptr;
+        m_dockNodes.clear();
+        m_dockNodes.reserve(savedNodes.size());
+
+        for (const SavedDockNode& savedNode : savedNodes)
+        {
+            DockNode dockNode{};
+            dockNode.kind = savedNode.isLeaf ? DockNodeKind::Leaf : DockNodeKind::Split;
+            dockNode.splitOrientation = savedNode.isHorizontalSplit
+                ? DockSplitOrientation::Horizontal
+                : DockSplitOrientation::Vertical;
+            dockNode.splitRatio = (std::max)(0.05f, (std::min)(0.95f, savedNode.splitRatio));
+            dockNode.firstChild = savedNode.firstChild;
+            dockNode.secondChild = savedNode.secondChild;
+            dockNode.activeTabIndex = savedNode.activeTabIndex;
+            dockNode.panels = savedNode.panels;
+            if (DockNodeKind::Leaf == dockNode.kind)
+            {
+                dockNode.tabControl = CreateDockTabControlForLayoutKey(savedNode.tabKey);
+            }
+            m_dockNodes.push_back(std::move(dockNode));
+        }
+        m_rootDockNodeId = rootDockNodeId;
+
+        for (const SavedFloatingGroup& group : savedFloatingGroups)
+        {
+            for (EditorPanelId panelId : group.panels)
+            {
+                RemovePanelFromDockTree(panelId, false);
+            }
+
+            const int width =
+                (std::max)(ScaleMetric(240), static_cast<int>(group.rect.right - group.rect.left));
+            const int height =
+                (std::max)(ScaleMetric(180), static_cast<int>(group.rect.bottom - group.rect.top));
+            FloatPanel(group.panels.front(), POINT{ group.rect.left, group.rect.top }, m_parentWindow);
+            HWND floatingWindow = GetFloatingWindowRef(group.panels.front());
+            if (nullptr == floatingWindow)
+            {
+                continue;
+            }
+
+            SetWindowPos(
+                floatingWindow,
+                nullptr,
+                group.rect.left,
+                group.rect.top,
+                width,
+                height,
+                SWP_NOZORDER | SWP_NOACTIVATE);
+            for (std::size_t panelIndex = 1; panelIndex < group.panels.size(); ++panelIndex)
+            {
+                AttachPanelToFloatingWindow(group.panels[panelIndex], floatingWindow);
+            }
+
+            const int groupIndex = FindFloatingPanelGroupIndex(floatingWindow);
+            if (groupIndex >= 0)
+            {
+                FloatingPanelGroup& floatingGroup = m_floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
+                floatingGroup.activeTabIndex =
+                    (std::max)(0, (std::min)(group.activeTabIndex, static_cast<int>(floatingGroup.panels.size()) - 1));
+                SyncFloatingPanelTabs(floatingWindow);
+                LayoutFloatingWindow(floatingWindow);
+            }
+        }
+
+        RestoreMissingPanelsToDefaultDock();
+        SyncDockTabs();
+        m_layoutInitialized = false;
+        return true;
+    }
+
     void EditorShell::ShowPanelControls(EditorPanelId panelId, bool visible) const
     {
         const int showCommand = visible ? SW_SHOW : SW_HIDE;
@@ -2379,6 +2704,11 @@ namespace Xelqoria::Editor
         }
 
         return -1;
+    }
+
+    bool EditorShell::IsPanelInDockTree(EditorPanelId panelId) const
+    {
+        return FindPanelDockLeaf(panelId) >= 0;
     }
 
     void EditorShell::RemovePanelFromDockTree(EditorPanelId panelId, bool collapseEmptyLeaves)
@@ -3293,6 +3623,72 @@ namespace Xelqoria::Editor
         ShowWindow(tabControl, SW_HIDE);
         m_dynamicDockTabs.push_back(tabControl);
         return tabControl;
+    }
+
+    HWND EditorShell::CreateDockTabControlForLayoutKey(const std::wstring& layoutKey)
+    {
+        if (L"LeftTop" == layoutKey)
+        {
+            return m_leftTopDockTab;
+        }
+        if (L"LeftBottom" == layoutKey)
+        {
+            return m_leftBottomDockTab;
+        }
+        if (L"Center" == layoutKey)
+        {
+            return m_centerDockTab;
+        }
+        if (L"Right" == layoutKey)
+        {
+            return m_rightDockTab;
+        }
+
+        HWND tabControl = CreateAdditionalDockTabControl(m_parentWindow);
+        if (L"LogOutput" == layoutKey)
+        {
+            m_logOutputDockTab = tabControl;
+        }
+        return tabControl;
+    }
+
+    std::wstring EditorShell::GetDockTabLayoutKey(HWND tabControl) const
+    {
+        if (tabControl == m_leftTopDockTab)
+        {
+            return L"LeftTop";
+        }
+        if (tabControl == m_leftBottomDockTab)
+        {
+            return L"LeftBottom";
+        }
+        if (tabControl == m_centerDockTab)
+        {
+            return L"Center";
+        }
+        if (tabControl == m_rightDockTab)
+        {
+            return L"Right";
+        }
+        if (tabControl == m_logOutputDockTab)
+        {
+            return L"LogOutput";
+        }
+
+        return L"Dynamic";
+    }
+
+    void EditorShell::RestoreMissingPanelsToDefaultDock()
+    {
+        for (EditorPanelId panelId : GetAllEditorPanels())
+        {
+            if (IsPanelInDockTree(panelId) || FindFloatingPanelGroupIndex(panelId) >= 0)
+            {
+                continue;
+            }
+
+            ShowPanelAtDefaultDock(panelId);
+        }
     }
 
     void EditorShell::SyncDockAreaTabs(DockAreaId dockAreaId)
