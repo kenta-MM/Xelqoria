@@ -26,6 +26,16 @@ namespace Xelqoria::Editor
             return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
         }
 
+        [[nodiscard]] POINT GetCursorScreenPoint(const Platform::ICursor* cursor)
+        {
+            if (nullptr == cursor)
+            {
+                return {};
+            }
+
+            return ToWin32Point(cursor->GetScreenPosition());
+        }
+
         /// <summary>
         /// Dock 先プレビューの青い配置範囲を描画する。
         /// </summary>
@@ -2395,8 +2405,7 @@ namespace Xelqoria::Editor
     {
         if (DockGuideTargetKind::None == guideTarget.kind || DockGuideTargetKind::Float == guideTarget.kind)
         {
-            POINT cursorScreenPoint{};
-            GetCursorPos(&cursorScreenPoint);
+            const POINT cursorScreenPoint = GetCursorScreenPoint(m_cursor);
             RemovePanelFromDockTree(panelId);
             FloatPanel(panelId, cursorScreenPoint, parentWindow);
             SyncDockTabs();
@@ -2596,8 +2605,7 @@ namespace Xelqoria::Editor
 
         if (DockAreaId::Floating == dockAreaId)
         {
-            POINT cursorScreenPoint{};
-            GetCursorPos(&cursorScreenPoint);
+            const POINT cursorScreenPoint = GetCursorScreenPoint(m_cursor);
             FloatPanel(panelId, cursorScreenPoint, parentWindow);
             SyncDockTabs();
             m_layoutInitialized = false;
@@ -2675,7 +2683,7 @@ namespace Xelqoria::Editor
 
         m_dragKind = DockDragKind::Panel;
         m_dragPanelId = panelId;
-        GetCursorPos(&m_dragStartScreenPoint);
+        m_dragStartScreenPoint = GetCursorScreenPoint(m_cursor);
         m_currentGuideTarget = DockGuideTarget{};
         m_hasDockPreview = false;
     }
@@ -2687,8 +2695,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        POINT cursorScreenPoint{};
-        GetCursorPos(&cursorScreenPoint);
+        const POINT cursorScreenPoint = GetCursorScreenPoint(m_cursor);
         UpdateDockGuideWindows(m_parentWindow, cursorScreenPoint);
         m_currentGuideTarget = HitTestDockGuideTarget(m_parentWindow, cursorScreenPoint);
         m_hasDockPreview = DockGuideTargetKind::None != m_currentGuideTarget.kind

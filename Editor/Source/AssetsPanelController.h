@@ -11,6 +11,7 @@
 #include "EditorProject.h"
 #include "EditorShell.h"
 #include "InputSystem.h"
+#include "ICursor.h"
 
 namespace Xelqoria::Editor
 {
@@ -70,7 +71,8 @@ namespace Xelqoria::Editor
         /// EditorShell の HWND 群へ接続する。
         /// </summary>
         /// <param name="shell">接続先の EditorShell。</param>
-        void Bind(const EditorShell& shell);
+        /// <param name="cursor">カーソル位置を取得する Platform 実装。</param>
+        void Bind(const EditorShell& shell, Platform::ICursor& cursor);
 
         /// <summary>
         /// Assets パネルのファイル詳細リスト表示を更新する。
@@ -373,6 +375,7 @@ namespace Xelqoria::Editor
     private:
         HWND m_assetsListView = nullptr;
         HWND m_assetsSummaryLabel = nullptr;
+        Platform::ICursor* m_cursor = nullptr;
         std::filesystem::path m_assetsRootDirectory{};
         std::filesystem::path m_currentDirectory{};
         std::vector<AssetListEntry> m_visibleEntries{};

@@ -333,9 +333,9 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        m_assetsPanelController.Bind(m_editorShell);
+        m_assetsPanelController.Bind(m_editorShell, m_cursor);
         m_hierarchyPanelController.Bind(m_editorShell);
-        m_inspectorPanelController.Bind(m_editorShell);
+        m_inspectorPanelController.Bind(m_editorShell, m_cursor);
         m_logOutputPanelController.Bind(m_editorShell, m_clipboard);
         m_projectPanelController.Bind(m_editorShell);
         m_sceneViewController.Bind(m_editorShell);
