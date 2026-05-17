@@ -3920,6 +3920,12 @@ namespace Xelqoria::Editor
             return;
         }
 
+        HWND parentWindow = GetParent(window);
+        RECT previousRect{};
+        const bool hasPreviousRect = nullptr != parentWindow
+            && GetWindowRect(window, &previousRect)
+            && MapWindowPoints(HWND_DESKTOP, parentWindow, reinterpret_cast<POINT*>(&previousRect), 2);
+
         SetWindowPos(
             window,
             nullptr,
@@ -3928,6 +3934,16 @@ namespace Xelqoria::Editor
             (std::max)(0, width),
             (std::max)(0, height),
             SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
+
+        if (hasPreviousRect)
+        {
+            InflateRect(&previousRect, ScaleMetric(2), ScaleMetric(2));
+            RedrawWindow(
+                parentWindow,
+                &previousRect,
+                nullptr,
+                RDW_INVALIDATE | RDW_ERASE | RDW_FRAME);
+        }
     }
 
     void EditorShell::RedrawLayout(HWND parentWindow) const
