@@ -19,11 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\EditorShell.cpp" />
+    <ClCompile Include="Source\EditorUIAnchor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\ButtonClickInput.h" />
-    <ClInclude Include="Source\EditorShell.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">

@@ -9,6 +9,7 @@
 #include <span>
 #include <string>
 
+#include "ButtonClickWin32Adapter.h"
 #include "GraphicsAPI.h"
 #include <Windows.h>
 #include <optional>
@@ -33,11 +34,6 @@ namespace Xelqoria::Editor
         constexpr unsigned ProjectMenuOpenCommandId = 5104;
         constexpr unsigned ProjectMenuSettingsCommandId = 5105;
         constexpr unsigned ProjectMenuResetLayoutCommandId = 5106;
-
-        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
-        {
-            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
-        }
 
         [[nodiscard]] std::filesystem::path SelectProjectFile(
             Platform::IFileDialog& fileDialog,
@@ -854,28 +850,28 @@ namespace Xelqoria::Editor
     {
         const ButtonClickFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
-            ToWin32Point(inputSnapshot.GetCursorScreenPoint())
+            inputSnapshot.GetCursorScreenPoint()
         };
 
-        if (TryConsumeButtonClick(m_buildAndPlayButton, frameInput, m_editorPlayButtonInputState))
+        if (TryConsumeButtonClick(BuildButtonClickTarget(m_buildAndPlayButton), frameInput, m_editorPlayButtonInputState))
         {
             (void)StartEditorPlay();
-            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+            m_editorPlayButtonInputState.pressedButtonId = 0;
         }
-        else if (TryConsumeButtonClick(m_pauseResumePlayButton, frameInput, m_editorPlayButtonInputState))
+        else if (TryConsumeButtonClick(BuildButtonClickTarget(m_pauseResumePlayButton), frameInput, m_editorPlayButtonInputState))
         {
             ToggleEditorPlayPause();
-            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+            m_editorPlayButtonInputState.pressedButtonId = 0;
         }
-        else if (TryConsumeButtonClick(m_endPlayButton, frameInput, m_editorPlayButtonInputState))
+        else if (TryConsumeButtonClick(BuildButtonClickTarget(m_endPlayButton), frameInput, m_editorPlayButtonInputState))
         {
             EndEditorPlay();
-            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+            m_editorPlayButtonInputState.pressedButtonId = 0;
         }
 
         if (false == frameInput.isLeftMouseButtonDown && true == m_editorPlayButtonInputState.wasLeftMouseButtonDown)
         {
-            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+            m_editorPlayButtonInputState.pressedButtonId = 0;
         }
 
         m_editorPlayButtonInputState.wasLeftMouseButtonDown = frameInput.isLeftMouseButtonDown;

@@ -3,15 +3,12 @@
 #include <CommCtrl.h>
 #include <utility>
 
+#include "ButtonClickWin32Adapter.h"
+
 namespace Xelqoria::Editor
 {
     namespace
     {
-        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
-        {
-            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
-        }
-
         [[nodiscard]] std::size_t ToLogIndex(LogOutputCategory category)
         {
             return static_cast<std::size_t>(category);
@@ -80,23 +77,23 @@ namespace Xelqoria::Editor
 
         const ButtonClickFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
-            ToWin32Point(inputSnapshot.GetCursorScreenPoint())
+            inputSnapshot.GetCursorScreenPoint()
         };
-        if (TryConsumeButtonClick(m_clearButton, frameInput, m_buttonInputState))
+        if (TryConsumeButtonClick(BuildButtonClickTarget(m_clearButton), frameInput, m_buttonInputState))
         {
             m_logs[ToLogIndex(GetActiveCategory())].clear();
             RefreshVisibleRows();
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
-        else if (TryConsumeButtonClick(m_copyButton, frameInput, m_buttonInputState))
+        else if (TryConsumeButtonClick(BuildButtonClickTarget(m_copyButton), frameInput, m_buttonInputState))
         {
             CopySelectedRow();
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
 
         if (false == frameInput.isLeftMouseButtonDown && true == m_buttonInputState.wasLeftMouseButtonDown)
         {
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
 
         m_buttonInputState.wasLeftMouseButtonDown = frameInput.isLeftMouseButtonDown;
