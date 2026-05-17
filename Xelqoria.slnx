@@ -9,12 +9,7 @@
     <File Path="AGENTS.md" />
     <File Path="README.md" />
   </Folder>
-  <Folder Name="/ソリューション項目/.codex/">
-    <File Path=".gitattributes" />
-    <File Path=".gitignore" />
-    <File Path="AGENTS.md" />
-    <File Path="README.md" />
-  </Folder>
+  <Folder Name="/ソリューション項目/.codex/" />
   <Folder Name="/ソリューション項目/.codex/skills/" />
   <Folder Name="/ソリューション項目/.codex/skills/xelqoria-feature-issue-generate/">
     <File Path=".codex/skills/xelqoria-feature-issue-generate/SKILL.md" />
