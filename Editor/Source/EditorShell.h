@@ -3,7 +3,9 @@
 #include <Windows.h>
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "ICursor.h"
@@ -290,6 +292,20 @@ namespace Xelqoria::Editor
         /// <param name="panelId">再表示するビュー。</param>
         void ShowPanelAtDefaultDock(EditorPanelId panelId);
 
+        /// <summary>
+        /// 現在の Dock / Floating レイアウトを保存する。
+        /// </summary>
+        /// <param name="layoutPath">保存先ファイル。</param>
+        /// <returns>保存に成功した場合は true。</returns>
+        [[nodiscard]] bool SaveLayout(const std::filesystem::path& layoutPath) const;
+
+        /// <summary>
+        /// 保存済み Dock / Floating レイアウトを復元する。
+        /// </summary>
+        /// <param name="layoutPath">復元元ファイル。</param>
+        /// <returns>復元に成功した場合は true。</returns>
+        [[nodiscard]] bool LoadLayout(const std::filesystem::path& layoutPath);
+
     private:
         enum class DockAreaId
         {
@@ -482,6 +498,11 @@ namespace Xelqoria::Editor
         [[nodiscard]] DockNodeId FindPanelDockLeaf(EditorPanelId panelId) const;
 
         /// <summary>
+        /// 指定パネルが Dock tree に含まれているかを返す。
+        /// </summary>
+        [[nodiscard]] bool IsPanelInDockTree(EditorPanelId panelId) const;
+
+        /// <summary>
         /// Dock ツリーから指定パネルを取り除く。
         /// </summary>
         void RemovePanelFromDockTree(EditorPanelId panelId, bool collapseEmptyLeaves = true);
@@ -650,6 +671,21 @@ namespace Xelqoria::Editor
         /// split Dock leaf 用の TabControl を追加生成する。
         /// </summary>
         [[nodiscard]] HWND CreateAdditionalDockTabControl(HWND parentWindow);
+
+        /// <summary>
+        /// 保存データに記録された Dock leaf 用 TabControl を取得または生成する。
+        /// </summary>
+        [[nodiscard]] HWND CreateDockTabControlForLayoutKey(const std::wstring& layoutKey);
+
+        /// <summary>
+        /// Dock leaf の TabControl を保存用識別子へ変換する。
+        /// </summary>
+        [[nodiscard]] std::wstring GetDockTabLayoutKey(HWND tabControl) const;
+
+        /// <summary>
+        /// 保存データから欠けたビューを既定 Dock 位置へ戻す。
+        /// </summary>
+        void RestoreMissingPanelsToDefaultDock();
 
         /// <summary>
         /// 指定 TabControl に DockArea のタブを設定する。
