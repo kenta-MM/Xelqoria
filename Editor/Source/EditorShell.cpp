@@ -553,6 +553,14 @@ namespace Xelqoria::Editor
             }
         }
         m_dynamicDockTabs.clear();
+        for (PendingLayoutRedraw& redraw : m_pendingLayoutRedraws)
+        {
+            if (nullptr != redraw.dirtyRegion)
+            {
+                DeleteObject(redraw.dirtyRegion);
+            }
+        }
+        m_pendingLayoutRedraws.clear();
 
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
@@ -3925,6 +3933,12 @@ namespace Xelqoria::Editor
         const bool hasPreviousRect = nullptr != parentWindow
             && GetWindowRect(window, &previousRect)
             && MapWindowPoints(HWND_DESKTOP, parentWindow, reinterpret_cast<POINT*>(&previousRect), 2);
+        const RECT nextRect{
+            x,
+            y,
+            x + (std::max)(0, width),
+            y + (std::max)(0, height)
+        };
 
         SetWindowPos(
             window,
@@ -3937,13 +3951,94 @@ namespace Xelqoria::Editor
 
         if (hasPreviousRect)
         {
-            InflateRect(&previousRect, ScaleMetric(2), ScaleMetric(2));
+            AccumulateLayoutRedraw(parentWindow, previousRect, nextRect);
+        }
+    }
+
+    void EditorShell::AccumulateLayoutRedraw(HWND parentWindow, const RECT& previousRect, const RECT& nextRect) const
+    {
+        if (nullptr == parentWindow)
+        {
+            return;
+        }
+
+        RECT oldRect = previousRect;
+        RECT newRect = nextRect;
+        InflateRect(&oldRect, ScaleMetric(2), ScaleMetric(2));
+        InflateRect(&newRect, ScaleMetric(2), ScaleMetric(2));
+
+        HRGN movedFromRegion = CreateRectRgnIndirect(&oldRect);
+        HRGN movedToRegion = CreateRectRgnIndirect(&newRect);
+        if (nullptr == movedFromRegion || nullptr == movedToRegion)
+        {
+            if (nullptr != movedFromRegion)
+            {
+                DeleteObject(movedFromRegion);
+            }
+            if (nullptr != movedToRegion)
+            {
+                DeleteObject(movedToRegion);
+            }
+            return;
+        }
+
+        const int diffResult = CombineRgn(movedFromRegion, movedFromRegion, movedToRegion, RGN_DIFF);
+        DeleteObject(movedToRegion);
+        if (NULLREGION == diffResult || ERROR == diffResult)
+        {
+            DeleteObject(movedFromRegion);
+            return;
+        }
+
+        auto existingRedraw = std::find_if(
+            m_pendingLayoutRedraws.begin(),
+            m_pendingLayoutRedraws.end(),
+            [parentWindow](const PendingLayoutRedraw& redraw)
+            {
+                return redraw.parentWindow == parentWindow;
+            });
+        if (existingRedraw == m_pendingLayoutRedraws.end())
+        {
+            HRGN dirtyRegion = CreateRectRgn(0, 0, 0, 0);
+            if (nullptr == dirtyRegion)
+            {
+                DeleteObject(movedFromRegion);
+                return;
+            }
+
+            m_pendingLayoutRedraws.push_back(PendingLayoutRedraw{ parentWindow, dirtyRegion });
+            existingRedraw = m_pendingLayoutRedraws.end() - 1;
+        }
+
+        CombineRgn(existingRedraw->dirtyRegion, existingRedraw->dirtyRegion, movedFromRegion, RGN_OR);
+        DeleteObject(movedFromRegion);
+    }
+
+    void EditorShell::FlushLayoutRedraw(HWND parentWindow) const
+    {
+        auto redraw = std::find_if(
+            m_pendingLayoutRedraws.begin(),
+            m_pendingLayoutRedraws.end(),
+            [parentWindow](const PendingLayoutRedraw& pendingRedraw)
+            {
+                return pendingRedraw.parentWindow == parentWindow;
+            });
+        if (redraw == m_pendingLayoutRedraws.end())
+        {
+            return;
+        }
+
+        if (nullptr != redraw->dirtyRegion)
+        {
             RedrawWindow(
                 parentWindow,
-                &previousRect,
                 nullptr,
+                redraw->dirtyRegion,
                 RDW_INVALIDATE | RDW_ERASE | RDW_FRAME);
+            DeleteObject(redraw->dirtyRegion);
         }
+
+        m_pendingLayoutRedraws.erase(redraw);
     }
 
     void EditorShell::RedrawLayout(HWND parentWindow) const
@@ -3953,6 +4048,7 @@ namespace Xelqoria::Editor
             return;
         }
 
+        FlushLayoutRedraw(parentWindow);
         RedrawWindow(
             parentWindow,
             nullptr,
