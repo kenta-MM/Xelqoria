@@ -307,7 +307,7 @@ namespace Xelqoria::Editor
         EditorCommandController m_editorCommandController{};
         std::future<ScriptBuildResult> m_scriptBuildFuture{};
         std::optional<std::filesystem::path> m_scriptBuildProjectRootDirectory{};
-        HierarchyButtonInputState m_editorPlayButtonInputState{};
+        ButtonClickInputState m_editorPlayButtonInputState{};
         HWND m_buildAndPlayButton = nullptr;
         HWND m_pauseResumePlayButton = nullptr;
         HWND m_endPlayButton = nullptr;

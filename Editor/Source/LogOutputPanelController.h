@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "ButtonClickInput.h"
 #include "EditorShell.h"
-#include "HierarchyPanelController.h"
 #include "IClipboard.h"
 #include "InputSystem.h"
 
@@ -101,7 +101,7 @@ namespace Xelqoria::Editor
         HWND m_listBox = nullptr;
         Platform::IClipboard* m_clipboard = nullptr;
         std::array<std::vector<LogOutputEntry>, 3> m_logs{};
-        HierarchyButtonInputState m_buttonInputState{};
+        ButtonClickInputState m_buttonInputState{};
         int m_lastActiveTab = 0;
         std::wstring m_lastFilterText{};
     };

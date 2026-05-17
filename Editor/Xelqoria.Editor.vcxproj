@@ -25,6 +25,7 @@
     <ClCompile Include="Source\EditorAssetPathUtils.cpp" />
     <ClCompile Include="Source\EditorProject.cpp" />
     <ClCompile Include="Source\EditorSceneDocument.cpp" />
+    <ClCompile Include="Source\EditorShell.cpp" />
     <ClCompile Include="Source\Entry.cpp" />
     <ClCompile Include="Source\HierarchyPanelController.cpp" />
     <ClCompile Include="Source\InspectorPanelController.cpp" />
@@ -46,11 +47,13 @@
   <ItemGroup>
     <ClInclude Include="Source\Application.h" />
     <ClInclude Include="Source\AssetsPanelController.h" />
+    <ClInclude Include="Source\ButtonClickWin32Adapter.h" />
     <ClInclude Include="Source\EditorCommandController.h" />
     <ClInclude Include="Source\EditorAssetPathUtils.h" />
     <ClInclude Include="Source\EditorProject.h" />
     <ClInclude Include="Source\EditorPathSecurity.h" />
     <ClInclude Include="Source\EditorSceneDocument.h" />
+    <ClInclude Include="Source\EditorShell.h" />
     <ClInclude Include="Source\EditorStringUtils.h" />
     <ClInclude Include="Source\EditorCamera2D.h" />
     <ClInclude Include="Source\HierarchyPanelController.h" />

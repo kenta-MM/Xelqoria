@@ -1,140 +1,81 @@
 #include <gtest/gtest.h>
 
+#include <cstdint>
+
 #include "HierarchyPanelController.h"
 
 namespace
 {
-    class ScopedTestWindowClass
+    [[nodiscard]] Xelqoria::Editor::ButtonClickTarget CreateButtonClickTarget(std::uintptr_t id, int left)
     {
-    public:
-        explicit ScopedTestWindowClass(const wchar_t* className)
-            : m_className(className)
-        {
-            WNDCLASSW windowClass{};
-            windowClass.lpfnWndProc = DefWindowProcW;
-            windowClass.hInstance = GetModuleHandleW(nullptr);
-            windowClass.lpszClassName = m_className;
-            m_registered = RegisterClassW(&windowClass) != 0;
-        }
-
-        ~ScopedTestWindowClass()
-        {
-            if (m_registered)
-            {
-                UnregisterClassW(m_className, GetModuleHandleW(nullptr));
-            }
-        }
-
-        [[nodiscard]] bool IsRegistered() const
-        {
-            return m_registered;
-        }
-
-    private:
-        const wchar_t* m_className = nullptr;
-        bool m_registered = false;
-    };
-
-    HWND CreateTestButtonWindow(const wchar_t* className, int left)
-    {
-        return CreateWindowExW(
-            0,
-            className,
-            L"Button",
-            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-            left,
-            100,
-            80,
-            32,
-            nullptr,
-            nullptr,
-            GetModuleHandleW(nullptr),
-            nullptr);
+        return Xelqoria::Editor::ButtonClickTarget{
+            id,
+            true,
+            true,
+            Xelqoria::Editor::ButtonClickRect{ left, 100, left + 80, 132 }
+        };
     }
 }
 
 TEST(HierarchyPanelControllerTests, PressingAndReleasingInsideSameButtonProducesClick)
 {
-    constexpr const wchar_t* kWindowClassName = L"XelqoriaHierarchyButtonTestWindow";
-    ScopedTestWindowClass windowClass(kWindowClassName);
-    ASSERT_TRUE(windowClass.IsRegistered());
+    const Xelqoria::Editor::ButtonClickTarget buttonTarget = CreateButtonClickTarget(1, 100);
 
-    HWND buttonHandle = CreateTestButtonWindow(kWindowClassName, 100);
-    ASSERT_NE(nullptr, buttonHandle);
+    Xelqoria::Editor::ButtonClickInputState inputState{};
 
-    Xelqoria::Editor::HierarchyButtonInputState inputState{};
-
-    Xelqoria::Editor::HierarchyButtonFrameInput pressFrame{
+    Xelqoria::Editor::ButtonClickFrameInput pressFrame{
         true,
-        POINT{ 110, 110 }
+        Xelqoria::Platform::Point{ 110, 110 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(buttonHandle, pressFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(buttonTarget, pressFrame, inputState));
     inputState.wasLeftMouseButtonDown = pressFrame.isLeftMouseButtonDown;
 
-    Xelqoria::Editor::HierarchyButtonFrameInput releaseFrame{
+    Xelqoria::Editor::ButtonClickFrameInput releaseFrame{
         false,
-        POINT{ 110, 110 }
+        Xelqoria::Platform::Point{ 110, 110 }
     };
-    EXPECT_TRUE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(buttonHandle, releaseFrame, inputState));
-
-    DestroyWindow(buttonHandle);
+    EXPECT_TRUE(Xelqoria::Editor::TryConsumeButtonClick(buttonTarget, releaseFrame, inputState));
 }
 
 TEST(HierarchyPanelControllerTests, ReleasingOutsideButtonDoesNotProduceClick)
 {
-    constexpr const wchar_t* kWindowClassName = L"XelqoriaHierarchyButtonTestWindowOutside";
-    ScopedTestWindowClass windowClass(kWindowClassName);
-    ASSERT_TRUE(windowClass.IsRegistered());
+    const Xelqoria::Editor::ButtonClickTarget buttonTarget = CreateButtonClickTarget(1, 100);
 
-    HWND buttonHandle = CreateTestButtonWindow(kWindowClassName, 100);
-    ASSERT_NE(nullptr, buttonHandle);
+    Xelqoria::Editor::ButtonClickInputState inputState{};
 
-    Xelqoria::Editor::HierarchyButtonInputState inputState{};
-
-    Xelqoria::Editor::HierarchyButtonFrameInput pressFrame{
+    Xelqoria::Editor::ButtonClickFrameInput pressFrame{
         true,
-        POINT{ 110, 110 }
+        Xelqoria::Platform::Point{ 110, 110 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(buttonHandle, pressFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(buttonTarget, pressFrame, inputState));
     inputState.wasLeftMouseButtonDown = pressFrame.isLeftMouseButtonDown;
 
-    Xelqoria::Editor::HierarchyButtonFrameInput releaseFrame{
+    Xelqoria::Editor::ButtonClickFrameInput releaseFrame{
         false,
-        POINT{ 10, 10 }
+        Xelqoria::Platform::Point{ 10, 10 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(buttonHandle, releaseFrame, inputState));
-
-    DestroyWindow(buttonHandle);
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(buttonTarget, releaseFrame, inputState));
 }
 
 TEST(HierarchyPanelControllerTests, AnotherButtonCanStillConsumeReleaseAfterCreateButtonWasCheckedFirst)
 {
-    constexpr const wchar_t* kWindowClassName = L"XelqoriaHierarchyButtonTestWindowSequential";
-    ScopedTestWindowClass windowClass(kWindowClassName);
-    ASSERT_TRUE(windowClass.IsRegistered());
+    const Xelqoria::Editor::ButtonClickTarget createButtonTarget = CreateButtonClickTarget(1, 100);
+    const Xelqoria::Editor::ButtonClickTarget duplicateButtonTarget = CreateButtonClickTarget(2, 220);
 
-    HWND createButtonHandle = CreateTestButtonWindow(kWindowClassName, 100);
-    HWND duplicateButtonHandle = CreateTestButtonWindow(kWindowClassName, 220);
-    ASSERT_NE(nullptr, createButtonHandle);
-    ASSERT_NE(nullptr, duplicateButtonHandle);
+    Xelqoria::Editor::ButtonClickInputState inputState{};
 
-    Xelqoria::Editor::HierarchyButtonInputState inputState{};
-
-    Xelqoria::Editor::HierarchyButtonFrameInput pressFrame{
+    Xelqoria::Editor::ButtonClickFrameInput pressFrame{
         true,
-        POINT{ 230, 110 }
+        Xelqoria::Platform::Point{ 230, 110 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(createButtonHandle, pressFrame, inputState));
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(duplicateButtonHandle, pressFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(createButtonTarget, pressFrame, inputState));
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(duplicateButtonTarget, pressFrame, inputState));
     inputState.wasLeftMouseButtonDown = pressFrame.isLeftMouseButtonDown;
 
-    Xelqoria::Editor::HierarchyButtonFrameInput releaseFrame{
+    Xelqoria::Editor::ButtonClickFrameInput releaseFrame{
         false,
-        POINT{ 230, 110 }
+        Xelqoria::Platform::Point{ 230, 110 }
     };
-    EXPECT_FALSE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(createButtonHandle, releaseFrame, inputState));
-    EXPECT_TRUE(Xelqoria::Editor::TryConsumeHierarchyButtonClick(duplicateButtonHandle, releaseFrame, inputState));
-
-    DestroyWindow(duplicateButtonHandle);
-    DestroyWindow(createButtonHandle);
+    EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(createButtonTarget, releaseFrame, inputState));
+    EXPECT_TRUE(Xelqoria::Editor::TryConsumeButtonClick(duplicateButtonTarget, releaseFrame, inputState));
 }

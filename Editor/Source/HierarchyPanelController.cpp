@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "ButtonClickWin32Adapter.h"
 #include "EditorStringUtils.h"
 #include <Windows.h>
 #include <cstdio>
@@ -14,14 +15,6 @@
 
 namespace Xelqoria::Editor
 {
-    namespace
-    {
-        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
-        {
-            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
-        }
-    }
-
     void HierarchyPanelController::Bind(const EditorShell& shell)
     {
         m_hierarchyListBox = shell.GetHierarchyListBox();
@@ -154,9 +147,9 @@ namespace Xelqoria::Editor
             : std::optional<std::reference_wrapper<Game::Entity>>{};
         const bool isNameEditFocused = GetFocus() == m_hierarchyNameEdit;
         const bool isEnterPressed = inputSnapshot.WasKeyPressed(VK_RETURN);
-        const HierarchyButtonFrameInput frameInput{
+        const ButtonClickFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
-            ToWin32Point(inputSnapshot.GetCursorScreenPoint())
+            inputSnapshot.GetCursorScreenPoint()
         };
 
         if (selectedEntity.has_value())
@@ -172,25 +165,25 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (true == TryConsumeHierarchyButtonClick(m_hierarchyCreateButton, frameInput, m_buttonInputState))
+        if (true == TryConsumeButtonClick(BuildButtonClickTarget(m_hierarchyCreateButton), frameInput, m_buttonInputState))
         {
             result = SceneEditingOperations::CreateUntexturedSprite(*scene, 0.0f, 0.0f);
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
-        else if (true == TryConsumeHierarchyButtonClick(m_hierarchyDuplicateButton, frameInput, m_buttonInputState))
+        else if (true == TryConsumeButtonClick(BuildButtonClickTarget(m_hierarchyDuplicateButton), frameInput, m_buttonInputState))
         {
             result = SceneEditingOperations::DuplicateSelectedEntity(*scene, m_selectedEntityId);
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
-        else if (true == TryConsumeHierarchyButtonClick(m_hierarchyDeleteButton, frameInput, m_buttonInputState))
+        else if (true == TryConsumeButtonClick(BuildButtonClickTarget(m_hierarchyDeleteButton), frameInput, m_buttonInputState))
         {
             result = SceneEditingOperations::DeleteSelectedEntity(*scene, m_selectedEntityId);
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
 
         if (false == frameInput.isLeftMouseButtonDown && true == m_buttonInputState.wasLeftMouseButtonDown)
         {
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
 
         m_buttonInputState.wasLeftMouseButtonDown = frameInput.isLeftMouseButtonDown;

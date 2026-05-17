@@ -6,12 +6,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\EditorShell.cpp">
+    <ClCompile Include="Source\EditorUIAnchor.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\EditorShell.h">
+    <ClInclude Include="Source\ButtonClickInput.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>
