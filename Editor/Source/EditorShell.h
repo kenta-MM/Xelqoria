@@ -220,12 +220,6 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetProjectSceneDetailLabel() const;
 
         /// <summary>
-        /// SceneView 描画先 child window を取得する。
-        /// </summary>
-        /// <returns>SceneView host の HWND。</returns>
-        [[nodiscard]] HWND GetSceneViewHost() const;
-
-        /// <summary>
         /// SceneView / Game Preview の描画先境界を取得する。
         /// </summary>
         /// <returns>描画先 surface。</returns>
@@ -260,18 +254,6 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>LogOutput ListBox の HWND。</returns>
         [[nodiscard]] HWND GetLogListBox() const;
-
-        /// <summary>
-        /// 現在の SceneView 幅を取得する。
-        /// </summary>
-        /// <returns>SceneView 幅。</returns>
-        [[nodiscard]] std::uint32_t GetSceneViewWidth() const;
-
-        /// <summary>
-        /// 現在の SceneView 高さを取得する。
-        /// </summary>
-        /// <returns>SceneView 高さ。</returns>
-        [[nodiscard]] std::uint32_t GetSceneViewHeight() const;
 
         /// <summary>
         /// Dock UI のフレーム入力を処理する。

@@ -340,14 +340,12 @@ namespace Xelqoria::Editor
         m_endPlayButton = m_editorShell.GetEndPlayButton();
 
         const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(GetMainWindowHandle());
+        const SceneViewSurface sceneViewSurface = m_editorShell.GetSceneViewSurface();
         if (true == sceneViewSizeChanged)
         {
-            m_sceneViewController.OnViewportChanged(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+            m_sceneViewController.OnViewportChanged(sceneViewSurface);
         }
 
-        const SceneViewSurface sceneViewSurface = m_editorShell.GetSceneViewSurface();
         if (false == m_sceneViewRenderer.Initialize(
                 m_hInstance,
                 static_cast<HWND>(sceneViewSurface.nativeWindow),
@@ -446,12 +444,11 @@ namespace Xelqoria::Editor
         const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(GetMainWindowHandle());
         if (sceneViewSizeChanged)
         {
-            m_sceneViewController.OnViewportChanged(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+            const SceneViewSurface sceneViewSurface = m_editorShell.GetSceneViewSurface();
+            m_sceneViewController.OnViewportChanged(sceneViewSurface);
             m_sceneViewRenderer.Resize(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+                sceneViewSurface.width,
+                sceneViewSurface.height);
         }
     }
 
@@ -920,12 +917,11 @@ namespace Xelqoria::Editor
         const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(GetMainWindowHandle());
         if (true == sceneViewSizeChanged)
         {
-            m_sceneViewController.OnViewportChanged(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+            const SceneViewSurface sceneViewSurface = m_editorShell.GetSceneViewSurface();
+            m_sceneViewController.OnViewportChanged(sceneViewSurface);
             m_sceneViewRenderer.Resize(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+                sceneViewSurface.width,
+                sceneViewSurface.height);
         }
 
         m_assetsPanelController.SyncSelection();
