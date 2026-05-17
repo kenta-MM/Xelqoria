@@ -561,6 +561,21 @@ namespace Xelqoria::Editor
         void LayoutFloatingPanel(EditorPanelId panelId, HWND floatingWindow);
 
         /// <summary>
+        /// 指定フローティングウィンドウ内の表示パネルを現在のタブ選択に合わせて配置する。
+        /// </summary>
+        void LayoutFloatingWindow(HWND floatingWindow);
+
+        /// <summary>
+        /// 指定パネルを既存のフローティングウィンドウへタブとして追加する。
+        /// </summary>
+        void AttachPanelToFloatingWindow(EditorPanelId panelId, HWND floatingWindow);
+
+        /// <summary>
+        /// カーソル位置にあるフローティングウィンドウを返す。
+        /// </summary>
+        [[nodiscard]] HWND HitTestFloatingWindow(POINT cursorScreenPoint, HWND excludedWindow) const;
+
+        /// <summary>
         /// フローティングウィンドウの移動による Dock 操作を開始する。
         /// </summary>
         void BeginFloatingWindowDockDrag(EditorPanelId panelId);
@@ -589,6 +604,26 @@ namespace Xelqoria::Editor
         /// 指定パネルに対応するフローティングウィンドウ格納先を返す。
         /// </summary>
         [[nodiscard]] HWND& GetFloatingWindowRef(EditorPanelId panelId);
+
+        /// <summary>
+        /// 指定フローティングウィンドウのタブ表示を同期する。
+        /// </summary>
+        void SyncFloatingPanelTabs(HWND floatingWindow);
+
+        /// <summary>
+        /// 指定フローティングウィンドウに対応する group index を返す。
+        /// </summary>
+        [[nodiscard]] int FindFloatingPanelGroupIndex(HWND floatingWindow) const;
+
+        /// <summary>
+        /// 指定パネルを含む floating group index を返す。
+        /// </summary>
+        [[nodiscard]] int FindFloatingPanelGroupIndex(EditorPanelId panelId) const;
+
+        /// <summary>
+        /// 指定フローティングウィンドウで現在選択されているパネルを返す。
+        /// </summary>
+        [[nodiscard]] EditorPanelId GetActiveFloatingPanel(HWND floatingWindow) const;
 
         /// <summary>
         /// Dock TabControl の表示を現在状態へ同期する。
@@ -749,6 +784,14 @@ namespace Xelqoria::Editor
             EditorPanelId panelId = EditorPanelId::SceneView;
         };
 
+        struct FloatingPanelGroup
+        {
+            HWND window = nullptr;
+            HWND tabControl = nullptr;
+            std::vector<EditorPanelId> panels{};
+            int activeTabIndex = 0;
+        };
+
         HFONT m_defaultFont = nullptr;
         UINT m_currentDpi = 96;
         bool m_ownsDefaultFont = false;
@@ -765,6 +808,7 @@ namespace Xelqoria::Editor
         HWND m_sceneViewFloatingWindow = nullptr;
         HWND m_inspectorFloatingWindow = nullptr;
         HWND m_logOutputFloatingWindow = nullptr;
+        std::vector<FloatingPanelGroup> m_floatingPanelGroups{};
         HWND m_hierarchyPanel = nullptr;
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;
