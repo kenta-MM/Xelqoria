@@ -748,14 +748,9 @@ namespace Xelqoria::Editor
         void MoveChildWindowNoRedraw(HWND window, int x, int y, int width, int height) const;
 
         /// <summary>
-        /// child window 移動前後の差分領域を後続のまとめ再描画へ追加する。
+        /// レイアウト中に蓄積した child window 配置をまとめて反映する。
         /// </summary>
-        void AccumulateLayoutRedraw(HWND parentWindow, const RECT& previousRect, const RECT& nextRect) const;
-
-        /// <summary>
-        /// レイアウト中に蓄積した再描画領域をまとめて反映する。
-        /// </summary>
-        void FlushLayoutRedraw(HWND parentWindow) const;
+        void FlushLayoutMoves(HWND parentWindow) const;
 
         /// <summary>
         /// 配置更新後に親と child window 群を同期再描画する。
@@ -854,10 +849,13 @@ namespace Xelqoria::Editor
             int activeTabIndex = 0;
         };
 
-        struct PendingLayoutRedraw
+        struct PendingLayoutMove
         {
-            HWND parentWindow = nullptr;
-            HRGN dirtyRegion = nullptr;
+            HWND window = nullptr;
+            int x = 0;
+            int y = 0;
+            int width = 0;
+            int height = 0;
         };
 
         HFONT m_defaultFont = nullptr;
@@ -952,7 +950,7 @@ namespace Xelqoria::Editor
         int m_lastLayoutClientWidth = 0;
         int m_lastLayoutClientHeight = 0;
         UINT m_lastLayoutDpi = 0;
-        mutable std::vector<PendingLayoutRedraw> m_pendingLayoutRedraws{};
+        mutable std::vector<PendingLayoutMove> m_pendingLayoutMoves{};
         Platform::ICursor* m_cursor = nullptr;
     };
 }

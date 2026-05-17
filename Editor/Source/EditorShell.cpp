@@ -553,14 +553,7 @@ namespace Xelqoria::Editor
             }
         }
         m_dynamicDockTabs.clear();
-        for (PendingLayoutRedraw& redraw : m_pendingLayoutRedraws)
-        {
-            if (nullptr != redraw.dirtyRegion)
-            {
-                DeleteObject(redraw.dirtyRegion);
-            }
-        }
-        m_pendingLayoutRedraws.clear();
+        m_pendingLayoutMoves.clear();
 
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
@@ -3928,117 +3921,92 @@ namespace Xelqoria::Editor
             return;
         }
 
-        HWND parentWindow = GetParent(window);
-        RECT previousRect{};
-        const bool hasPreviousRect = nullptr != parentWindow
-            && GetWindowRect(window, &previousRect)
-            && MapWindowPoints(HWND_DESKTOP, parentWindow, reinterpret_cast<POINT*>(&previousRect), 2);
-        const RECT nextRect{
-            x,
-            y,
-            x + (std::max)(0, width),
-            y + (std::max)(0, height)
-        };
-
-        SetWindowPos(
+        const PendingLayoutMove pendingMove{
             window,
-            nullptr,
             x,
             y,
             (std::max)(0, width),
-            (std::max)(0, height),
-            SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
-
-        if (hasPreviousRect)
+            (std::max)(0, height)
+        };
+        auto existingMove = std::find_if(
+            m_pendingLayoutMoves.begin(),
+            m_pendingLayoutMoves.end(),
+            [window](const PendingLayoutMove& move)
+            {
+                return move.window == window;
+            });
+        if (existingMove == m_pendingLayoutMoves.end())
         {
-            AccumulateLayoutRedraw(parentWindow, previousRect, nextRect);
+            m_pendingLayoutMoves.push_back(pendingMove);
+            return;
         }
+
+        *existingMove = pendingMove;
     }
 
-    void EditorShell::AccumulateLayoutRedraw(HWND parentWindow, const RECT& previousRect, const RECT& nextRect) const
+    void EditorShell::FlushLayoutMoves(HWND parentWindow) const
     {
-        if (nullptr == parentWindow)
+        if (m_pendingLayoutMoves.empty())
         {
             return;
         }
 
-        RECT oldRect = previousRect;
-        RECT newRect = nextRect;
-        InflateRect(&oldRect, ScaleMetric(2), ScaleMetric(2));
-        InflateRect(&newRect, ScaleMetric(2), ScaleMetric(2));
-
-        HRGN movedFromRegion = CreateRectRgnIndirect(&oldRect);
-        HRGN movedToRegion = CreateRectRgnIndirect(&newRect);
-        if (nullptr == movedFromRegion || nullptr == movedToRegion)
+        HDWP deferredPosition = BeginDeferWindowPos(static_cast<int>(m_pendingLayoutMoves.size()));
+        if (nullptr == deferredPosition)
         {
-            if (nullptr != movedFromRegion)
+            for (const PendingLayoutMove& move : m_pendingLayoutMoves)
             {
-                DeleteObject(movedFromRegion);
+                SetWindowPos(
+                    move.window,
+                    nullptr,
+                    move.x,
+                    move.y,
+                    move.width,
+                    move.height,
+                    SWP_NOZORDER | SWP_NOACTIVATE);
             }
-            if (nullptr != movedToRegion)
-            {
-                DeleteObject(movedToRegion);
-            }
+            m_pendingLayoutMoves.clear();
             return;
         }
 
-        const int diffResult = CombineRgn(movedFromRegion, movedFromRegion, movedToRegion, RGN_DIFF);
-        DeleteObject(movedToRegion);
-        if (NULLREGION == diffResult || ERROR == diffResult)
+        bool deferFailed = false;
+        for (const PendingLayoutMove& move : m_pendingLayoutMoves)
         {
-            DeleteObject(movedFromRegion);
-            return;
-        }
-
-        auto existingRedraw = std::find_if(
-            m_pendingLayoutRedraws.begin(),
-            m_pendingLayoutRedraws.end(),
-            [parentWindow](const PendingLayoutRedraw& redraw)
-            {
-                return redraw.parentWindow == parentWindow;
-            });
-        if (existingRedraw == m_pendingLayoutRedraws.end())
-        {
-            HRGN dirtyRegion = CreateRectRgn(0, 0, 0, 0);
-            if (nullptr == dirtyRegion)
-            {
-                DeleteObject(movedFromRegion);
-                return;
-            }
-
-            m_pendingLayoutRedraws.push_back(PendingLayoutRedraw{ parentWindow, dirtyRegion });
-            existingRedraw = m_pendingLayoutRedraws.end() - 1;
-        }
-
-        CombineRgn(existingRedraw->dirtyRegion, existingRedraw->dirtyRegion, movedFromRegion, RGN_OR);
-        DeleteObject(movedFromRegion);
-    }
-
-    void EditorShell::FlushLayoutRedraw(HWND parentWindow) const
-    {
-        auto redraw = std::find_if(
-            m_pendingLayoutRedraws.begin(),
-            m_pendingLayoutRedraws.end(),
-            [parentWindow](const PendingLayoutRedraw& pendingRedraw)
-            {
-                return pendingRedraw.parentWindow == parentWindow;
-            });
-        if (redraw == m_pendingLayoutRedraws.end())
-        {
-            return;
-        }
-
-        if (nullptr != redraw->dirtyRegion)
-        {
-            RedrawWindow(
-                parentWindow,
+            deferredPosition = DeferWindowPos(
+                deferredPosition,
+                move.window,
                 nullptr,
-                redraw->dirtyRegion,
-                RDW_INVALIDATE | RDW_ERASE | RDW_FRAME);
-            DeleteObject(redraw->dirtyRegion);
+                move.x,
+                move.y,
+                move.width,
+                move.height,
+                SWP_NOZORDER | SWP_NOACTIVATE);
+            if (nullptr == deferredPosition)
+            {
+                deferFailed = true;
+                break;
+            }
         }
 
-        m_pendingLayoutRedraws.erase(redraw);
+        if (deferFailed)
+        {
+            for (const PendingLayoutMove& move : m_pendingLayoutMoves)
+            {
+                SetWindowPos(
+                    move.window,
+                    nullptr,
+                    move.x,
+                    move.y,
+                    move.width,
+                    move.height,
+                    SWP_NOZORDER | SWP_NOACTIVATE);
+            }
+        }
+        else
+        {
+            EndDeferWindowPos(deferredPosition);
+        }
+        m_pendingLayoutMoves.clear();
     }
 
     void EditorShell::RedrawLayout(HWND parentWindow) const
@@ -4048,7 +4016,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        FlushLayoutRedraw(parentWindow);
+        FlushLayoutMoves(parentWindow);
         RedrawWindow(
             parentWindow,
             nullptr,
