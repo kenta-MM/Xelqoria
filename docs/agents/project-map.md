@@ -79,7 +79,7 @@ Core は OS 非依存の共通基盤レイヤー
 
 ## Editor.UI
 
-- 役割: Editor 専用の UI シェル、パネル配置、Dock 管理、UI 入力補助、SceneView 表示境界
+- 役割: Editor 専用の OS 非依存 UI 入力補助、SceneView 表示境界
 - 利用可能: Core, Platform
 - Runtime から参照しない
 - Backends / Direct3D / Platform.Win32 を参照しない

@@ -16,12 +16,13 @@ OS 依存は `Platform` 抽象を経由し、OS 固有実装は `Platform.Win32`
 - Platform = Window / EventLoop / Input / Dialog / Clipboard / Cursor などの OS 抽象
 - Platform.Win32 = Windows 向け Platform 実装
 - Platform.Mac = macOS 向け Platform スタブまたは実装
-- Editor.UI = Editor 専用の UI シェル、Dock/パネル配置、UI 入力補助、SceneView 表示境界
+- Editor.UI = Editor 専用の OS 非依存 UI 入力補助、SceneView 表示境界
 
 ## コアルール
 
 - GPU API 固有コードは Backends プロジェクトでのみ使用可能
-- OS ネイティブ API は Platform.* プロジェクトでのみ使用可能
+- Window / EventLoop / Input / Dialog / Clipboard / Cursor の OS ネイティブ API は Platform.* プロジェクトでのみ使用可能
+- Editor の OS ネイティブ UI シェルは Editor に閉じ、Editor.UI へ持ち込まない
 - Graphics は Direct3D 型を使用してはならない
 - RHI は Sprite、Camera、Material、Renderer などの描画概念を含めてはならない
 - Game は Backends や Direct3D を参照してはならない
