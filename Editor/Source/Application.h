@@ -21,6 +21,9 @@
 #include "ScriptRuntimeSession.h"
 #include "StartupScreenController.h"
 #include "RecentProjectsStore.h"
+#include "Win32Clipboard.h"
+#include "Win32Cursor.h"
+#include "Win32FileDialog.h"
 
 namespace Xelqoria::Editor
 {
@@ -202,6 +205,12 @@ namespace Xelqoria::Editor
         void Render();
 
         /// <summary>
+        /// メインウィンドウの Win32 ハンドルを取得する。
+        /// </summary>
+        /// <returns>メインウィンドウの HWND。</returns>
+        [[nodiscard]] HWND GetMainWindowHandle() const;
+
+        /// <summary>
         /// Assets パネル、Hierarchy、Inspector の表示を現在状態へ同期する。
         /// </summary>
         /// <param name="canAddSpriteComponent">SpriteComponent を追加可能な場合は true。</param>
@@ -280,6 +289,9 @@ namespace Xelqoria::Editor
         bool m_editorInitialized = false;
         bool m_projectDirty = false;
         HMENU m_projectMenu = nullptr;
+        Platform::Win32::Win32FileDialog m_fileDialog{};
+        Platform::Win32::Win32Clipboard m_clipboard{};
+        Platform::Win32::Win32Cursor m_cursor{};
         EditorShell m_editorShell{};
         StartupScreenController m_startupScreenController{};
         RecentProjectsStore m_recentProjectsStore{};
@@ -295,7 +307,7 @@ namespace Xelqoria::Editor
         EditorCommandController m_editorCommandController{};
         std::future<ScriptBuildResult> m_scriptBuildFuture{};
         std::optional<std::filesystem::path> m_scriptBuildProjectRootDirectory{};
-        HierarchyButtonInputState m_editorPlayButtonInputState{};
+        ButtonClickInputState m_editorPlayButtonInputState{};
         HWND m_buildAndPlayButton = nullptr;
         HWND m_pauseResumePlayButton = nullptr;
         HWND m_endPlayButton = nullptr;

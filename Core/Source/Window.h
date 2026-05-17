@@ -1,21 +1,37 @@
 #pragma once
-#include <Windows.h>
+
+#include "IEventLoop.h"
+#include "IWindow.h"
+#include "PlatformTypes.h"
+
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 
 namespace Xelqoria::Core
 {
 	/// <summary>
-	/// Win32 API を使用してアプリケーションウィンドウを管理する。
+	/// Platform のウィンドウ実装を通じてアプリケーションウィンドウを管理する。
 	/// </summary>
 	class Window
 	{
 	public:
-		/// デフォルトコンストラクタ
+		/// <summary>
+		/// 空の Window を生成する。使用前に SetPlatformWindow を呼び出す必要がある。
+		/// </summary>
 		Window() = default;
 
-		/// ウィンドウリソースを解放する
+		/// <summary>
+		/// Platform 実装を受け取って Window を生成する。
+		/// </summary>
+		/// <param name="window">OS 固有のウィンドウ実装。</param>
+		/// <param name="eventLoop">OS 固有のイベントループ実装。</param>
+		Window(std::unique_ptr<Platform::IWindow> window, std::unique_ptr<Platform::IEventLoop> eventLoop);
+
+		/// <summary>
+		/// ウィンドウリソースを解放する。
+		/// </summary>
 		~Window();
 
 		Window(const Window&) = delete;
@@ -24,47 +40,56 @@ namespace Xelqoria::Core
 		Window& operator=(Window&&) = delete;
 
 		/// <summary>
-		/// 指定サイズとタイトルで Win32 ウィンドウを作成する。
+		/// 使用する Platform ウィンドウ実装を設定する。
 		/// </summary>
-		/// <param name="hInstance">アプリケーションインスタンスハンドル。</param>
+		/// <param name="window">OS 固有のウィンドウ実装。</param>
+		/// <param name="eventLoop">OS 固有のイベントループ実装。</param>
+		void SetPlatformWindow(std::unique_ptr<Platform::IWindow> window, std::unique_ptr<Platform::IEventLoop> eventLoop);
+
+		/// <summary>
+		/// 指定サイズとタイトルでウィンドウを作成する。
+		/// </summary>
 		/// <param name="title">ウィンドウタイトル。</param>
 		/// <param name="clientWidth">クライアント領域の幅。</param>
 		/// <param name="clientHeight">クライアント領域の高さ。</param>
 		/// <returns>作成に成功した場合は true。</returns>
-		bool Create(HINSTANCE hInstance, const wchar_t* title, uint32_t clientWidth, uint32_t clientHeight);
+		bool Create(const wchar_t* title, uint32_t clientWidth, uint32_t clientHeight);
 
 		/// <summary>
 		/// ウィンドウを表示する。
 		/// </summary>
-		/// <param name="nCmdShow">表示方法（SW_SHOW など）。</param>
-		void Show(int nCmdShow = SW_SHOW);
+		/// <param name="showCommand">互換性のために受け取る表示指定。Platform 実装が表示方法を決定する。</param>
+		void Show(int showCommand = 1);
 
 		/// <summary>
-		/// Win32 メッセージキューからメッセージを取得して処理する。
+		/// Platform のイベントキューからイベントを取得して処理する。
 		/// </summary>
 		/// <returns>アプリケーション終了要求があった場合は false。</returns>
 		bool PumpMessages();
 
-		/// ウィンドウハンドルを取得する
-		[[nodiscard]] HWND GetHwnd() const;
+		/// <summary>
+		/// OS 固有のウィンドウハンドルを取得する。
+		/// </summary>
+		/// <returns>不透明なネイティブウィンドウハンドル。</returns>
+		[[nodiscard]] Platform::NativeWindowHandle GetHwnd() const;
 
 		/// <summary>
-		/// WM_COMMAND を受け取るハンドラを設定する。
+		/// コマンド通知を受け取るハンドラを設定する。
 		/// </summary>
 		/// <param name="handler">コマンド ID を受け取るハンドラ。</param>
 		void SetCommandHandler(std::function<void(unsigned)> handler);
 
 		/// <summary>
-		/// WM_NOTIFY を受け取るハンドラを設定する。
+		/// OS 固有の通知メッセージを受け取るハンドラを設定する。
 		/// </summary>
-		/// <param name="handler">通知 LPARAM を処理し、消費した場合は true を返すハンドラ。</param>
-		void SetNotifyHandler(std::function<bool(LPARAM)> handler);
+		/// <param name="handler">通知メッセージ引数を処理し、消費した場合は true を返すハンドラ。</param>
+		void SetNotifyHandler(std::function<bool(Platform::NativeMessageParameter)> handler);
 
 		/// <summary>
-		/// WM_DRAWITEM を受け取るハンドラを設定する。
+		/// OS 固有のオーナー描画メッセージを受け取るハンドラを設定する。
 		/// </summary>
-		/// <param name="handler">DRAWITEMSTRUCT LPARAM を処理し、消費した場合は true を返すハンドラ。</param>
-		void SetDrawItemHandler(std::function<bool(LPARAM)> handler);
+		/// <param name="handler">描画メッセージ引数を処理し、消費した場合は true を返すハンドラ。</param>
+		void SetDrawItemHandler(std::function<bool(Platform::NativeMessageParameter)> handler);
 
 		/// <summary>
 		/// ウィンドウを閉じる前に呼ばれるハンドラを設定する。
@@ -78,10 +103,16 @@ namespace Xelqoria::Core
 		/// <param name="handler">新しいクライアント領域の幅と高さを受け取るハンドラ。</param>
 		void SetResizeHandler(std::function<void(uint32_t, uint32_t)> handler);
 
-		/// クライアント領域の幅を取得する
+		/// <summary>
+		/// クライアント領域の幅を取得する。
+		/// </summary>
+		/// <returns>クライアント領域の幅。</returns>
 		[[nodiscard]] uint32_t GetWidth() const;
 
-		/// クライアント領域の高さを取得する
+		/// <summary>
+		/// クライアント領域の高さを取得する。
+		/// </summary>
+		/// <returns>クライアント領域の高さ。</returns>
 		[[nodiscard]] uint32_t GetHeight() const;
 
 		/// <summary>
@@ -91,30 +122,7 @@ namespace Xelqoria::Core
 		[[nodiscard]] int ConsumeMouseWheelDelta();
 
 	private:
-		/// <summary>
-		/// Win32 API から呼び出される静的ウィンドウプロシージャ。
-		/// 実際の処理はインスタンスメンバ関数 WndProc に委譲する。
-		/// </summary>
-		static LRESULT CALLBACK StaticWndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp);
-
-		/// <summary>
-		/// 各ウィンドウインスタンスのメッセージ処理を行う。
-		/// </summary>
-		LRESULT WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp);
-
-		HINSTANCE m_hInstance = nullptr;
-		HWND m_hWnd = nullptr;
-		std::function<void(unsigned)> m_commandHandler{};
-		std::function<bool(LPARAM)> m_notifyHandler{};
-		std::function<bool(LPARAM)> m_drawItemHandler{};
-		std::function<bool()> m_closeRequestHandler{};
-		std::function<void(uint32_t, uint32_t)> m_resizeHandler{};
-		int m_pendingMouseWheelDelta = 0;
-
-		std::wstring m_className = L"XelqoriaWindowClass";
-		std::wstring m_title = L"Xelqoria";
-
-		uint32_t m_width = 0;
-		uint32_t m_height = 0;
+		std::unique_ptr<Platform::IWindow> m_window{};
+		std::unique_ptr<Platform::IEventLoop> m_eventLoop{};
 	};
 }

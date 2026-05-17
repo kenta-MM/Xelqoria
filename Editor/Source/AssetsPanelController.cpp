@@ -31,6 +31,11 @@ namespace Xelqoria::Editor
         constexpr int DragPreviewCursorOffsetX = 14;
         constexpr int DragPreviewCursorOffsetY = 18;
 
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+
         /// <summary>
         /// ディレクトリエントリをフォルダ優先、名前順で並べる。
         /// </summary>
@@ -257,10 +262,11 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR DeleteEntryMenuCommandId = 2;
     }
 
-    void AssetsPanelController::Bind(const EditorShell& shell)
+    void AssetsPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
     {
         m_assetsListView = shell.GetAssetsListView();
         m_assetsSummaryLabel = shell.GetAssetsSummaryLabel();
+        m_cursor = &cursor;
         InitializeListView();
     }
 
@@ -338,9 +344,13 @@ namespace Xelqoria::Editor
 
         if (notifyHeader->code == NM_RCLICK)
         {
+            if (nullptr == m_cursor)
+            {
+                return false;
+            }
+
             const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
-            POINT menuPoint{};
-            GetCursorPos(&menuPoint);
+            const POINT menuPoint = ToWin32Point(m_cursor->GetScreenPosition());
 
             const int nameLabelIndex = HitTestListViewNameLabel(menuPoint);
             if (0 <= nameLabelIndex)
@@ -426,7 +436,7 @@ namespace Xelqoria::Editor
 
         if (m_isAssetDragActive)
         {
-            MoveDragImage(inputSnapshot.GetCursorScreenPoint());
+            MoveDragImage(ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
         }
 
         if (false == inputSnapshot.WasMouseButtonPressed(Core::MouseButton::Left))
@@ -434,7 +444,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const int hitIndex = HitTestListView(inputSnapshot.GetCursorScreenPoint());
+        const int hitIndex = HitTestListView(ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
         if (hitIndex < 0)
         {
             return;
@@ -462,7 +472,7 @@ namespace Xelqoria::Editor
             m_canPlaceDraggingAssetInScene = false;
             if (m_isAssetDragActive)
             {
-                BeginDragImage(hitEntry.path, hitEntry.iconIndex, inputSnapshot.GetCursorScreenPoint());
+                BeginDragImage(hitEntry.path, hitEntry.iconIndex, ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
             }
         }
         else if (false == hitEntry.isDirectory
@@ -478,7 +488,7 @@ namespace Xelqoria::Editor
             m_canPlaceDraggingAssetInScene = false;
             if (m_isAssetDragActive)
             {
-                BeginDragPreview(hitEntry.path, inputSnapshot.GetCursorScreenPoint());
+                BeginDragPreview(hitEntry.path, ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
             }
         }
         else

@@ -122,6 +122,14 @@
   <Project Path="Editor/Xelqoria.Editor.vcxproj" Id="2a2fc413-07f6-41d7-ab02-079ce112c042" />
   <Project Path="Game/Xelqoria.Game.vcxproj" Id="b43e8e97-59ef-4caa-8a27-bd9192d8833a" />
   <Project Path="Graphics/Xelqoria.Graphics.vcxproj" Id="7693792a-4ad4-445a-98f7-b90d6989a837" />
+  <Project Path="Platform.Mac/Xelqoria.Platform.Mac.vcxproj" Id="2bbdb336-af96-404d-aab6-42c1f36ca1a3">
+    <Configuration Solution="Debug|x64" Project="Debug|x64|NoBuild" />
+    <Configuration Solution="Debug|x86" Project="Debug|Win32|NoBuild" />
+    <Configuration Solution="Release|x64" Project="Release|x64|NoBuild" />
+    <Configuration Solution="Release|x86" Project="Release|Win32|NoBuild" />
+  </Project>
+  <Project Path="Platform.Win32/Xelqoria.Platform.Win32.vcxproj" Id="e121a6f2-effe-44e6-8123-02cced1196fc" />
+  <Project Path="Platform/Xelqoria.Platform.vcxproj" Id="fbc1e45e-2f7b-4e99-b813-916509583283" />
   <Project Path="RHI/Xelqoria.RHI.vcxproj" Id="158b81fc-b108-4237-8a37-eb8c6ef29392" />
   <Project Path="Xelqoria.Math/Xelqoria.Math.vcxproj" Id="9143e43a-0447-43e1-9fe4-9c3edec98212" />
 </Solution>

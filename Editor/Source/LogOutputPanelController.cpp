@@ -1,8 +1,9 @@
 #include "LogOutputPanelController.h"
 
 #include <CommCtrl.h>
-#include <cstring>
 #include <utility>
+
+#include "ButtonClickWin32Adapter.h"
 
 namespace Xelqoria::Editor
 {
@@ -22,45 +23,16 @@ namespace Xelqoria::Editor
 
             return text.find(filter) != std::wstring::npos;
         }
-
-        void SetClipboardText(HWND ownerWindow, const std::wstring& text)
-        {
-            if (text.empty() || FALSE == OpenClipboard(ownerWindow))
-            {
-                return;
-            }
-
-            EmptyClipboard();
-            const SIZE_T byteSize = (text.size() + 1u) * sizeof(wchar_t);
-            HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, byteSize);
-            if (nullptr == memory)
-            {
-                CloseClipboard();
-                return;
-            }
-
-            void* data = GlobalLock(memory);
-            if (nullptr == data)
-            {
-                GlobalFree(memory);
-                CloseClipboard();
-                return;
-            }
-
-            std::memcpy(data, text.c_str(), byteSize);
-            GlobalUnlock(memory);
-            SetClipboardData(CF_UNICODETEXT, memory);
-            CloseClipboard();
-        }
     }
 
-    void LogOutputPanelController::Bind(const EditorShell& shell)
+    void LogOutputPanelController::Bind(const EditorShell& shell, Platform::IClipboard& clipboard)
     {
         m_tabControl = shell.GetLogOutputTabControl();
         m_clearButton = shell.GetLogClearButton();
         m_copyButton = shell.GetLogCopyButton();
         m_filterEdit = shell.GetLogFilterEdit();
         m_listBox = shell.GetLogListBox();
+        m_clipboard = &clipboard;
         RefreshVisibleRows();
     }
 
@@ -103,25 +75,25 @@ namespace Xelqoria::Editor
             RefreshVisibleRows();
         }
 
-        const HierarchyButtonFrameInput frameInput{
+        const ButtonClickFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
             inputSnapshot.GetCursorScreenPoint()
         };
-        if (TryConsumeHierarchyButtonClick(m_clearButton, frameInput, m_buttonInputState))
+        if (TryConsumeButtonClick(BuildButtonClickTarget(m_clearButton), frameInput, m_buttonInputState))
         {
             m_logs[ToLogIndex(GetActiveCategory())].clear();
             RefreshVisibleRows();
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
-        else if (TryConsumeHierarchyButtonClick(m_copyButton, frameInput, m_buttonInputState))
+        else if (TryConsumeButtonClick(BuildButtonClickTarget(m_copyButton), frameInput, m_buttonInputState))
         {
             CopySelectedRow();
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
 
         if (false == frameInput.isLeftMouseButtonDown && true == m_buttonInputState.wasLeftMouseButtonDown)
         {
-            m_buttonInputState.pressedButtonHandle = nullptr;
+            m_buttonInputState.pressedButtonId = 0;
         }
 
         m_buttonInputState.wasLeftMouseButtonDown = frameInput.isLeftMouseButtonDown;
@@ -244,7 +216,10 @@ namespace Xelqoria::Editor
         std::wstring text(static_cast<std::size_t>(textLength) + 1u, L'\0');
         SendMessageW(m_listBox, LB_GETTEXT, static_cast<WPARAM>(selectedIndex), reinterpret_cast<LPARAM>(text.data()));
         text.resize(static_cast<std::size_t>(textLength));
-        SetClipboardText(GetParent(m_listBox), text);
+        if (nullptr != m_clipboard)
+        {
+            (void)m_clipboard->SetText(text);
+        }
     }
 
     LogOutputCategory LogOutputPanelController::GetActiveCategory() const

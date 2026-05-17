@@ -60,6 +60,9 @@
     <ProjectReference Include="..\..\RHI\Xelqoria.RHI.vcxproj">
       <Project>{158B81FC-B108-4237-8A37-EB8C6EF29392}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\..\Platform\Xelqoria.Platform.vcxproj">
+      <Project>{FBC1E45E-2F7B-4E99-B813-916509583283}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
@@ -123,7 +126,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Platform\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -143,7 +146,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Platform\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -161,7 +164,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Platform\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -181,7 +184,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Editor\Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Platform\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)third_party\googletest\googletest\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>

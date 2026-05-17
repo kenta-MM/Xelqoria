@@ -16,16 +16,17 @@ namespace Xelqoria::Editor
 {
     void SceneViewController::Bind(const EditorShell& shell)
     {
-        m_sceneViewHost = shell.GetSceneViewHost();
+        const SceneViewSurface sceneViewSurface = shell.GetSceneViewSurface();
+        m_sceneViewHost = static_cast<HWND>(sceneViewSurface.nativeWindow);
         m_sceneViewPlanLabel = shell.GetSceneViewPlanLabel();
         m_sceneViewSizeLabel = shell.GetSceneViewSizeLabel();
         m_inputTracker.Bind(m_sceneViewHost);
     }
 
-    void SceneViewController::OnViewportChanged(std::uint32_t width, std::uint32_t height)
+    void SceneViewController::OnViewportChanged(const SceneViewSurface& surface)
     {
-        m_sceneViewWidth = width;
-        m_sceneViewHeight = height;
+        m_sceneViewWidth = surface.width;
+        m_sceneViewHeight = surface.height;
         m_sceneViewCamera.SetViewport(m_sceneViewWidth, m_sceneViewHeight);
     }
 

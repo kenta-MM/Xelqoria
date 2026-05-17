@@ -21,6 +21,21 @@ namespace Xelqoria::Editor
         constexpr const wchar_t* FloatingPanelWindowClassName = L"XelqoriaFloatingPanelWindow";
         constexpr ULONGLONG DockPanelDragDelayMilliseconds = 200;
 
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+
+        [[nodiscard]] POINT GetCursorScreenPoint(const Platform::ICursor* cursor)
+        {
+            if (nullptr == cursor)
+            {
+                return {};
+            }
+
+            return ToWin32Point(cursor->GetScreenPosition());
+        }
+
         /// <summary>
         /// Dock 先プレビューの青い配置範囲を描画する。
         /// </summary>
@@ -368,8 +383,9 @@ namespace Xelqoria::Editor
         int sceneHostHeight = 0;
     };
 
-    bool EditorShell::Initialize(HWND parentWindow, HINSTANCE hInstance)
+    bool EditorShell::Initialize(HWND parentWindow, HINSTANCE hInstance, Platform::ICursor& cursor)
     {
+        m_cursor = &cursor;
         if (false == RegisterDockPreviewWindowClass(hInstance))
         {
             return false;
@@ -1649,7 +1665,7 @@ namespace Xelqoria::Editor
         }
 
         bool changed = false;
-        const POINT cursorScreenPoint = inputSnapshot.GetCursorScreenPoint();
+        const POINT cursorScreenPoint = ToWin32Point(inputSnapshot.GetCursorScreenPoint());
 
         if (inputSnapshot.WasKeyPressed('R') && inputSnapshot.IsKeyDown(VK_CONTROL))
         {
@@ -1717,7 +1733,13 @@ namespace Xelqoria::Editor
             else if (DockDragKind::HorizontalSplitter == m_dragKind || DockDragKind::VerticalSplitter == m_dragKind)
             {
                 changed = UpdateDockSplitterDrag(parentWindow, cursorScreenPoint) || changed;
-                SetCursor(LoadCursorW(nullptr, DockDragKind::HorizontalSplitter == m_dragKind ? IDC_SIZEWE : IDC_SIZENS));
+                if (nullptr != m_cursor)
+                {
+                    m_cursor->SetShape(
+                        DockDragKind::HorizontalSplitter == m_dragKind
+                            ? Platform::CursorShape::HorizontalResize
+                            : Platform::CursorShape::VerticalResize);
+                }
             }
         }
         else if (DockDragKind::None == m_dragKind)
@@ -1726,7 +1748,13 @@ namespace Xelqoria::Editor
             if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_dockNodes.size())
             {
                 const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
-                SetCursor(LoadCursorW(nullptr, DockSplitOrientation::Horizontal == splitNode.splitOrientation ? IDC_SIZEWE : IDC_SIZENS));
+                if (nullptr != m_cursor)
+                {
+                    m_cursor->SetShape(
+                        DockSplitOrientation::Horizontal == splitNode.splitOrientation
+                            ? Platform::CursorShape::HorizontalResize
+                            : Platform::CursorShape::VerticalResize);
+                }
             }
         }
 
@@ -2377,8 +2405,7 @@ namespace Xelqoria::Editor
     {
         if (DockGuideTargetKind::None == guideTarget.kind || DockGuideTargetKind::Float == guideTarget.kind)
         {
-            POINT cursorScreenPoint{};
-            GetCursorPos(&cursorScreenPoint);
+            const POINT cursorScreenPoint = GetCursorScreenPoint(m_cursor);
             RemovePanelFromDockTree(panelId);
             FloatPanel(panelId, cursorScreenPoint, parentWindow);
             SyncDockTabs();
@@ -2578,8 +2605,7 @@ namespace Xelqoria::Editor
 
         if (DockAreaId::Floating == dockAreaId)
         {
-            POINT cursorScreenPoint{};
-            GetCursorPos(&cursorScreenPoint);
+            const POINT cursorScreenPoint = GetCursorScreenPoint(m_cursor);
             FloatPanel(panelId, cursorScreenPoint, parentWindow);
             SyncDockTabs();
             m_layoutInitialized = false;
@@ -2657,7 +2683,7 @@ namespace Xelqoria::Editor
 
         m_dragKind = DockDragKind::Panel;
         m_dragPanelId = panelId;
-        GetCursorPos(&m_dragStartScreenPoint);
+        m_dragStartScreenPoint = GetCursorScreenPoint(m_cursor);
         m_currentGuideTarget = DockGuideTarget{};
         m_hasDockPreview = false;
     }
@@ -2669,8 +2695,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        POINT cursorScreenPoint{};
-        GetCursorPos(&cursorScreenPoint);
+        const POINT cursorScreenPoint = GetCursorScreenPoint(m_cursor);
         UpdateDockGuideWindows(m_parentWindow, cursorScreenPoint);
         m_currentGuideTarget = HitTestDockGuideTarget(m_parentWindow, cursorScreenPoint);
         m_hasDockPreview = DockGuideTargetKind::None != m_currentGuideTarget.kind
@@ -3510,9 +3535,13 @@ namespace Xelqoria::Editor
         return m_projectSceneDetailLabel;
     }
 
-    HWND EditorShell::GetSceneViewHost() const
+    SceneViewSurface EditorShell::GetSceneViewSurface() const
     {
-        return m_sceneViewHost;
+        return SceneViewSurface{
+            m_sceneViewHost,
+            m_sceneViewWidth,
+            m_sceneViewHeight
+        };
     }
 
     HWND EditorShell::GetLogOutputTabControl() const
@@ -3538,16 +3567,6 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetLogListBox() const
     {
         return m_logListBox;
-    }
-
-    std::uint32_t EditorShell::GetSceneViewWidth() const
-    {
-        return m_sceneViewWidth;
-    }
-
-    std::uint32_t EditorShell::GetSceneViewHeight() const
-    {
-        return m_sceneViewHeight;
     }
 
     HWND EditorShell::CreateChildWindow(

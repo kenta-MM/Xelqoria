@@ -6,7 +6,9 @@
 #include <optional>
 #include <vector>
 
+#include "ICursor.h"
 #include "InputSystem.h"
+#include "SceneViewSurface.h"
 
 namespace Xelqoria::Editor
 {
@@ -21,8 +23,9 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <param name="parentWindow">親となる Editor メインウィンドウ。</param>
         /// <param name="hInstance">Windows アプリケーションのインスタンスハンドル。</param>
+        /// <param name="cursor">カーソル形状を切り替える Platform 実装。</param>
         /// <returns>生成に成功した場合は true。</returns>
-        bool Initialize(HWND parentWindow, HINSTANCE hInstance);
+        bool Initialize(HWND parentWindow, HINSTANCE hInstance, Platform::ICursor& cursor);
 
         /// <summary>
         /// EditorShell が所有する UI リソースを破棄する。
@@ -217,10 +220,10 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetProjectSceneDetailLabel() const;
 
         /// <summary>
-        /// SceneView 描画先 child window を取得する。
+        /// SceneView / Game Preview の描画先境界を取得する。
         /// </summary>
-        /// <returns>SceneView host の HWND。</returns>
-        [[nodiscard]] HWND GetSceneViewHost() const;
+        /// <returns>描画先 surface。</returns>
+        [[nodiscard]] SceneViewSurface GetSceneViewSurface() const;
 
         /// <summary>
         /// LogOutput タブを取得する。
@@ -251,18 +254,6 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>LogOutput ListBox の HWND。</returns>
         [[nodiscard]] HWND GetLogListBox() const;
-
-        /// <summary>
-        /// 現在の SceneView 幅を取得する。
-        /// </summary>
-        /// <returns>SceneView 幅。</returns>
-        [[nodiscard]] std::uint32_t GetSceneViewWidth() const;
-
-        /// <summary>
-        /// 現在の SceneView 高さを取得する。
-        /// </summary>
-        /// <returns>SceneView 高さ。</returns>
-        [[nodiscard]] std::uint32_t GetSceneViewHeight() const;
 
         /// <summary>
         /// Dock UI のフレーム入力を処理する。
@@ -832,5 +823,6 @@ namespace Xelqoria::Editor
         int m_lastLayoutClientWidth = 0;
         int m_lastLayoutClientHeight = 0;
         UINT m_lastLayoutDpi = 0;
+        Platform::ICursor* m_cursor = nullptr;
     };
 }

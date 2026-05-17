@@ -1,8 +1,12 @@
 #pragma once
 
-#include <Windows.h>
+#include "IInput.h"
+#include "PlatformTypes.h"
+
 #include <array>
+#include <cstdint>
 #include <functional>
+#include <memory>
 
 namespace Xelqoria::Core
 {
@@ -41,29 +45,29 @@ namespace Xelqoria::Core
             const std::array<bool, KeyStateCount>& previousKeyDownStates,
             bool isLeftMouseButtonDown,
             bool wasLeftMouseButtonDown,
-            POINT cursorScreenPoint,
+            Platform::Point cursorScreenPoint,
             int mouseWheelDelta);
 
         /// <summary>
-        /// 指定した仮想キーが現在押下中かを取得する。
+        /// 指定したキーコードが現在押下中かを取得する。
         /// </summary>
-        /// <param name="virtualKeyCode">Win32 仮想キーコード。</param>
+        /// <param name="keyCode">入力実装が解釈するキーコード。</param>
         /// <returns>押下中の場合は true。</returns>
-        [[nodiscard]] bool IsKeyDown(int virtualKeyCode) const;
+        [[nodiscard]] bool IsKeyDown(int keyCode) const;
 
         /// <summary>
-        /// 指定した仮想キーが今フレームで押下されたかを取得する。
+        /// 指定したキーコードが今フレームで押下されたかを取得する。
         /// </summary>
-        /// <param name="virtualKeyCode">Win32 仮想キーコード。</param>
+        /// <param name="keyCode">入力実装が解釈するキーコード。</param>
         /// <returns>今フレームで押下された場合は true。</returns>
-        [[nodiscard]] bool WasKeyPressed(int virtualKeyCode) const;
+        [[nodiscard]] bool WasKeyPressed(int keyCode) const;
 
         /// <summary>
-        /// 指定した仮想キーが今フレームで解放されたかを取得する。
+        /// 指定したキーコードが今フレームで解放されたかを取得する。
         /// </summary>
-        /// <param name="virtualKeyCode">Win32 仮想キーコード。</param>
+        /// <param name="keyCode">入力実装が解釈するキーコード。</param>
         /// <returns>今フレームで解放された場合は true。</returns>
-        [[nodiscard]] bool WasKeyReleased(int virtualKeyCode) const;
+        [[nodiscard]] bool WasKeyReleased(int keyCode) const;
 
         /// <summary>
         /// 指定したマウスボタンが現在押下中かを取得する。
@@ -90,7 +94,7 @@ namespace Xelqoria::Core
         /// 現在のカーソル位置をスクリーン座標で取得する。
         /// </summary>
         /// <returns>スクリーン座標のカーソル位置。</returns>
-        [[nodiscard]] POINT GetCursorScreenPoint() const;
+        [[nodiscard]] Platform::Point GetCursorScreenPoint() const;
 
         /// <summary>
         /// 現在フレームのマウスホイール差分を取得する。
@@ -99,31 +103,31 @@ namespace Xelqoria::Core
         [[nodiscard]] int GetMouseWheelDelta() const;
 
     private:
-        [[nodiscard]] static bool IsValidVirtualKeyCode(int virtualKeyCode);
+        [[nodiscard]] static bool IsValidKeyCode(int keyCode);
 
         std::array<bool, KeyStateCount> m_keyDownStates{};
         std::array<bool, KeyStateCount> m_previousKeyDownStates{};
         bool m_isLeftMouseButtonDown = false;
         bool m_wasLeftMouseButtonDown = false;
-        POINT m_cursorScreenPoint{};
+        Platform::Point m_cursorScreenPoint{};
         int m_mouseWheelDelta = 0;
     };
 
     /// <summary>
-    /// Win32 入力を毎フレーム収集して InputSnapshot として保持する。
+    /// Platform 入力を毎フレーム収集して InputSnapshot として保持する。
     /// </summary>
     class InputSystem
     {
     public:
         /// <summary>
-        /// 仮想キーの押下状態を読み取る関数型を表す。
+        /// キーの押下状態を読み取る関数型を表す。
         /// </summary>
         using KeyStateReader = std::function<bool(int)>;
 
         /// <summary>
         /// カーソル位置を読み取る関数型を表す。
         /// </summary>
-        using CursorPositionReader = std::function<POINT()>;
+        using CursorPositionReader = std::function<Platform::Point()>;
 
         /// <summary>
         /// マウスホイール差分を読み取る関数型を表す。
@@ -131,27 +135,39 @@ namespace Xelqoria::Core
         using MouseWheelDeltaReader = std::function<int()>;
 
         /// <summary>
-        /// Win32 API を入力元として InputSystem を生成する。
+        /// 入力元未設定の InputSystem を生成する。
         /// </summary>
         InputSystem();
 
         /// <summary>
+        /// Platform 入力を使って InputSystem を生成する。
+        /// </summary>
+        /// <param name="input">OS 固有の入力実装。</param>
+        explicit InputSystem(std::unique_ptr<Platform::IInput> input);
+
+        /// <summary>
         /// 任意の入力読み取り関数を使って InputSystem を生成する。
         /// </summary>
-        /// <param name="keyStateReader">仮想キー押下状態の読み取り関数。</param>
+        /// <param name="keyStateReader">キー押下状態の読み取り関数。</param>
         /// <param name="cursorPositionReader">カーソル位置の読み取り関数。</param>
         InputSystem(KeyStateReader keyStateReader, CursorPositionReader cursorPositionReader);
 
         /// <summary>
         /// 任意の入力読み取り関数を使って InputSystem を生成する。
         /// </summary>
-        /// <param name="keyStateReader">仮想キー押下状態の読み取り関数。</param>
+        /// <param name="keyStateReader">キー押下状態の読み取り関数。</param>
         /// <param name="cursorPositionReader">カーソル位置の読み取り関数。</param>
         /// <param name="mouseWheelDeltaReader">マウスホイール差分の読み取り関数。</param>
         InputSystem(
             KeyStateReader keyStateReader,
             CursorPositionReader cursorPositionReader,
             MouseWheelDeltaReader mouseWheelDeltaReader);
+
+        /// <summary>
+        /// 使用する Platform 入力実装を設定する。
+        /// </summary>
+        /// <param name="input">OS 固有の入力実装。</param>
+        void SetPlatformInput(std::unique_ptr<Platform::IInput> input);
 
         /// <summary>
         /// マウスホイール差分を読み取る関数を設定する。
@@ -174,6 +190,7 @@ namespace Xelqoria::Core
         KeyStateReader m_keyStateReader{};
         CursorPositionReader m_cursorPositionReader{};
         MouseWheelDeltaReader m_mouseWheelDeltaReader{};
+        std::unique_ptr<Platform::IInput> m_input{};
         InputSnapshot m_snapshot{};
     };
 }

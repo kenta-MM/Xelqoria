@@ -17,7 +17,15 @@
 
 namespace Xelqoria::Editor
 {
-    void InspectorPanelController::Bind(const EditorShell& shell)
+    namespace
+    {
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+    }
+
+    void InspectorPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
     {
         m_inspectorSummaryLabel = shell.GetInspectorSummaryLabel();
         m_transformSectionLabel = shell.GetTransformSectionLabel();
@@ -32,6 +40,7 @@ namespace Xelqoria::Editor
         m_scriptAssignButton = shell.GetScriptAssignButton();
         m_scriptClearButton = shell.GetScriptClearButton();
         m_spriteComponentActionButton = shell.GetSpriteComponentActionButton();
+        m_cursor = &cursor;
     }
 
     void InspectorPanelController::Refresh(
@@ -389,7 +398,7 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        const POINT cursorScreenPoint = inputSnapshot.GetCursorScreenPoint();
+        const POINT cursorScreenPoint = ToWin32Point(inputSnapshot.GetCursorScreenPoint());
 
         RECT buttonRect{};
         GetWindowRect(buttonHandle, &buttonRect);
@@ -433,8 +442,12 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        POINT cursorPoint{};
-        GetCursorPos(&cursorPoint);
+        if (nullptr == m_cursor)
+        {
+            return false;
+        }
+
+        const POINT cursorPoint = ToWin32Point(m_cursor->GetScreenPosition());
 
         RECT textureRect{};
         GetWindowRect(m_spriteRefEdit, &textureRect);
@@ -456,8 +469,12 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        POINT cursorPoint{};
-        GetCursorPos(&cursorPoint);
+        if (nullptr == m_cursor)
+        {
+            return false;
+        }
+
+        const POINT cursorPoint = ToWin32Point(m_cursor->GetScreenPosition());
 
         RECT scriptRect{};
         GetWindowRect(m_scriptAssetEdit, &scriptRect);

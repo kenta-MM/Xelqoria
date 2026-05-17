@@ -2,18 +2,15 @@
 
 #include <array>
 #include <chrono>
-#include <commdlg.h>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <functional>
-#include <shlobj.h>
 #include <span>
 #include <string>
 
+#include "ButtonClickWin32Adapter.h"
 #include "GraphicsAPI.h"
-#include <ShlObj_core.h>
-#include <shtypes.h>
 #include <Windows.h>
 #include <optional>
 #include <InputSystem.h>
@@ -23,6 +20,7 @@
 #include "SceneEditingOperations.h"
 #include "SceneViewInteractionTypes.h"
 #include "ScriptAssetService.h"
+#include "Win32PlatformFactory.h"
 #include <Entity.h>
 #include <cstdint>
 
@@ -37,68 +35,56 @@ namespace Xelqoria::Editor
         constexpr unsigned ProjectMenuSettingsCommandId = 5105;
         constexpr unsigned ProjectMenuResetLayoutCommandId = 5106;
 
-        [[nodiscard]] std::filesystem::path SelectProjectFile(HWND ownerWindow)
+        [[nodiscard]] std::filesystem::path SelectProjectFile(
+            Platform::IFileDialog& fileDialog,
+            HWND ownerWindow)
         {
-            std::array<wchar_t, MAX_PATH> filePath{};
-            OPENFILENAMEW openFileName{};
-            openFileName.lStructSize = sizeof(openFileName);
-            openFileName.hwndOwner = ownerWindow;
-            openFileName.lpstrFilter = L"Xelqoria Project (*.proj)\0*.proj\0All Files (*.*)\0*.*\0";
-            openFileName.lpstrFile = filePath.data();
-            openFileName.nMaxFile = static_cast<DWORD>(filePath.size());
-            openFileName.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-            if (GetOpenFileNameW(&openFileName))
-            {
-                return filePath.data();
-            }
-
-            return {};
+            const std::optional<std::filesystem::path> filePath =
+                fileDialog.OpenFile(
+                    Platform::FileDialogOptions{
+                        ownerWindow,
+                        {},
+                        {
+                            Platform::FileDialogFilter{ L"Xelqoria Project (*.proj)", L"*.proj" },
+                            Platform::FileDialogFilter{ L"All Files (*.*)", L"*.*" }
+                        },
+                        {}
+                    });
+            return filePath.value_or(std::filesystem::path{});
         }
 
         [[nodiscard]] std::filesystem::path SelectScriptAssetFile(
+            Platform::IFileDialog& fileDialog,
             HWND ownerWindow,
             const std::filesystem::path& initialDirectory)
         {
-            std::array<wchar_t, MAX_PATH> filePath{};
-            OPENFILENAMEW openFileName{};
-            openFileName.lStructSize = sizeof(openFileName);
-            openFileName.hwndOwner = ownerWindow;
-            openFileName.lpstrFilter = L"Xelqoria Script Asset (*.script)\0*.script\0All Files (*.*)\0*.*\0";
-            openFileName.lpstrFile = filePath.data();
-            openFileName.nMaxFile = static_cast<DWORD>(filePath.size());
-            openFileName.lpstrInitialDir = initialDirectory.empty() ? nullptr : initialDirectory.c_str();
-            openFileName.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-            if (GetOpenFileNameW(&openFileName))
-            {
-                return filePath.data();
-            }
-
-            return {};
+            const std::optional<std::filesystem::path> filePath =
+                fileDialog.OpenFile(
+                    Platform::FileDialogOptions{
+                        ownerWindow,
+                        {},
+                        {
+                            Platform::FileDialogFilter{ L"Xelqoria Script Asset (*.script)", L"*.script" },
+                            Platform::FileDialogFilter{ L"All Files (*.*)", L"*.*" }
+                        },
+                        initialDirectory
+                    });
+            return filePath.value_or(std::filesystem::path{});
         }
 
 
-        [[nodiscard]] std::filesystem::path SelectFolder(HWND ownerWindow, const wchar_t* title)
+        [[nodiscard]] std::filesystem::path SelectFolder(
+            Platform::IFileDialog& fileDialog,
+            HWND ownerWindow,
+            const wchar_t* title)
         {
-            BROWSEINFOW browseInfo{};
-            browseInfo.hwndOwner = ownerWindow;
-            browseInfo.lpszTitle = title;
-            browseInfo.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-
-            PIDLIST_ABSOLUTE itemList = SHBrowseForFolderW(&browseInfo);
-            if (nullptr == itemList)
-            {
-                return {};
-            }
-
-            std::filesystem::path folderPath{};
-            std::array<wchar_t, MAX_PATH> selectedPath{};
-            if (SHGetPathFromIDListW(itemList, selectedPath.data()))
-            {
-                folderPath = selectedPath.data();
-            }
-
-            CoTaskMemFree(itemList);
-            return folderPath;
+            const std::optional<std::filesystem::path> folderPath =
+                fileDialog.OpenFolder(
+                    Platform::FolderDialogOptions{
+                        ownerWindow,
+                        title
+                    });
+            return folderPath.value_or(std::filesystem::path{});
         }
 
         [[nodiscard]] std::wstring BuildNewProjectName(const std::filesystem::path& parentDirectory)
@@ -272,7 +258,12 @@ namespace Xelqoria::Editor
         constexpr auto clientHeight = 900u;
 
         const std::wstring title = L"Xelqoria Editor";
-        if (false == m_window.Create(m_hInstance, title.c_str(), clientWidth, clientHeight))
+        m_window.SetPlatformWindow(
+            Platform::Win32::CreateWin32Window(m_hInstance),
+            Platform::Win32::CreateWin32EventLoop());
+        m_inputSystem.SetPlatformInput(Platform::Win32::CreateWin32Input());
+
+        if (false == m_window.Create(title.c_str(), clientWidth, clientHeight))
         {
             return false;
         }
@@ -289,19 +280,19 @@ namespace Xelqoria::Editor
                 HandleProjectMenuCommand(commandId);
             });
         m_window.SetNotifyHandler(
-            [this](LPARAM notifyParameter)
+            [this](Platform::NativeMessageParameter notifyParameter)
             {
-                if (m_editorShell.HandleNotify(notifyParameter))
+                if (m_editorShell.HandleNotify(static_cast<LPARAM>(notifyParameter)))
                 {
                     return true;
                 }
 
-                return m_assetsPanelController.HandleNotify(notifyParameter);
+                return m_assetsPanelController.HandleNotify(static_cast<LPARAM>(notifyParameter));
             });
         m_window.SetDrawItemHandler(
-            [this](LPARAM drawItemParameter)
+            [this](Platform::NativeMessageParameter drawItemParameter)
             {
-                return m_logOutputPanelController.HandleDrawItem(drawItemParameter);
+                return m_logOutputPanelController.HandleDrawItem(static_cast<LPARAM>(drawItemParameter));
             });
         m_window.SetCloseRequestHandler(
             [this]()
@@ -314,12 +305,12 @@ namespace Xelqoria::Editor
                 HandleWindowResized(width, height);
             });
 
-        if (false == m_startupScreenController.Initialize(m_window.GetHwnd(), m_hInstance))
+        if (false == m_startupScreenController.Initialize(GetMainWindowHandle(), m_hInstance, m_fileDialog))
         {
             return false;
         }
 
-        m_startupScreenController.UpdateLayout(m_window.GetHwnd());
+        m_startupScreenController.UpdateLayout(GetMainWindowHandle());
         m_window.Show();
         return true;
     }
@@ -333,34 +324,33 @@ namespace Xelqoria::Editor
 
         constexpr RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D11;
 
-        if (false == m_editorShell.Initialize(m_window.GetHwnd(), m_hInstance))
+        if (false == m_editorShell.Initialize(GetMainWindowHandle(), m_hInstance, m_cursor))
         {
             return false;
         }
 
-        m_assetsPanelController.Bind(m_editorShell);
+        m_assetsPanelController.Bind(m_editorShell, m_cursor);
         m_hierarchyPanelController.Bind(m_editorShell);
-        m_inspectorPanelController.Bind(m_editorShell);
-        m_logOutputPanelController.Bind(m_editorShell);
+        m_inspectorPanelController.Bind(m_editorShell, m_cursor);
+        m_logOutputPanelController.Bind(m_editorShell, m_clipboard);
         m_projectPanelController.Bind(m_editorShell);
         m_sceneViewController.Bind(m_editorShell);
         m_buildAndPlayButton = m_editorShell.GetBuildAndPlayButton();
         m_pauseResumePlayButton = m_editorShell.GetPauseResumePlayButton();
         m_endPlayButton = m_editorShell.GetEndPlayButton();
 
-        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
+        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(GetMainWindowHandle());
+        const SceneViewSurface sceneViewSurface = m_editorShell.GetSceneViewSurface();
         if (true == sceneViewSizeChanged)
         {
-            m_sceneViewController.OnViewportChanged(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+            m_sceneViewController.OnViewportChanged(sceneViewSurface);
         }
 
         if (false == m_sceneViewRenderer.Initialize(
                 m_hInstance,
-                m_editorShell.GetSceneViewHost(),
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight(),
+                static_cast<HWND>(sceneViewSurface.nativeWindow),
+                sceneViewSurface.width,
+                sceneViewSurface.height,
                 api))
         {
             return false;
@@ -379,7 +369,7 @@ namespace Xelqoria::Editor
         AppendEditorLog(L"Editor ワークスペースを初期化しました。");
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         m_editorInitialized = true;
-        RedrawWindow(m_window.GetHwnd(), nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+        RedrawWindow(GetMainWindowHandle(), nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
         return true;
     }
 
@@ -396,7 +386,7 @@ namespace Xelqoria::Editor
 
         HMENU menuBar = CreateMenu();
         AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_projectMenu), L"プロジェクト");
-        SetMenu(m_window.GetHwnd(), menuBar);
+        SetMenu(GetMainWindowHandle(), menuBar);
     }
 
     void Application::HandleProjectMenuCommand(unsigned commandId)
@@ -447,19 +437,18 @@ namespace Xelqoria::Editor
 
         if (false == m_editorInitialized)
         {
-            m_startupScreenController.UpdateLayout(m_window.GetHwnd());
+            m_startupScreenController.UpdateLayout(GetMainWindowHandle());
             return;
         }
 
-        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
+        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(GetMainWindowHandle());
         if (sceneViewSizeChanged)
         {
-            m_sceneViewController.OnViewportChanged(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+            const SceneViewSurface sceneViewSurface = m_editorShell.GetSceneViewSurface();
+            m_sceneViewController.OnViewportChanged(sceneViewSurface);
             m_sceneViewRenderer.Resize(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+                sceneViewSurface.width,
+                sceneViewSurface.height);
         }
     }
 
@@ -525,7 +514,8 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path parentDirectory = SelectFolder(m_window.GetHwnd(), L"プロジェクトの保存先フォルダを選択");
+        const std::filesystem::path parentDirectory =
+            SelectFolder(m_fileDialog, GetMainWindowHandle(), L"プロジェクトの保存先フォルダを選択");
         if (parentDirectory.empty())
         {
             return;
@@ -564,7 +554,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path projectFilePath = SelectProjectFile(m_window.GetHwnd());
+        const std::filesystem::path projectFilePath = SelectProjectFile(m_fileDialog, GetMainWindowHandle());
         if (projectFilePath.empty())
         {
             return;
@@ -624,7 +614,8 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path parentDirectory = SelectFolder(m_window.GetHwnd(), L"別名保存先フォルダを選択");
+        const std::filesystem::path parentDirectory =
+            SelectFolder(m_fileDialog, GetMainWindowHandle(), L"別名保存先フォルダを選択");
         if (parentDirectory.empty())
         {
             return;
@@ -660,7 +651,7 @@ namespace Xelqoria::Editor
         }
 
         const int result = MessageBoxW(
-            m_window.GetHwnd(),
+            GetMainWindowHandle(),
             L"プロジェクトを保存しますか？",
             L"保存確認",
             MB_YESNOCANCEL | MB_ICONQUESTION);
@@ -855,30 +846,30 @@ namespace Xelqoria::Editor
 
     void Application::UpdateEditorPlayControls(const Core::InputSnapshot& inputSnapshot)
     {
-        const HierarchyButtonFrameInput frameInput{
+        const ButtonClickFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
             inputSnapshot.GetCursorScreenPoint()
         };
 
-        if (TryConsumeHierarchyButtonClick(m_buildAndPlayButton, frameInput, m_editorPlayButtonInputState))
+        if (TryConsumeButtonClick(BuildButtonClickTarget(m_buildAndPlayButton), frameInput, m_editorPlayButtonInputState))
         {
             (void)StartEditorPlay();
-            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+            m_editorPlayButtonInputState.pressedButtonId = 0;
         }
-        else if (TryConsumeHierarchyButtonClick(m_pauseResumePlayButton, frameInput, m_editorPlayButtonInputState))
+        else if (TryConsumeButtonClick(BuildButtonClickTarget(m_pauseResumePlayButton), frameInput, m_editorPlayButtonInputState))
         {
             ToggleEditorPlayPause();
-            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+            m_editorPlayButtonInputState.pressedButtonId = 0;
         }
-        else if (TryConsumeHierarchyButtonClick(m_endPlayButton, frameInput, m_editorPlayButtonInputState))
+        else if (TryConsumeButtonClick(BuildButtonClickTarget(m_endPlayButton), frameInput, m_editorPlayButtonInputState))
         {
             EndEditorPlay();
-            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+            m_editorPlayButtonInputState.pressedButtonId = 0;
         }
 
         if (false == frameInput.isLeftMouseButtonDown && true == m_editorPlayButtonInputState.wasLeftMouseButtonDown)
         {
-            m_editorPlayButtonInputState.pressedButtonHandle = nullptr;
+            m_editorPlayButtonInputState.pressedButtonId = 0;
         }
 
         m_editorPlayButtonInputState.wasLeftMouseButtonDown = frameInput.isLeftMouseButtonDown;
@@ -901,7 +892,7 @@ namespace Xelqoria::Editor
 
         if (false == m_editorInitialized)
         {
-            m_startupScreenController.UpdateLayout(m_window.GetHwnd());
+            m_startupScreenController.UpdateLayout(GetMainWindowHandle());
             m_startupScreenController.Update(inputSnapshot);
             if (m_startupScreenController.HasCreateRequest())
             {
@@ -921,17 +912,16 @@ namespace Xelqoria::Editor
             return;
         }
 
-        (void)m_editorShell.UpdateDocking(m_window.GetHwnd(), inputSnapshot);
+        (void)m_editorShell.UpdateDocking(GetMainWindowHandle(), inputSnapshot);
         m_logOutputPanelController.Update(inputSnapshot);
-        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(m_window.GetHwnd());
+        const bool sceneViewSizeChanged = m_editorShell.UpdateLayout(GetMainWindowHandle());
         if (true == sceneViewSizeChanged)
         {
-            m_sceneViewController.OnViewportChanged(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+            const SceneViewSurface sceneViewSurface = m_editorShell.GetSceneViewSurface();
+            m_sceneViewController.OnViewportChanged(sceneViewSurface);
             m_sceneViewRenderer.Resize(
-                m_editorShell.GetSceneViewWidth(),
-                m_editorShell.GetSceneViewHeight());
+                sceneViewSurface.width,
+                sceneViewSurface.height);
         }
 
         m_assetsPanelController.SyncSelection();
@@ -1028,7 +1018,7 @@ namespace Xelqoria::Editor
                 ? m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path()
                 : std::filesystem::path{};
             const std::filesystem::path scriptAssetPath =
-                SelectScriptAssetFile(m_window.GetHwnd(), projectRootDirectory);
+                SelectScriptAssetFile(m_fileDialog, GetMainWindowHandle(), projectRootDirectory);
             if (false == scriptAssetPath.empty())
             {
                 if (true == m_sceneDocument.AssignScriptAssetToSpriteAssetFile(spriteAssetPath, scriptAssetPath))
@@ -1120,7 +1110,7 @@ namespace Xelqoria::Editor
                     ? m_sceneDocument.GetProjectInfo()->projectFilePath.parent_path()
                     : std::filesystem::path{};
                 const std::filesystem::path scriptAssetPath =
-                    SelectScriptAssetFile(m_window.GetHwnd(), projectRootDirectory);
+                    SelectScriptAssetFile(m_fileDialog, GetMainWindowHandle(), projectRootDirectory);
                 if (false == scriptAssetPath.empty())
                 {
                     const std::optional<Core::AssetId> scriptTargetSpriteAssetId =
@@ -1324,6 +1314,11 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.GetSelectedEntityId(),
             m_sceneViewController.GetEditMode(),
             m_sceneViewController.GetDragPreviewState());
+    }
+
+    HWND Application::GetMainWindowHandle() const
+    {
+        return reinterpret_cast<HWND>(m_window.GetHwnd());
     }
 
     void Application::RefreshEditorPanels(bool canAddSpriteComponent, bool resetTrackedEntity)

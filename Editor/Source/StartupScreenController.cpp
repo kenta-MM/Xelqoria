@@ -4,8 +4,6 @@
 #include <array>
 #include <cwchar>
 #include <string>
-#include <ShlObj_core.h>
-#include <shtypes.h>
 #include <Windows.h>
 #include <filesystem>
 #include <optional>
@@ -22,6 +20,11 @@ namespace Xelqoria::Editor
         constexpr int CreateConfirmButtonId = 4304;
         constexpr int CreateCancelButtonId = 4305;
         constexpr const wchar_t* CreateProjectWindowClassName = L"XelqoriaCreateProjectWindow";
+
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
 
         UINT GetWindowDpi(HWND window)
         {
@@ -78,15 +81,16 @@ namespace Xelqoria::Editor
 
             windowClass.lpfnWndProc = CreateProjectWindowProc;
             windowClass.hInstance = hInstance;
-            windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+            windowClass.hCursor = nullptr;
             windowClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
             windowClass.lpszClassName = CreateProjectWindowClassName;
             return 0 != RegisterClassW(&windowClass);
         }
     }
 
-    bool StartupScreenController::Initialize(HWND parentWindow, HINSTANCE hInstance)
+    bool StartupScreenController::Initialize(HWND parentWindow, HINSTANCE hInstance, Platform::IFileDialog& fileDialog)
     {
+        m_fileDialog = &fileDialog;
         (void)RefreshDpiResources(parentWindow);
         m_createButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクト作成", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_openButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクトを開く", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
@@ -229,7 +233,7 @@ namespace Xelqoria::Editor
 
         m_wasLeftMouseDown = false;
 
-        const POINT cursorPosition = inputSnapshot.GetCursorScreenPoint();
+        const POINT cursorPosition = ToWin32Point(inputSnapshot.GetCursorScreenPoint());
         const HWND clickedWindow = WindowFromPoint(cursorPosition);
         if (clickedWindow == m_createButton)
         {
@@ -239,21 +243,18 @@ namespace Xelqoria::Editor
 
         if (clickedWindow == m_browseFolderButton)
         {
-            BROWSEINFOW browseInfo{};
-            browseInfo.hwndOwner = GetParent(m_browseFolderButton);
-            browseInfo.lpszTitle = L"プロジェクトの保存先フォルダを選択";
-            browseInfo.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-
-            PIDLIST_ABSOLUTE itemList = SHBrowseForFolderW(&browseInfo);
-            if (nullptr != itemList)
+            if (nullptr != m_fileDialog)
             {
-                std::array<wchar_t, MAX_PATH> folderPath{};
-                if (SHGetPathFromIDListW(itemList, folderPath.data()))
+                const std::optional<std::filesystem::path> folderPath =
+                    m_fileDialog->OpenFolder(
+                        Platform::FolderDialogOptions{
+                            GetParent(m_browseFolderButton),
+                            L"プロジェクトの保存先フォルダを選択"
+                        });
+                if (folderPath.has_value())
                 {
-                    SetWindowTextW(m_projectFolderEdit, folderPath.data());
+                    SetWindowTextW(m_projectFolderEdit, folderPath->c_str());
                 }
-
-                CoTaskMemFree(itemList);
             }
 
             return;
@@ -286,17 +287,25 @@ namespace Xelqoria::Editor
                 return;
             }
 
-            std::array<wchar_t, MAX_PATH> filePath{};
-            OPENFILENAMEW openFileName{};
-            openFileName.lStructSize = sizeof(openFileName);
-            openFileName.hwndOwner = GetParent(m_openButton);
-            openFileName.lpstrFilter = L"Xelqoria Project (*.proj)\0*.proj\0All Files (*.*)\0*.*\0";
-            openFileName.lpstrFile = filePath.data();
-            openFileName.nMaxFile = static_cast<DWORD>(filePath.size());
-            openFileName.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-            if (GetOpenFileNameW(&openFileName))
+            if (nullptr == m_fileDialog)
             {
-                m_openProjectFilePath = filePath.data();
+                return;
+            }
+
+            const std::optional<std::filesystem::path> filePath =
+                m_fileDialog->OpenFile(
+                    Platform::FileDialogOptions{
+                        GetParent(m_openButton),
+                        {},
+                        {
+                            Platform::FileDialogFilter{ L"Xelqoria Project (*.proj)", L"*.proj" },
+                            Platform::FileDialogFilter{ L"All Files (*.*)", L"*.*" }
+                        },
+                        {}
+                    });
+            if (filePath.has_value())
+            {
+                m_openProjectFilePath = *filePath;
             }
         }
     }

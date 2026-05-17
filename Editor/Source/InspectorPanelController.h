@@ -12,6 +12,7 @@
 #include "Assets/SpriteAsset.h"
 #include "EditorStringUtils.h"
 #include "EditorShell.h"
+#include "ICursor.h"
 #include "InputSystem.h"
 #include "SceneEditingOperations.h"
 #include "Scene.h"
@@ -120,7 +121,8 @@ namespace Xelqoria::Editor
         /// EditorShell の HWND 群へ接続する。
         /// </summary>
         /// <param name="shell">接続先の EditorShell。</param>
-        void Bind(const EditorShell& shell);
+        /// <param name="cursor">カーソル位置を取得する Platform 実装。</param>
+        void Bind(const EditorShell& shell, Platform::ICursor& cursor);
 
         /// <summary>
         /// 現在選択中 Entity を Inspector 表示へ反映する。
@@ -356,6 +358,7 @@ namespace Xelqoria::Editor
         HWND m_scriptAssignButton = nullptr;
         HWND m_scriptClearButton = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
+        Platform::ICursor* m_cursor = nullptr;
         std::optional<Game::EntityId> m_lastInspectorEntityId{};
         Core::AssetId m_lastSpriteRefAssetId{};
         std::wstring m_lastSpriteRefDisplayText{};
