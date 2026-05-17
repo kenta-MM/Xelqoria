@@ -5,9 +5,15 @@
 #include <optional>
 #include <string_view>
 #include <string>
+#include <AssetId.h>
 
 namespace
 {
+	/// <summary>
+	/// 行解析前に前後の空白文字を除去する。
+	/// </summary>
+	/// <param name="value">整形対象の文字列ビュー。</param>
+	/// <returns>前後の空白を除いた文字列ビュー。</returns>
 	std::string_view Trim(std::string_view value)
 	{
 		const auto first = value.find_first_not_of(" \t\r");
@@ -19,6 +25,14 @@ namespace
 		return value.substr(first, last - first + 1);
 	}
 
+	/// <summary>
+	/// SpriteAsset 読み込み時の共通エラー結果を構築する。
+	/// </summary>
+	/// <param name="code">エラー種別。</param>
+	/// <param name="lineNumber">エラーが発生した行番号。</param>
+	/// <param name="fieldName">問題のあったフィールド名。</param>
+	/// <param name="message">ユーザー向けエラーメッセージ。</param>
+	/// <returns>エラー情報を含む SpriteAssetLoadResult。</returns>
 	Xelqoria::Game::Assets::SpriteAssetLoadResult MakeError(
 		Xelqoria::Game::Assets::SpriteAssetLoadErrorCode code,
 		std::size_t lineNumber,
@@ -42,7 +56,9 @@ namespace Xelqoria::Game::Assets
 	SpriteAssetLoadResult SpriteAssetLoader::LoadFromText(std::string_view source)
 	{
 		SpriteAsset asset{};
+		bool hasEditorSpriteAssetMagic = false;
 		bool hasTextureAssetId = false;
+		bool hasScriptAssetId = false;
 		std::size_t lineNumber = 0;
 		std::size_t cursor = 0;
 
@@ -77,7 +93,18 @@ namespace Xelqoria::Game::Assets
 						"SpriteAsset のキーが空です。");
 				}
 
-				if (key == "textureAssetId") {
+				if (key == "magic") {
+					if (value != "XelqoriaSpriteAsset") {
+						return MakeError(
+							SpriteAssetLoadErrorCode::InvalidRecord,
+							lineNumber,
+							key,
+							"SpriteAsset の magic が不正です。");
+					}
+
+					hasEditorSpriteAssetMagic = true;
+				}
+				else if (key == "textureAssetId") {
 					if (hasTextureAssetId) {
 						return MakeError(
 							SpriteAssetLoadErrorCode::DuplicateField,
@@ -86,7 +113,7 @@ namespace Xelqoria::Game::Assets
 							"textureAssetId が重複しています。");
 					}
 
-					if (value.empty()) {
+					if (value.empty() && false == hasEditorSpriteAssetMagic) {
 						return MakeError(
 							SpriteAssetLoadErrorCode::EmptyFieldValue,
 							lineNumber,
@@ -96,6 +123,33 @@ namespace Xelqoria::Game::Assets
 
 					asset.textureAssetId = Core::AssetId(value);
 					hasTextureAssetId = true;
+				}
+				else if (key == "scriptAssetId") {
+					if (hasScriptAssetId) {
+						return MakeError(
+							SpriteAssetLoadErrorCode::DuplicateField,
+							lineNumber,
+							key,
+							"scriptAssetId が重複しています。");
+					}
+
+					asset.scriptAssetId = Core::AssetId(value);
+					hasScriptAssetId = true;
+				}
+				else if (hasEditorSpriteAssetMagic
+					&& (key == "version"
+						|| key == "name"
+						|| key == "transform.position"
+						|| key == "transform.rotation"
+						|| key == "transform.scale"
+						|| key == "hasSpriteComponent"
+						|| key == "spriteAssetRef"
+						|| key == "texture.size"
+						|| key == "render.visible"
+						|| key == "render.sortOrder"
+						|| key == "render.opacity"
+						|| key == "render.color")) {
+					// Editor 生成の .sprite は付加メタデータを含むが、実行時 SpriteAsset は textureAssetId のみを使用する。
 				}
 				else {
 					return MakeError(

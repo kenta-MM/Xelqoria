@@ -1,0 +1,9 @@
+magic=xelqoria.scene
+version=1
+entity.0.id=3
+entity.0.name="Sprite 3"
+entity.0.transform.position=-31.000000,92.393997,0.000000
+entity.0.transform.rotation=0.000000,0.000000,0.000000
+entity.0.transform.scale=0.850000,0.850000,1.000000
+entity.0.hasSpriteComponent=true
+entity.0.spriteRef=sprites/Sprite 3.sprite

@@ -1,7 +1,9 @@
 #include "D3D12VertexBuffer.h"
 
-#include <cstddef>
 #include <cstring>
+#include <d3d12.h>
+#include <Windows.h>
+#include <cstdint>
 
 namespace Xelqoria::Backends::D3D12
 {

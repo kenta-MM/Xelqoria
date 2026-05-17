@@ -11,13 +11,28 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Assets\SpriteAssetRegistry.cpp">
+      <Filter>Source\Assets</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Assets\SpriteAssetLoader.cpp">
       <Filter>Source\Assets</Filter>
     </ClCompile>
     <ClCompile Include="Source\Entity.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Physics2D.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Scene.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneTextReader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneTextWriter.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneSerializer.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Transform.cpp">
@@ -25,6 +40,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Assets\ISpriteAssetResolver.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\SpriteAssetRegistry.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Assets\SpriteAsset.h">
       <Filter>Source\Assets</Filter>
     </ClInclude>
@@ -34,7 +55,22 @@
     <ClInclude Include="Source\Entity.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Physics2D.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneSaveFormat.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneSerializer.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneTextReader.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SceneTextWriter.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\SpriteComponent.h">

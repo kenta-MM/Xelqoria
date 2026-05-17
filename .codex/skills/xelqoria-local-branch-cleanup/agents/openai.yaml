@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xelqoria Local Branch Cleanup"
+  short_description: "リモートに存在しないローカルブランチの整理"
+  default_prompt: "$xelqoria-local-branch-cleanup を使って、Xelqoria のリモートに存在しないローカルブランチを安全に整理します。"
+
+policy:
+  allow_implicit_invocation: true

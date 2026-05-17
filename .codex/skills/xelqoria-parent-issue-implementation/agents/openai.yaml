@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xelqoria Parent Issue Implementation"
+  short_description: "親 Issue 配下の子 Issue を順番に実装"
+  default_prompt: "$xelqoria-parent-issue-implementation を使って、Xelqoria の親 Issue にぶら下がる子 Issue を順番に実装し、各子 Issue ごとに親 Issue 向け PR を作成します。"
+
+policy:
+  allow_implicit_invocation: true

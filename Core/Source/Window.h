@@ -1,5 +1,7 @@
 #pragma once
 #include <Windows.h>
+#include <cstdint>
+#include <functional>
 #include <string>
 
 namespace Xelqoria::Core
@@ -46,11 +48,47 @@ namespace Xelqoria::Core
 		/// ウィンドウハンドルを取得する
 		[[nodiscard]] HWND GetHwnd() const;
 
+		/// <summary>
+		/// WM_COMMAND を受け取るハンドラを設定する。
+		/// </summary>
+		/// <param name="handler">コマンド ID を受け取るハンドラ。</param>
+		void SetCommandHandler(std::function<void(unsigned)> handler);
+
+		/// <summary>
+		/// WM_NOTIFY を受け取るハンドラを設定する。
+		/// </summary>
+		/// <param name="handler">通知 LPARAM を処理し、消費した場合は true を返すハンドラ。</param>
+		void SetNotifyHandler(std::function<bool(LPARAM)> handler);
+
+		/// <summary>
+		/// WM_DRAWITEM を受け取るハンドラを設定する。
+		/// </summary>
+		/// <param name="handler">DRAWITEMSTRUCT LPARAM を処理し、消費した場合は true を返すハンドラ。</param>
+		void SetDrawItemHandler(std::function<bool(LPARAM)> handler);
+
+		/// <summary>
+		/// ウィンドウを閉じる前に呼ばれるハンドラを設定する。
+		/// </summary>
+		/// <param name="handler">閉じてよい場合は true を返すハンドラ。</param>
+		void SetCloseRequestHandler(std::function<bool()> handler);
+
+		/// <summary>
+		/// クライアント領域サイズ変更時に呼ばれるハンドラを設定する。
+		/// </summary>
+		/// <param name="handler">新しいクライアント領域の幅と高さを受け取るハンドラ。</param>
+		void SetResizeHandler(std::function<void(uint32_t, uint32_t)> handler);
+
 		/// クライアント領域の幅を取得する
 		[[nodiscard]] uint32_t GetWidth() const;
 
 		/// クライアント領域の高さを取得する
 		[[nodiscard]] uint32_t GetHeight() const;
+
+		/// <summary>
+		/// 前回取得以降に蓄積されたマウスホイール差分を取得して消費する。
+		/// </summary>
+		/// <returns>蓄積されたマウスホイール差分。</returns>
+		[[nodiscard]] int ConsumeMouseWheelDelta();
 
 	private:
 		/// <summary>
@@ -66,6 +104,12 @@ namespace Xelqoria::Core
 
 		HINSTANCE m_hInstance = nullptr;
 		HWND m_hWnd = nullptr;
+		std::function<void(unsigned)> m_commandHandler{};
+		std::function<bool(LPARAM)> m_notifyHandler{};
+		std::function<bool(LPARAM)> m_drawItemHandler{};
+		std::function<bool()> m_closeRequestHandler{};
+		std::function<void(uint32_t, uint32_t)> m_resizeHandler{};
+		int m_pendingMouseWheelDelta = 0;
 
 		std::wstring m_className = L"XelqoriaWindowClass";
 		std::wstring m_title = L"Xelqoria";

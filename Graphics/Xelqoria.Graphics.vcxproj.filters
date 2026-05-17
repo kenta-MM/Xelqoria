@@ -12,15 +12,36 @@
     <ClCompile Include="Source\SpriteRenderer.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\TextureAssetRegistry.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Texture2D.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\ITextureAssetResolver.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\QuadTransformFactory.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Sprite.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\SpriteCulling.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SpriteDrawInput.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SpriteRenderMath.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\SpriteRenderer.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\TextureAssetRegistry.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\Texture2D.h">

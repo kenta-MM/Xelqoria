@@ -6,12 +6,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\InputSystem.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Window.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\AssetId.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\InputSystem.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\Window.h">

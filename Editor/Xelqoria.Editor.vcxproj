@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\AssetsPanelController.cpp" />
+    <ClCompile Include="Source\EditorCommandController.cpp" />
+    <ClCompile Include="Source\EditorAssetPathUtils.cpp" />
+    <ClCompile Include="Source\EditorProject.cpp" />
+    <ClCompile Include="Source\EditorSceneDocument.cpp" />
+    <ClCompile Include="Source\Entry.cpp" />
+    <ClCompile Include="Source\HierarchyPanelController.cpp" />
+    <ClCompile Include="Source\InspectorPanelController.cpp" />
+    <ClCompile Include="Source\LogOutputPanelController.cpp" />
+    <ClCompile Include="Source\ProjectPanelController.cpp" />
+    <ClCompile Include="Source\RecentProjectsStore.cpp" />
+    <ClCompile Include="Source\RenderBackendBootstrap.cpp" />
+    <ClCompile Include="Source\SceneDropPlacementService.cpp" />
+    <ClCompile Include="Source\SceneCommandHistory.cpp" />
+    <ClCompile Include="Source\SceneEditingOperations.cpp" />
+    <ClCompile Include="Source\SceneViewController.cpp" />
+    <ClCompile Include="Source\SceneViewInputTracker.cpp" />
+    <ClCompile Include="Source\SceneViewRenderer.cpp" />
+    <ClCompile Include="Source\SceneViewStatusPresenter.cpp" />
+    <ClCompile Include="Source\ScriptAssetService.cpp" />
+    <ClCompile Include="Source\ScriptRuntimeSession.cpp" />
+    <ClCompile Include="Source\StartupScreenController.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Application.h" />
+    <ClInclude Include="Source\AssetsPanelController.h" />
+    <ClInclude Include="Source\EditorCommandController.h" />
+    <ClInclude Include="Source\EditorAssetPathUtils.h" />
+    <ClInclude Include="Source\EditorProject.h" />
+    <ClInclude Include="Source\EditorPathSecurity.h" />
+    <ClInclude Include="Source\EditorSceneDocument.h" />
+    <ClInclude Include="Source\EditorStringUtils.h" />
+    <ClInclude Include="Source\EditorCamera2D.h" />
+    <ClInclude Include="Source\HierarchyPanelController.h" />
+    <ClInclude Include="Source\InspectorPanelController.h" />
+    <ClInclude Include="Source\LogOutputPanelController.h" />
+    <ClInclude Include="Source\ProjectPanelController.h" />
+    <ClInclude Include="Source\RecentProjectsStore.h" />
+    <ClInclude Include="Source\RenderBackendBootstrap.h" />
+    <ClInclude Include="Source\StartupScreenController.h" />
+    <ClInclude Include="Source\SceneDropPlacementService.h" />
+    <ClInclude Include="Source\SceneCommandHistory.h" />
+    <ClInclude Include="Source\SceneEditingOperations.h" />
+    <ClInclude Include="Source\SceneViewController.h" />
+    <ClInclude Include="Source\SceneViewInputTracker.h" />
+    <ClInclude Include="Source\SceneViewInteractionTypes.h" />
+    <ClInclude Include="Source\SceneViewRenderer.h" />
+    <ClInclude Include="Source\SceneViewStatusPresenter.h" />
+    <ClInclude Include="Source\ScriptAssetService.h" />
+    <ClInclude Include="Source\ScriptRuntimeSession.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">
+      <Project>{79E8E826-7407-4766-B731-675CB84F6552}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Editor.UI\Xelqoria.Editor.UI.vcxproj">
+      <Project>{66FA8A19-4FCE-418A-B450-638F3A42681E}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Xelqoria.Math\Xelqoria.Math.vcxproj">
+      <Project>{9143e43a-0447-43e1-9fe4-9c3edec98212}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\RHI\Xelqoria.RHI.vcxproj">
+      <Project>{158B81FC-B108-4237-8A37-EB8C6EF29392}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Graphics\Xelqoria.Graphics.vcxproj">
+      <Project>{7693792A-4AD4-445A-98F7-B90D6989A837}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Game\Xelqoria.Game.vcxproj">
+      <Project>{B43E8E97-59EF-4CAA-8A27-BD9192D8833A}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Backends.D3D11\Xelqoria.Backends.D3D11.vcxproj">
+      <Project>{D89979A3-9EDE-4B5B-A2B1-2DD1DB261114}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Backends.D3D12\Xelqoria.Backends.D3D12.vcxproj">
+      <Project>{14484BBF-F4FB-48AA-9CE4-BD7CBE1B24A4}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{2A2FC413-07F6-41D7-AB02-079CE112C042}</ProjectGuid>
+    <RootNamespace>XelqoriaEditor</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <RepoRootDir>$(MSBuildProjectDirectory)\..\</RepoRootDir>
+    <OutDir>$(RepoRootDir)artifacts\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(RepoRootDir)build\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;comdlg32.lib;comctl32.lib;shell32.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;comdlg32.lib;comctl32.lib;shell32.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;comdlg32.lib;comctl32.lib;shell32.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(RepoRootDir)Editor.UI\Source;$(RepoRootDir)Core\Source;$(RepoRootDir)Game\Source;$(RepoRootDir)Graphics\Source;$(RepoRootDir)RHI\Source;$(RepoRootDir)Xelqoria.Math\Source;$(RepoRootDir)Backends.D3D11\Source;$(RepoRootDir)Backends.D3D12\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;dxguid.lib;d3d12.lib;comdlg32.lib;comctl32.lib;shell32.lib;ole32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <PropertyGroup>
+    <LayerDependencyCheckerExe>$(RepoRootDir)tools\LayerDependencyChecker\bin\$(Configuration)\net8.0\LayerDependencyChecker.exe</LayerDependencyCheckerExe>
+  </PropertyGroup>
+  <Target Name="ValidateLayerDependencies" BeforeTargets="ClCompile">
+    <Error Condition="!Exists('$(LayerDependencyCheckerExe)')" Text="LayerDependencyChecker.exe が見つかりません。tools\LayerDependencyChecker をビルドしてください。期待パス: $(LayerDependencyCheckerExe)" />
+    <Exec Command="&quot;$(LayerDependencyCheckerExe)&quot; &quot;$(RepoRootDir)&quot;" />
+  </Target>
+  <ImportGroup Label="ExtensionTargets" />
+</Project>

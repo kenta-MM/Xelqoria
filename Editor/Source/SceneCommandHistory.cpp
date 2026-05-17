@@ -1,0 +1,94 @@
+#include "SceneCommandHistory.h"
+
+#include <utility>
+#include <optional>
+
+namespace Xelqoria::Editor
+{
+    void SceneCommandHistory::Reset(SceneCommandHistoryEntry entry)
+    {
+        m_entries.clear();
+        m_entries.push_back(std::move(entry));
+        m_currentIndex = 0;
+    }
+
+    void SceneCommandHistory::Push(SceneCommandHistoryEntry entry)
+    {
+        if (m_entries.empty())
+        {
+            Reset(std::move(entry));
+            return;
+        }
+
+        if (m_currentIndex + 1 < m_entries.size())
+        {
+            m_entries.erase(m_entries.begin() + static_cast<std::ptrdiff_t>(m_currentIndex + 1), m_entries.end());
+        }
+
+        const SceneCommandHistoryEntry& currentEntry = m_entries[m_currentIndex];
+        if (currentEntry.serializedScene == entry.serializedScene
+            && currentEntry.selectedEntityId == entry.selectedEntityId)
+        {
+            return;
+        }
+
+        m_entries.push_back(std::move(entry));
+        m_currentIndex = m_entries.size() - 1;
+
+        if (m_entries.size() > MaxHistoryEntryCount)
+        {
+            const std::size_t removeCount = m_entries.size() - MaxHistoryEntryCount;
+            m_entries.erase(
+                m_entries.begin(),
+                m_entries.begin() + static_cast<std::ptrdiff_t>(removeCount));
+            m_currentIndex -= removeCount;
+        }
+    }
+
+    bool SceneCommandHistory::CanUndo() const
+    {
+        return !m_entries.empty() && m_currentIndex > 0;
+    }
+
+    bool SceneCommandHistory::CanRedo() const
+    {
+        return !m_entries.empty() && (m_currentIndex + 1) < m_entries.size();
+    }
+
+    std::optional<SceneCommandHistoryEntry> SceneCommandHistory::Undo()
+    {
+        if (false == CanUndo())
+        {
+            return std::nullopt;
+        }
+
+        --m_currentIndex;
+        return m_entries[m_currentIndex];
+    }
+
+    std::optional<SceneCommandHistoryEntry> SceneCommandHistory::Redo()
+    {
+        if (false == CanRedo())
+        {
+            return std::nullopt;
+        }
+
+        ++m_currentIndex;
+        return m_entries[m_currentIndex];
+    }
+
+    std::optional<SceneCommandHistoryEntry> SceneCommandHistory::GetCurrent() const
+    {
+        if (m_entries.empty())
+        {
+            return std::nullopt;
+        }
+
+        return m_entries[m_currentIndex];
+    }
+
+    std::size_t SceneCommandHistory::GetCount() const
+    {
+        return m_entries.size();
+    }
+}

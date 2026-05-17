@@ -1,0 +1,7 @@
+interface:
+  display_name: "Xelqoria クラス図更新"
+  short_description: "PR差分に基づいて対象のクラス図を更新"
+  default_prompt: "$xelqoria-class-diagram-update を使って、このPR差分を確認し、影響のあるプロジェクトのクラス図1つだけを最小限更新してください。コードに現れている関係だけを反映し、推測で関係を追加しません。不明な場合は更新しません。"
+
+policy:
+  allow_implicit_invocation: true

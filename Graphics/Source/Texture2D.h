@@ -3,11 +3,13 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
+
+#include "ITexture.h"
 
 namespace Xelqoria::RHI
 {
     class IGraphicsContext;
-    class ITexture;
 }
 
 namespace Xelqoria::Graphics
@@ -52,7 +54,21 @@ namespace Xelqoria::Graphics
         /// 内部で参照する RHI テクスチャを設定する。
         /// </summary>
         /// <param name="texture">設定する RHI テクスチャ。</param>
-        void SetRHITexture(std::shared_ptr<RHI::ITexture> texture);
+        void SetRHITexture(std::shared_ptr<RHI::ITexture> texture)
+        {
+            m_texture = std::move(texture);
+
+            if (m_texture)
+            {
+                m_width = m_texture->GetWidth();
+                m_height = m_texture->GetHeight();
+            }
+            else
+            {
+                m_width = 0;
+                m_height = 0;
+            }
+        }
 
         /// <summary>
         /// 内部で参照している RHI テクスチャを取得する。

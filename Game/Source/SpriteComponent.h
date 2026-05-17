@@ -1,11 +1,22 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include "AssetId.h"
 
 namespace Xelqoria::Game
 {
+	/// <summary>
+	/// Sprite アセット参照の解決状態を表す。
+	/// </summary>
+	enum class SpriteAssetReferenceState
+	{
+		Unknown = 0,
+		Resolved,
+		Missing
+	};
+
 	/// <summary>
 	/// SpriteComponent が保持する描画設定を表す。
 	/// </summary>
@@ -25,6 +36,11 @@ namespace Xelqoria::Game
 		/// スプライト全体に適用する不透明度を表す。
 		/// </summary>
 		float opacity = 1.0f;
+
+		/// <summary>
+		/// スプライト全体に乗算する色を RGBA 順で表す。
+		/// </summary>
+		std::array<float, 4> color{ 1.0f, 1.0f, 1.0f, 1.0f };
 	};
 
 	/// <summary>
@@ -41,5 +57,16 @@ namespace Xelqoria::Game
 		/// 描画時に使用する設定値を表す。
 		/// </summary>
 		SpriteRenderSettings renderSettings{};
+
+		/// <summary>
+		/// Sprite アセット参照の解決状態を表す。
+		/// </summary>
+		SpriteAssetReferenceState spriteAssetState = SpriteAssetReferenceState::Unknown;
+
+		/// <summary>
+		/// 欠損している Sprite アセット識別子を表す。
+		/// 正常時は空を保持する。
+		/// </summary>
+		Core::AssetId missingSpriteAssetRef{};
 	};
 }
