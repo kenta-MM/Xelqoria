@@ -19,6 +19,7 @@
 - 実装フローに迷った場合 → workflows.md を参照する
 - アーキテクチャに迷った場合 → architecture.md を参照する
 - コーディングルールに迷った場合 → coding-rules.md を参照する
+- ブランチ運用に迷った場合 → docs/agents/branch-rules.md を参照する
 
 ## ExecPlans
 
