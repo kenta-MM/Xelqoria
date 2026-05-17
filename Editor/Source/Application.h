@@ -289,6 +289,7 @@ namespace Xelqoria::Editor
         bool m_editorInitialized = false;
         bool m_projectDirty = false;
         HMENU m_projectMenu = nullptr;
+        HMENU m_viewMenu = nullptr;
         Platform::Win32::Win32FileDialog m_fileDialog{};
         Platform::Win32::Win32Clipboard m_clipboard{};
         Platform::Win32::Win32Cursor m_cursor{};
