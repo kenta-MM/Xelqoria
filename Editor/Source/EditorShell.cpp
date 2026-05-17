@@ -1081,6 +1081,7 @@ namespace Xelqoria::Editor
         logOutputNode.kind = DockNodeKind::Leaf;
         logOutputNode.panels = { EditorPanelId::LogOutput };
         logOutputNode.tabControl = CreateAdditionalDockTabControl(m_parentWindow);
+        m_logOutputDockTab = logOutputNode.tabControl;
         const DockNodeId logOutputNodeId = AddDockNode(std::move(logOutputNode));
 
         DockNode inspectorNode{};
@@ -1232,6 +1233,85 @@ namespace Xelqoria::Editor
         const DockNodeId dockNodeId = static_cast<DockNodeId>(m_dockNodes.size());
         m_dockNodes.push_back(std::move(node));
         return dockNodeId;
+    }
+
+    EditorShell::DockNodeId EditorShell::EnsureDefaultDockLeaf(EditorPanelId panelId)
+    {
+        HWND targetTabControl = GetDefaultDockTabControl(panelId);
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Leaf == dockNode.kind && dockNode.tabControl == targetTabControl)
+            {
+                return dockNodeId;
+            }
+        }
+
+        if (EditorPanelId::LogOutput == panelId || nullptr == targetTabControl)
+        {
+            targetTabControl = CreateAdditionalDockTabControl(m_parentWindow);
+            if (EditorPanelId::LogOutput == panelId)
+            {
+                m_logOutputDockTab = targetTabControl;
+            }
+        }
+
+        DockNode newLeaf{};
+        newLeaf.kind = DockNodeKind::Leaf;
+        newLeaf.tabControl = targetTabControl;
+        const DockNodeId newLeafNodeId = AddDockNode(std::move(newLeaf));
+        if (m_rootDockNodeId < 0 || static_cast<std::size_t>(m_rootDockNodeId) >= m_dockNodes.size())
+        {
+            m_rootDockNodeId = newLeafNodeId;
+            return newLeafNodeId;
+        }
+
+        const DockNode oldRootNode = m_dockNodes[static_cast<std::size_t>(m_rootDockNodeId)];
+        const DockNodeId oldRootNodeId = AddDockNode(oldRootNode);
+        DockNode splitNode{};
+        splitNode.kind = DockNodeKind::Split;
+        splitNode.splitOrientation =
+            EditorPanelId::LogOutput == panelId || EditorPanelId::SceneView == panelId
+                ? DockSplitOrientation::Vertical
+                : DockSplitOrientation::Horizontal;
+        splitNode.splitRatio = 0.5f;
+
+        if (EditorPanelId::Hierarchy == panelId || EditorPanelId::Assets == panelId || EditorPanelId::SceneView == panelId)
+        {
+            splitNode.firstChild = newLeafNodeId;
+            splitNode.secondChild = oldRootNodeId;
+            splitNode.splitRatio = EditorPanelId::SceneView == panelId ? 0.70f : 0.18f;
+        }
+        else
+        {
+            splitNode.firstChild = oldRootNodeId;
+            splitNode.secondChild = newLeafNodeId;
+            splitNode.splitRatio = EditorPanelId::LogOutput == panelId ? 0.75f : 0.84f;
+        }
+
+        m_dockNodes[static_cast<std::size_t>(m_rootDockNodeId)] = splitNode;
+        return newLeafNodeId;
+    }
+
+    HWND EditorShell::GetDefaultDockTabControl(EditorPanelId panelId)
+    {
+        switch (panelId)
+        {
+        case EditorPanelId::Hierarchy:
+            return m_leftTopDockTab;
+        case EditorPanelId::Assets:
+            return m_leftBottomDockTab;
+        case EditorPanelId::SceneView:
+            return m_centerDockTab;
+        case EditorPanelId::Inspector:
+            return m_rightDockTab;
+        case EditorPanelId::LogOutput:
+            return m_logOutputDockTab;
+        default:
+            return m_centerDockTab;
+        }
     }
 
     void EditorShell::LayoutHierarchyPanelInRect(const RECT& panelRect)
@@ -1835,6 +1915,7 @@ namespace Xelqoria::Editor
             }
         }
         m_dynamicDockTabs.clear();
+        m_logOutputDockTab = nullptr;
         m_hasDockPreview = false;
         m_currentGuideTarget = DockGuideTarget{};
         m_pendingDockDragPanelId.reset();
@@ -1855,6 +1936,33 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(EditorPanelId::SceneView);
         DestroyFloatingWindow(EditorPanelId::Inspector);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
+        SyncDockTabs();
+        m_layoutInitialized = false;
+    }
+
+    void EditorShell::ShowPanelAtDefaultDock(EditorPanelId panelId)
+    {
+        if (nullptr == m_parentWindow)
+        {
+            return;
+        }
+
+        RemovePanelFromDockTree(panelId);
+        DestroyFloatingWindow(panelId);
+        SetPanelParent(panelId, m_parentWindow);
+        const DockNodeId targetDockNodeId = EnsureDefaultDockLeaf(panelId);
+        if (targetDockNodeId < 0 || static_cast<std::size_t>(targetDockNodeId) >= m_dockNodes.size())
+        {
+            return;
+        }
+
+        DockNode& targetDockNode = m_dockNodes[static_cast<std::size_t>(targetDockNodeId)];
+        if (targetDockNode.panels.end() == std::find(targetDockNode.panels.begin(), targetDockNode.panels.end(), panelId))
+        {
+            targetDockNode.panels.push_back(panelId);
+        }
+        targetDockNode.activeTabIndex = static_cast<int>(targetDockNode.panels.size()) - 1;
+        ShowPanelControls(panelId, true);
         SyncDockTabs();
         m_layoutInitialized = false;
     }
@@ -2688,8 +2796,8 @@ namespace Xelqoria::Editor
         }
 
         m_dragPanelWindowOffset = POINT{
-            (std::max)(ScaleMetric(8), cursorScreenPoint.x - captionRect.left),
-            (std::max)(ScaleMetric(8), cursorScreenPoint.y - captionRect.top)
+            static_cast<LONG>((std::max)(ScaleMetric(8), static_cast<int>(cursorScreenPoint.x - captionRect.left))),
+            static_cast<LONG>((std::max)(ScaleMetric(8), static_cast<int>(cursorScreenPoint.y - captionRect.top)))
         };
 
         RemovePanelFromDockTree(panelId);

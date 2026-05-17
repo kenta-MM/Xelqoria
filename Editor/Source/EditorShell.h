@@ -18,6 +18,15 @@ namespace Xelqoria::Editor
     class EditorShell
     {
     public:
+        enum class EditorPanelId
+        {
+            Hierarchy,
+            Assets,
+            SceneView,
+            Inspector,
+            LogOutput
+        };
+
         /// <summary>
         /// EditorShell 用 child window 群を生成する。
         /// </summary>
@@ -275,16 +284,13 @@ namespace Xelqoria::Editor
         /// </summary>
         void ResetDockLayout();
 
-    private:
-        enum class EditorPanelId
-        {
-            Hierarchy,
-            Assets,
-            SceneView,
-            Inspector,
-            LogOutput
-        };
+        /// <summary>
+        /// 指定ビューを既定の Dock 位置へ表示する。
+        /// </summary>
+        /// <param name="panelId">再表示するビュー。</param>
+        void ShowPanelAtDefaultDock(EditorPanelId panelId);
 
+    private:
         enum class DockAreaId
         {
             LeftTop,
@@ -429,6 +435,16 @@ namespace Xelqoria::Editor
         /// Dock node を追加して ID を返す。
         /// </summary>
         [[nodiscard]] DockNodeId AddDockNode(DockNode node);
+
+        /// <summary>
+        /// 指定ビューの既定 Dock leaf を返す。存在しない場合は生成する。
+        /// </summary>
+        [[nodiscard]] DockNodeId EnsureDefaultDockLeaf(EditorPanelId panelId);
+
+        /// <summary>
+        /// 指定ビューの既定 Dock tab control を返す。
+        /// </summary>
+        [[nodiscard]] HWND GetDefaultDockTabControl(EditorPanelId panelId);
 
         /// <summary>
         /// カーソル位置にある Dock leaf を返す。
@@ -800,6 +816,7 @@ namespace Xelqoria::Editor
         HWND m_leftBottomDockTab = nullptr;
         HWND m_centerDockTab = nullptr;
         HWND m_rightDockTab = nullptr;
+        HWND m_logOutputDockTab = nullptr;
         std::vector<HWND> m_dynamicDockTabs{};
         HWND m_dockPreviewWindow = nullptr;
         std::array<HWND, 9> m_dockGuideWindows{};
