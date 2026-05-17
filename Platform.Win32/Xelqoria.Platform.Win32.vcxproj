@@ -19,7 +19,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Win32EventLoop.cpp" />
+    <ClCompile Include="Source\Win32Input.cpp" />
     <ClCompile Include="Source\Win32PlatformAnchor.cpp" />
+    <ClCompile Include="Source\Win32PlatformFactory.cpp" />
+    <ClCompile Include="Source\Win32Window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Win32EventLoop.h" />
+    <ClInclude Include="Source\Win32Input.h" />
+    <ClInclude Include="Source\Win32PlatformFactory.h" />
+    <ClInclude Include="Source\Win32Window.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Platform\Xelqoria.Platform.vcxproj">

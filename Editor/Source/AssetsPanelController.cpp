@@ -31,6 +31,11 @@ namespace Xelqoria::Editor
         constexpr int DragPreviewCursorOffsetX = 14;
         constexpr int DragPreviewCursorOffsetY = 18;
 
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+
         /// <summary>
         /// ディレクトリエントリをフォルダ優先、名前順で並べる。
         /// </summary>
@@ -426,7 +431,7 @@ namespace Xelqoria::Editor
 
         if (m_isAssetDragActive)
         {
-            MoveDragImage(inputSnapshot.GetCursorScreenPoint());
+            MoveDragImage(ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
         }
 
         if (false == inputSnapshot.WasMouseButtonPressed(Core::MouseButton::Left))
@@ -434,7 +439,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const int hitIndex = HitTestListView(inputSnapshot.GetCursorScreenPoint());
+        const int hitIndex = HitTestListView(ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
         if (hitIndex < 0)
         {
             return;
@@ -462,7 +467,7 @@ namespace Xelqoria::Editor
             m_canPlaceDraggingAssetInScene = false;
             if (m_isAssetDragActive)
             {
-                BeginDragImage(hitEntry.path, hitEntry.iconIndex, inputSnapshot.GetCursorScreenPoint());
+                BeginDragImage(hitEntry.path, hitEntry.iconIndex, ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
             }
         }
         else if (false == hitEntry.isDirectory
@@ -478,7 +483,7 @@ namespace Xelqoria::Editor
             m_canPlaceDraggingAssetInScene = false;
             if (m_isAssetDragActive)
             {
-                BeginDragPreview(hitEntry.path, inputSnapshot.GetCursorScreenPoint());
+                BeginDragPreview(hitEntry.path, ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
             }
         }
         else

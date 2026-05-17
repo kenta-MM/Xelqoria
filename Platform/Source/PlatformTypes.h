@@ -15,6 +15,11 @@ namespace Xelqoria::Platform
     using NativeApplicationHandle = void*;
 
     /// <summary>
+    /// OS 固有のメッセージ引数を保持する不透明な整数値を表す。
+    /// </summary>
+    using NativeMessageParameter = std::intptr_t;
+
+    /// <summary>
     /// 2 次元の整数座標を表す。
     /// </summary>
     struct Point

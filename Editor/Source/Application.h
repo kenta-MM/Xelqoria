@@ -202,6 +202,12 @@ namespace Xelqoria::Editor
         void Render();
 
         /// <summary>
+        /// メインウィンドウの Win32 ハンドルを取得する。
+        /// </summary>
+        /// <returns>メインウィンドウの HWND。</returns>
+        [[nodiscard]] HWND GetMainWindowHandle() const;
+
+        /// <summary>
         /// Assets パネル、Hierarchy、Inspector の表示を現在状態へ同期する。
         /// </summary>
         /// <param name="canAddSpriteComponent">SpriteComponent を追加可能な場合は true。</param>

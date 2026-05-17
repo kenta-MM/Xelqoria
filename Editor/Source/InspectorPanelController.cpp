@@ -17,6 +17,14 @@
 
 namespace Xelqoria::Editor
 {
+    namespace
+    {
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+    }
+
     void InspectorPanelController::Bind(const EditorShell& shell)
     {
         m_inspectorSummaryLabel = shell.GetInspectorSummaryLabel();
@@ -389,7 +397,7 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        const POINT cursorScreenPoint = inputSnapshot.GetCursorScreenPoint();
+        const POINT cursorScreenPoint = ToWin32Point(inputSnapshot.GetCursorScreenPoint());
 
         RECT buttonRect{};
         GetWindowRect(buttonHandle, &buttonRect);

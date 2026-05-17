@@ -21,6 +21,11 @@ namespace Xelqoria::Editor
         constexpr const wchar_t* FloatingPanelWindowClassName = L"XelqoriaFloatingPanelWindow";
         constexpr ULONGLONG DockPanelDragDelayMilliseconds = 200;
 
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+
         /// <summary>
         /// Dock 先プレビューの青い配置範囲を描画する。
         /// </summary>
@@ -1649,7 +1654,7 @@ namespace Xelqoria::Editor
         }
 
         bool changed = false;
-        const POINT cursorScreenPoint = inputSnapshot.GetCursorScreenPoint();
+        const POINT cursorScreenPoint = ToWin32Point(inputSnapshot.GetCursorScreenPoint());
 
         if (inputSnapshot.WasKeyPressed('R') && inputSnapshot.IsKeyDown(VK_CONTROL))
         {

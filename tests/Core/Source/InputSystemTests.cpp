@@ -12,7 +12,7 @@ TEST(InputSystemTests, KeyPressedIsTrueOnlyOnTransitionToDown)
         },
         []
         {
-            return POINT{ 10, 20 };
+            return Xelqoria::Platform::Point{ 10, 20 };
         });
 
     inputSystem.Update();
@@ -40,7 +40,7 @@ TEST(InputSystemTests, KeyReleasedIsTrueOnlyOnTransitionToUp)
         },
         []
         {
-            return POINT{};
+            return Xelqoria::Platform::Point{};
         });
 
     inputSystem.Update();
@@ -60,11 +60,11 @@ TEST(InputSystemTests, KeyReleasedIsTrueOnlyOnTransitionToUp)
 TEST(InputSystemTests, MouseLeftButtonTracksTransitionsAndCursorPosition)
 {
     bool isLeftButtonDown = false;
-    POINT cursorPoint{ 30, 40 };
+    Xelqoria::Platform::Point cursorPoint{ 30, 40 };
     Xelqoria::Core::InputSystem inputSystem(
         [&isLeftButtonDown](int virtualKeyCode)
         {
-            return virtualKeyCode == VK_LBUTTON && isLeftButtonDown;
+            return virtualKeyCode == 0x01 && isLeftButtonDown;
         },
         [&cursorPoint]
         {
@@ -77,7 +77,7 @@ TEST(InputSystemTests, MouseLeftButtonTracksTransitionsAndCursorPosition)
     EXPECT_EQ(40, inputSystem.GetSnapshot().GetCursorScreenPoint().y);
 
     isLeftButtonDown = true;
-    cursorPoint = POINT{ 50, 60 };
+    cursorPoint = Xelqoria::Platform::Point{ 50, 60 };
     inputSystem.Update();
     EXPECT_TRUE(inputSystem.GetSnapshot().IsMouseButtonDown(Xelqoria::Core::MouseButton::Left));
     EXPECT_TRUE(inputSystem.GetSnapshot().WasMouseButtonPressed(Xelqoria::Core::MouseButton::Left));
@@ -100,7 +100,7 @@ TEST(InputSystemTests, MouseWheelDeltaIsCapturedPerUpdate)
         },
         []
         {
-            return POINT{};
+            return Xelqoria::Platform::Point{};
         },
         [&mouseWheelDelta]
         {

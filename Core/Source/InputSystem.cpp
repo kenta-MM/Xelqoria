@@ -1,17 +1,25 @@
 #include "InputSystem.h"
 
 #include <utility>
-#include <Windows.h>
-#include <array>
 
 namespace Xelqoria::Core
 {
+    namespace
+    {
+        constexpr std::uint32_t LeftMouseButtonCode = 0x01;
+
+        [[nodiscard]] bool IsValidInputCode(int keyCode)
+        {
+            return 0 <= keyCode && keyCode < static_cast<int>(InputSnapshot::KeyStateCount);
+        }
+    }
+
     InputSnapshot::InputSnapshot(
         const std::array<bool, KeyStateCount>& keyDownStates,
         const std::array<bool, KeyStateCount>& previousKeyDownStates,
         bool isLeftMouseButtonDown,
         bool wasLeftMouseButtonDown,
-        POINT cursorScreenPoint,
+        Platform::Point cursorScreenPoint,
         int mouseWheelDelta)
         : m_keyDownStates(keyDownStates)
         , m_previousKeyDownStates(previousKeyDownStates)
@@ -22,35 +30,35 @@ namespace Xelqoria::Core
     {
     }
 
-    bool InputSnapshot::IsKeyDown(int virtualKeyCode) const
+    bool InputSnapshot::IsKeyDown(int keyCode) const
     {
-        if (false == IsValidVirtualKeyCode(virtualKeyCode))
+        if (false == IsValidKeyCode(keyCode))
         {
             return false;
         }
 
-        return m_keyDownStates[static_cast<std::size_t>(virtualKeyCode)];
+        return m_keyDownStates[static_cast<std::size_t>(keyCode)];
     }
 
-    bool InputSnapshot::WasKeyPressed(int virtualKeyCode) const
+    bool InputSnapshot::WasKeyPressed(int keyCode) const
     {
-        if (false == IsValidVirtualKeyCode(virtualKeyCode))
+        if (false == IsValidKeyCode(keyCode))
         {
             return false;
         }
 
-        const std::size_t stateIndex = static_cast<std::size_t>(virtualKeyCode);
+        const std::size_t stateIndex = static_cast<std::size_t>(keyCode);
         return m_keyDownStates[stateIndex] && false == m_previousKeyDownStates[stateIndex];
     }
 
-    bool InputSnapshot::WasKeyReleased(int virtualKeyCode) const
+    bool InputSnapshot::WasKeyReleased(int keyCode) const
     {
-        if (false == IsValidVirtualKeyCode(virtualKeyCode))
+        if (false == IsValidKeyCode(keyCode))
         {
             return false;
         }
 
-        const std::size_t stateIndex = static_cast<std::size_t>(virtualKeyCode);
+        const std::size_t stateIndex = static_cast<std::size_t>(keyCode);
         return false == m_keyDownStates[stateIndex] && true == m_previousKeyDownStates[stateIndex];
     }
 
@@ -84,7 +92,7 @@ namespace Xelqoria::Core
         return false;
     }
 
-    POINT InputSnapshot::GetCursorScreenPoint() const
+    Platform::Point InputSnapshot::GetCursorScreenPoint() const
     {
         return m_cursorScreenPoint;
     }
@@ -94,28 +102,32 @@ namespace Xelqoria::Core
         return m_mouseWheelDelta;
     }
 
-    bool InputSnapshot::IsValidVirtualKeyCode(int virtualKeyCode)
+    bool InputSnapshot::IsValidKeyCode(int keyCode)
     {
-        return 0 <= virtualKeyCode && virtualKeyCode < static_cast<int>(KeyStateCount);
+        return 0 <= keyCode && keyCode < static_cast<int>(KeyStateCount);
     }
 
     InputSystem::InputSystem()
         : InputSystem(
-            [](int virtualKeyCode)
+            [](int)
             {
-                return 0 != (::GetAsyncKeyState(virtualKeyCode) & 0x8000);
+                return false;
             },
             []
             {
-                POINT cursorScreenPoint{};
-                ::GetCursorPos(&cursorScreenPoint);
-                return cursorScreenPoint;
+                return Platform::Point{};
             },
             []
             {
                 return 0;
             })
     {
+    }
+
+    InputSystem::InputSystem(std::unique_ptr<Platform::IInput> input)
+        : InputSystem()
+    {
+        SetPlatformInput(std::move(input));
     }
 
     InputSystem::InputSystem(KeyStateReader keyStateReader, CursorPositionReader cursorPositionReader)
@@ -133,6 +145,41 @@ namespace Xelqoria::Core
     {
     }
 
+    void InputSystem::SetPlatformInput(std::unique_ptr<Platform::IInput> input)
+    {
+        m_input = std::move(input);
+        m_keyStateReader =
+            [this](int keyCode)
+            {
+                if (nullptr == m_input || false == IsValidInputCode(keyCode))
+                {
+                    return false;
+                }
+
+                return m_input->IsKeyDown(static_cast<std::uint32_t>(keyCode));
+            };
+        m_cursorPositionReader =
+            [this]()
+            {
+                if (nullptr == m_input)
+                {
+                    return Platform::Point{};
+                }
+
+                return m_input->GetCursorScreenPosition();
+            };
+        m_mouseWheelDeltaReader =
+            [this]()
+            {
+                if (nullptr == m_input)
+                {
+                    return 0;
+                }
+
+                return m_input->GetMouseWheelDelta();
+            };
+    }
+
     void InputSystem::SetMouseWheelDeltaReader(MouseWheelDeltaReader mouseWheelDeltaReader)
     {
         m_mouseWheelDeltaReader = std::move(mouseWheelDeltaReader);
@@ -140,6 +187,11 @@ namespace Xelqoria::Core
 
     void InputSystem::Update()
     {
+        if (m_input)
+        {
+            m_input->Update();
+        }
+
         std::array<bool, InputSnapshot::KeyStateCount> keyDownStates{};
         std::array<bool, InputSnapshot::KeyStateCount> previousKeyDownStates{};
         for (std::size_t index = 0; index < keyDownStates.size(); ++index)
@@ -149,7 +201,7 @@ namespace Xelqoria::Core
         }
 
         const bool wasLeftMouseButtonDown = m_snapshot.IsMouseButtonDown(MouseButton::Left);
-        const bool isLeftMouseButtonDown = m_keyStateReader(VK_LBUTTON);
+        const bool isLeftMouseButtonDown = m_keyStateReader(static_cast<int>(LeftMouseButtonCode));
         m_snapshot = InputSnapshot(
             keyDownStates,
             previousKeyDownStates,

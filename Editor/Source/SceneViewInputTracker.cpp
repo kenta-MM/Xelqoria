@@ -27,6 +27,11 @@ namespace Xelqoria::Editor
     {
         constexpr float UntexturedSpriteSizeWorldUnits = 64.0f;
 
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+
         /// <summary>
         /// 指定編集モードキーの押下から次の編集モードを決定する。
         /// </summary>
@@ -114,7 +119,7 @@ namespace Xelqoria::Editor
             return result;
         }
 
-        const POINT screenPoint = inputSnapshot.GetCursorScreenPoint();
+        const POINT screenPoint = ToWin32Point(inputSnapshot.GetCursorScreenPoint());
 
         RECT sceneHostRect{};
         GetWindowRect(m_sceneViewHost, &sceneHostRect);

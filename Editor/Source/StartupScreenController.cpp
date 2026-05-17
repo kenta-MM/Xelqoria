@@ -23,6 +23,11 @@ namespace Xelqoria::Editor
         constexpr int CreateCancelButtonId = 4305;
         constexpr const wchar_t* CreateProjectWindowClassName = L"XelqoriaCreateProjectWindow";
 
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+
         UINT GetWindowDpi(HWND window)
         {
             HMODULE user32 = GetModuleHandleW(L"user32.dll");
@@ -229,7 +234,7 @@ namespace Xelqoria::Editor
 
         m_wasLeftMouseDown = false;
 
-        const POINT cursorPosition = inputSnapshot.GetCursorScreenPoint();
+        const POINT cursorPosition = ToWin32Point(inputSnapshot.GetCursorScreenPoint());
         const HWND clickedWindow = WindowFromPoint(cursorPosition);
         if (clickedWindow == m_createButton)
         {

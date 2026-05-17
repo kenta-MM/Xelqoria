@@ -14,6 +14,14 @@
 
 namespace Xelqoria::Editor
 {
+    namespace
+    {
+        [[nodiscard]] POINT ToWin32Point(Platform::Point point)
+        {
+            return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+    }
+
     void HierarchyPanelController::Bind(const EditorShell& shell)
     {
         m_hierarchyListBox = shell.GetHierarchyListBox();
@@ -148,7 +156,7 @@ namespace Xelqoria::Editor
         const bool isEnterPressed = inputSnapshot.WasKeyPressed(VK_RETURN);
         const HierarchyButtonFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
-            inputSnapshot.GetCursorScreenPoint()
+            ToWin32Point(inputSnapshot.GetCursorScreenPoint())
         };
 
         if (selectedEntity.has_value())

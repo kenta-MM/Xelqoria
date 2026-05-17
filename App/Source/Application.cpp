@@ -10,6 +10,7 @@
 #include "SpriteRenderer.h"
 #include "Texture2D.h"
 #include "GraphicsAPI.h"
+#include "Win32PlatformFactory.h"
 
 namespace Xelqoria::App
 {
@@ -69,7 +70,11 @@ namespace Xelqoria::App
         std::wstring title = L"Xelqoria - ";
         title += RHI::GraphicsAPIToString(api);
 
-        if (!m_window.Create(m_hInstance, title.c_str(), 1280, 720))
+        m_window.SetPlatformWindow(
+            Platform::Win32::CreateWin32Window(m_hInstance),
+            Platform::Win32::CreateWin32EventLoop());
+
+        if (!m_window.Create(title.c_str(), 1280, 720))
         {
             return false;
         }
