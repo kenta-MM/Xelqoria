@@ -3932,28 +3932,16 @@ namespace Xelqoria::Editor
 
     void EditorShell::RedrawLayout(HWND parentWindow) const
     {
-        if (nullptr != parentWindow)
+        if (nullptr == parentWindow)
         {
-            RedrawWindow(
-                parentWindow,
-                nullptr,
-                nullptr,
-                RDW_INVALIDATE | RDW_ERASE | RDW_ERASENOW | RDW_UPDATENOW | RDW_ALLCHILDREN | RDW_FRAME);
+            return;
         }
 
-        const std::array<HWND, 65> controls = CollectControls();
-
-        for (HWND control : controls)
-        {
-            if (nullptr != control)
-            {
-                RedrawWindow(
-                    control,
-                    nullptr,
-                    nullptr,
-                    RDW_INVALIDATE | RDW_ERASE | RDW_ERASENOW | RDW_UPDATENOW | RDW_FRAME);
-            }
-        }
+        RedrawWindow(
+            parentWindow,
+            nullptr,
+            nullptr,
+            RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_FRAME);
     }
 
     bool EditorShell::UpdateSceneViewHostSize()
