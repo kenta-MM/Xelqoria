@@ -471,6 +471,11 @@ namespace Xelqoria::Editor
         void RemovePanelFromDockTree(EditorPanelId panelId, bool collapseEmptyLeaves = true);
 
         /// <summary>
+        /// 指定 Dock node のパネル一覧から指定パネルを取り除く。
+        /// </summary>
+        void RemovePanelFromDockNode(DockNode& dockNode, EditorPanelId panelId) const;
+
+        /// <summary>
         /// 空になった Dock leaf を親 node へ畳み込む。
         /// </summary>
         [[nodiscard]] bool CollapseEmptyDockLeaves(DockNodeId dockNodeId);

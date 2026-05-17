@@ -2281,16 +2281,21 @@ namespace Xelqoria::Editor
                 continue;
             }
 
-            dockNode.panels.erase(std::remove(dockNode.panels.begin(), dockNode.panels.end(), panelId), dockNode.panels.end());
-            if (dockNode.activeTabIndex >= static_cast<int>(dockNode.panels.size()))
-            {
-                dockNode.activeTabIndex = (std::max)(0, static_cast<int>(dockNode.panels.size()) - 1);
-            }
+            RemovePanelFromDockNode(dockNode, panelId);
         }
 
         if (collapseEmptyLeaves && m_rootDockNodeId >= 0)
         {
             (void)CollapseEmptyDockLeaves(m_rootDockNodeId);
+        }
+    }
+
+    void EditorShell::RemovePanelFromDockNode(DockNode& dockNode, EditorPanelId panelId) const
+    {
+        dockNode.panels.erase(std::remove(dockNode.panels.begin(), dockNode.panels.end(), panelId), dockNode.panels.end());
+        if (dockNode.activeTabIndex >= static_cast<int>(dockNode.panels.size()))
+        {
+            dockNode.activeTabIndex = (std::max)(0, static_cast<int>(dockNode.panels.size()) - 1);
         }
     }
 
@@ -2450,6 +2455,20 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(panelId);
         SetPanelParent(panelId, parentWindow);
 
+        DockNode oldTargetNode = targetNode;
+        if (sourceLeafNodeId == guideTarget.dockNodeId)
+        {
+            RemovePanelFromDockNode(oldTargetNode, panelId);
+            if (oldTargetNode.panels.empty())
+            {
+                targetNode.panels.push_back(panelId);
+                targetNode.activeTabIndex = 0;
+                SyncDockTabs();
+                m_layoutInitialized = false;
+                return;
+            }
+        }
+
         DockNode newLeaf{};
         newLeaf.kind = DockNodeKind::Leaf;
         newLeaf.panels = { panelId };
@@ -2459,7 +2478,6 @@ namespace Xelqoria::Editor
             newLeaf.tabControl = sourceTabControl;
         }
 
-        const DockNode oldTargetNode = targetNode;
         const std::size_t targetNodeIndex = static_cast<std::size_t>(guideTarget.dockNodeId);
         const DockNodeId newLeafNodeId = AddDockNode(std::move(newLeaf));
         DockNode splitNode{};
