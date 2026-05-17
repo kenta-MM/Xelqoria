@@ -40,6 +40,11 @@ namespace Xelqoria::Editor
         constexpr unsigned ViewMenuInspectorCommandId = 5204;
         constexpr unsigned ViewMenuLogOutputCommandId = 5205;
 
+        [[nodiscard]] std::filesystem::path GetEditorLayoutFilePath()
+        {
+            return std::filesystem::path("Saved") / "EditorLayout.txt";
+        }
+
         [[nodiscard]] std::filesystem::path SelectProjectFile(
             Platform::IFileDialog& fileDialog,
             HWND ownerWindow)
@@ -333,6 +338,7 @@ namespace Xelqoria::Editor
         {
             return false;
         }
+        (void)m_editorShell.LoadLayout(GetEditorLayoutFilePath());
 
         m_assetsPanelController.Bind(m_editorShell, m_cursor);
         m_hierarchyPanelController.Bind(m_editorShell);
@@ -468,7 +474,13 @@ namespace Xelqoria::Editor
 
     bool Application::HandleCloseRequest()
     {
-        return ConfirmSaveIfDirty();
+        const bool canClose = ConfirmSaveIfDirty();
+        if (canClose && m_editorInitialized)
+        {
+            (void)m_editorShell.SaveLayout(GetEditorLayoutFilePath());
+        }
+
+        return canClose;
     }
 
     void Application::HandleWindowResized(std::uint32_t width, std::uint32_t height)
