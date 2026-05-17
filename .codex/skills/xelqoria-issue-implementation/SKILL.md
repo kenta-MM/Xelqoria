@@ -21,12 +21,14 @@ Xelqoria で GitHub Issue を実装する時に使う。
 - アーキテクチャ: [docs/agents/architecture.md]($XELQORIA_ROOT/docs/agents/architecture.md)
 - 実装フロー: [docs/agents/workflows.md]($XELQORIA_ROOT/docs/agents/workflows.md)
 - コーディング規約: [docs/agents/coding-rules.md]($XELQORIA_ROOT/docs/agents/coding-rules.md)
+- ブランチ運用: [docs/agents/branch-rules.md]($XELQORIA_ROOT/docs/agents/branch-rules.md)
 
 ## 標準ワークフロー
 
 1. Issue の内容を取得する
 - 現在の作業ブランチ名から Issue 番号を取得する
-- ブランチ名は `issue-<番号>` を前提とし、`issue-26` なら Issue `26` を参照する
+- ブランチ名は `docs/agents/branch-rules.md` に従い、`issue-<番号>` を前提とする
+- `issue-26` なら Issue `26` を参照する
 - ブランチ名から番号を取得できない場合のみ、ユーザーが貼った本文や URL を使う
 - 番号が取得できたら `gh issue view` などで内容取得を試みる
 - 取得できない場合は止まらず、ローカル文脈で補えるか確認し、それでも無理なら短く不足情報を聞く

@@ -17,6 +17,7 @@ allowed-tools: Bash(git fetch:*) Bash(git checkout:*) Bash(git branch:*) Bash(gi
 
 # 初期確認
 1. 必要なら `docs/agents` 配下を参照
+2. ブランチの作成元、命名、PR の向きは `docs/agents/branch-rules.md` に従う
 
 # 親Issue取得
 1. ユーザー指定のIssue番号を使用
@@ -45,7 +46,7 @@ allowed-tools: Bash(git fetch:*) Bash(git checkout:*) Bash(git branch:*) Bash(gi
 2. 未コミット変更がある場合は中断する
 
 ## 2. 親ブランチ確認
-1. 親ブランチを `issue-<親番号>` とする
+1. 親ブランチは `docs/agents/branch-rules.md` に従い、`issue-<親番号>` とする
 2. 親ブランチが存在しない場合は中断する
 
 ## 3. 並列実行対象の処理
@@ -55,7 +56,7 @@ allowed-tools: Bash(git fetch:*) Bash(git checkout:*) Bash(git branch:*) Bash(gi
    - 対象子Issueを確認する
    - `git status` で未コミット変更がないことを確認する
    - 子ブランチ `issue-<子番号>` に checkout する
-   - 必要に応じて親ブランチ `issue-<親番号>` から作成する
+   - 必要に応じて `docs/agents/branch-rules.md` に従い、親ブランチ `issue-<親番号>` から作成する
    - `AGENTS.md` に従い最小限の変更を実装する
    - ビルドまたはテストを実行する
    - 実行不可の場合は理由を記録する
@@ -77,8 +78,7 @@ allowed-tools: Bash(git fetch:*) Bash(git checkout:*) Bash(git branch:*) Bash(gi
    - PRを作成する
 
 ## 5. PR作成
-- base: `issue-<親番号>` または指定ブランチ
-- head: `issue-<子番号>`
+- base / head は `docs/agents/branch-rules.md` に従う
 - 親Issue番号と子Issue番号を本文に含める
 - コンフリクトの有無に関係なく必ず作成する
 
@@ -93,7 +93,7 @@ allowed-tools: Bash(git fetch:*) Bash(git checkout:*) Bash(git branch:*) Bash(gi
 - 依存関係がある子Issueのみ直列実行する
 - 子Issueは必ず1PRで完結させる
 - 子Issueは単独で検証可能にする
-- PRのbaseは常に親Issueブランチとする
+- PRのbaseは `docs/agents/branch-rules.md` に従う
 - コンフリクトが発生する可能性がある場合でもPRは必ず作成する
 - コンフリクトの解消は本フローでは行わない
 - 要件にない変更は禁止
