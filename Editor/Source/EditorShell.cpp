@@ -3535,9 +3535,13 @@ namespace Xelqoria::Editor
         return m_projectSceneDetailLabel;
     }
 
-    HWND EditorShell::GetSceneViewHost() const
+    SceneViewSurface EditorShell::GetSceneViewSurface() const
     {
-        return m_sceneViewHost;
+        return SceneViewSurface{
+            m_sceneViewHost,
+            m_sceneViewWidth,
+            m_sceneViewHeight
+        };
     }
 
     HWND EditorShell::GetLogOutputTabControl() const
@@ -3563,16 +3567,6 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetLogListBox() const
     {
         return m_logListBox;
-    }
-
-    std::uint32_t EditorShell::GetSceneViewWidth() const
-    {
-        return m_sceneViewWidth;
-    }
-
-    std::uint32_t EditorShell::GetSceneViewHeight() const
-    {
-        return m_sceneViewHeight;
     }
 
     HWND EditorShell::CreateChildWindow(

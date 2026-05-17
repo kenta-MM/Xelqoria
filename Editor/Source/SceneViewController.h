@@ -35,9 +35,8 @@ namespace Xelqoria::Editor
         /// <summary>
         /// SceneView ビューポートサイズ変更を反映する。
         /// </summary>
-        /// <param name="width">SceneView 幅。</param>
-        /// <param name="height">SceneView 高さ。</param>
-        void OnViewportChanged(std::uint32_t width, std::uint32_t height);
+        /// <param name="surface">SceneView の描画先境界。</param>
+        void OnViewportChanged(const SceneViewSurface& surface);
 
         /// <summary>
         /// SceneView 入力状態を更新する。

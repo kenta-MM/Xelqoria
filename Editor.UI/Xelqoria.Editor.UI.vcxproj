@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\ButtonClickInput.h" />
+    <ClInclude Include="Source\SceneViewSurface.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">
