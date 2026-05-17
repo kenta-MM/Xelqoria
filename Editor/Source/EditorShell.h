@@ -536,6 +536,16 @@ namespace Xelqoria::Editor
         void MovePanelToDockArea(EditorPanelId panelId, DockAreaId dockAreaId, HWND parentWindow);
 
         /// <summary>
+        /// Dock タブからのパネルドラッグを開始し、ビュー本体を追従用 window へ移す。
+        /// </summary>
+        void BeginDockPanelDrag(EditorPanelId panelId, HWND parentWindow, POINT cursorScreenPoint);
+
+        /// <summary>
+        /// ドラッグ中のパネル本体をカーソル位置へ追従させる。
+        /// </summary>
+        void UpdateDockPanelDragWindow(EditorPanelId panelId, POINT cursorScreenPoint);
+
+        /// <summary>
         /// 指定パネルをフローティングウィンドウへ移動する。
         /// </summary>
         void FloatPanel(EditorPanelId panelId, POINT screenPoint, HWND parentWindow);
@@ -813,6 +823,7 @@ namespace Xelqoria::Editor
         bool m_hasDockPreview = false;
         RECT m_dockPreviewRect{};
         POINT m_dragStartScreenPoint{};
+        POINT m_dragPanelWindowOffset{};
         ULONGLONG m_pendingDockDragStartTick = 0;
         DockNodeId m_dragSplitNodeId = -1;
         float m_dragStartSplitRatio = 0.5f;

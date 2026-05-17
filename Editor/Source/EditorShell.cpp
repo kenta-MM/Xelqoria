@@ -1718,11 +1718,14 @@ namespace Xelqoria::Editor
                     m_pendingDockDragPanelId.reset();
                     m_currentGuideTarget = DockGuideTarget{};
                     m_hasDockPreview = false;
+                    BeginDockPanelDrag(*m_dragPanelId, parentWindow, cursorScreenPoint);
+                    changed = true;
                 }
             }
 
             if (DockDragKind::Panel == m_dragKind && m_dragPanelId.has_value())
             {
+                UpdateDockPanelDragWindow(*m_dragPanelId, cursorScreenPoint);
                 UpdateDockGuideWindows(parentWindow, cursorScreenPoint);
                 m_currentGuideTarget = HitTestDockGuideTarget(parentWindow, cursorScreenPoint);
                 m_hasDockPreview = DockGuideTargetKind::None != m_currentGuideTarget.kind
@@ -1777,6 +1780,7 @@ namespace Xelqoria::Editor
             m_pendingDockDragStartTick = 0;
             m_dragSplitNodeId = -1;
             m_hasDockPreview = false;
+            m_dragPanelWindowOffset = POINT{};
             ReleaseCapture();
             HideDockGuideWindows();
             UpdateDockPreviewWindow(parentWindow);
@@ -2636,6 +2640,57 @@ namespace Xelqoria::Editor
 
         SyncDockTabs();
         m_layoutInitialized = false;
+    }
+
+    void EditorShell::BeginDockPanelDrag(EditorPanelId panelId, HWND parentWindow, POINT cursorScreenPoint)
+    {
+        if (nullptr == parentWindow)
+        {
+            return;
+        }
+
+        RECT captionRect = GetPanelCaptionRect(panelId);
+        if (captionRect.right <= captionRect.left || captionRect.bottom <= captionRect.top)
+        {
+            captionRect = RECT{
+                cursorScreenPoint.x - ScaleMetric(24),
+                cursorScreenPoint.y - ScaleMetric(12),
+                cursorScreenPoint.x + ScaleMetric(336),
+                cursorScreenPoint.y + ScaleMetric(348)
+            };
+        }
+
+        m_dragPanelWindowOffset = POINT{
+            (std::max)(ScaleMetric(8), cursorScreenPoint.x - captionRect.left),
+            (std::max)(ScaleMetric(8), cursorScreenPoint.y - captionRect.top)
+        };
+
+        RemovePanelFromDockTree(panelId);
+        const POINT floatingOrigin{
+            cursorScreenPoint.x - m_dragPanelWindowOffset.x,
+            cursorScreenPoint.y - m_dragPanelWindowOffset.y
+        };
+        FloatPanel(panelId, floatingOrigin, parentWindow);
+        SyncDockTabs();
+        m_layoutInitialized = false;
+    }
+
+    void EditorShell::UpdateDockPanelDragWindow(EditorPanelId panelId, POINT cursorScreenPoint)
+    {
+        HWND floatingWindow = GetFloatingWindowRef(panelId);
+        if (nullptr == floatingWindow)
+        {
+            return;
+        }
+
+        SetWindowPos(
+            floatingWindow,
+            HWND_TOP,
+            cursorScreenPoint.x - m_dragPanelWindowOffset.x,
+            cursorScreenPoint.y - m_dragPanelWindowOffset.y,
+            0,
+            0,
+            SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
     }
 
     void EditorShell::FloatPanel(EditorPanelId panelId, POINT screenPoint, HWND parentWindow)
