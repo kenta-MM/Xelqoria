@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{7F9A39CC-2048-4A29-86DF-CF5B1F27445F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\PlatformAnchor.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\IApplication.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\IClipboard.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ICursor.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\IEventLoop.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\IFileDialog.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\IInput.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\IWindow.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\PlatformTypes.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
