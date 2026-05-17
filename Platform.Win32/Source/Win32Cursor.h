@@ -1,53 +1,41 @@
 #pragma once
 
-#include "PlatformTypes.h"
+#include "ICursor.h"
 
-namespace Xelqoria::Platform
+namespace Xelqoria::Platform::Win32
 {
     /// <summary>
-    /// OS に表示させるカーソル形状を表す。
+    /// Win32 API を使用するカーソル実装。
     /// </summary>
-    enum class CursorShape
-    {
-        Arrow,
-        HorizontalResize,
-        VerticalResize
-    };
-
-    /// <summary>
-    /// OS のカーソル表示と座標操作を抽象化する。
-    /// </summary>
-    class ICursor
+    class Win32Cursor final : public ICursor
     {
     public:
-        virtual ~ICursor() = default;
-
         /// <summary>
         /// カーソルを表示する。
         /// </summary>
-        virtual void Show() = 0;
+        void Show() override;
 
         /// <summary>
         /// カーソルを非表示にする。
         /// </summary>
-        virtual void Hide() = 0;
+        void Hide() override;
 
         /// <summary>
         /// カーソルのスクリーン座標を設定する。
         /// </summary>
         /// <param name="position">設定するスクリーン座標。</param>
-        virtual void SetScreenPosition(Point position) = 0;
+        void SetScreenPosition(Point position) override;
 
         /// <summary>
         /// カーソル形状を設定する。
         /// </summary>
         /// <param name="shape">設定するカーソル形状。</param>
-        virtual void SetShape(CursorShape shape) = 0;
+        void SetShape(CursorShape shape) override;
 
         /// <summary>
         /// カーソルのスクリーン座標を取得する。
         /// </summary>
         /// <returns>現在のスクリーン座標。</returns>
-        [[nodiscard]] virtual Point GetScreenPosition() const = 0;
+        [[nodiscard]] Point GetScreenPosition() const override;
     };
 }

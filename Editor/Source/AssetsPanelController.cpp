@@ -262,10 +262,11 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR DeleteEntryMenuCommandId = 2;
     }
 
-    void AssetsPanelController::Bind(const EditorShell& shell)
+    void AssetsPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
     {
         m_assetsListView = shell.GetAssetsListView();
         m_assetsSummaryLabel = shell.GetAssetsSummaryLabel();
+        m_cursor = &cursor;
         InitializeListView();
     }
 
@@ -343,9 +344,13 @@ namespace Xelqoria::Editor
 
         if (notifyHeader->code == NM_RCLICK)
         {
+            if (nullptr == m_cursor)
+            {
+                return false;
+            }
+
             const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
-            POINT menuPoint{};
-            GetCursorPos(&menuPoint);
+            const POINT menuPoint = ToWin32Point(m_cursor->GetScreenPosition());
 
             const int nameLabelIndex = HitTestListViewNameLabel(menuPoint);
             if (0 <= nameLabelIndex)
