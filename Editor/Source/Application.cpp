@@ -34,6 +34,16 @@ namespace Xelqoria::Editor
         constexpr unsigned ProjectMenuOpenCommandId = 5104;
         constexpr unsigned ProjectMenuSettingsCommandId = 5105;
         constexpr unsigned ProjectMenuResetLayoutCommandId = 5106;
+        constexpr unsigned ViewMenuHierarchyCommandId = 5201;
+        constexpr unsigned ViewMenuAssetsCommandId = 5202;
+        constexpr unsigned ViewMenuSceneViewCommandId = 5203;
+        constexpr unsigned ViewMenuInspectorCommandId = 5204;
+        constexpr unsigned ViewMenuLogOutputCommandId = 5205;
+
+        [[nodiscard]] std::filesystem::path GetEditorLayoutFilePath()
+        {
+            return std::filesystem::path("Saved") / "EditorLayout.txt";
+        }
 
         [[nodiscard]] std::filesystem::path SelectProjectFile(
             Platform::IFileDialog& fileDialog,
@@ -328,6 +338,7 @@ namespace Xelqoria::Editor
         {
             return false;
         }
+        (void)m_editorShell.LoadLayout(GetEditorLayoutFilePath());
 
         m_assetsPanelController.Bind(m_editorShell, m_cursor);
         m_hierarchyPanelController.Bind(m_editorShell);
@@ -376,6 +387,7 @@ namespace Xelqoria::Editor
     void Application::InitializeProjectMenu()
     {
         m_projectMenu = CreatePopupMenu();
+        m_viewMenu = CreatePopupMenu();
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuCreateCommandId, L"プロジェクトを作成する");
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSaveCommandId, L"プロジェクトを保存する");
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSaveAsCommandId, L"プロジェクトを別名で保存する");
@@ -384,8 +396,15 @@ namespace Xelqoria::Editor
         AppendMenuW(m_projectMenu, MF_SEPARATOR, 0, nullptr);
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuResetLayoutCommandId, L"画面レイアウトを初期状態に戻す");
 
+        AppendMenuW(m_viewMenu, MF_STRING, ViewMenuHierarchyCommandId, L"Hierarchy");
+        AppendMenuW(m_viewMenu, MF_STRING, ViewMenuAssetsCommandId, L"Assets");
+        AppendMenuW(m_viewMenu, MF_STRING, ViewMenuSceneViewCommandId, L"SceneView");
+        AppendMenuW(m_viewMenu, MF_STRING, ViewMenuInspectorCommandId, L"Inspector");
+        AppendMenuW(m_viewMenu, MF_STRING, ViewMenuLogOutputCommandId, L"LogOutput");
+
         HMENU menuBar = CreateMenu();
         AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_projectMenu), L"プロジェクト");
+        AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_viewMenu), L"表示");
         SetMenu(GetMainWindowHandle(), menuBar);
     }
 
@@ -418,6 +437,36 @@ namespace Xelqoria::Editor
                 SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"画面レイアウトを初期状態に戻しました。");
             }
             break;
+        case ViewMenuHierarchyCommandId:
+            if (m_editorInitialized)
+            {
+                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::Hierarchy);
+            }
+            break;
+        case ViewMenuAssetsCommandId:
+            if (m_editorInitialized)
+            {
+                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::Assets);
+            }
+            break;
+        case ViewMenuSceneViewCommandId:
+            if (m_editorInitialized)
+            {
+                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::SceneView);
+            }
+            break;
+        case ViewMenuInspectorCommandId:
+            if (m_editorInitialized)
+            {
+                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::Inspector);
+            }
+            break;
+        case ViewMenuLogOutputCommandId:
+            if (m_editorInitialized)
+            {
+                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::LogOutput);
+            }
+            break;
         default:
             break;
         }
@@ -425,7 +474,13 @@ namespace Xelqoria::Editor
 
     bool Application::HandleCloseRequest()
     {
-        return ConfirmSaveIfDirty();
+        const bool canClose = ConfirmSaveIfDirty();
+        if (canClose && m_editorInitialized)
+        {
+            (void)m_editorShell.SaveLayout(GetEditorLayoutFilePath());
+        }
+
+        return canClose;
     }
 
     void Application::HandleWindowResized(std::uint32_t width, std::uint32_t height)
