@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Sprite.cpp" />
+    <ClCompile Include="Source\SpriteMaterial.cpp" />
     <ClCompile Include="Source\SpriteRenderer.cpp" />
     <ClCompile Include="Source\TextureAssetRegistry.cpp" />
     <ClCompile Include="Source\Texture2D.cpp" />
@@ -30,6 +31,7 @@
     <ClInclude Include="Source\Sprite.h" />
     <ClInclude Include="Source\SpriteCulling.h" />
     <ClInclude Include="Source\SpriteDrawInput.h" />
+    <ClInclude Include="Source\SpriteMaterial.h" />
     <ClInclude Include="Source\SpriteRenderMath.h" />
     <ClInclude Include="Source\SpriteRenderer.h" />
     <ClInclude Include="Source\TextureAssetRegistry.h" />
