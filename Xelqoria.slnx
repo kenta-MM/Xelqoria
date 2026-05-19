@@ -57,6 +57,14 @@
   <Folder Name="/ソリューション項目/.github/workflows/">
     <File Path=".github/workflows/runtime-artifact-validation.yml" />
   </Folder>
+  <Folder Name="/ソリューション項目/Assets/" />
+  <Folder Name="/ソリューション項目/Assets/Editor/" />
+  <Folder Name="/ソリューション項目/Assets/Editor/Icons/">
+    <File Path="Assets/Editor/Icons/folder.png" />
+    <File Path="Assets/Editor/Icons/proj.png" />
+    <File Path="Assets/Editor/Icons/script.png" />
+    <File Path="Assets/Editor/Icons/spite.png" />
+  </Folder>
   <Folder Name="/ソリューション項目/docs/" />
   <Folder Name="/ソリューション項目/docs/agents/">
     <File Path="docs/agents/architecture.md" />

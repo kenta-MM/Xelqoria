@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "AssetId.h"
@@ -67,6 +68,11 @@ namespace Xelqoria::Editor
     class AssetsPanelController
     {
     public:
+        /// <summary>
+        /// Assets パネルで所有する Win32 リソースを破棄する。
+        /// </summary>
+        ~AssetsPanelController();
+
         /// <summary>
         /// EditorShell の HWND 群へ接続する。
         /// </summary>
@@ -219,6 +225,36 @@ namespace Xelqoria::Editor
         /// ListView の列とシステムアイコンを初期化する。
         /// </summary>
         void InitializeListView();
+
+        /// <summary>
+        /// Assets ListView 用のローカル ImageList を初期化する。
+        /// </summary>
+        void InitializeAssetsImageList();
+
+        /// <summary>
+        /// Editor 専用 PNG アイコンを Assets ListView 用 ImageList へ読み込む。
+        /// </summary>
+        /// <param name="assetsRootDirectory">現在の Assets ルートディレクトリ。</param>
+        void ReloadEditorIconImages(const std::filesystem::path& assetsRootDirectory);
+
+        /// <summary>
+        /// Assets 項目に表示するアイコン番号を取得する。
+        /// </summary>
+        /// <param name="path">表示対象パス。</param>
+        /// <param name="isDirectory">フォルダの場合は true。</param>
+        /// <param name="fallbackIconIndex">PNG アイコンがない場合に使うアイコン番号。</param>
+        /// <returns>Assets ImageList 上のアイコン番号。</returns>
+        [[nodiscard]] int ResolveAssetIconIndex(
+            const std::filesystem::path& path,
+            bool isDirectory,
+            int fallbackIconIndex);
+
+        /// <summary>
+        /// システムアイコンを Assets ListView 用 ImageList へ追加して番号を取得する。
+        /// </summary>
+        /// <param name="systemIconIndex">システム ImageList 上のアイコン番号。</param>
+        /// <returns>Assets ImageList 上のアイコン番号。</returns>
+        [[nodiscard]] int ResolveFallbackSystemIconIndex(int systemIconIndex);
 
         /// <summary>
         /// 現在フォルダから表示項目を再構築する。
@@ -405,5 +441,12 @@ namespace Xelqoria::Editor
         HWND m_dragPreviewText = nullptr;
         HBITMAP m_dragPreviewBitmap = nullptr;
         HICON m_dragPreviewIcon = nullptr;
+        HIMAGELIST m_assetsImageList = nullptr;
+        bool m_ownsAssetsImageList = false;
+        std::unordered_map<std::wstring, int> m_fileIconIndices{};
+        std::unordered_map<int, int> m_systemIconIndices{};
+        std::optional<int> m_defaultFileIconIndex{};
+        std::optional<int> m_folderIconIndex{};
+        std::filesystem::path m_loadedIconRootDirectory{};
     };
 }
