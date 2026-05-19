@@ -57,6 +57,11 @@ namespace Xelqoria::Editor
         /// ドロップされた Script Asset ファイルパスを表す。
         /// </summary>
         std::filesystem::path droppedScriptAssetPath{};
+
+        /// <summary>
+        /// 履歴へ記録する操作名を表す。
+        /// </summary>
+        std::string operationName{};
     };
 
     /// <summary>

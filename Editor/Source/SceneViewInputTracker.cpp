@@ -177,7 +177,26 @@ namespace Xelqoria::Editor
                         m_entityDragState.grabOffsetY = worldPoint.y - transform.position.y;
                         m_entityDragState.initialWorldX = transform.position.x;
                         m_entityDragState.initialWorldY = transform.position.y;
+                        m_entityDragState.initialCursorWorldX = worldPoint.x;
+                        m_entityDragState.initialCursorWorldY = worldPoint.y;
+                        m_entityDragState.initialScaleX = transform.scale.x;
+                        m_entityDragState.initialScaleY = transform.scale.y;
+                        m_entityDragState.initialRotationZ = transform.rotation.z;
                         m_entityDragState.hasMoved = false;
+                        switch (m_editMode)
+                        {
+                        case SceneViewEditMode::Scale:
+                            m_entityDragState.operationName = "Scale Entity";
+                            break;
+                        case SceneViewEditMode::Rotate:
+                            m_entityDragState.operationName = "Rotate Entity";
+                            break;
+                        case SceneViewEditMode::Move:
+                        case SceneViewEditMode::None:
+                        default:
+                            m_entityDragState.operationName = "Move Entity";
+                            break;
+                        }
                     }
                 }
                 else
@@ -190,7 +209,6 @@ namespace Xelqoria::Editor
         if (false == isAssetDragActive
             && true == isLeftButtonDown
             && true == m_entityDragState.entityId.has_value()
-            && (SceneViewEditMode::None == m_editMode || SceneViewEditMode::Move == m_editMode)
             && nullptr != scene)
         {
             POINT clientPoint = screenPoint;
@@ -200,12 +218,51 @@ namespace Xelqoria::Editor
                 static_cast<float>(clientPoint.x),
                 static_cast<float>(clientPoint.y)
             });
-            const float nextWorldX = worldPoint.x - m_entityDragState.grabOffsetX;
-            const float nextWorldY = worldPoint.y - m_entityDragState.grabOffsetY;
-            if (SceneEditingOperations::MoveEntity(*scene, *m_entityDragState.entityId, nextWorldX, nextWorldY))
+
+            if (SceneViewEditMode::Scale == m_editMode)
             {
-                result.sceneChanged = true;
-                m_entityDragState.hasMoved = true;
+                const auto entity = scene->FindEntity(*m_entityDragState.entityId);
+                if (true == entity.has_value())
+                {
+                    const float dragDelta =
+                        (worldPoint.x - m_entityDragState.initialCursorWorldX
+                            + m_entityDragState.initialCursorWorldY - worldPoint.y) * 0.01f;
+                    const Game::Transform& transform = entity->get().GetTransform();
+                    const float nextScaleX = (std::max)(0.01f, m_entityDragState.initialScaleX + dragDelta);
+                    const float nextScaleY = (std::max)(0.01f, m_entityDragState.initialScaleY + dragDelta);
+                    if (transform.scale.x != nextScaleX || transform.scale.y != nextScaleY)
+                    {
+                        entity->get().SetScale(nextScaleX, nextScaleY, transform.scale.z);
+                        result.sceneChanged = true;
+                        m_entityDragState.hasMoved = true;
+                    }
+                }
+            }
+            else if (SceneViewEditMode::Rotate == m_editMode)
+            {
+                const auto entity = scene->FindEntity(*m_entityDragState.entityId);
+                if (true == entity.has_value())
+                {
+                    const float dragDelta = worldPoint.x - m_entityDragState.initialCursorWorldX;
+                    const float nextRotationZ = m_entityDragState.initialRotationZ + (dragDelta * 2.0f);
+                    const Game::Transform& transform = entity->get().GetTransform();
+                    if (transform.rotation.z != nextRotationZ)
+                    {
+                        entity->get().SetRotation(transform.rotation.x, transform.rotation.y, nextRotationZ);
+                        result.sceneChanged = true;
+                        m_entityDragState.hasMoved = true;
+                    }
+                }
+            }
+            else
+            {
+                const float nextWorldX = worldPoint.x - m_entityDragState.grabOffsetX;
+                const float nextWorldY = worldPoint.y - m_entityDragState.grabOffsetY;
+                if (SceneEditingOperations::MoveEntity(*scene, *m_entityDragState.entityId, nextWorldX, nextWorldY))
+                {
+                    result.sceneChanged = true;
+                    m_entityDragState.hasMoved = true;
+                }
             }
         }
 
@@ -224,6 +281,7 @@ namespace Xelqoria::Editor
                     result.sceneChanged = true;
                     result.shouldPersistScene = true;
                     result.shouldPushHistory = true;
+                    result.operationName = "Scale Entity";
                 }
             }
             else if (SceneViewEditMode::Rotate == m_editMode)
@@ -235,6 +293,7 @@ namespace Xelqoria::Editor
                     result.sceneChanged = true;
                     result.shouldPersistScene = true;
                     result.shouldPushHistory = true;
+                    result.operationName = "Rotate Entity";
                 }
             }
         }
@@ -319,6 +378,7 @@ namespace Xelqoria::Editor
                 result.sceneChanged = true;
                 result.shouldPersistScene = true;
                 result.shouldPushHistory = true;
+                result.operationName = m_entityDragState.operationName;
             }
 
             ClearEntityDrag();
