@@ -11,6 +11,7 @@
 #include "Sprite.h"
 #include "SpriteCulling.h"
 #include "SpriteDrawInput.h"
+#include "SpriteMaterial.h"
 #include "SpriteRenderMath.h"
 #include "SpriteRenderer.h"
 #include "TextureAssetRegistry.h"
@@ -229,6 +230,95 @@ TEST(SpriteRenderMathTests, SpriteRendererDrawsCommonDrawInput)
     EXPECT_TRUE(IsEqual(context.lastConstants[7], 4.0f));
     EXPECT_TRUE(IsEqual(context.lastConstants[12], 0.25f));
     EXPECT_TRUE(IsEqual(context.lastConstants[15], 0.8f));
+}
+
+TEST(SpriteRenderMathTests, SpriteRendererDrawsSpriteUsingMaterialState)
+{
+    auto rhiTexture = std::make_shared<FakeTexture>(64, 32);
+    auto renderTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+    renderTexture->SetRHITexture(rhiTexture);
+
+    Xelqoria::Graphics::Sprite sprite;
+    sprite.SetTexture(renderTexture);
+    sprite.SetPosition(160.0f, -90.0f);
+    sprite.SetScale(2.0f, 0.5f);
+    sprite.SetRotationDegrees(90.0f);
+    sprite.SetColor(0.25f, 0.5f, 0.75f, 0.8f);
+    sprite.SetOutlineEnabled(true);
+    sprite.SetOutlineThickness(4.0f);
+    sprite.SetOutlineColor(0.1f, 0.2f, 0.3f, 0.4f);
+
+    FakeGraphicsContext context{};
+    Xelqoria::Graphics::SpriteRenderer spriteRenderer(context);
+
+    spriteRenderer.Begin();
+    spriteRenderer.Draw(sprite);
+    spriteRenderer.End();
+
+    EXPECT_EQ(context.drawCount, 1u);
+    EXPECT_EQ(context.lastVertexCount, 6u);
+    EXPECT_EQ(context.lastStartVertexLocation, 0u);
+    EXPECT_EQ(context.lastBoundTexture, nullptr);
+    EXPECT_EQ(context.lastConstants.size(), Xelqoria::Graphics::QuadRenderConstantFloatCount);
+    EXPECT_TRUE(IsEqual(context.lastConstants[0], 0.2f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[6], 1.0f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[7], 4.0f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[8], 0.1f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[11], 0.4f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[12], 0.25f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[15], 0.8f));
+}
+
+TEST(SpriteRenderMathTests, SpritesShareMaterialStateWithoutImplicitCopy)
+{
+    auto sharedMaterial = std::make_shared<Xelqoria::Graphics::SpriteMaterial>();
+
+    Xelqoria::Graphics::Sprite firstSprite;
+    Xelqoria::Graphics::Sprite secondSprite;
+    firstSprite.SetMaterial(sharedMaterial);
+    secondSprite.SetMaterial(sharedMaterial);
+
+    sharedMaterial->SetColor(0.2f, 0.4f, 0.6f, 0.8f);
+    sharedMaterial->SetOutlineEnabled(true);
+    sharedMaterial->SetOutlineThickness(5.0f);
+
+    const Xelqoria::Graphics::SpriteDrawInput firstInput = firstSprite.ToDrawInput();
+    const Xelqoria::Graphics::SpriteDrawInput secondInput = secondSprite.ToDrawInput();
+
+    EXPECT_EQ(firstSprite.GetMaterial(), sharedMaterial);
+    EXPECT_EQ(secondSprite.GetMaterial(), sharedMaterial);
+    EXPECT_TRUE(IsEqual(firstInput.color[0], 0.2f));
+    EXPECT_TRUE(IsEqual(secondInput.color[2], 0.6f));
+    EXPECT_TRUE(firstInput.outlineEnabled);
+    EXPECT_TRUE(secondInput.outlineEnabled);
+    EXPECT_TRUE(IsEqual(firstInput.outlineThickness, 5.0f));
+    EXPECT_TRUE(IsEqual(secondInput.outlineThickness, 5.0f));
+}
+
+TEST(SpriteRenderMathTests, SpriteCanUseIndividualMaterialState)
+{
+    auto sharedMaterial = std::make_shared<Xelqoria::Graphics::SpriteMaterial>();
+    sharedMaterial->SetColor(0.2f, 0.4f, 0.6f, 0.8f);
+
+    auto individualMaterial = std::make_shared<Xelqoria::Graphics::SpriteMaterial>();
+    individualMaterial->SetColor(0.9f, 0.7f, 0.5f, 0.3f);
+
+    Xelqoria::Graphics::Sprite sharedSprite;
+    Xelqoria::Graphics::Sprite individualSprite;
+    sharedSprite.SetMaterial(sharedMaterial);
+    individualSprite.SetMaterial(individualMaterial);
+
+    sharedMaterial->SetColor(0.1f, 0.2f, 0.3f, 0.4f);
+
+    const Xelqoria::Graphics::SpriteDrawInput sharedInput = sharedSprite.ToDrawInput();
+    const Xelqoria::Graphics::SpriteDrawInput individualInput = individualSprite.ToDrawInput();
+
+    EXPECT_EQ(sharedSprite.GetMaterial(), sharedMaterial);
+    EXPECT_EQ(individualSprite.GetMaterial(), individualMaterial);
+    EXPECT_TRUE(IsEqual(sharedInput.color[0], 0.1f));
+    EXPECT_TRUE(IsEqual(sharedInput.color[3], 0.4f));
+    EXPECT_TRUE(IsEqual(individualInput.color[0], 0.9f));
+    EXPECT_TRUE(IsEqual(individualInput.color[3], 0.3f));
 }
 
 TEST(SpriteRenderMathTests, SpriteCullingRejectsSpritesOutsideViewport)
