@@ -231,6 +231,43 @@ TEST(SpriteRenderMathTests, SpriteRendererDrawsCommonDrawInput)
     EXPECT_TRUE(IsEqual(context.lastConstants[15], 0.8f));
 }
 
+TEST(SpriteRenderMathTests, SpriteRendererDrawsSpriteUsingMaterialState)
+{
+    auto rhiTexture = std::make_shared<FakeTexture>(64, 32);
+    auto renderTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+    renderTexture->SetRHITexture(rhiTexture);
+
+    Xelqoria::Graphics::Sprite sprite;
+    sprite.SetTexture(renderTexture);
+    sprite.SetPosition(160.0f, -90.0f);
+    sprite.SetScale(2.0f, 0.5f);
+    sprite.SetRotationDegrees(90.0f);
+    sprite.SetColor(0.25f, 0.5f, 0.75f, 0.8f);
+    sprite.SetOutlineEnabled(true);
+    sprite.SetOutlineThickness(4.0f);
+    sprite.SetOutlineColor(0.1f, 0.2f, 0.3f, 0.4f);
+
+    FakeGraphicsContext context{};
+    Xelqoria::Graphics::SpriteRenderer spriteRenderer(context);
+
+    spriteRenderer.Begin();
+    spriteRenderer.Draw(sprite);
+    spriteRenderer.End();
+
+    EXPECT_EQ(context.drawCount, 1u);
+    EXPECT_EQ(context.lastVertexCount, 6u);
+    EXPECT_EQ(context.lastStartVertexLocation, 0u);
+    EXPECT_EQ(context.lastBoundTexture, nullptr);
+    EXPECT_EQ(context.lastConstants.size(), Xelqoria::Graphics::QuadRenderConstantFloatCount);
+    EXPECT_TRUE(IsEqual(context.lastConstants[0], 0.2f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[6], 1.0f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[7], 4.0f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[8], 0.1f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[11], 0.4f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[12], 0.25f));
+    EXPECT_TRUE(IsEqual(context.lastConstants[15], 0.8f));
+}
+
 TEST(SpriteRenderMathTests, SpriteCullingRejectsSpritesOutsideViewport)
 {
     auto renderTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
