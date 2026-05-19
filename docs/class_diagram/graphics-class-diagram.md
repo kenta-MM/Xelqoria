@@ -35,15 +35,39 @@ classDiagram
             +GetRHITexture()
         }
 
-        class Sprite {
+        class SpriteMaterial {
             -m_texture shared_ptr~Texture2D~
             -m_textureAssetId AssetId
-            -m_position Vector2
-            -m_scale Vector2
-            -m_rotationDegrees float
+            -m_color array~float, 4~
+            -m_outlineEnabled bool
+            -m_outlineThickness float
+            -m_outlineColor array~float, 4~
             +SetTexture(...)
             +GetTexture()
             +SetTextureAssetId(...)
+            +GetTextureAssetId()
+            +SetColor(...)
+            +GetColor()
+            +SetOutlineEnabled(...)
+            +IsOutlineEnabled()
+            +SetOutlineThickness(...)
+            +GetOutlineThickness()
+            +SetOutlineColor(...)
+            +GetOutlineColor()
+        }
+
+        class Sprite {
+            -m_material shared_ptr~SpriteMaterial~
+            -m_position Vector2
+            -m_scale Vector2
+            -m_rotationDegrees float
+            +SetMaterial(...)
+            +GetMaterial()
+            +SetTexture(...)
+            +GetTexture()
+            +SetTextureAssetId(...)
+            +GetTextureAssetId()
+            +ToDrawInput()
         }
 
         class SpriteRenderer {
@@ -69,8 +93,9 @@ classDiagram
     TextureAssetRegistry ..|> ITextureAssetResolver
     Texture2D --> ITexture : wraps
     Texture2D ..> IGraphicsContext : loads via
-    Sprite --> Texture2D : holds
-    Sprite --> AssetId : references
+    SpriteMaterial --> Texture2D : holds
+    SpriteMaterial --> AssetId : references
+    Sprite --> SpriteMaterial : references
     Sprite ..> Vector2 : uses
     Sprite *-- Vector2
     SpriteRenderer --> IGraphicsContext : uses

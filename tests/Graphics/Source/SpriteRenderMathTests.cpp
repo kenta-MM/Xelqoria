@@ -166,6 +166,51 @@ TEST(SpriteRenderMathTests, SpriteStoresRenderStateAndComputesQuadTransform)
     EXPECT_TRUE(IsEqual(emptyTransform.rotationSin, 0.0f));
 }
 
+TEST(SpriteRenderMathTests, SpriteMaterialStoresRenderState)
+{
+    auto renderTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+    renderTexture->SetRHITexture(std::make_shared<FakeTexture>(32, 16));
+
+    Xelqoria::Graphics::SpriteMaterial material;
+    material.SetTexture(renderTexture);
+    material.SetTextureAssetId("textures/material");
+    material.SetColor(0.2f, 0.4f, 0.6f, 0.8f);
+    material.SetOutlineEnabled(true);
+    material.SetOutlineThickness(6.0f);
+    material.SetOutlineColor(0.1f, 0.3f, 0.5f, 0.7f);
+
+    EXPECT_EQ(material.GetTexture(), renderTexture);
+    EXPECT_EQ(material.GetTextureAssetId(), Xelqoria::Core::AssetId("textures/material"));
+    EXPECT_TRUE(IsEqual(material.GetColor()[0], 0.2f));
+    EXPECT_TRUE(IsEqual(material.GetColor()[3], 0.8f));
+    EXPECT_TRUE(material.IsOutlineEnabled());
+    EXPECT_TRUE(IsEqual(material.GetOutlineThickness(), 6.0f));
+    EXPECT_TRUE(IsEqual(material.GetOutlineColor()[0], 0.1f));
+    EXPECT_TRUE(IsEqual(material.GetOutlineColor()[3], 0.7f));
+}
+
+TEST(SpriteRenderMathTests, SpriteAlwaysHasMaterial)
+{
+    Xelqoria::Graphics::Sprite sprite;
+
+    const std::shared_ptr<Xelqoria::Graphics::SpriteMaterial> defaultMaterial = sprite.GetMaterial();
+    ASSERT_NE(defaultMaterial, nullptr);
+
+    auto customMaterial = std::make_shared<Xelqoria::Graphics::SpriteMaterial>();
+    customMaterial->SetColor(0.3f, 0.5f, 0.7f, 0.9f);
+    sprite.SetMaterial(customMaterial);
+
+    EXPECT_EQ(sprite.GetMaterial(), customMaterial);
+    EXPECT_TRUE(IsEqual(sprite.ToDrawInput().color[1], 0.5f));
+
+    sprite.SetMaterial(nullptr);
+
+    ASSERT_NE(sprite.GetMaterial(), nullptr);
+    EXPECT_NE(sprite.GetMaterial(), customMaterial);
+    EXPECT_TRUE(IsEqual(sprite.ToDrawInput().color[0], 1.0f));
+    EXPECT_TRUE(IsEqual(sprite.ToDrawInput().outlineThickness, 1.0f));
+}
+
 TEST(SpriteRenderMathTests, SpriteCreatesCommonDrawInput)
 {
     Xelqoria::Graphics::Sprite sprite;
