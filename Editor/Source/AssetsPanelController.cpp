@@ -4,6 +4,7 @@
 #include <array>
 #include <CommCtrl.h>
 #include <cstdio>
+#include <cwctype>
 #include <iterator>
 #include <objbase.h>
 #include <ShObjIdl.h>
@@ -11,11 +12,14 @@
 #include <system_error>
 #include <utility>
 #include <Windows.h>
+#include <wincodec.h>
 #include <wrl/client.h>
 
 #include "EditorAssetPathUtils.h"
 #include "EditorPathSecurity.h"
 #include "ScriptAssetService.h"
+
+#pragma comment(lib, "windowscodecs.lib")
 
 namespace Xelqoria::Editor
 {
@@ -30,10 +34,244 @@ namespace Xelqoria::Editor
         constexpr int DragPreviewImageSize = 48;
         constexpr int DragPreviewCursorOffsetX = 14;
         constexpr int DragPreviewCursorOffsetY = 18;
+        constexpr int AssetsIconSize = 16;
+        constexpr const wchar_t* EditorIconsRelativeDirectory = L"Assets\\Editor\\Icons";
+
+        /// <summary>
+        /// COM 利用スコープの終了時に CoUninitialize を遅延実行する。
+        /// </summary>
+        struct ScopedComInitialization
+        {
+            explicit ScopedComInitialization(DWORD concurrencyModel)
+            {
+                const HRESULT result = CoInitializeEx(nullptr, concurrencyModel);
+                shouldUninitialize = SUCCEEDED(result);
+            }
+
+            ~ScopedComInitialization()
+            {
+                if (shouldUninitialize)
+                {
+                    CoUninitialize();
+                }
+            }
+
+            ScopedComInitialization(const ScopedComInitialization&) = delete;
+            ScopedComInitialization& operator=(const ScopedComInitialization&) = delete;
+
+            bool shouldUninitialize = false;
+        };
 
         [[nodiscard]] POINT ToWin32Point(Platform::Point point)
         {
             return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+
+        /// <summary>
+        /// 拡張子文字列を小文字へ正規化する。
+        /// </summary>
+        /// <param name="extension">正規化する拡張子。</param>
+        /// <returns>小文字化した拡張子。</returns>
+        [[nodiscard]] std::wstring NormalizeExtension(std::wstring extension)
+        {
+            for (wchar_t& character : extension)
+            {
+                character = static_cast<wchar_t>(std::towlower(character));
+            }
+
+            return extension;
+        }
+
+        /// <summary>
+        /// 指定ディレクトリから Editor アイコン配置ディレクトリを親方向へ探索する。
+        /// </summary>
+        /// <param name="startDirectory">探索開始ディレクトリ。</param>
+        /// <returns>見つかったアイコンディレクトリ。未検出時は空。</returns>
+        [[nodiscard]] std::filesystem::path FindEditorIconsDirectoryFrom(const std::filesystem::path& startDirectory)
+        {
+            if (startDirectory.empty())
+            {
+                return {};
+            }
+
+            std::error_code errorCode;
+            std::filesystem::path currentDirectory = std::filesystem::absolute(startDirectory, errorCode);
+            if (errorCode)
+            {
+                currentDirectory = startDirectory;
+            }
+
+            while (false == currentDirectory.empty())
+            {
+                const std::filesystem::path candidate = currentDirectory / EditorIconsRelativeDirectory;
+                if (std::filesystem::is_directory(candidate, errorCode)
+                    && false == static_cast<bool>(errorCode))
+                {
+                    return candidate;
+                }
+
+                errorCode.clear();
+                const std::filesystem::path parentDirectory = currentDirectory.parent_path();
+                if (parentDirectory == currentDirectory)
+                {
+                    break;
+                }
+
+                currentDirectory = parentDirectory;
+            }
+
+            return {};
+        }
+
+        /// <summary>
+        /// 利用可能な Editor アイコン配置ディレクトリを取得する。
+        /// </summary>
+        /// <param name="assetsRootDirectory">現在の Assets ルートディレクトリ。</param>
+        /// <returns>見つかったアイコンディレクトリ。未検出時は空。</returns>
+        [[nodiscard]] std::filesystem::path FindEditorIconsDirectory(const std::filesystem::path& assetsRootDirectory)
+        {
+            const std::filesystem::path projectIconsDirectory = assetsRootDirectory / EditorIconsRelativeDirectory;
+            std::error_code errorCode;
+            if (false == assetsRootDirectory.empty()
+                && std::filesystem::is_directory(projectIconsDirectory, errorCode)
+                && false == static_cast<bool>(errorCode))
+            {
+                return projectIconsDirectory;
+            }
+
+            errorCode.clear();
+            const std::filesystem::path currentIconsDirectory =
+                FindEditorIconsDirectoryFrom(std::filesystem::current_path(errorCode));
+            if (false == currentIconsDirectory.empty())
+            {
+                return currentIconsDirectory;
+            }
+
+            wchar_t modulePath[MAX_PATH]{};
+            if (0 != GetModuleFileNameW(nullptr, modulePath, std::size(modulePath)))
+            {
+                return FindEditorIconsDirectoryFrom(std::filesystem::path(modulePath).parent_path());
+            }
+
+            return {};
+        }
+
+        /// <summary>
+        /// PNG ファイルを ImageList へ追加できる 32bpp HBITMAP として読み込む。
+        /// </summary>
+        /// <param name="iconPath">読み込む PNG パス。</param>
+        /// <returns>読み込んだ HBITMAP。失敗時は nullptr。</returns>
+        [[nodiscard]] HBITMAP LoadPngIconBitmap(const std::filesystem::path& iconPath)
+        {
+            if (false == std::filesystem::exists(iconPath))
+            {
+                return nullptr;
+            }
+
+            ScopedComInitialization comInitialization(COINIT_APARTMENTTHREADED);
+
+            Microsoft::WRL::ComPtr<IWICImagingFactory> imagingFactory;
+            HRESULT hr = CoCreateInstance(
+                CLSID_WICImagingFactory,
+                nullptr,
+                CLSCTX_INPROC_SERVER,
+                IID_PPV_ARGS(imagingFactory.GetAddressOf()));
+            if (FAILED(hr))
+            {
+                return nullptr;
+            }
+
+            Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
+            hr = imagingFactory->CreateDecoderFromFilename(
+                iconPath.c_str(),
+                nullptr,
+                GENERIC_READ,
+                WICDecodeMetadataCacheOnLoad,
+                decoder.GetAddressOf());
+            if (FAILED(hr))
+            {
+                return nullptr;
+            }
+
+            Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
+            hr = decoder->GetFrame(0, frame.GetAddressOf());
+            if (FAILED(hr))
+            {
+                return nullptr;
+            }
+
+            Microsoft::WRL::ComPtr<IWICBitmapScaler> scaler;
+            hr = imagingFactory->CreateBitmapScaler(scaler.GetAddressOf());
+            if (FAILED(hr))
+            {
+                return nullptr;
+            }
+
+            hr = scaler->Initialize(
+                frame.Get(),
+                AssetsIconSize,
+                AssetsIconSize,
+                WICBitmapInterpolationModeFant);
+            if (FAILED(hr))
+            {
+                return nullptr;
+            }
+
+            Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
+            hr = imagingFactory->CreateFormatConverter(converter.GetAddressOf());
+            if (FAILED(hr))
+            {
+                return nullptr;
+            }
+
+            hr = converter->Initialize(
+                scaler.Get(),
+                GUID_WICPixelFormat32bppPBGRA,
+                WICBitmapDitherTypeNone,
+                nullptr,
+                0.0,
+                WICBitmapPaletteTypeCustom);
+            if (FAILED(hr))
+            {
+                return nullptr;
+            }
+
+            BITMAPINFO bitmapInfo{};
+            bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+            bitmapInfo.bmiHeader.biWidth = AssetsIconSize;
+            bitmapInfo.bmiHeader.biHeight = -AssetsIconSize;
+            bitmapInfo.bmiHeader.biPlanes = 1;
+            bitmapInfo.bmiHeader.biBitCount = 32;
+            bitmapInfo.bmiHeader.biCompression = BI_RGB;
+
+            void* bits = nullptr;
+            HBITMAP bitmap = CreateDIBSection(
+                nullptr,
+                &bitmapInfo,
+                DIB_RGB_COLORS,
+                &bits,
+                nullptr,
+                0);
+            if (nullptr == bitmap || nullptr == bits)
+            {
+                if (nullptr != bitmap)
+                {
+                    DeleteObject(bitmap);
+                }
+
+                return nullptr;
+            }
+
+            constexpr UINT stride = AssetsIconSize * 4;
+            constexpr UINT bufferSize = stride * AssetsIconSize;
+            hr = converter->CopyPixels(nullptr, stride, bufferSize, static_cast<BYTE*>(bits));
+            if (FAILED(hr))
+            {
+                DeleteObject(bitmap);
+                return nullptr;
+            }
+
+            return bitmap;
         }
 
         /// <summary>
@@ -262,6 +500,16 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR DeleteEntryMenuCommandId = 2;
     }
 
+    AssetsPanelController::~AssetsPanelController()
+    {
+        if (m_ownsAssetsImageList && nullptr != m_assetsImageList)
+        {
+            ImageList_Destroy(m_assetsImageList);
+            m_assetsImageList = nullptr;
+            m_ownsAssetsImageList = false;
+        }
+    }
+
     void AssetsPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
     {
         m_assetsListView = shell.GetAssetsListView();
@@ -276,6 +524,7 @@ namespace Xelqoria::Editor
         {
             m_assetsRootDirectory.clear();
             m_currentDirectory.clear();
+            ReloadEditorIconImages({});
             m_visibleEntries.clear();
             m_selectedFilePath.clear();
             m_selectedSpriteAssetId = {};
@@ -308,6 +557,7 @@ namespace Xelqoria::Editor
             m_lastClickedIndex = -1;
         }
 
+        ReloadEditorIconImages(m_assetsRootDirectory);
         RebuildVisibleEntries();
         RefreshListView();
         RefreshSummaryLabel();
@@ -640,17 +890,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        SHFILEINFOW fileInfo{};
-        const HIMAGELIST imageList = reinterpret_cast<HIMAGELIST>(SHGetFileInfoW(
-            L"C:\\",
-            FILE_ATTRIBUTE_DIRECTORY,
-            &fileInfo,
-            sizeof(fileInfo),
-            SHGFI_SYSICONINDEX | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES));
-        if (nullptr != imageList)
-        {
-            ListView_SetImageList(m_assetsListView, imageList, LVSIL_SMALL);
-        }
+        InitializeAssetsImageList();
 
         const std::array<std::pair<const wchar_t*, int>, 4> columns{
             std::pair<const wchar_t*, int>{ L"名前", 140 },
@@ -670,6 +910,148 @@ namespace Xelqoria::Editor
         }
 
         m_listViewInitialized = true;
+    }
+
+    void AssetsPanelController::InitializeAssetsImageList()
+    {
+        if (nullptr == m_assetsListView)
+        {
+            return;
+        }
+
+        if (m_ownsAssetsImageList && nullptr != m_assetsImageList)
+        {
+            ImageList_Destroy(m_assetsImageList);
+        }
+
+        m_assetsImageList = ImageList_Create(
+            AssetsIconSize,
+            AssetsIconSize,
+            ILC_COLOR32 | ILC_MASK,
+            16,
+            16);
+        m_ownsAssetsImageList = nullptr != m_assetsImageList;
+        ListView_SetImageList(m_assetsListView, m_assetsImageList, LVSIL_SMALL);
+    }
+
+    void AssetsPanelController::ReloadEditorIconImages(const std::filesystem::path& assetsRootDirectory)
+    {
+        m_fileIconIndices.clear();
+        m_systemIconIndices.clear();
+        m_defaultFileIconIndex.reset();
+        m_folderIconIndex.reset();
+        m_loadedIconRootDirectory.clear();
+
+        InitializeAssetsImageList();
+        if (nullptr == m_assetsImageList)
+        {
+            return;
+        }
+
+        const std::filesystem::path iconsDirectory = FindEditorIconsDirectory(assetsRootDirectory);
+        if (iconsDirectory.empty())
+        {
+            return;
+        }
+
+        const auto addIcon = [this, &iconsDirectory](const wchar_t* fileName) -> std::optional<int>
+        {
+            HBITMAP bitmap = LoadPngIconBitmap(iconsDirectory / fileName);
+            if (nullptr == bitmap)
+            {
+                return std::nullopt;
+            }
+
+            const int iconIndex = ImageList_Add(m_assetsImageList, bitmap, nullptr);
+            DeleteObject(bitmap);
+            if (iconIndex < 0)
+            {
+                return std::nullopt;
+            }
+
+            return iconIndex;
+        };
+
+        if (const std::optional<int> iconIndex = addIcon(L"file_proj.png"); iconIndex.has_value())
+        {
+            m_fileIconIndices.emplace(L".proj", *iconIndex);
+        }
+
+        if (const std::optional<int> iconIndex = addIcon(L"file_script.png"); iconIndex.has_value())
+        {
+            m_fileIconIndices.emplace(L".script", *iconIndex);
+        }
+
+        if (const std::optional<int> iconIndex = addIcon(L"file_sprite.png"); iconIndex.has_value())
+        {
+            m_fileIconIndices.emplace(L".sprite", *iconIndex);
+        }
+
+        m_defaultFileIconIndex = addIcon(L"file_default.png");
+        m_folderIconIndex = addIcon(L"folder.png");
+        m_loadedIconRootDirectory = iconsDirectory;
+    }
+
+    int AssetsPanelController::ResolveAssetIconIndex(
+        const std::filesystem::path& path,
+        bool isDirectory,
+        int fallbackIconIndex)
+    {
+        if (isDirectory)
+        {
+            return m_folderIconIndex.value_or(ResolveFallbackSystemIconIndex(fallbackIconIndex));
+        }
+
+        const std::wstring extension = NormalizeExtension(path.extension().wstring());
+        const auto iconIt = m_fileIconIndices.find(extension);
+        if (iconIt != m_fileIconIndices.end())
+        {
+            return iconIt->second;
+        }
+
+        return m_defaultFileIconIndex.value_or(ResolveFallbackSystemIconIndex(fallbackIconIndex));
+    }
+
+    int AssetsPanelController::ResolveFallbackSystemIconIndex(int systemIconIndex)
+    {
+        const auto cacheIt = m_systemIconIndices.find(systemIconIndex);
+        if (cacheIt != m_systemIconIndices.end())
+        {
+            return cacheIt->second;
+        }
+
+        if (nullptr == m_assetsImageList)
+        {
+            return 0;
+        }
+
+        SHFILEINFOW fileInfo{};
+        const HIMAGELIST systemImageList = reinterpret_cast<HIMAGELIST>(SHGetFileInfoW(
+            L"C:\\",
+            FILE_ATTRIBUTE_DIRECTORY,
+            &fileInfo,
+            sizeof(fileInfo),
+            SHGFI_SYSICONINDEX | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES));
+        if (nullptr == systemImageList)
+        {
+            return 0;
+        }
+
+        HICON icon = ImageList_GetIcon(systemImageList, systemIconIndex, ILD_NORMAL);
+        if (nullptr == icon)
+        {
+            return 0;
+        }
+
+        const int iconIndex = ImageList_AddIcon(m_assetsImageList, icon);
+        DestroyIcon(icon);
+        if (iconIndex < 0)
+        {
+            return 0;
+        }
+
+        m_systemIconIndices.emplace(systemIconIndex, iconIndex);
+        return iconIndex;
     }
 
     void AssetsPanelController::RebuildVisibleEntries()
@@ -701,7 +1083,7 @@ namespace Xelqoria::Editor
         parentEntry.path = m_currentDirectory.parent_path();
         parentEntry.displayName = L"..";
         parentEntry.typeName = L"親フォルダー";
-        parentEntry.iconIndex = GetFolderIconIndex();
+        parentEntry.iconIndex = ResolveAssetIconIndex(parentEntry.path, true, GetFolderIconIndex());
         parentEntry.isDirectory = true;
         parentEntry.isParentLink = true;
         m_visibleEntries.push_back(parentEntry);
@@ -727,7 +1109,12 @@ namespace Xelqoria::Editor
         std::sort(entries.begin(), entries.end(), CompareDirectoryEntry);
         for (const std::filesystem::directory_entry& entry : entries)
         {
-            m_visibleEntries.push_back(BuildEntry(entry));
+            AssetListEntry visibleEntry = BuildEntry(entry);
+            visibleEntry.iconIndex = ResolveAssetIconIndex(
+                visibleEntry.path,
+                visibleEntry.isDirectory,
+                visibleEntry.iconIndex);
+            m_visibleEntries.push_back(std::move(visibleEntry));
         }
     }
 
@@ -1384,8 +1771,7 @@ namespace Xelqoria::Editor
 
     HBITMAP AssetsPanelController::CreateDragPreviewBitmap(const std::filesystem::path& imagePath) const
     {
-        const HRESULT coInitializeResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-        const bool shouldUninitializeCom = SUCCEEDED(coInitializeResult);
+        ScopedComInitialization comInitialization(COINIT_APARTMENTTHREADED);
 
         Microsoft::WRL::ComPtr<IShellItemImageFactory> imageFactory;
         const HRESULT itemHr = SHCreateItemFromParsingName(
@@ -1402,11 +1788,6 @@ namespace Xelqoria::Editor
                 &thumbnail);
         }
 
-        if (shouldUninitializeCom)
-        {
-            CoUninitialize();
-        }
-
         return thumbnail;
     }
 
@@ -1415,8 +1796,7 @@ namespace Xelqoria::Editor
         int fallbackIconIndex) const
     {
         constexpr int DragImageSize = 48;
-        const HRESULT coInitializeResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-        const bool shouldUninitializeCom = SUCCEEDED(coInitializeResult);
+        ScopedComInitialization comInitialization(COINIT_APARTMENTTHREADED);
 
         HIMAGELIST imageList = ImageList_Create(
             DragImageSize,
@@ -1426,11 +1806,6 @@ namespace Xelqoria::Editor
             1);
         if (nullptr == imageList)
         {
-            if (shouldUninitializeCom)
-            {
-                CoUninitialize();
-            }
-
             return nullptr;
         }
 
@@ -1453,11 +1828,6 @@ namespace Xelqoria::Editor
                 DeleteObject(thumbnail);
                 if (0 < ImageList_GetImageCount(imageList))
                 {
-                    if (shouldUninitializeCom)
-                    {
-                        CoUninitialize();
-                    }
-
                     return imageList;
                 }
             }
@@ -1479,22 +1849,12 @@ namespace Xelqoria::Editor
                 DestroyIcon(icon);
                 if (0 < ImageList_GetImageCount(imageList))
                 {
-                    if (shouldUninitializeCom)
-                    {
-                        CoUninitialize();
-                    }
-
                     return imageList;
                 }
             }
         }
 
         ImageList_Destroy(imageList);
-        if (shouldUninitializeCom)
-        {
-            CoUninitialize();
-        }
-
         return nullptr;
     }
 
