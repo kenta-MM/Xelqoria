@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 
 #include "AssetId.h"
 #include "Entity.h"
@@ -121,6 +122,11 @@ namespace Xelqoria::Editor
         /// 更新後の選択 EntityId を表す。
         /// </summary>
         std::optional<Game::EntityId> selectedEntityId{};
+
+        /// <summary>
+        /// 履歴へ記録する操作名を表す。
+        /// </summary>
+        std::string operationName{};
     };
 
     /// <summary>
@@ -166,5 +172,10 @@ namespace Xelqoria::Editor
         /// ドロップ適用の最終状態を表す。
         /// </summary>
         SceneDropPlacementStatus status = SceneDropPlacementStatus::None;
+
+        /// <summary>
+        /// 履歴へ記録する操作名を表す。
+        /// </summary>
+        std::string operationName{};
     };
 }

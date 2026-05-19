@@ -22,6 +22,11 @@ namespace Xelqoria::Editor
         /// スナップショット時点の選択 EntityId を保持する。
         /// </summary>
         std::optional<Game::EntityId> selectedEntityId{};
+
+        /// <summary>
+        /// 履歴へ表示・記録する操作名を保持する。
+        /// </summary>
+        std::string operationName{};
     };
 
     /// <summary>
@@ -40,7 +45,19 @@ namespace Xelqoria::Editor
         /// 新しい編集結果を履歴へ積む。
         /// </summary>
         /// <param name="entry">追加するスナップショット。</param>
-        void Push(SceneCommandHistoryEntry entry);
+        /// <returns>履歴へ追加された場合は true。</returns>
+        bool Push(SceneCommandHistoryEntry entry);
+
+        /// <summary>
+        /// 現在位置を保存済み位置として記録する。
+        /// </summary>
+        void MarkSaved();
+
+        /// <summary>
+        /// 現在位置が保存済み位置から離れているかを取得する。
+        /// </summary>
+        /// <returns>未保存変更がある場合は true。</returns>
+        [[nodiscard]] bool IsDirty() const;
 
         /// <summary>
         /// Undo 可能かを取得する。
@@ -78,10 +95,17 @@ namespace Xelqoria::Editor
         /// <returns>履歴件数。</returns>
         std::size_t GetCount() const;
 
+        /// <summary>
+        /// 現在位置の履歴インデックスを取得する。
+        /// </summary>
+        /// <returns>現在位置の履歴インデックス。</returns>
+        [[nodiscard]] std::size_t GetCurrentIndex() const;
+
     private:
         static constexpr std::size_t MaxHistoryEntryCount = 128;
 
         std::vector<SceneCommandHistoryEntry> m_entries{};
         std::size_t m_currentIndex = 0;
+        std::optional<std::size_t> m_savedIndex{};
     };
 }

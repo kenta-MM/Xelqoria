@@ -5,6 +5,7 @@
 #include <Windows.h>
 #include <memory>
 #include <optional>
+#include <utility>
 #include "EditorSceneDocument.h"
 #include "SceneCommandHistory.h"
 #include <Entity.h>
@@ -14,12 +15,25 @@ namespace Xelqoria::Editor
 {
     void EditorCommandController::Reset(const EditorSceneDocument& document, std::optional<Game::EntityId> selectedEntityId)
     {
-        m_sceneCommandHistory.Reset(CaptureSceneHistoryEntry(document, selectedEntityId));
+        m_sceneCommandHistory.Reset(CaptureSceneHistoryEntry(document, selectedEntityId, "Initial Scene"));
     }
 
-    void EditorCommandController::PushSnapshot(const EditorSceneDocument& document, std::optional<Game::EntityId> selectedEntityId)
+    bool EditorCommandController::PushSnapshot(
+        const EditorSceneDocument& document,
+        std::optional<Game::EntityId> selectedEntityId,
+        std::string operationName)
     {
-        m_sceneCommandHistory.Push(CaptureSceneHistoryEntry(document, selectedEntityId));
+        return m_sceneCommandHistory.Push(CaptureSceneHistoryEntry(document, selectedEntityId, std::move(operationName)));
+    }
+
+    void EditorCommandController::MarkSaved()
+    {
+        m_sceneCommandHistory.MarkSaved();
+    }
+
+    bool EditorCommandController::IsDirty() const
+    {
+        return m_sceneCommandHistory.IsDirty();
     }
 
     EditorCommandUpdateResult EditorCommandController::Update(
@@ -31,8 +45,9 @@ namespace Xelqoria::Editor
         EditorCommandUpdateResult result{};
 
         const bool isControlDown = inputSnapshot.IsKeyDown(VK_CONTROL);
-        const bool isUndoPressed = isControlDown && inputSnapshot.WasKeyPressed('Z');
-        const bool isRedoPressed = isControlDown && inputSnapshot.WasKeyPressed('Y');
+        const bool isShiftDown = inputSnapshot.IsKeyDown(VK_SHIFT);
+        const bool isRedoPressed = isControlDown && isShiftDown && inputSnapshot.WasKeyPressed('Z');
+        const bool isUndoPressed = isControlDown && false == isShiftDown && inputSnapshot.WasKeyPressed('Z');
         const bool isDuplicatePressed = isControlDown && inputSnapshot.WasKeyPressed('D');
         const bool isDeletePressed = inputSnapshot.WasKeyPressed(VK_DELETE);
 
@@ -44,9 +59,11 @@ namespace Xelqoria::Editor
                 result = RestoreSceneHistoryEntry(*entry, document, sceneViewPlanLabel);
                 if (result.changed)
                 {
-                    SetWindowTextW(sceneViewPlanLabel, L"Ctrl+Z で直前の Scene スナップショットへ戻しました。");
+                    SetWindowTextW(sceneViewPlanLabel, L"Ctrl+Z で直前の Scene 状態へ戻しました。");
                 }
             }
+
+            return result;
         }
 
         if (isRedoPressed)
@@ -57,9 +74,11 @@ namespace Xelqoria::Editor
                 result = RestoreSceneHistoryEntry(*entry, document, sceneViewPlanLabel);
                 if (result.changed)
                 {
-                    SetWindowTextW(sceneViewPlanLabel, L"Ctrl+Y で Scene スナップショットを再適用しました。");
+                    SetWindowTextW(sceneViewPlanLabel, L"Shift+Ctrl+Z で Scene 状態を再適用しました。");
                 }
             }
+
+            return result;
         }
 
         Game::Scene* scene = document.GetScene();
@@ -72,16 +91,10 @@ namespace Xelqoria::Editor
                 selectedEntityId = duplicateResult.selectedEntityId;
                 result.changed = true;
                 result.selectedEntityId = selectedEntityId;
-                if (document.Save())
+                if (PushSnapshot(document, selectedEntityId, "Duplicate Entity"))
                 {
-                    PushSnapshot(document, selectedEntityId);
                     SetWindowTextW(sceneViewPlanLabel, L"Ctrl+D で選択 Entity を複製しました。");
                 }
-                else
-                {
-                    SetWindowTextW(sceneViewPlanLabel, L"Ctrl+D で Entity は複製されましたが、Scene の保存に失敗しました。");
-                }
-                
             }
         }
 
@@ -94,16 +107,10 @@ namespace Xelqoria::Editor
                 selectedEntityId = deleteResult.selectedEntityId;
                 result.changed = true;
                 result.selectedEntityId = selectedEntityId;
-                if (document.Save())
+                if (PushSnapshot(document, selectedEntityId, "Delete Entity"))
                 {
-                    PushSnapshot(document, selectedEntityId);
                     SetWindowTextW(sceneViewPlanLabel, L"Delete で選択 Entity を削除しました。");
                 }
-                else
-                {
-                    SetWindowTextW(sceneViewPlanLabel, L"Delete で Entity は削除されましたが、Scene の保存に失敗しました。");
-                }
-                
             }
         }
 
@@ -112,7 +119,8 @@ namespace Xelqoria::Editor
 
     SceneCommandHistoryEntry EditorCommandController::CaptureSceneHistoryEntry(
         const EditorSceneDocument& document,
-        std::optional<Game::EntityId> selectedEntityId) const
+        std::optional<Game::EntityId> selectedEntityId,
+        std::string operationName) const
     {
         const Game::Scene* scene = document.GetScene();
         if (nullptr == scene)
@@ -122,7 +130,8 @@ namespace Xelqoria::Editor
 
         return SceneCommandHistoryEntry{
             Game::SceneSerializer::SaveToText(*scene),
-            selectedEntityId
+            selectedEntityId,
+            std::move(operationName)
         };
     }
 

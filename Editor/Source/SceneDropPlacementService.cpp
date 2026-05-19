@@ -86,13 +86,8 @@ namespace Xelqoria::Editor
 
         document.ReplaceScene(std::make_unique<Game::Scene>(*loadResult.scene));
 
-        if (false == document.Save())
-        {
-            result.status = SceneDropPlacementStatus::SaveFailed;
-            return result;
-        }
-
         result.shouldPushHistory = true;
+        result.operationName = "Create Entity";
         result.status = SceneDropPlacementStatus::Success;
 
         const std::string debugLine =

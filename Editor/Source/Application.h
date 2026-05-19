@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <future>
 #include <optional>
+#include <string>
 
 #include "AssetsPanelController.h"
 #include "InputSystem.h"
@@ -137,6 +138,11 @@ namespace Xelqoria::Editor
         void MarkProjectDirty();
 
         /// <summary>
+        /// 履歴状態から Scene Dirty 表示を同期する。
+        /// </summary>
+        void RefreshProjectDirtyState();
+
+        /// <summary>
         /// Editor 再生開始前に Script をビルドする。
         /// </summary>
         /// <returns>再生開始前ビルドに成功した場合は true。</returns>
@@ -236,15 +242,15 @@ namespace Xelqoria::Editor
             bool refreshSceneViewSelectionStatus);
 
         /// <summary>
-        /// Scene 変更内容を保存し、必要に応じて履歴へ積む。
+        /// Scene 変更内容を必要に応じて履歴へ積み、Dirty 表示へ反映する。
         /// </summary>
-        /// <param name="successMessage">保存成功時の表示文面。</param>
-        /// <param name="failureMessage">保存失敗時の表示文面。</param>
-        /// <param name="pushHistory">保存成功時に履歴へ積む場合は true。</param>
-        /// <returns>保存に成功した場合は true。</returns>
+        /// <param name="message">変更反映時の表示文面。</param>
+        /// <param name="operationName">履歴へ記録する操作名。</param>
+        /// <param name="pushHistory">履歴へ積む場合は true。</param>
+        /// <returns>履歴追加または Dirty 反映を行った場合は true。</returns>
         bool PersistSceneChanges(
-            const wchar_t* successMessage,
-            const wchar_t* failureMessage,
+            const wchar_t* message,
+            const std::string& operationName,
             bool pushHistory);
 
         /// <summary>

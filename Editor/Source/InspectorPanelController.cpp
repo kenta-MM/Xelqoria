@@ -214,13 +214,31 @@ namespace Xelqoria::Editor
                 {
                     *transformValues[index] = parsed;
                     result.changed = true;
+                    if (index < 3)
+                    {
+                        result.operationName = "Move Entity";
+                    }
+                    else if (index < 6)
+                    {
+                        result.operationName = "Rotate Entity";
+                    }
+                    else
+                    {
+                        result.operationName = "Scale Entity";
+                    }
                 }
             }
         }
 
         if (true == ConsumeButtonClick(m_spriteComponentActionButton, inputSnapshot))
         {
-            result.changed = ApplySpriteComponentAction(entity->get(), canAddSpriteComponent) || result.changed;
+            const bool hadSpriteComponent = entity->get().HasSpriteComponent();
+            const bool actionChanged = ApplySpriteComponentAction(entity->get(), canAddSpriteComponent);
+            result.changed = actionChanged || result.changed;
+            if (actionChanged)
+            {
+                result.operationName = hadSpriteComponent ? "Remove SpriteComponent" : "Add SpriteComponent";
+            }
             if (false == entity->get().HasSpriteComponent())
             {
                 SetWindowTextW(m_spriteRefEdit, L"");
@@ -300,6 +318,7 @@ namespace Xelqoria::Editor
 
         spriteComponent->get().spriteAssetRef = droppedSpriteAssetId;
         result.changed = true;
+        result.operationName = "Change Sprite Asset";
         Refresh(scene, selectedEntityId, true, spriteAssetResolver);
         return result;
     }

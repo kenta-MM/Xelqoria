@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <optional>
+#include <string>
 
 #include "EditorSceneDocument.h"
 #include "InputSystem.h"
@@ -44,7 +45,23 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <param name="document">対象ドキュメント。</param>
         /// <param name="selectedEntityId">現在選択中の EntityId。</param>
-        void PushSnapshot(const EditorSceneDocument& document, std::optional<Game::EntityId> selectedEntityId);
+        /// <param name="operationName">履歴へ記録する操作名。</param>
+        /// <returns>履歴へ追加された場合は true。</returns>
+        bool PushSnapshot(
+            const EditorSceneDocument& document,
+            std::optional<Game::EntityId> selectedEntityId,
+            std::string operationName);
+
+        /// <summary>
+        /// 現在の履歴位置を保存済み位置として記録する。
+        /// </summary>
+        void MarkSaved();
+
+        /// <summary>
+        /// 現在の履歴位置が保存済み位置から離れているかを取得する。
+        /// </summary>
+        /// <returns>未保存変更がある場合は true。</returns>
+        [[nodiscard]] bool IsDirty() const;
 
         /// <summary>
         /// ショートカット入力を評価して Scene へ反映する。
@@ -69,7 +86,8 @@ namespace Xelqoria::Editor
         /// <returns>履歴スナップショット。</returns>
         [[nodiscard]] SceneCommandHistoryEntry CaptureSceneHistoryEntry(
             const EditorSceneDocument& document,
-            std::optional<Game::EntityId> selectedEntityId) const;
+            std::optional<Game::EntityId> selectedEntityId,
+            std::string operationName) const;
 
         /// <summary>
         /// 履歴スナップショットを Scene へ復元する。

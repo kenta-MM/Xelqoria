@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <string>
 #include <string_view>
 
 #include "Scene.h"
@@ -27,6 +28,11 @@ namespace Xelqoria::Editor
         /// Sprite Entity の新規作成が行われたかを表す。
         /// </summary>
         bool createdSpriteEntity = false;
+
+        /// <summary>
+        /// 履歴へ記録する操作名を表す。
+        /// </summary>
+        std::string operationName{};
     };
 
     /// <summary>

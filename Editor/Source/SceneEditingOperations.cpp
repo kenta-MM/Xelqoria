@@ -133,7 +133,8 @@ namespace Xelqoria::Editor
         return SceneEditResult{
             true,
             entity.GetId(),
-            false
+            false,
+            "Create Entity"
         };
     }
 
@@ -147,7 +148,8 @@ namespace Xelqoria::Editor
         return SceneEditResult{
             true,
             entity.GetId(),
-            true
+            true,
+            "Create Entity"
         };
     }
 
@@ -193,7 +195,8 @@ namespace Xelqoria::Editor
         return SceneEditResult{
             true,
             nextSelection,
-            false
+            false,
+            "Delete Entity"
         };
     }
 
@@ -220,7 +223,8 @@ namespace Xelqoria::Editor
         return SceneEditResult{
             true,
             duplicateEntity.GetId(),
-            false
+            false,
+            "Duplicate Entity"
         };
     }
 

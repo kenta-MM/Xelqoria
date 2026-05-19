@@ -7,14 +7,6 @@
 
 namespace Xelqoria::Editor
 {
-    namespace
-    {
-        [[nodiscard]] std::wstring BuildSceneLabel(const std::filesystem::path& scenePath)
-        {
-            return scenePath.filename().wstring();
-        }
-    }
-
     void ProjectPanelController::Bind(const EditorShell& shell)
     {
         m_projectSummaryLabel = shell.GetProjectSummaryLabel();
@@ -22,14 +14,17 @@ namespace Xelqoria::Editor
         m_projectSceneDetailLabel = shell.GetProjectSceneDetailLabel();
     }
 
-    void ProjectPanelController::Refresh(const EditorSceneDocument& document)
+    void ProjectPanelController::Refresh(const EditorSceneDocument& document, bool sceneDirty)
     {
         m_sceneFiles = document.EnumerateProjectSceneFiles();
         SendMessageW(m_projectSceneListBox, LB_RESETCONTENT, 0, 0);
 
         for (const std::filesystem::path& scenePath : m_sceneFiles)
         {
-            const std::wstring label = BuildSceneLabel(scenePath);
+            const bool isActiveDirty = sceneDirty
+                && document.GetProjectInfo().has_value()
+                && scenePath == document.GetProjectInfo()->activeScenePath;
+            const std::wstring label = BuildSceneLabel(scenePath, isActiveDirty);
             SendMessageW(m_projectSceneListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
         }
 
@@ -63,7 +58,7 @@ namespace Xelqoria::Editor
             + L" / Scenes: " + std::to_wstring(m_sceneFiles.size())
             + L" / Root: " + projectInfo->rootDirectory.wstring();
         SetWindowTextW(m_projectSummaryLabel, summary.c_str());
-        RefreshSelectedSceneDetail(document);
+        RefreshSelectedSceneDetail(document, sceneDirty);
     }
 
     bool ProjectPanelController::Update(EditorSceneDocument& document)
@@ -89,11 +84,23 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        Refresh(document);
+        Refresh(document, false);
         return true;
     }
 
-    void ProjectPanelController::RefreshSelectedSceneDetail(const EditorSceneDocument& document)
+    bool ProjectPanelController::HasSceneSelectionChangeRequest() const
+    {
+        const LRESULT selectedIndex = SendMessageW(m_projectSceneListBox, LB_GETCURSEL, 0, 0);
+        if (selectedIndex == LB_ERR)
+        {
+            return false;
+        }
+
+        const auto index = static_cast<std::size_t>(selectedIndex);
+        return index < m_sceneFiles.size() && m_sceneFiles[index] != m_selectedScenePath;
+    }
+
+    void ProjectPanelController::RefreshSelectedSceneDetail(const EditorSceneDocument& document, bool sceneDirty)
     {
         const Game::Scene* scene = document.GetScene();
         const unsigned entityCount = nullptr != scene
@@ -102,7 +109,7 @@ namespace Xelqoria::Editor
 
         const std::wstring sceneName = m_selectedScenePath.empty()
             ? std::wstring(L"not selected")
-            : m_selectedScenePath.filename().wstring();
+            : BuildSceneLabel(m_selectedScenePath, sceneDirty);
 
         wchar_t detailText[512]{};
         std::swprintf(
@@ -112,5 +119,16 @@ namespace Xelqoria::Editor
             sceneName.c_str(),
             entityCount);
         SetWindowTextW(m_projectSceneDetailLabel, detailText);
+    }
+
+    std::wstring ProjectPanelController::BuildSceneLabel(const std::filesystem::path& scenePath, bool sceneDirty)
+    {
+        std::wstring label = scenePath.filename().wstring();
+        if (sceneDirty)
+        {
+            label += L" *";
+        }
+
+        return label;
     }
 }

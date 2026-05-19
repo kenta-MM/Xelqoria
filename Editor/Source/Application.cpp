@@ -529,6 +529,7 @@ namespace Xelqoria::Editor
         m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_sceneDocument.RefreshProjectAssetRegistries();
         m_projectPanelController.Refresh(m_sceneDocument);
+        m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         ClearProjectDirty();
         AppendEditorLog(L"プロジェクトを作成しました。");
         return true;
@@ -557,6 +558,7 @@ namespace Xelqoria::Editor
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
         m_projectPanelController.Refresh(m_sceneDocument);
         ApplySelectionChange(std::nullopt, canAddSpriteComponent, true, true);
+        m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         ClearProjectDirty();
         AppendEditorLog(L"プロジェクトを開きました。");
         return true;
@@ -654,8 +656,8 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        m_editorCommandController.PushSnapshot(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         m_projectPanelController.Refresh(m_sceneDocument);
+        m_editorCommandController.MarkSaved();
         ClearProjectDirty();
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを保存しました。");
         AppendEditorLog(L"プロジェクトを保存しました。");
@@ -693,6 +695,7 @@ namespace Xelqoria::Editor
         m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_sceneDocument.RefreshProjectAssetRegistries();
         m_projectPanelController.Refresh(m_sceneDocument);
+        m_editorCommandController.MarkSaved();
         ClearProjectDirty();
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを別名で保存しました。");
         AppendEditorLog(L"プロジェクトを別名で保存しました。");
@@ -725,7 +728,25 @@ namespace Xelqoria::Editor
 
     void Application::MarkProjectDirty()
     {
+        if (m_projectDirty)
+        {
+            return;
+        }
+
         m_projectDirty = true;
+        if (m_editorInitialized)
+        {
+            m_projectPanelController.Refresh(m_sceneDocument, m_projectDirty);
+        }
+    }
+
+    void Application::RefreshProjectDirtyState()
+    {
+        m_projectDirty = m_editorCommandController.IsDirty();
+        if (m_editorInitialized)
+        {
+            m_projectPanelController.Refresh(m_sceneDocument, m_projectDirty);
+        }
     }
 
     bool Application::StartEditorPlay()
@@ -933,6 +954,10 @@ namespace Xelqoria::Editor
     void Application::ClearProjectDirty()
     {
         m_projectDirty = false;
+        if (m_editorInitialized)
+        {
+            m_projectPanelController.Refresh(m_sceneDocument, m_projectDirty);
+        }
     }
 
     void Application::Shutdown()
@@ -982,12 +1007,19 @@ namespace Xelqoria::Editor
         m_assetsPanelController.SyncSelection();
         UpdateEditorPlayControls(inputSnapshot);
         PollEditorPlayBuild();
-        if (true == m_projectPanelController.Update(m_sceneDocument))
+        bool canUpdateProjectScene = true;
+        if (true == m_projectPanelController.HasSceneSelectionChangeRequest()
+            && false == ConfirmSaveIfDirty())
+        {
+            m_projectPanelController.Refresh(m_sceneDocument, m_projectDirty);
+            canUpdateProjectScene = false;
+        }
+        if (true == canUpdateProjectScene && true == m_projectPanelController.Update(m_sceneDocument))
         {
             const bool canAddSpriteComponentAfterSceneLoad = m_assetsPanelController.HasVisibleSpriteAssets();
             ApplySelectionChange(std::nullopt, canAddSpriteComponentAfterSceneLoad, true, true);
             m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
-            MarkProjectDirty();
+            ClearProjectDirty();
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"選択した Scene を読み込みました。");
             AppendEditorLog(L"選択した Scene を読み込みました。");
         }
@@ -1035,7 +1067,7 @@ namespace Xelqoria::Editor
                     ApplySelectionChange(createSpriteResult.selectedEntityId, canAddSpriteComponent, true, true);
                     PersistSceneChanges(
                         L"Assets から Sprite を作成しました。",
-                        L"Sprite は作成されましたが、Scene の保存に失敗しました。",
+                        createSpriteResult.operationName,
                         true);
                 }
             }
@@ -1113,8 +1145,8 @@ namespace Xelqoria::Editor
 
             ApplySelectionChange(hierarchyEditResult.selectedEntityId, canAddSpriteComponent, true, true);
             PersistSceneChanges(
-                L"Hierarchy の編集内容を Scene へ保存しました。",
-                L"Hierarchy の編集内容は反映されましたが、Scene の保存に失敗しました。",
+                L"Hierarchy の編集内容を Scene へ反映しました。",
+                hierarchyEditResult.operationName,
                 true);
         }
 
@@ -1127,8 +1159,8 @@ namespace Xelqoria::Editor
         if (true == inspectorResult.changed)
         {
             PersistSceneChanges(
-                L"Inspector の編集内容を Scene へ保存しました。",
-                L"Inspector の編集内容は反映されましたが、Scene の保存に失敗しました。",
+                L"Inspector の編集内容を Scene へ反映しました。",
+                inspectorResult.operationName,
                 true);
             RefreshEditorPanels(canAddSpriteComponent, false);
             RefreshSceneViewSelectionStatus();
@@ -1226,8 +1258,8 @@ namespace Xelqoria::Editor
                 if (scriptActionChangedScene)
                 {
                     (void)PersistSceneChanges(
-                        L"Sprite の Script 設定を Scene へ保存しました。",
-                        L"Script 設定は反映されましたが、Scene の保存に失敗しました。",
+                        L"Sprite の Script 設定を Scene へ反映しました。",
+                        "Change Sprite Asset",
                         true);
                 }
 
@@ -1251,7 +1283,7 @@ namespace Xelqoria::Editor
         {
             PersistSceneChanges(
                 L"Texture を Sprite に設定しました。",
-                L"Texture 設定は反映されましたが、Scene の保存に失敗しました。",
+                textureDropResult.operationName,
                 true);
             RefreshEditorPanels(canAddSpriteComponent, false);
             RefreshSceneViewSelectionStatus();
@@ -1277,8 +1309,8 @@ namespace Xelqoria::Editor
                 if (scriptDropChangedScene)
                 {
                     (void)PersistSceneChanges(
-                        L"Sprite の Script 設定を Scene へ保存しました。",
-                        L"Script 設定は反映されましたが、Scene の保存に失敗しました。",
+                        L"Sprite の Script 設定を Scene へ反映しました。",
+                        "Change Sprite Asset",
                         true);
                 }
 
@@ -1316,8 +1348,8 @@ namespace Xelqoria::Editor
         if (true == interactionResult.shouldPersistScene)
         {
             PersistSceneChanges(
-                L"SceneView で Sprite の編集内容を保存しました。",
-                L"SceneView で Sprite は編集されましたが、Scene の保存に失敗しました。",
+                L"SceneView で Sprite の編集内容を反映しました。",
+                interactionResult.operationName,
                 interactionResult.shouldPushHistory);
         }
 
@@ -1339,7 +1371,11 @@ namespace Xelqoria::Editor
 
         if (true == dropResult.shouldPushHistory)
         {
-            m_editorCommandController.PushSnapshot(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
+            (void)m_editorCommandController.PushSnapshot(
+                m_sceneDocument,
+                m_hierarchyPanelController.GetSelectedEntityId(),
+                dropResult.operationName);
+            RefreshProjectDirtyState();
         }
 
         const EditorCommandUpdateResult commandResult = m_editorCommandController.Update(
@@ -1349,7 +1385,7 @@ namespace Xelqoria::Editor
             inputSnapshot);
         if (true == commandResult.changed)
         {
-            MarkProjectDirty();
+            RefreshProjectDirtyState();
             ApplySelectionChange(commandResult.selectedEntityId, canAddSpriteComponent, true, true);
         }
     }
@@ -1413,28 +1449,23 @@ namespace Xelqoria::Editor
     }
 
     bool Application::PersistSceneChanges(
-        const wchar_t* successMessage,
-        const wchar_t* failureMessage,
+        const wchar_t* message,
+        const std::string& operationName,
         bool pushHistory)
     {
-        if (m_sceneDocument.Save())
+        bool pushedHistory = false;
+        if (true == pushHistory)
         {
-            if (true == pushHistory)
-            {
-                m_editorCommandController.PushSnapshot(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
-            }
-
-            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), successMessage);
-            AppendEditorLog(successMessage);
-            m_projectPanelController.Refresh(m_sceneDocument);
-            ClearProjectDirty();
-            return true;
+            pushedHistory = m_editorCommandController.PushSnapshot(
+                m_sceneDocument,
+                m_hierarchyPanelController.GetSelectedEntityId(),
+                operationName);
         }
 
-        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), failureMessage);
-        AppendEditorLog(failureMessage);
-        MarkProjectDirty();
-        return false;
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), message);
+        AppendEditorLog(message);
+        RefreshProjectDirtyState();
+        return pushedHistory || m_projectDirty;
     }
 
     std::optional<Core::AssetId> Application::EnsureSelectedSpriteAssetFileForScript(

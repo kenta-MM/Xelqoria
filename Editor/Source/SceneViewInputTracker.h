@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <optional>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "Assets/SpriteAssetRegistry.h"
@@ -169,9 +170,39 @@ namespace Xelqoria::Editor
             float initialWorldY = 0.0f;
 
             /// <summary>
-            /// 現在フレームまでに位置が変化したかを表す。
+            /// ドラッグ開始時のカーソル X 座標を表す。
+            /// </summary>
+            float initialCursorWorldX = 0.0f;
+
+            /// <summary>
+            /// ドラッグ開始時のカーソル Y 座標を表す。
+            /// </summary>
+            float initialCursorWorldY = 0.0f;
+
+            /// <summary>
+            /// ドラッグ開始時の X 拡大率を表す。
+            /// </summary>
+            float initialScaleX = 1.0f;
+
+            /// <summary>
+            /// ドラッグ開始時の Y 拡大率を表す。
+            /// </summary>
+            float initialScaleY = 1.0f;
+
+            /// <summary>
+            /// ドラッグ開始時の Z 回転を表す。
+            /// </summary>
+            float initialRotationZ = 0.0f;
+
+            /// <summary>
+            /// 現在フレームまでに値が変化したかを表す。
             /// </summary>
             bool hasMoved = false;
+
+            /// <summary>
+            /// ドラッグ完了時に履歴へ記録する操作名を表す。
+            /// </summary>
+            std::string operationName{};
         };
 
         HWND m_sceneViewHost = nullptr;

@@ -11,7 +11,8 @@ namespace
     {
         return Xelqoria::Editor::SceneCommandHistoryEntry{
             Xelqoria::Game::SceneSerializer::SaveToText(scene),
-            selectedEntityId
+            selectedEntityId,
+            "Test Edit"
         };
     }
 }
@@ -101,4 +102,34 @@ TEST(SceneCommandHistoryTests, SkipsDuplicateSnapshotsAndCapsHistorySize)
     }
 
     EXPECT_EQ(static_cast<std::size_t>(128), history.GetCount());
+}
+
+TEST(SceneCommandHistoryTests, TracksOperationNameAndDirtyPosition)
+{
+    Xelqoria::Editor::SceneCommandHistory history;
+
+    Xelqoria::Game::Scene initialScene;
+    history.Reset(CreateEntry(initialScene, std::nullopt));
+    EXPECT_FALSE(history.IsDirty());
+
+    Xelqoria::Game::Scene movedScene;
+    auto& entity = movedScene.CreateEntity();
+    entity.GetTransform().SetPosition(12.0f, 24.0f, 0.0f);
+    Xelqoria::Editor::SceneCommandHistoryEntry moveEntry = CreateEntry(movedScene, entity.GetId());
+    moveEntry.operationName = "Move Entity";
+    EXPECT_TRUE(history.Push(moveEntry));
+    EXPECT_TRUE(history.IsDirty());
+
+    const auto currentEntry = history.GetCurrent();
+    ASSERT_TRUE(currentEntry.has_value());
+    EXPECT_EQ("Move Entity", currentEntry->operationName);
+
+    history.MarkSaved();
+    EXPECT_FALSE(history.IsDirty());
+
+    ASSERT_TRUE(history.Undo().has_value());
+    EXPECT_TRUE(history.IsDirty());
+
+    ASSERT_TRUE(history.Redo().has_value());
+    EXPECT_FALSE(history.IsDirty());
 }
