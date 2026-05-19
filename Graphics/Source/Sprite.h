@@ -171,14 +171,8 @@ namespace Xelqoria::Graphics
 
 	private:
 		std::shared_ptr<SpriteMaterial> m_material;
-		std::shared_ptr<Texture2D> m_texture;
-		Core::AssetId m_textureAssetId{};
 		Xelqoria::Math::Vector2 m_position{};
 		Xelqoria::Math::Vector2 m_scale{ 1.0f, 1.0f };
 		float m_rotationDegrees = 0.0f;
-		std::array<float, 4> m_color{ 1.0f, 1.0f, 1.0f, 1.0f };
-		bool m_outlineEnabled = false;
-		float m_outlineThickness = 1.0f;
-		std::array<float, 4> m_outlineColor{ 1.0f, 1.0f, 0.0f, 1.0f };
 	};
 }

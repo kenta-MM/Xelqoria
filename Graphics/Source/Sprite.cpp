@@ -29,22 +29,22 @@ namespace Xelqoria::Graphics
 
 	void Sprite::SetTexture(std::shared_ptr <Texture2D> texture)
 	{
-		m_texture = std::move(texture);
+		m_material->SetTexture(std::move(texture));
 	}
 
 	std::shared_ptr<Texture2D> Sprite::GetTexture() const
 	{
-		return m_texture;
+		return m_material->GetTexture();
 	}
 
 	void Sprite::SetTextureAssetId(Core::AssetId assetId)
 	{
-		m_textureAssetId = std::move(assetId);
+		m_material->SetTextureAssetId(std::move(assetId));
 	}
 
 	const Core::AssetId& Sprite::GetTextureAssetId() const
 	{
-		return m_textureAssetId;
+		return m_material->GetTextureAssetId();
 	}
 
 	void Sprite::SetPosition(const Xelqoria::Math::Vector2& position)
@@ -89,56 +89,56 @@ namespace Xelqoria::Graphics
 
 	void Sprite::SetColor(float red, float green, float blue, float alpha)
 	{
-		m_color = { red, green, blue, alpha };
+		m_material->SetColor(red, green, blue, alpha);
 	}
 
 	const std::array<float, 4>& Sprite::GetColor() const
 	{
-		return m_color;
+		return m_material->GetColor();
 	}
 
 	void Sprite::SetOutlineEnabled(bool enabled)
 	{
-		m_outlineEnabled = enabled;
+		m_material->SetOutlineEnabled(enabled);
 	}
 
 	bool Sprite::IsOutlineEnabled() const
 	{
-		return m_outlineEnabled;
+		return m_material->IsOutlineEnabled();
 	}
 
 	void Sprite::SetOutlineThickness(float thickness)
 	{
-		m_outlineThickness = thickness;
+		m_material->SetOutlineThickness(thickness);
 	}
 
 	float Sprite::GetOutlineThickness() const
 	{
-		return m_outlineThickness;
+		return m_material->GetOutlineThickness();
 	}
 
 	void Sprite::SetOutlineColor(float red, float green, float blue, float alpha)
 	{
-		m_outlineColor = { red, green, blue, alpha };
+		m_material->SetOutlineColor(red, green, blue, alpha);
 	}
 
 	const std::array<float, 4>& Sprite::GetOutlineColor() const
 	{
-		return m_outlineColor;
+		return m_material->GetOutlineColor();
 	}
 
 	SpriteDrawInput Sprite::ToDrawInput() const
 	{
 		return SpriteDrawInput{
-			m_texture,
-			m_textureAssetId,
+			m_material->GetTexture(),
+			m_material->GetTextureAssetId(),
 			m_position,
 			m_scale,
 			m_rotationDegrees,
-			m_color,
-			m_outlineEnabled,
-			m_outlineThickness,
-			m_outlineColor
+			m_material->GetColor(),
+			m_material->IsOutlineEnabled(),
+			m_material->GetOutlineThickness(),
+			m_material->GetOutlineColor()
 		};
 	}
 }
