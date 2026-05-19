@@ -1,9 +1,32 @@
 #include "Sprite.h"
 
+#include "SpriteMaterial.h"
+
 #include <utility>
 
 namespace Xelqoria::Graphics
 {
+	Sprite::Sprite()
+		: m_material(std::make_shared<SpriteMaterial>())
+	{
+	}
+
+	void Sprite::SetMaterial(std::shared_ptr<SpriteMaterial> material)
+	{
+		if (material)
+		{
+			m_material = std::move(material);
+			return;
+		}
+
+		m_material = std::make_shared<SpriteMaterial>();
+	}
+
+	std::shared_ptr<SpriteMaterial> Sprite::GetMaterial() const
+	{
+		return m_material;
+	}
+
 	void Sprite::SetTexture(std::shared_ptr <Texture2D> texture)
 	{
 		m_texture = std::move(texture);

@@ -9,6 +9,7 @@
 
 namespace Xelqoria::Graphics
 {
+	class SpriteMaterial;
 	class Texture2D;
 
 	/// <summary>
@@ -17,6 +18,23 @@ namespace Xelqoria::Graphics
 	class Sprite
 	{
 	public:
+		/// <summary>
+		/// default SpriteMaterial を持つスプライトを生成する。
+		/// </summary>
+		Sprite();
+
+		/// <summary>
+		/// スプライトに使用する Material を設定する。
+		/// </summary>
+		/// <param name="material">設定する Material。nullptr の場合は default Material に戻す。</param>
+		void SetMaterial(std::shared_ptr<SpriteMaterial> material);
+
+		/// <summary>
+		/// 現在設定されている Material を取得する。
+		/// </summary>
+		/// <returns>スプライトに紐づく Material。</returns>
+		std::shared_ptr<SpriteMaterial> GetMaterial() const;
+
 		/// <summary>
 		/// スプライトに使用するテクスチャを設定する。
 		/// </summary>
@@ -152,6 +170,7 @@ namespace Xelqoria::Graphics
 		[[nodiscard]] SpriteDrawInput ToDrawInput() const;
 
 	private:
+		std::shared_ptr<SpriteMaterial> m_material;
 		std::shared_ptr<Texture2D> m_texture;
 		Core::AssetId m_textureAssetId{};
 		Xelqoria::Math::Vector2 m_position{};
