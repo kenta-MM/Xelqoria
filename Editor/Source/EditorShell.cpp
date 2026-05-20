@@ -558,7 +558,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 65> controls = CollectControls();
+            const std::array<HWND, 76> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -817,6 +817,34 @@ namespace Xelqoria::Editor
         if (FALSE == SetWindowSubclass(m_spriteRefEdit, SpriteRefEditSubclassProc, SpriteRefEditSubclassId, 0))
         {
             return false;
+        }
+
+        m_materialDetailsSectionLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Material Details", WS_CHILD);
+        if (nullptr == m_materialDetailsSectionLabel)
+        {
+            return false;
+        }
+
+        const std::array<const wchar_t*, 5> materialDetailLabels{
+            L"Texture",
+            L"Color",
+            L"Outline",
+            L"Thickness",
+            L"OutlineColor"
+        };
+        for (std::size_t index = 0; index < m_materialDetailLabels.size(); ++index)
+        {
+            m_materialDetailLabels[index] = CreateChildWindow(parentWindow, hInstance, L"Static", materialDetailLabels[index], WS_CHILD);
+            m_materialDetailEditControls[index] = CreateChildWindow(
+                parentWindow,
+                hInstance,
+                L"Edit",
+                L"",
+                WS_CHILD | WS_BORDER | ES_AUTOHSCROLL);
+            if (nullptr == m_materialDetailLabels[index] || nullptr == m_materialDetailEditControls[index])
+            {
+                return false;
+            }
         }
 
         m_scriptAssetLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Script", WS_CHILD | WS_VISIBLE);
@@ -4083,7 +4111,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 65> controls = CollectControls();
+        const std::array<HWND, 76> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -4101,7 +4129,7 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 65> EditorShell::CollectControls() const
+    std::array<HWND, 76> EditorShell::CollectControls() const
     {
         return {
             m_leftTopDockTab,
@@ -4163,6 +4191,17 @@ namespace Xelqoria::Editor
             m_spriteRefLabel,
             m_spriteRefDropHighlight,
             m_spriteRefEdit,
+            m_materialDetailsSectionLabel,
+            m_materialDetailLabels[0],
+            m_materialDetailLabels[1],
+            m_materialDetailLabels[2],
+            m_materialDetailLabels[3],
+            m_materialDetailLabels[4],
+            m_materialDetailEditControls[0],
+            m_materialDetailEditControls[1],
+            m_materialDetailEditControls[2],
+            m_materialDetailEditControls[3],
+            m_materialDetailEditControls[4],
             m_scriptAssetLabel,
             m_scriptAssetEdit,
             m_scriptCreateButton,
@@ -4328,6 +4367,21 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetSpriteRefDropHighlight() const
     {
         return m_spriteRefDropHighlight;
+    }
+
+    HWND EditorShell::GetMaterialDetailsSectionLabel() const
+    {
+        return m_materialDetailsSectionLabel;
+    }
+
+    const std::array<HWND, 5>& EditorShell::GetMaterialDetailLabels() const
+    {
+        return m_materialDetailLabels;
+    }
+
+    const std::array<HWND, 5>& EditorShell::GetMaterialDetailEditControls() const
+    {
+        return m_materialDetailEditControls;
     }
 
     HWND EditorShell::GetScriptAssetLabel() const

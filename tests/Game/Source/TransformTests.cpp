@@ -16,6 +16,8 @@
 #include "SpriteComponent.h"
 #include "TextureAssetRegistry.h"
 #include "Texture2D.h"
+#include "Assets/SpriteMaterialAssetLoader.h"
+#include "Assets/SpriteMaterialAssetRegistry.h"
 #include "Transform.h"
 
 namespace
@@ -568,6 +570,51 @@ TEST(TransformTests, SceneSerializerRoundTripPreservesMultipleSpritePlacementsAn
 	EXPECT_TRUE(IsEqual(-12.0f, resolvedSprites[0].GetPosition().y));
 	EXPECT_TRUE(IsEqual(-320.0f, resolvedSprites[1].GetPosition().x));
 	EXPECT_TRUE(IsEqual(180.0f, resolvedSprites[1].GetPosition().y));
+}
+
+TEST(TransformTests, SceneSerializerRoundTripPreservesMaterialRef)
+{
+	Xelqoria::Game::Scene scene;
+	auto& entity = scene.CreateEntity();
+	Xelqoria::Game::SpriteComponent spriteComponent{
+		Xelqoria::Core::AssetId("sprites/player"),
+		{}
+	};
+	spriteComponent.materialAssetRef = Xelqoria::Core::AssetId("materials/player.material");
+	entity.SetSpriteComponent(spriteComponent);
+
+	const std::string saved = Xelqoria::Game::SceneSerializer::SaveToText(scene);
+	const auto loaded = Xelqoria::Game::SceneSerializer::LoadFromText(saved);
+
+	ASSERT_TRUE(loaded.IsSuccess());
+	const auto loadedEntity = loaded.scene->FindEntity(entity.GetId());
+	ASSERT_TRUE(loadedEntity.has_value());
+	const auto loadedSpriteComponent = loadedEntity->get().GetSpriteComponent();
+	ASSERT_TRUE(loadedSpriteComponent.has_value());
+	EXPECT_EQ(
+		Xelqoria::Core::AssetId("materials/player.material"),
+		loadedSpriteComponent->get().materialAssetRef);
+}
+
+TEST(TransformTests, SpriteMaterialAssetLoaderReadsTextureColorAndOutline)
+{
+	const auto loadResult = Xelqoria::Game::Assets::SpriteMaterialAssetLoader::LoadFromText(
+		"magic=XelqoriaSpriteMaterialAsset\n"
+		"version=1\n"
+		"textureAssetId=textures/player.png\n"
+		"color=0.2,0.4,0.6,0.8\n"
+		"outline.enabled=true\n"
+		"outline.thickness=3.5\n"
+		"outline.color=1.0,0.5,0.25,1.0\n");
+
+	ASSERT_TRUE(loadResult.IsSuccess());
+	ASSERT_TRUE(loadResult.asset.has_value());
+	EXPECT_EQ(Xelqoria::Core::AssetId("textures/player.png"), loadResult.asset->textureAssetId);
+	EXPECT_TRUE(IsEqual(0.2f, loadResult.asset->color[0]));
+	EXPECT_TRUE(IsEqual(0.8f, loadResult.asset->color[3]));
+	EXPECT_TRUE(loadResult.asset->outlineEnabled);
+	EXPECT_TRUE(IsEqual(3.5f, loadResult.asset->outlineThickness));
+	EXPECT_TRUE(IsEqual(0.25f, loadResult.asset->outlineColor[2]));
 }
 
 TEST(TransformTests, SceneSerializerLoadAcceptsExtensionFieldsAndEmptyNames)

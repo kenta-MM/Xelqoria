@@ -38,6 +38,17 @@ namespace Xelqoria::Game
 	};
 
 	/// <summary>
+	/// Scene 保存時に 1 Entity 分の MaterialRef を表す。
+	/// </summary>
+	struct SceneMaterialRefRecord
+	{
+		/// <summary>
+		/// Entity に関連付ける Material アセット参照を表す。
+		/// </summary>
+		Core::AssetId materialAssetRef{};
+	};
+
+	/// <summary>
 	/// Scene 保存時に 1 Entity 分の保存対象を表す。
 	/// </summary>
 	struct SceneEntitySaveRecord
@@ -72,6 +83,12 @@ namespace Xelqoria::Game
 		/// 未設定の Entity では空を許容する。
 		/// </summary>
 		std::optional<SceneSpriteRefRecord> spriteRef{};
+
+		/// <summary>
+		/// 保存対象の MaterialRef を表す。
+		/// 未設定の Entity では空を許容する。
+		/// </summary>
+		std::optional<SceneMaterialRefRecord> materialRef{};
 	};
 
 	/// <summary>
@@ -87,5 +104,6 @@ entity.<index>.transform.position=<x>,<y>,<z>
 entity.<index>.transform.rotation=<x>,<y>,<z>
 entity.<index>.transform.scale=<x>,<y>,<z>
 entity.<index>.spriteRef=<SpriteAssetId>
+entity.<index>.materialRef=<MaterialAssetId>
 entity.<index>.extensions.<name>=<reserved>)";
 }

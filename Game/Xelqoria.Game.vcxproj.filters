@@ -17,6 +17,12 @@
     <ClCompile Include="Source\Assets\SpriteAssetLoader.cpp">
       <Filter>Source\Assets</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Assets\SpriteMaterialAssetLoader.cpp">
+      <Filter>Source\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Assets\SpriteMaterialAssetRegistry.cpp">
+      <Filter>Source\Assets</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Entity.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -43,6 +49,9 @@
     <ClInclude Include="Source\Assets\ISpriteAssetResolver.h">
       <Filter>Source\Assets</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Assets\IMaterialAssetResolver.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Assets\SpriteAssetRegistry.h">
       <Filter>Source\Assets</Filter>
     </ClInclude>
@@ -50,6 +59,15 @@
       <Filter>Source\Assets</Filter>
     </ClInclude>
     <ClInclude Include="Source\Assets\SpriteAssetLoader.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\SpriteMaterialAsset.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\SpriteMaterialAssetLoader.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\SpriteMaterialAssetRegistry.h">
       <Filter>Source\Assets</Filter>
     </ClInclude>
     <ClInclude Include="Source\Entity.h">

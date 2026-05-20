@@ -490,6 +490,11 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR CreateScriptMenuCommandId = 3;
 
         /// <summary>
+        /// Assets の右クリックメニューから Material Asset を作成するコマンド ID を表す。
+        /// </summary>
+        constexpr UINT_PTR CreateMaterialMenuCommandId = 5;
+
+        /// <summary>
         /// Sprite Asset へ Script Asset を割り当てるコマンド ID を表す。
         /// </summary>
         constexpr UINT_PTR AssignScriptMenuCommandId = 4;
@@ -531,6 +536,7 @@ namespace Xelqoria::Editor
             m_draggingSpriteAssetId = {};
             m_draggingTextureAssetId = {};
             m_draggingScriptAssetId = {};
+            m_draggingMaterialAssetId = {};
             m_draggingImagePath.clear();
             m_draggingScriptAssetPath.clear();
             m_canPlaceDraggingAssetInScene = false;
@@ -538,6 +544,8 @@ namespace Xelqoria::Editor
             m_createSpriteTargetDirectory.clear();
             m_createScriptRequested = false;
             m_createScriptTargetDirectory.clear();
+            m_createMaterialRequested = false;
+            m_createMaterialTargetDirectory.clear();
             m_assignScriptRequested = false;
             m_assignScriptSpriteAssetPath.clear();
             EndDragImage();
@@ -718,6 +726,7 @@ namespace Xelqoria::Editor
             m_draggingTextureAssetId = EditorAssetPathUtils::BuildTextureAssetId(hitEntry.path, m_assetsRootDirectory);
             m_draggingSpriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(hitEntry.path, m_assetsRootDirectory);
             m_draggingScriptAssetId = {};
+            m_draggingMaterialAssetId = {};
             m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
             m_canPlaceDraggingAssetInScene = false;
             if (m_isAssetDragActive)
@@ -734,7 +743,25 @@ namespace Xelqoria::Editor
             m_draggingSpriteAssetId = {};
             m_draggingScriptAssetPath = hitEntry.path;
             m_draggingScriptAssetId = ScriptAssetService::BuildScriptAssetId(m_assetsRootDirectory, hitEntry.path);
+            m_draggingMaterialAssetId = {};
             m_isAssetDragActive = false == m_draggingScriptAssetId.IsEmpty();
+            m_canPlaceDraggingAssetInScene = false;
+            if (m_isAssetDragActive)
+            {
+                BeginDragPreview(hitEntry.path, ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
+            }
+        }
+        else if (false == hitEntry.isDirectory
+            && EditorPathSecurity::IsPathInsideOrEqual(hitEntry.path, m_assetsRootDirectory)
+            && EditorAssetPathUtils::IsMaterialAssetFile(hitEntry.path))
+        {
+            m_draggingImagePath.clear();
+            m_draggingTextureAssetId = {};
+            m_draggingSpriteAssetId = {};
+            m_draggingScriptAssetPath.clear();
+            m_draggingScriptAssetId = {};
+            m_draggingMaterialAssetId = EditorAssetPathUtils::BuildMaterialAssetId(hitEntry.path, m_assetsRootDirectory);
+            m_isAssetDragActive = false == m_draggingMaterialAssetId.IsEmpty();
             m_canPlaceDraggingAssetInScene = false;
             if (m_isAssetDragActive)
             {
@@ -748,6 +775,7 @@ namespace Xelqoria::Editor
             m_draggingSpriteAssetId = {};
             m_draggingScriptAssetPath.clear();
             m_draggingScriptAssetId = {};
+            m_draggingMaterialAssetId = {};
             m_isAssetDragActive = false;
             m_canPlaceDraggingAssetInScene = false;
             EndDragImage();
@@ -770,6 +798,7 @@ namespace Xelqoria::Editor
         m_draggingSpriteAssetId = {};
         m_draggingTextureAssetId = {};
         m_draggingScriptAssetId = {};
+        m_draggingMaterialAssetId = {};
         m_draggingImagePath.clear();
         m_draggingScriptAssetPath.clear();
         m_canPlaceDraggingAssetInScene = false;
@@ -800,6 +829,11 @@ namespace Xelqoria::Editor
     const Core::AssetId& AssetsPanelController::GetDraggingScriptAssetId() const
     {
         return m_draggingScriptAssetId;
+    }
+
+    const Core::AssetId& AssetsPanelController::GetDraggingMaterialAssetId() const
+    {
+        return m_draggingMaterialAssetId;
     }
 
     const std::filesystem::path& AssetsPanelController::GetDraggingScriptAssetPath() const
@@ -857,6 +891,17 @@ namespace Xelqoria::Editor
         m_createScriptTargetDirectory.clear();
     }
 
+    bool AssetsPanelController::HasCreateMaterialRequest() const
+    {
+        return m_createMaterialRequested;
+    }
+
+    void AssetsPanelController::ClearCreateMaterialRequest()
+    {
+        m_createMaterialRequested = false;
+        m_createMaterialTargetDirectory.clear();
+    }
+
     bool AssetsPanelController::HasAssignScriptRequest() const
     {
         return m_assignScriptRequested;
@@ -876,6 +921,11 @@ namespace Xelqoria::Editor
     const std::filesystem::path& AssetsPanelController::GetCreateScriptTargetDirectory() const
     {
         return m_createScriptTargetDirectory;
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetCreateMaterialTargetDirectory() const
+    {
+        return m_createMaterialTargetDirectory;
     }
 
     const std::filesystem::path& AssetsPanelController::GetAssignScriptSpriteAssetPath() const
@@ -985,6 +1035,11 @@ namespace Xelqoria::Editor
         if (const std::optional<int> iconIndex = addIcon(L"file_sprite.png"); iconIndex.has_value())
         {
             m_fileIconIndices.emplace(L".sprite", *iconIndex);
+        }
+
+        if (const std::optional<int> iconIndex = addIcon(L"file_material.png"); iconIndex.has_value())
+        {
+            m_fileIconIndices.emplace(L".material", *iconIndex);
         }
 
         m_defaultFileIconIndex = addIcon(L"file_default.png");
@@ -1425,6 +1480,7 @@ namespace Xelqoria::Editor
         }
 
         AppendMenuW(popupMenu, MF_STRING, CreateSpriteMenuCommandId, L"Spriteを作成");
+        AppendMenuW(popupMenu, MF_STRING, CreateMaterialMenuCommandId, L"Materialを作成");
         AppendMenuW(popupMenu, MF_STRING, CreateScriptMenuCommandId, L"Scriptを作成");
 
         const UINT command = TrackPopupMenu(
@@ -1448,6 +1504,13 @@ namespace Xelqoria::Editor
         {
             m_createScriptRequested = true;
             m_createScriptTargetDirectory = targetDirectory;
+            return true;
+        }
+
+        if (CreateMaterialMenuCommandId == command)
+        {
+            m_createMaterialRequested = true;
+            m_createMaterialTargetDirectory = targetDirectory;
             return true;
         }
 

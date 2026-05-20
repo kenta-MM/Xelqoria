@@ -147,6 +147,24 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSpriteRefDropHighlight() const;
 
         /// <summary>
+        /// Material 詳細セクション見出しラベルを取得する。
+        /// </summary>
+        /// <returns>Material 詳細セクション見出しの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialDetailsSectionLabel() const;
+
+        /// <summary>
+        /// Material 詳細項目ラベル群を取得する。
+        /// </summary>
+        /// <returns>Material 詳細ラベル配列。</returns>
+        [[nodiscard]] const std::array<HWND, 5>& GetMaterialDetailLabels() const;
+
+        /// <summary>
+        /// Material 詳細入力欄群を取得する。
+        /// </summary>
+        /// <returns>Material 詳細入力欄配列。</returns>
+        [[nodiscard]] const std::array<HWND, 5>& GetMaterialDetailEditControls() const;
+
+        /// <summary>
         /// Script Asset ラベルを取得する。
         /// </summary>
         /// <returns>Script Asset ラベルの HWND。</returns>
@@ -775,7 +793,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 65> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 76> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -911,6 +929,9 @@ namespace Xelqoria::Editor
         HWND m_spriteRefLabel = nullptr;
         HWND m_spriteRefDropHighlight = nullptr;
         HWND m_spriteRefEdit = nullptr;
+        HWND m_materialDetailsSectionLabel = nullptr;
+        std::array<HWND, 5> m_materialDetailLabels{};
+        std::array<HWND, 5> m_materialDetailEditControls{};
         HWND m_scriptAssetLabel = nullptr;
         HWND m_scriptAssetEdit = nullptr;
         HWND m_scriptCreateButton = nullptr;
