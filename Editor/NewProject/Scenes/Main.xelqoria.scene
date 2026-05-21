@@ -1,10 +1,10 @@
 magic=xelqoria.scene
 version=1
-entity.0.id=4
-entity.0.name="Sprite 4"
-entity.0.transform.position=-36.000000,-24.000000,0.000000
+entity.0.id=6
+entity.0.name="Sprite 6"
+entity.0.transform.position=95.000000,30.000000,0.000000
 entity.0.transform.rotation=0.000000,0.000000,0.000000
 entity.0.transform.scale=1.000000,1.000000,1.000000
 entity.0.hasSpriteComponent=true
 entity.0.spriteRef=
-entity.0.materialRef=materials/NewMaterial1.material
+entity.0.materialRef=materials/NewMaterial.material
