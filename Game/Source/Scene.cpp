@@ -1,6 +1,7 @@
 #include "Scene.h"
 
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <sstream>
 
@@ -13,6 +14,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include "Assets/IMaterialAssetResolver.h"
 #include "Assets/ISpriteAssetResolver.h"
 #include "SpriteComponent.h"
 #include <ITextureAssetResolver.h>
@@ -35,16 +37,49 @@ namespace Xelqoria::Game
 		}
 
 		/// <summary>
+		/// Sprite 描画で使用する Material 状態を表す。
+		/// </summary>
+		struct ResolvedSpriteMaterialState
+		{
+			Core::AssetId textureAssetId{};
+			std::array<float, 4> color{ 1.0f, 1.0f, 1.0f, 1.0f };
+			bool outlineEnabled = false;
+			float outlineThickness = 1.0f;
+			std::array<float, 4> outlineColor{ 1.0f, 1.0f, 0.0f, 1.0f };
+			bool resolvedFromMaterialAsset = false;
+			Core::AssetId materialAssetRef{};
+		};
+
+		/// <summary>
+		/// 旧 SpriteAsset Texture 参照と SpriteComponent 描画設定から Material 状態を構成する。
+		/// </summary>
+		/// <param name="spriteAsset">参照元 SpriteAsset。</param>
+		/// <param name="spriteComponent">参照元 SpriteComponent。</param>
+		/// <returns>描画に使用する Material 状態。</returns>
+		ResolvedSpriteMaterialState MakeSpriteAssetMaterialState(
+			const Assets::SpriteAsset& spriteAsset,
+			const SpriteComponent& spriteComponent)
+		{
+			ResolvedSpriteMaterialState materialState{};
+			materialState.textureAssetId = spriteAsset.textureAssetId;
+			materialState.color = spriteComponent.renderSettings.color;
+			materialState.color[3] *= spriteComponent.renderSettings.opacity;
+			return materialState;
+		}
+
+		/// <summary>
 		/// Sprite 描画候補 1 件を解決済み Sprite へ変換する。
 		/// </summary>
 		/// <param name="renderItem">変換対象の描画候補。</param>
 		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
+		/// <param name="materialAssetResolver">MaterialAsset を解決する Resolver。未指定時は旧 SpriteAsset Texture を使用する。</param>
 		/// <param name="textureAssetResolver">Texture2D を解決する Resolver。</param>
 		/// <param name="logger">解決状況を受け取るロガー。</param>
 		/// <returns>解決に成功した Sprite。失敗時は nullopt。</returns>
 		std::optional<ResolvedSceneSprite> ResolveSceneRenderItem(
 			const SceneSpriteRenderItem& renderItem,
 			const Assets::ISpriteAssetResolver& spriteAssetResolver,
+			const Assets::IMaterialAssetResolver* materialAssetResolver,
 			const Graphics::ITextureAssetResolver& textureAssetResolver,
 			const std::function<void(const std::string&)>& logger)
 		{
@@ -54,54 +89,159 @@ namespace Xelqoria::Game
 			}
 
 			const auto& spriteAssetRef = renderItem.spriteComponent->spriteAssetRef;
-			if (spriteAssetRef.IsEmpty()) {
+			const auto& materialAssetRef = renderItem.spriteComponent->materialAssetRef;
+			std::optional<Assets::SpriteAsset> spriteAsset{};
+			if (false == spriteAssetRef.IsEmpty())
+			{
+				spriteAsset = spriteAssetResolver.ResolveSpriteAsset(spriteAssetRef);
+				if (false == spriteAsset.has_value()) {
+					std::ostringstream message;
+					message << "Scene::ResolveSceneSprites could not resolve SpriteAsset '"
+						<< spriteAssetRef.GetValue() << "' for entity " << renderItem.entityId << ".";
+					LogMessage(logger, message.str());
+					return std::nullopt;
+				}
+			}
+
+			ResolvedSpriteMaterialState materialState{};
+			if (false == materialAssetRef.IsEmpty())
+			{
+				if (nullptr == materialAssetResolver)
+				{
+					if (false == spriteAsset.has_value())
+					{
+						std::ostringstream message;
+						message << "Scene::ResolveSceneSprites skipped entity " << renderItem.entityId
+							<< " because materialAssetRef was set but no MaterialAsset resolver was provided.";
+						LogMessage(logger, message.str());
+						return std::nullopt;
+					}
+
+					std::ostringstream message;
+					message << "Scene::ResolveSceneSprites ignored MaterialAsset '"
+						<< materialAssetRef.GetValue() << "' for entity " << renderItem.entityId
+						<< " because no MaterialAsset resolver was provided.";
+					LogMessage(logger, message.str());
+					materialState = MakeSpriteAssetMaterialState(*spriteAsset, *renderItem.spriteComponent);
+				}
+				else
+				{
+					const auto materialAsset = materialAssetResolver->ResolveMaterialAsset(materialAssetRef);
+					if (false == materialAsset.has_value())
+					{
+						std::ostringstream message;
+						message << "Scene::ResolveSceneSprites could not resolve MaterialAsset '"
+							<< materialAssetRef.GetValue() << "' for entity " << renderItem.entityId << ".";
+						LogMessage(logger, message.str());
+						return std::nullopt;
+					}
+
+					materialState.textureAssetId = materialAsset->textureAssetId;
+					materialState.color = materialAsset->color;
+					materialState.color[3] *= renderItem.spriteComponent->renderSettings.opacity;
+					materialState.outlineEnabled = materialAsset->outlineEnabled;
+					materialState.outlineThickness = materialAsset->outlineThickness;
+					materialState.outlineColor = materialAsset->outlineColor;
+					materialState.resolvedFromMaterialAsset = true;
+					materialState.materialAssetRef = materialAssetRef;
+				}
+			}
+			else if (true == spriteAsset.has_value())
+			{
+				materialState = MakeSpriteAssetMaterialState(*spriteAsset, *renderItem.spriteComponent);
+			}
+			else
+			{
 				std::ostringstream message;
 				message << "Scene::ResolveSceneSprites skipped entity " << renderItem.entityId
-					<< " because spriteAssetRef was empty.";
+					<< " because both spriteAssetRef and materialAssetRef were empty.";
 				LogMessage(logger, message.str());
 				return std::nullopt;
 			}
 
-			const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(spriteAssetRef);
-			if (!spriteAsset.has_value()) {
-				std::ostringstream message;
-				message << "Scene::ResolveSceneSprites could not resolve SpriteAsset '"
-					<< spriteAssetRef.GetValue() << "' for entity " << renderItem.entityId << ".";
-				LogMessage(logger, message.str());
-				return std::nullopt;
-			}
-
-			const auto texture = textureAssetResolver.ResolveTexture(spriteAsset->textureAssetId);
+			const auto texture = textureAssetResolver.ResolveTexture(materialState.textureAssetId);
 			if (!texture) {
 				std::ostringstream message;
 				message << "Scene::ResolveSceneSprites could not resolve Texture2D '"
-					<< spriteAsset->textureAssetId.GetValue() << "' for entity " << renderItem.entityId << ".";
+					<< materialState.textureAssetId.GetValue() << "' for entity " << renderItem.entityId << ".";
 				LogMessage(logger, message.str());
 				return std::nullopt;
 			}
 
 			Graphics::Sprite sprite{};
 			sprite.SetTexture(texture);
-			sprite.SetTextureAssetId(spriteAsset->textureAssetId);
+			sprite.SetTextureAssetId(materialState.textureAssetId);
 			sprite.SetPosition(renderItem.transform->position.x, renderItem.transform->position.y);
 			sprite.SetScale(renderItem.transform->scale.x, renderItem.transform->scale.y);
 			sprite.SetRotationDegrees(renderItem.transform->rotation.z);
 			sprite.SetColor(
-				renderItem.spriteComponent->renderSettings.color[0],
-				renderItem.spriteComponent->renderSettings.color[1],
-				renderItem.spriteComponent->renderSettings.color[2],
-				renderItem.spriteComponent->renderSettings.color[3] * renderItem.spriteComponent->renderSettings.opacity);
+				materialState.color[0],
+				materialState.color[1],
+				materialState.color[2],
+				materialState.color[3]);
+			sprite.SetOutlineEnabled(materialState.outlineEnabled);
+			sprite.SetOutlineThickness(materialState.outlineThickness);
+			sprite.SetOutlineColor(
+				materialState.outlineColor[0],
+				materialState.outlineColor[1],
+				materialState.outlineColor[2],
+				materialState.outlineColor[3]);
 
 			std::ostringstream message;
-			message << "Scene::ResolveSceneSprites resolved entity " << renderItem.entityId
-				<< " from SpriteAsset '" << spriteAssetRef.GetValue()
-				<< "' to Texture2D '" << spriteAsset->textureAssetId.GetValue() << "'.";
+			message << "Scene::ResolveSceneSprites resolved entity " << renderItem.entityId;
+			if (false == spriteAssetRef.IsEmpty())
+			{
+				message << " from SpriteAsset '" << spriteAssetRef.GetValue() << "'";
+			}
+			if (true == materialState.resolvedFromMaterialAsset)
+			{
+				message << (false == spriteAssetRef.IsEmpty() ? " and" : " from")
+					<< " MaterialAsset '" << materialState.materialAssetRef.GetValue() << "'";
+			}
+			message << " to Texture2D '" << materialState.textureAssetId.GetValue() << "'.";
 			LogMessage(logger, message.str());
 
 			return ResolvedSceneSprite{
 				renderItem.entityId,
 				std::move(sprite)
 			};
+		}
+
+		/// <summary>
+		/// Scene 内の Sprite 描画候補を解決済み Sprite 一覧へ変換する。
+		/// </summary>
+		/// <param name="scene">解決対象 Scene。</param>
+		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
+		/// <param name="materialAssetResolver">MaterialAsset を解決する Resolver。未指定時は旧 SpriteAsset Texture を使用する。</param>
+		/// <param name="textureAssetResolver">Texture2D を解決する Resolver。</param>
+		/// <param name="logger">解決状況を受け取るロガー。</param>
+		/// <returns>描画可能な Sprite 一覧。</returns>
+		std::vector<ResolvedSceneSprite> ResolveSceneSpritesCore(
+			const Scene& scene,
+			const Assets::ISpriteAssetResolver& spriteAssetResolver,
+			const Assets::IMaterialAssetResolver* materialAssetResolver,
+			const Graphics::ITextureAssetResolver& textureAssetResolver,
+			const std::function<void(const std::string&)>& logger)
+		{
+			std::vector<ResolvedSceneSprite> resolvedSprites;
+			const auto renderItems = scene.CollectSpriteRenderItems();
+			resolvedSprites.reserve(renderItems.size());
+
+			for (const SceneSpriteRenderItem& renderItem : renderItems) {
+				const auto resolvedSprite = ResolveSceneRenderItem(
+					renderItem,
+					spriteAssetResolver,
+					materialAssetResolver,
+					textureAssetResolver,
+					logger);
+				if (false == resolvedSprite.has_value()) {
+					continue;
+				}
+
+				resolvedSprites.push_back(std::move(*resolvedSprite));
+			}
+
+			return resolvedSprites;
 		}
 	}
 
@@ -267,6 +407,23 @@ namespace Xelqoria::Game
 
 	std::vector<Graphics::Sprite> Scene::ResolveSprites(
 		const Assets::ISpriteAssetResolver& spriteAssetResolver,
+		const Assets::IMaterialAssetResolver& materialAssetResolver,
+		const Graphics::ITextureAssetResolver& textureAssetResolver,
+		const std::function<void(const std::string&)>& logger) const
+	{
+		std::vector<Graphics::Sprite> resolvedSprites;
+		const auto sceneSprites = ResolveSceneSprites(spriteAssetResolver, materialAssetResolver, textureAssetResolver, logger);
+		resolvedSprites.reserve(sceneSprites.size());
+
+		for (const ResolvedSceneSprite& sceneSprite : sceneSprites) {
+			resolvedSprites.push_back(sceneSprite.sprite);
+		}
+
+		return resolvedSprites;
+	}
+
+	std::vector<Graphics::Sprite> Scene::ResolveSprites(
+		const Assets::ISpriteAssetResolver& spriteAssetResolver,
 		const Graphics::ITextureAssetResolver& textureAssetResolver,
 		const std::function<void(const std::string&)>& logger) const
 	{
@@ -283,27 +440,29 @@ namespace Xelqoria::Game
 
 	std::vector<ResolvedSceneSprite> Scene::ResolveSceneSprites(
 		const Assets::ISpriteAssetResolver& spriteAssetResolver,
+		const Assets::IMaterialAssetResolver& materialAssetResolver,
 		const Graphics::ITextureAssetResolver& textureAssetResolver,
 		const std::function<void(const std::string&)>& logger) const
 	{
-		std::vector<ResolvedSceneSprite> resolvedSprites;
-		const auto renderItems = CollectSpriteRenderItems();
-		resolvedSprites.reserve(renderItems.size());
+		return ResolveSceneSpritesCore(
+			*this,
+			spriteAssetResolver,
+			&materialAssetResolver,
+			textureAssetResolver,
+			logger);
+	}
 
-		for (const SceneSpriteRenderItem& renderItem : renderItems) {
-			const auto resolvedSprite = ResolveSceneRenderItem(
-				renderItem,
-				spriteAssetResolver,
-				textureAssetResolver,
-				logger);
-			if (false == resolvedSprite.has_value()) {
-				continue;
-			}
-
-			resolvedSprites.push_back(std::move(*resolvedSprite));
-		}
-
-		return resolvedSprites;
+	std::vector<ResolvedSceneSprite> Scene::ResolveSceneSprites(
+		const Assets::ISpriteAssetResolver& spriteAssetResolver,
+		const Graphics::ITextureAssetResolver& textureAssetResolver,
+		const std::function<void(const std::string&)>& logger) const
+	{
+		return ResolveSceneSpritesCore(
+			*this,
+			spriteAssetResolver,
+			nullptr,
+			textureAssetResolver,
+			logger);
 	}
 
 	void Scene::ValidateSpriteReferences(

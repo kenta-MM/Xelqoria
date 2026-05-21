@@ -40,9 +40,7 @@ namespace Xelqoria::Editor
         m_scriptAssignButton = shell.GetScriptAssignButton();
         m_scriptClearButton = shell.GetScriptClearButton();
         m_spriteComponentActionButton = shell.GetSpriteComponentActionButton();
-        m_materialDetailsSectionLabel = shell.GetMaterialDetailsSectionLabel();
-        m_materialDetailLabels = shell.GetMaterialDetailLabels();
-        m_materialDetailEditControls = shell.GetMaterialDetailEditControls();
+        m_materialOpenButton = shell.GetMaterialOpenButton();
         m_cursor = &cursor;
         SetWindowTextW(m_spriteRefLabel, L"Material");
     }
@@ -66,12 +64,7 @@ namespace Xelqoria::Editor
             ShowWindow(m_scriptCreateButton, SW_HIDE);
             ShowWindow(m_scriptAssignButton, SW_HIDE);
             ShowWindow(m_scriptClearButton, SW_HIDE);
-            ShowWindow(m_materialDetailsSectionLabel, SW_HIDE);
-            for (std::size_t index = 0; index < m_materialDetailLabels.size(); ++index)
-            {
-                ShowWindow(m_materialDetailLabels[index], SW_HIDE);
-                ShowWindow(m_materialDetailEditControls[index], SW_HIDE);
-            }
+            ShowWindow(m_materialOpenButton, SW_HIDE);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
             m_lastScriptAssetId = {};
@@ -90,12 +83,7 @@ namespace Xelqoria::Editor
             ShowWindow(m_scriptCreateButton, SW_HIDE);
             ShowWindow(m_scriptAssignButton, SW_HIDE);
             ShowWindow(m_scriptClearButton, SW_HIDE);
-            ShowWindow(m_materialDetailsSectionLabel, SW_HIDE);
-            for (std::size_t index = 0; index < m_materialDetailLabels.size(); ++index)
-            {
-                ShowWindow(m_materialDetailLabels[index], SW_HIDE);
-                ShowWindow(m_materialDetailEditControls[index], SW_HIDE);
-            }
+            ShowWindow(m_materialOpenButton, SW_HIDE);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
             m_lastScriptAssetId = {};
@@ -129,6 +117,7 @@ namespace Xelqoria::Editor
             ComputeSpriteComponentActionState(hasSpriteComponent, canAddSpriteComponent);
         ShowWindow(m_spriteRefLabel, actionState.showSpriteRefControls ? SW_SHOW : SW_HIDE);
         ShowWindow(m_spriteRefEdit, actionState.showSpriteRefControls ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_materialOpenButton, actionState.showSpriteRefControls ? SW_SHOW : SW_HIDE);
         EnableWindow(m_spriteComponentActionButton, actionState.enableActionButton ? TRUE : FALSE);
         SetWindowTextW(m_spriteComponentSectionLabel, actionState.sectionLabel);
         SetWindowTextW(m_spriteComponentActionButton, actionState.buttonLabel);
@@ -142,12 +131,7 @@ namespace Xelqoria::Editor
                 : Core::AssetId{};
             m_lastSpriteRefDisplayText = FormatMaterialDisplayText(displayMaterialAssetId);
             SetWindowTextW(m_spriteRefEdit, m_lastSpriteRefDisplayText.c_str());
-            ShowWindow(m_materialDetailsSectionLabel, SW_HIDE);
-            for (std::size_t index = 0; index < m_materialDetailLabels.size(); ++index)
-            {
-                ShowWindow(m_materialDetailLabels[index], SW_HIDE);
-                ShowWindow(m_materialDetailEditControls[index], SW_HIDE);
-            }
+            EnableWindow(m_materialOpenButton, false == materialAssetId.IsEmpty() ? TRUE : FALSE);
 
             m_lastScriptAssetId = spriteAsset.has_value() ? spriteAsset->scriptAssetId : Core::AssetId{};
             m_lastScriptDisplayText = FormatScriptDisplayText(m_lastScriptAssetId);
@@ -175,12 +159,7 @@ namespace Xelqoria::Editor
             ShowWindow(m_scriptCreateButton, SW_HIDE);
             ShowWindow(m_scriptAssignButton, SW_HIDE);
             ShowWindow(m_scriptClearButton, SW_HIDE);
-            ShowWindow(m_materialDetailsSectionLabel, SW_HIDE);
-            for (std::size_t index = 0; index < m_materialDetailLabels.size(); ++index)
-            {
-                ShowWindow(m_materialDetailLabels[index], SW_HIDE);
-                ShowWindow(m_materialDetailEditControls[index], SW_HIDE);
-            }
+            ShowWindow(m_materialOpenButton, SW_HIDE);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
             m_lastScriptAssetId = {};
@@ -304,6 +283,13 @@ namespace Xelqoria::Editor
                 result.scriptAction = InspectorScriptAction::Clear;
                 result.scriptTargetSpriteAssetId = spriteComponent->get().spriteAssetRef;
             }
+
+            if (false == spriteComponent->get().materialAssetRef.IsEmpty()
+                && true == ConsumeButtonClick(m_materialOpenButton, inputSnapshot))
+            {
+                result.openMaterialRequested = true;
+                result.openMaterialAssetId = spriteComponent->get().materialAssetRef;
+            }
         }
 
         if (result.changed)
@@ -312,67 +298,6 @@ namespace Xelqoria::Editor
         }
 
         FinishButtonClickTracking(inputSnapshot);
-        return result;
-    }
-
-    InspectorApplyResult InspectorPanelController::ApplyTextureDrop(
-        Game::Scene* scene,
-        std::optional<Game::EntityId> selectedEntityId,
-        const AssetsPanelController& assetsPanelController,
-        const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
-        const Game::Assets::IMaterialAssetResolver& materialAssetResolver)
-    {
-        InspectorApplyResult result{};
-        if (nullptr == scene
-            || false == selectedEntityId.has_value()
-            || true == assetsPanelController.GetDraggingSpriteAssetId().IsEmpty()
-            || false == assetsPanelController.WasDragReleasedThisFrame()
-            || false == IsTextureDropTargetHovered(assetsPanelController))
-        {
-            return result;
-        }
-
-        const auto entity = scene->FindEntity(*selectedEntityId);
-        if (false == entity.has_value())
-        {
-            return result;
-        }
-
-        auto spriteComponent = entity->get().GetSpriteComponent();
-        if (false == spriteComponent.has_value())
-        {
-            return result;
-        }
-
-        const Core::AssetId droppedSpriteAssetId = assetsPanelController.GetDraggingSpriteAssetId();
-        const Core::AssetId droppedTextureAssetId = assetsPanelController.GetDraggingTextureAssetId();
-        if (false == spriteComponent->get().materialAssetRef.IsEmpty()
-            && false == droppedTextureAssetId.IsEmpty())
-        {
-            const auto materialAsset = materialAssetResolver.ResolveMaterialAsset(spriteComponent->get().materialAssetRef);
-            if (false == materialAsset.has_value()
-                || materialAsset->textureAssetId == droppedTextureAssetId)
-            {
-                return result;
-            }
-
-            result.materialAsset = *materialAsset;
-            result.materialAsset.textureAssetId = droppedTextureAssetId;
-            result.materialTargetAssetId = spriteComponent->get().materialAssetRef;
-            result.materialAssetChanged = true;
-            result.operationName = "Change Sprite Material Texture";
-            return result;
-        }
-
-        if (spriteComponent->get().spriteAssetRef == droppedSpriteAssetId)
-        {
-            return result;
-        }
-
-        spriteComponent->get().spriteAssetRef = droppedSpriteAssetId;
-        result.changed = true;
-        result.operationName = "Change Sprite Asset";
-        Refresh(scene, selectedEntityId, true, spriteAssetResolver, materialAssetResolver);
         return result;
     }
 
@@ -388,7 +313,7 @@ namespace Xelqoria::Editor
             || false == selectedEntityId.has_value()
             || true == assetsPanelController.GetDraggingMaterialAssetId().IsEmpty()
             || false == assetsPanelController.WasDragReleasedThisFrame()
-            || false == IsTextureDropTargetHovered(assetsPanelController))
+            || false == IsMaterialDropTargetHovered(assetsPanelController))
         {
             return result;
         }
@@ -453,10 +378,10 @@ namespace Xelqoria::Editor
         return result;
     }
 
-    void InspectorPanelController::UpdateTextureDropHighlight(const AssetsPanelController& assetsPanelController)
+    void InspectorPanelController::UpdateDropHighlight(const AssetsPanelController& assetsPanelController)
     {
         HWND targetEdit = nullptr;
-        if (true == IsTextureDropTargetHovered(assetsPanelController))
+        if (true == IsMaterialDropTargetHovered(assetsPanelController))
         {
             targetEdit = m_spriteRefEdit;
         }
@@ -544,13 +469,12 @@ namespace Xelqoria::Editor
         m_wasLeftMouseButtonDown = isLeftMouseButtonDown;
     }
 
-    bool InspectorPanelController::IsTextureDropTargetHovered(const AssetsPanelController& assetsPanelController) const
+    bool InspectorPanelController::IsMaterialDropTargetHovered(const AssetsPanelController& assetsPanelController) const
     {
-        const bool hasTextureDrag = assetsPanelController.IsDragActive()
+        const bool hasMaterialDrag = assetsPanelController.IsDragActive()
             || assetsPanelController.WasDragReleasedThisFrame();
-        if (false == hasTextureDrag
-            || (true == assetsPanelController.GetDraggingSpriteAssetId().IsEmpty()
-                && true == assetsPanelController.GetDraggingMaterialAssetId().IsEmpty())
+        if (false == hasMaterialDrag
+            || true == assetsPanelController.GetDraggingMaterialAssetId().IsEmpty()
             || nullptr == m_spriteRefEdit
             || FALSE == IsWindowVisible(m_spriteRefEdit))
         {

@@ -209,6 +209,23 @@ namespace Xelqoria::Editor
         void ClearCreateMaterialRequest();
 
         /// <summary>
+        /// Material Asset を Material タブで開く要求があるかを取得する。
+        /// </summary>
+        /// <returns>Material を開く要求がある場合は true。</returns>
+        [[nodiscard]] bool HasOpenMaterialRequest() const;
+
+        /// <summary>
+        /// Material タブで開く MaterialAssetId を取得する。
+        /// </summary>
+        /// <returns>開く MaterialAssetId。</returns>
+        [[nodiscard]] const Core::AssetId& GetOpenMaterialAssetId() const;
+
+        /// <summary>
+        /// Material を開く要求を消費する。
+        /// </summary>
+        void ClearOpenMaterialRequest();
+
+        /// <summary>
         /// Sprite Asset への Script 割り当て要求があるかを取得する。
         /// </summary>
         /// <returns>割り当て要求がある場合は true。</returns>
@@ -457,6 +474,8 @@ namespace Xelqoria::Editor
         std::filesystem::path m_createScriptTargetDirectory{};
         bool m_createMaterialRequested = false;
         std::filesystem::path m_createMaterialTargetDirectory{};
+        bool m_openMaterialRequested = false;
+        Core::AssetId m_openMaterialAssetId{};
         bool m_assignScriptRequested = false;
         std::filesystem::path m_assignScriptSpriteAssetPath{};
         bool m_listViewInitialized = false;

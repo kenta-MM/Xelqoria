@@ -43,13 +43,14 @@ namespace Xelqoria::Editor
             std::vector<EditorShell::EditorPanelId> panels{};
         };
 
-        [[nodiscard]] constexpr std::array<EditorShell::EditorPanelId, 5> GetAllEditorPanels()
+        [[nodiscard]] constexpr std::array<EditorShell::EditorPanelId, 6> GetAllEditorPanels()
         {
             return {
                 EditorShell::EditorPanelId::Hierarchy,
                 EditorShell::EditorPanelId::Assets,
                 EditorShell::EditorPanelId::SceneView,
                 EditorShell::EditorPanelId::Inspector,
+                EditorShell::EditorPanelId::Material,
                 EditorShell::EditorPanelId::LogOutput
             };
         }
@@ -66,6 +67,8 @@ namespace Xelqoria::Editor
                 return L"SceneView";
             case EditorShell::EditorPanelId::Inspector:
                 return L"Inspector";
+            case EditorShell::EditorPanelId::Material:
+                return L"Material";
             case EditorShell::EditorPanelId::LogOutput:
                 return L"LogOutput";
             default:
@@ -527,6 +530,7 @@ namespace Xelqoria::Editor
         const bool initialized = InitializeHierarchyPanel(parentWindow, hInstance)
             && InitializeAssetsPanel(parentWindow, hInstance)
             && InitializeInspectorPanel(parentWindow, hInstance)
+            && InitializeMaterialPanel(parentWindow, hInstance)
             && InitializeSceneViewPanel(parentWindow, hInstance)
             && InitializeLogOutputPanel(parentWindow, hInstance);
         if (initialized)
@@ -543,6 +547,7 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(EditorPanelId::Assets);
         DestroyFloatingWindow(EditorPanelId::SceneView);
         DestroyFloatingWindow(EditorPanelId::Inspector);
+        DestroyFloatingWindow(EditorPanelId::Material);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
 
         for (HWND tabControl : m_dynamicDockTabs)
@@ -558,7 +563,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 76> controls = CollectControls();
+            const std::array<HWND, 81> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -819,32 +824,15 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        m_materialDetailsSectionLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Material Details", WS_CHILD);
-        if (nullptr == m_materialDetailsSectionLabel)
+        m_materialOpenButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"Open",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_materialOpenButton)
         {
             return false;
-        }
-
-        const std::array<const wchar_t*, 5> materialDetailLabels{
-            L"Texture",
-            L"Color",
-            L"Outline",
-            L"Thickness",
-            L"OutlineColor"
-        };
-        for (std::size_t index = 0; index < m_materialDetailLabels.size(); ++index)
-        {
-            m_materialDetailLabels[index] = CreateChildWindow(parentWindow, hInstance, L"Static", materialDetailLabels[index], WS_CHILD);
-            m_materialDetailEditControls[index] = CreateChildWindow(
-                parentWindow,
-                hInstance,
-                L"Edit",
-                L"",
-                WS_CHILD | WS_BORDER | ES_AUTOHSCROLL);
-            if (nullptr == m_materialDetailLabels[index] || nullptr == m_materialDetailEditControls[index])
-            {
-                return false;
-            }
         }
 
         m_scriptAssetLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Script", WS_CHILD | WS_VISIBLE);
@@ -904,6 +892,84 @@ namespace Xelqoria::Editor
             L"Add SpriteComponent",
             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         return nullptr != m_spriteComponentActionButton;
+    }
+
+    bool EditorShell::InitializeMaterialPanel(HWND parentWindow, HINSTANCE hInstance)
+    {
+        constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE | BS_GROUPBOX;
+        m_materialPanel = CreateChildWindow(parentWindow, hInstance, L"Button", L"", panelStyle);
+        if (nullptr == m_materialPanel)
+        {
+            return false;
+        }
+
+        m_materialSummaryLabel = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"Material: no material selected",
+            WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_materialSummaryLabel)
+        {
+            return false;
+        }
+
+        m_materialSharedNoticeLabel = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"共有 Material 編集中: 参照中 Sprite に反映されます。",
+            WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_materialSharedNoticeLabel)
+        {
+            return false;
+        }
+
+        m_materialDetailsSectionLabel = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"Material",
+            WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_materialDetailsSectionLabel)
+        {
+            return false;
+        }
+
+        const std::array<const wchar_t*, 5> materialDetailLabels{
+            L"Texture",
+            L"Tint",
+            L"OutlineEnabled",
+            L"OutlineThickness",
+            L"OutlineColor"
+        };
+        for (std::size_t index = 0; index < m_materialDetailLabels.size(); ++index)
+        {
+            m_materialDetailLabels[index] = CreateChildWindow(
+                parentWindow,
+                hInstance,
+                L"Static",
+                materialDetailLabels[index],
+                WS_CHILD | WS_VISIBLE);
+            m_materialDetailEditControls[index] = CreateChildWindow(
+                parentWindow,
+                hInstance,
+                L"Edit",
+                L"",
+                WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+            if (nullptr == m_materialDetailLabels[index] || nullptr == m_materialDetailEditControls[index])
+            {
+                return false;
+            }
+        }
+
+        m_materialTextureDropHighlight = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"",
+            WS_CHILD | SS_BLACKFRAME);
+        return nullptr != m_materialTextureDropHighlight;
     }
 
     bool EditorShell::InitializeSceneViewPanel(HWND parentWindow, HINSTANCE hInstance)
@@ -1140,6 +1206,9 @@ namespace Xelqoria::Editor
             case EditorPanelId::Inspector:
                 LayoutInspectorPanelInRect(panelRect);
                 break;
+            case EditorPanelId::Material:
+                LayoutMaterialPanelInRect(panelRect);
+                break;
             case EditorPanelId::LogOutput:
                 LayoutLogOutputPanelInRect(panelRect);
                 break;
@@ -1180,7 +1249,7 @@ namespace Xelqoria::Editor
 
         DockNode inspectorNode{};
         inspectorNode.kind = DockNodeKind::Leaf;
-        inspectorNode.panels = { EditorPanelId::Inspector };
+        inspectorNode.panels = { EditorPanelId::Inspector, EditorPanelId::Material };
         inspectorNode.tabControl = m_rightDockTab;
         const DockNodeId inspectorNodeId = AddDockNode(std::move(inspectorNode));
 
@@ -1313,6 +1382,9 @@ namespace Xelqoria::Editor
             case EditorPanelId::Inspector:
                 LayoutInspectorPanelInRect(panelRect);
                 break;
+            case EditorPanelId::Material:
+                LayoutMaterialPanelInRect(panelRect);
+                break;
             case EditorPanelId::LogOutput:
                 LayoutLogOutputPanelInRect(panelRect);
                 break;
@@ -1401,6 +1473,8 @@ namespace Xelqoria::Editor
             return m_centerDockTab;
         case EditorPanelId::Inspector:
             return m_rightDockTab;
+        case EditorPanelId::Material:
+            return m_rightDockTab;
         case EditorPanelId::LogOutput:
             return m_logOutputDockTab;
         default:
@@ -1486,6 +1560,9 @@ namespace Xelqoria::Editor
         const int scriptButtonTop = scriptAssetTop + rowHeight + rowSpacing;
         const int scriptButtonGap = ScaleMetric(6);
         const int scriptButtonWidth = (std::max)(0, (innerWidth - scriptButtonGap * 2) / 3);
+        const int materialOpenButtonWidth = ScaleMetric(56);
+        const int materialOpenButtonGap = ScaleMetric(6);
+        const int materialEditWidth = (std::max)(0, innerWidth - labelWidth - materialOpenButtonWidth - materialOpenButtonGap);
 
         MoveChildWindowNoRedraw(m_inspectorPanel, panelRect.left, panelRect.top, width, height);
         MoveChildWindowNoRedraw(m_inspectorSummaryLabel, innerX, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
@@ -1504,14 +1581,63 @@ namespace Xelqoria::Editor
 
         MoveChildWindowNoRedraw(m_spriteComponentSectionLabel, innerX, spriteSectionTop, innerWidth, labelHeight);
         MoveChildWindowNoRedraw(m_spriteRefLabel, innerX, spriteRefTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_spriteRefDropHighlight, innerX + labelWidth - ScaleMetric(2), spriteRefTop - ScaleMetric(2), (std::max)(0, innerWidth - labelWidth + ScaleMetric(4)), rowHeight + ScaleMetric(4));
-        MoveChildWindowNoRedraw(m_spriteRefEdit, innerX + labelWidth, spriteRefTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
+        MoveChildWindowNoRedraw(m_spriteRefDropHighlight, innerX + labelWidth - ScaleMetric(2), spriteRefTop - ScaleMetric(2), materialEditWidth + ScaleMetric(4), rowHeight + ScaleMetric(4));
+        MoveChildWindowNoRedraw(m_spriteRefEdit, innerX + labelWidth, spriteRefTop, materialEditWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_materialOpenButton, innerX + labelWidth + materialEditWidth + materialOpenButtonGap, spriteRefTop, materialOpenButtonWidth, rowHeight);
         MoveChildWindowNoRedraw(m_scriptAssetLabel, innerX, scriptAssetTop + ScaleMetric(4), labelWidth, rowHeight);
         MoveChildWindowNoRedraw(m_scriptAssetEdit, innerX + labelWidth, scriptAssetTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
         MoveChildWindowNoRedraw(m_scriptCreateButton, innerX, scriptButtonTop, scriptButtonWidth, rowHeight + ScaleMetric(4));
         MoveChildWindowNoRedraw(m_scriptAssignButton, innerX + scriptButtonWidth + scriptButtonGap, scriptButtonTop, scriptButtonWidth, rowHeight + ScaleMetric(4));
         MoveChildWindowNoRedraw(m_scriptClearButton, innerX + (scriptButtonWidth + scriptButtonGap) * 2, scriptButtonTop, (std::max)(0, innerWidth - (scriptButtonWidth + scriptButtonGap) * 2), rowHeight + ScaleMetric(4));
         MoveChildWindowNoRedraw(m_spriteComponentActionButton, innerX, scriptButtonTop + rowHeight + ScaleMetric(4) + rowSpacing, innerWidth, rowHeight + ScaleMetric(4));
+    }
+
+    void EditorShell::LayoutMaterialPanelInRect(const RECT& panelRect)
+    {
+        const int outerPadding = ScaleMetric(12);
+        const int groupHeaderHeight = ScaleMetric(26);
+        const int labelHeight = ScaleMetric(24);
+        const int rowHeight = ScaleMetric(24);
+        const int rowSpacing = ScaleMetric(8);
+        const int labelWidth = ScaleMetric(116);
+        const int width = panelRect.right - panelRect.left;
+        const int height = panelRect.bottom - panelRect.top;
+        const int innerX = panelRect.left + outerPadding;
+        const int innerWidth = (std::max)(0, width - outerPadding * 2);
+        const int summaryTop = panelRect.top + groupHeaderHeight;
+        const int noticeTop = summaryTop + labelHeight + ScaleMetric(6);
+        const int sectionTop = noticeTop + labelHeight + ScaleMetric(10);
+        const int firstRowTop = sectionTop + labelHeight + ScaleMetric(4);
+        const int editWidth = (std::max)(0, innerWidth - labelWidth);
+
+        MoveChildWindowNoRedraw(m_materialPanel, panelRect.left, panelRect.top, width, height);
+        MoveChildWindowNoRedraw(m_materialSummaryLabel, innerX, summaryTop, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_materialSharedNoticeLabel, innerX, noticeTop, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_materialDetailsSectionLabel, innerX, sectionTop, innerWidth, labelHeight);
+
+        for (std::size_t index = 0; index < m_materialDetailLabels.size(); ++index)
+        {
+            const int rowTop = firstRowTop + static_cast<int>(index) * (rowHeight + rowSpacing);
+            MoveChildWindowNoRedraw(
+                m_materialDetailLabels[index],
+                innerX,
+                rowTop + ScaleMetric(4),
+                labelWidth,
+                rowHeight);
+            MoveChildWindowNoRedraw(
+                m_materialDetailEditControls[index],
+                innerX + labelWidth,
+                rowTop,
+                editWidth,
+                rowHeight);
+        }
+
+        MoveChildWindowNoRedraw(
+            m_materialTextureDropHighlight,
+            innerX + labelWidth - ScaleMetric(2),
+            firstRowTop - ScaleMetric(2),
+            editWidth + ScaleMetric(4),
+            rowHeight + ScaleMetric(4));
     }
 
     void EditorShell::LayoutSceneViewPanelInRect(const RECT& panelRect)
@@ -1709,17 +1835,27 @@ namespace Xelqoria::Editor
             metrics.spriteRefTop + ScaleMetric(4),
             metrics.inspectorLabelWidth,
             metrics.inspectorRowHeight);
+        const int materialOpenButtonWidth = ScaleMetric(56);
+        const int materialOpenButtonGap = ScaleMetric(6);
+        const int materialEditWidth =
+            (std::max)(0, metrics.inspectorInnerWidth - metrics.inspectorLabelWidth - materialOpenButtonWidth - materialOpenButtonGap);
         MoveChildWindowNoRedraw(
             m_spriteRefDropHighlight,
             metrics.inspectorInnerX + metrics.inspectorLabelWidth - ScaleMetric(2),
             metrics.spriteRefTop - ScaleMetric(2),
-            (std::max)(0, metrics.inspectorInnerWidth - metrics.inspectorLabelWidth + ScaleMetric(4)),
+            materialEditWidth + ScaleMetric(4),
             metrics.inspectorRowHeight + ScaleMetric(4));
         MoveChildWindowNoRedraw(
             m_spriteRefEdit,
             metrics.inspectorInnerX + metrics.inspectorLabelWidth,
             metrics.spriteRefTop,
-            (std::max)(0, metrics.inspectorInnerWidth - metrics.inspectorLabelWidth),
+            materialEditWidth,
+            metrics.inspectorRowHeight);
+        MoveChildWindowNoRedraw(
+            m_materialOpenButton,
+            metrics.inspectorInnerX + metrics.inspectorLabelWidth + materialEditWidth + materialOpenButtonGap,
+            metrics.spriteRefTop,
+            materialOpenButtonWidth,
             metrics.inspectorRowHeight);
 
         const int scriptAssetTop = metrics.spriteRefTop + metrics.inspectorRowHeight + metrics.inspectorRowSpacing;
@@ -1807,10 +1943,11 @@ namespace Xelqoria::Editor
 
     void EditorShell::SendGroupBoxesToBack()
     {
-        const std::array<HWND, 5> groupBoxes{
+        const std::array<HWND, 6> groupBoxes{
             m_hierarchyPanel,
             m_assetsPanel,
             m_inspectorPanel,
+            m_materialPanel,
             m_sceneViewPanel,
             m_logOutputPanel
         };
@@ -1996,7 +2133,7 @@ namespace Xelqoria::Editor
         m_leftTopDockPanels = { EditorPanelId::Hierarchy };
         m_leftBottomDockPanels = { EditorPanelId::Assets };
         m_centerDockPanels = { EditorPanelId::SceneView };
-        m_rightDockPanels = { EditorPanelId::Inspector };
+        m_rightDockPanels = { EditorPanelId::Inspector, EditorPanelId::Material };
         m_leftTopActiveTabIndex = 0;
         m_leftBottomActiveTabIndex = 0;
         m_centerActiveTabIndex = 0;
@@ -2024,11 +2161,13 @@ namespace Xelqoria::Editor
         SetPanelParent(EditorPanelId::Assets, m_parentWindow);
         SetPanelParent(EditorPanelId::SceneView, m_parentWindow);
         SetPanelParent(EditorPanelId::Inspector, m_parentWindow);
+        SetPanelParent(EditorPanelId::Material, m_parentWindow);
         SetPanelParent(EditorPanelId::LogOutput, m_parentWindow);
         DestroyFloatingWindow(EditorPanelId::Hierarchy);
         DestroyFloatingWindow(EditorPanelId::Assets);
         DestroyFloatingWindow(EditorPanelId::SceneView);
         DestroyFloatingWindow(EditorPanelId::Inspector);
+        DestroyFloatingWindow(EditorPanelId::Material);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
         SyncDockTabs();
         m_layoutInitialized = false;
@@ -2059,6 +2198,49 @@ namespace Xelqoria::Editor
         ShowPanelControls(panelId, true);
         SyncDockTabs();
         m_layoutInitialized = false;
+    }
+
+    void EditorShell::ActivatePanel(EditorPanelId panelId)
+    {
+        if (nullptr == m_parentWindow)
+        {
+            return;
+        }
+
+        const int floatingGroupIndex = FindFloatingPanelGroupIndex(panelId);
+        if (floatingGroupIndex >= 0)
+        {
+            FloatingPanelGroup& group = m_floatingPanelGroups[static_cast<std::size_t>(floatingGroupIndex)];
+            const auto panelIt = std::find(group.panels.begin(), group.panels.end(), panelId);
+            if (panelIt != group.panels.end())
+            {
+                group.activeTabIndex = static_cast<int>(std::distance(group.panels.begin(), panelIt));
+                if (nullptr != group.window)
+                {
+                    SyncFloatingPanelTabs(group.window);
+                    LayoutFloatingWindow(group.window);
+                    ShowWindow(group.window, SW_SHOW);
+                    SetForegroundWindow(group.window);
+                }
+                return;
+            }
+        }
+
+        const DockNodeId dockNodeId = FindPanelDockLeaf(panelId);
+        if (0 <= dockNodeId && static_cast<std::size_t>(dockNodeId) < m_dockNodes.size())
+        {
+            DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            const auto panelIt = std::find(dockNode.panels.begin(), dockNode.panels.end(), panelId);
+            if (panelIt != dockNode.panels.end())
+            {
+                dockNode.activeTabIndex = static_cast<int>(std::distance(dockNode.panels.begin(), panelIt));
+                SyncDockTabs();
+                m_layoutInitialized = false;
+                return;
+            }
+        }
+
+        ShowPanelAtDefaultDock(panelId);
     }
 
     bool EditorShell::SaveLayout(const std::filesystem::path& layoutPath) const
@@ -2350,13 +2532,23 @@ namespace Xelqoria::Editor
             ShowWindow(m_sceneViewSizeLabel, SW_HIDE);
             break;
         case EditorPanelId::Inspector:
-            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefEdit, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton })
+            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefEdit, m_materialOpenButton, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton })
             {
                 ShowWindow(control, showCommand);
             }
             if (false == visible)
             {
                 ShowWindow(m_spriteRefDropHighlight, SW_HIDE);
+            }
+            break;
+        case EditorPanelId::Material:
+            for (HWND control : { m_materialPanel, m_materialSummaryLabel, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4] })
+            {
+                ShowWindow(control, showCommand);
+            }
+            if (false == visible)
+            {
+                ShowWindow(m_materialTextureDropHighlight, SW_HIDE);
             }
             break;
         case EditorPanelId::LogOutput:
@@ -2408,7 +2600,13 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::Inspector:
-            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefDropHighlight, m_spriteRefEdit, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton })
+            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefDropHighlight, m_spriteRefEdit, m_materialOpenButton, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton })
+            {
+                setParent(control);
+            }
+            break;
+        case EditorPanelId::Material:
+            for (HWND control : { m_materialPanel, m_materialSummaryLabel, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4], m_materialTextureDropHighlight })
             {
                 setParent(control);
             }
@@ -2441,6 +2639,9 @@ namespace Xelqoria::Editor
         case EditorPanelId::Inspector:
             panelWindow = m_inspectorPanel;
             break;
+        case EditorPanelId::Material:
+            panelWindow = m_materialPanel;
+            break;
         case EditorPanelId::LogOutput:
             panelWindow = m_logOutputPanel;
             break;
@@ -2460,7 +2661,7 @@ namespace Xelqoria::Editor
 
     std::optional<EditorShell::EditorPanelId> EditorShell::HitTestPanelCaption(POINT cursorScreenPoint) const
     {
-        for (EditorPanelId panelId : { EditorPanelId::Hierarchy, EditorPanelId::Assets, EditorPanelId::SceneView, EditorPanelId::Inspector, EditorPanelId::LogOutput })
+        for (EditorPanelId panelId : GetAllEditorPanels())
         {
             const RECT captionRect = GetPanelCaptionRect(panelId);
             if (PtInRect(&captionRect, cursorScreenPoint))
@@ -3377,6 +3578,9 @@ namespace Xelqoria::Editor
         case EditorPanelId::Inspector:
             LayoutInspectorPanelInRect(panelRect);
             break;
+        case EditorPanelId::Material:
+            LayoutMaterialPanelInRect(panelRect);
+            break;
         case EditorPanelId::LogOutput:
             LayoutLogOutputPanelInRect(panelRect);
             break;
@@ -3512,6 +3716,8 @@ namespace Xelqoria::Editor
             return m_sceneViewFloatingWindow;
         case EditorPanelId::Inspector:
             return m_inspectorFloatingWindow;
+        case EditorPanelId::Material:
+            return m_materialFloatingWindow;
         case EditorPanelId::LogOutput:
             return m_logOutputFloatingWindow;
         default:
@@ -3818,6 +4024,8 @@ namespace Xelqoria::Editor
             return L"SceneView";
         case EditorPanelId::Inspector:
             return L"Inspector";
+        case EditorPanelId::Material:
+            return L"Material";
         case EditorPanelId::LogOutput:
             return L"LogOutput";
         default:
@@ -4111,7 +4319,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 76> controls = CollectControls();
+        const std::array<HWND, 81> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -4129,7 +4337,7 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 76> EditorShell::CollectControls() const
+    std::array<HWND, 81> EditorShell::CollectControls() const
     {
         return {
             m_leftTopDockTab,
@@ -4149,6 +4357,7 @@ namespace Xelqoria::Editor
             m_hierarchyPanel,
             m_assetsPanel,
             m_inspectorPanel,
+            m_materialPanel,
             m_sceneViewPanel,
             m_sceneViewPlanLabel,
             m_projectSummaryLabel,
@@ -4191,6 +4400,9 @@ namespace Xelqoria::Editor
             m_spriteRefLabel,
             m_spriteRefDropHighlight,
             m_spriteRefEdit,
+            m_materialOpenButton,
+            m_materialSummaryLabel,
+            m_materialSharedNoticeLabel,
             m_materialDetailsSectionLabel,
             m_materialDetailLabels[0],
             m_materialDetailLabels[1],
@@ -4202,6 +4414,7 @@ namespace Xelqoria::Editor
             m_materialDetailEditControls[2],
             m_materialDetailEditControls[3],
             m_materialDetailEditControls[4],
+            m_materialTextureDropHighlight,
             m_scriptAssetLabel,
             m_scriptAssetEdit,
             m_scriptCreateButton,
@@ -4364,9 +4577,24 @@ namespace Xelqoria::Editor
         return m_spriteRefEdit;
     }
 
+    HWND EditorShell::GetMaterialOpenButton() const
+    {
+        return m_materialOpenButton;
+    }
+
     HWND EditorShell::GetSpriteRefDropHighlight() const
     {
         return m_spriteRefDropHighlight;
+    }
+
+    HWND EditorShell::GetMaterialSummaryLabel() const
+    {
+        return m_materialSummaryLabel;
+    }
+
+    HWND EditorShell::GetMaterialSharedNoticeLabel() const
+    {
+        return m_materialSharedNoticeLabel;
     }
 
     HWND EditorShell::GetMaterialDetailsSectionLabel() const
@@ -4382,6 +4610,11 @@ namespace Xelqoria::Editor
     const std::array<HWND, 5>& EditorShell::GetMaterialDetailEditControls() const
     {
         return m_materialDetailEditControls;
+    }
+
+    HWND EditorShell::GetMaterialTextureDropHighlight() const
+    {
+        return m_materialTextureDropHighlight;
     }
 
     HWND EditorShell::GetScriptAssetLabel() const

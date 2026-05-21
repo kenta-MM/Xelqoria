@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "Assets/IMaterialAssetResolver.h"
 #include "Assets/SpriteAssetRegistry.h"
 #include "AssetsPanelController.h"
 #include "EditorCamera2D.h"
@@ -34,6 +35,7 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <param name="scene">編集中 Scene。</param>
         /// <param name="spriteAssetRegistry">SpriteAsset レジストリ。</param>
+        /// <param name="materialAssetResolver">MaterialAsset Resolver。</param>
         /// <param name="textureAssetRegistry">Texture レジストリ。</param>
         /// <param name="assetsPanelController">Assets パネル状態。</param>
         /// <param name="camera">SceneView 用カメラ。</param>
@@ -45,6 +47,7 @@ namespace Xelqoria::Editor
         SceneViewInteractionResult UpdateInteraction(
             Game::Scene* scene,
             const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
             const Graphics::TextureAssetRegistry& textureAssetRegistry,
             const AssetsPanelController& assetsPanelController,
             const EditorCamera2D& camera,

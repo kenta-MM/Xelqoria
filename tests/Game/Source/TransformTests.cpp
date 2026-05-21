@@ -749,3 +749,117 @@ TEST(TransformTests, ResolveSceneSpritesPreservesEntityIdsAndResolvedTextures)
 	EXPECT_TRUE(IsEqual(24.0f, resolvedSceneSprites[1].sprite.GetPosition().x));
 	EXPECT_TRUE(IsEqual(-12.0f, resolvedSceneSprites[1].sprite.GetPosition().y));
 }
+
+TEST(TransformTests, ResolveSceneSpritesUsesAssignedMaterialAsset)
+{
+	Xelqoria::Game::Scene scene;
+
+	auto& entity = scene.CreateEntity();
+	entity.GetTransform().SetPosition(8.0f, -16.0f, 0.0f);
+	auto spriteComponent = Xelqoria::Game::SpriteComponent{
+		"sprites/player",
+		{
+			true,
+			0,
+			1.0f
+		}
+	};
+	spriteComponent.materialAssetRef = Xelqoria::Core::AssetId("materials/player.material");
+	entity.SetSpriteComponent(spriteComponent);
+
+	auto fallbackTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+	fallbackTexture->SetRHITexture(std::make_shared<FakeTexture>(16, 16));
+	auto materialTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+	materialTexture->SetRHITexture(std::make_shared<FakeTexture>(64, 32));
+
+	Xelqoria::Game::Assets::SpriteAssetRegistry spriteAssetRegistry;
+	spriteAssetRegistry.RegisterSpriteAsset(
+		"sprites/player",
+		Xelqoria::Game::Assets::SpriteAsset{ "textures/fallback" });
+
+	Xelqoria::Game::Assets::SpriteMaterialAssetRegistry materialAssetRegistry;
+	materialAssetRegistry.RegisterMaterialAsset(
+		"materials/player.material",
+		Xelqoria::Game::Assets::SpriteMaterialAsset{
+			"textures/player-material",
+			{ 0.25f, 0.5f, 0.75f, 0.8f },
+			true,
+			3.5f,
+			{ 1.0f, 0.0f, 0.5f, 0.6f }
+		});
+
+	Xelqoria::Graphics::TextureAssetRegistry textureAssetRegistry;
+	textureAssetRegistry.RegisterTexture("textures/fallback", fallbackTexture);
+	textureAssetRegistry.RegisterTexture("textures/player-material", materialTexture);
+
+	std::vector<std::string> resolveLogs;
+	const auto resolvedSceneSprites = scene.ResolveSceneSprites(
+		spriteAssetRegistry,
+		materialAssetRegistry,
+		textureAssetRegistry,
+		[&resolveLogs](const std::string& message)
+		{
+			resolveLogs.push_back(message);
+		});
+
+	ASSERT_EQ(static_cast<std::size_t>(1), resolvedSceneSprites.size());
+	const auto& resolvedSprite = resolvedSceneSprites[0].sprite;
+	EXPECT_EQ(Xelqoria::Core::AssetId("textures/player-material"), resolvedSprite.GetTextureAssetId());
+	EXPECT_EQ(materialTexture, resolvedSprite.GetTexture());
+	EXPECT_TRUE(IsEqual(0.25f, resolvedSprite.GetColor()[0]));
+	EXPECT_TRUE(IsEqual(0.5f, resolvedSprite.GetColor()[1]));
+	EXPECT_TRUE(IsEqual(0.75f, resolvedSprite.GetColor()[2]));
+	EXPECT_TRUE(IsEqual(0.8f, resolvedSprite.GetColor()[3]));
+	EXPECT_TRUE(resolvedSprite.IsOutlineEnabled());
+	EXPECT_TRUE(IsEqual(3.5f, resolvedSprite.GetOutlineThickness()));
+	EXPECT_TRUE(IsEqual(1.0f, resolvedSprite.GetOutlineColor()[0]));
+	EXPECT_TRUE(IsEqual(0.0f, resolvedSprite.GetOutlineColor()[1]));
+	EXPECT_TRUE(IsEqual(0.5f, resolvedSprite.GetOutlineColor()[2]));
+	EXPECT_TRUE(IsEqual(0.6f, resolvedSprite.GetOutlineColor()[3]));
+
+	ASSERT_EQ(static_cast<std::size_t>(1), resolveLogs.size());
+	EXPECT_NE(std::string::npos, resolveLogs[0].find("materials/player.material"));
+	EXPECT_NE(std::string::npos, resolveLogs[0].find("textures/player-material"));
+}
+
+TEST(TransformTests, ResolveSceneSpritesUsesMaterialAssetWithoutSpriteAssetRef)
+{
+	Xelqoria::Game::Scene scene;
+
+	auto& entity = scene.CreateEntity();
+	const Xelqoria::Game::EntityId entityId = entity.GetId();
+	entity.GetTransform().SetPosition(-36.0f, -24.0f, 0.0f);
+	Xelqoria::Game::SpriteComponent spriteComponent{};
+	spriteComponent.materialAssetRef = Xelqoria::Core::AssetId("materials/NewMaterial1.material");
+	entity.SetSpriteComponent(spriteComponent);
+
+	auto materialTexture = std::make_shared<Xelqoria::Graphics::Texture2D>();
+	materialTexture->SetRHITexture(std::make_shared<FakeTexture>(128, 64));
+
+	Xelqoria::Game::Assets::SpriteAssetRegistry spriteAssetRegistry;
+	Xelqoria::Game::Assets::SpriteMaterialAssetRegistry materialAssetRegistry;
+	materialAssetRegistry.RegisterMaterialAsset(
+		"materials/NewMaterial1.material",
+		Xelqoria::Game::Assets::SpriteMaterialAsset{
+			"textures/title.png",
+			{ 1.0f, 1.0f, 1.0f, 1.0f },
+			false,
+			1.0f,
+			{ 1.0f, 1.0f, 0.0f, 1.0f }
+		});
+
+	Xelqoria::Graphics::TextureAssetRegistry textureAssetRegistry;
+	textureAssetRegistry.RegisterTexture("textures/title.png", materialTexture);
+
+	const auto resolvedSceneSprites = scene.ResolveSceneSprites(
+		spriteAssetRegistry,
+		materialAssetRegistry,
+		textureAssetRegistry);
+
+	ASSERT_EQ(static_cast<std::size_t>(1), resolvedSceneSprites.size());
+	EXPECT_EQ(entityId, resolvedSceneSprites[0].entityId);
+	EXPECT_EQ(Xelqoria::Core::AssetId("textures/title.png"), resolvedSceneSprites[0].sprite.GetTextureAssetId());
+	EXPECT_EQ(materialTexture, resolvedSceneSprites[0].sprite.GetTexture());
+	EXPECT_TRUE(IsEqual(-36.0f, resolvedSceneSprites[0].sprite.GetPosition().x));
+	EXPECT_TRUE(IsEqual(-24.0f, resolvedSceneSprites[0].sprite.GetPosition().y));
+}

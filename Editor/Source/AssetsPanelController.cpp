@@ -563,6 +563,8 @@ namespace Xelqoria::Editor
             m_selectedFilePath.clear();
             m_lastClickTick = 0;
             m_lastClickedIndex = -1;
+            m_openMaterialRequested = false;
+            m_openMaterialAssetId = {};
         }
 
         ReloadEditorIconImages(m_assetsRootDirectory);
@@ -900,6 +902,22 @@ namespace Xelqoria::Editor
     {
         m_createMaterialRequested = false;
         m_createMaterialTargetDirectory.clear();
+    }
+
+    bool AssetsPanelController::HasOpenMaterialRequest() const
+    {
+        return m_openMaterialRequested;
+    }
+
+    const Core::AssetId& AssetsPanelController::GetOpenMaterialAssetId() const
+    {
+        return m_openMaterialAssetId;
+    }
+
+    void AssetsPanelController::ClearOpenMaterialRequest()
+    {
+        m_openMaterialRequested = false;
+        m_openMaterialAssetId = {};
     }
 
     bool AssetsPanelController::HasAssignScriptRequest() const
@@ -1263,6 +1281,14 @@ namespace Xelqoria::Editor
         const AssetListEntry entry = m_visibleEntries[entryIndex];
         if (false == entry.isDirectory)
         {
+            if (EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory)
+                && EditorAssetPathUtils::IsMaterialAssetFile(entry.path))
+            {
+                m_openMaterialAssetId = EditorAssetPathUtils::BuildMaterialAssetId(entry.path, m_assetsRootDirectory);
+                m_openMaterialRequested = false == m_openMaterialAssetId.IsEmpty();
+                return m_openMaterialRequested;
+            }
+
             return TryOpenScriptAssetSource(entry);
         }
 

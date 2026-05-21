@@ -13,6 +13,7 @@
 #include "SceneViewStatusPresenter.h"
 #include "AssetsPanelController.h"
 #include "EditorSceneDocument.h"
+#include <Assets/IMaterialAssetResolver.h>
 #include <Assets/SpriteAssetRegistry.h>
 #include <Entity.h>
 #include <Scene.h>
@@ -43,6 +44,7 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <param name="scene">編集中 Scene。</param>
         /// <param name="spriteAssetRegistry">SpriteAsset レジストリ。</param>
+        /// <param name="materialAssetResolver">MaterialAsset Resolver。</param>
         /// <param name="textureAssetRegistry">Texture レジストリ。</param>
         /// <param name="assetsPanelController">Assets パネル状態。</param>
         /// <param name="currentSelectedEntityId">現在選択中の EntityId。</param>
@@ -51,6 +53,7 @@ namespace Xelqoria::Editor
         SceneViewInteractionResult UpdateInteraction(
             Game::Scene* scene,
             const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
             const Graphics::TextureAssetRegistry& textureAssetRegistry,
             const AssetsPanelController& assetsPanelController,
             std::optional<Game::EntityId> currentSelectedEntityId,
