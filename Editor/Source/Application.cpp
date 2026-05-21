@@ -303,6 +303,11 @@ namespace Xelqoria::Editor
         m_window.SetDrawItemHandler(
             [this](Platform::NativeMessageParameter drawItemParameter)
             {
+                if (m_editorShell.HandleDrawItem(static_cast<LPARAM>(drawItemParameter)))
+                {
+                    return true;
+                }
+
                 return m_logOutputPanelController.HandleDrawItem(static_cast<LPARAM>(drawItemParameter));
             });
         m_window.SetCloseRequestHandler(

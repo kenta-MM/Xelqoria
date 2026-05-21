@@ -22,6 +22,7 @@ namespace Xelqoria::Editor
     {
         constexpr UINT_PTR ParentWindowSubclassId = 1;
         constexpr UINT_PTR SpriteRefEditSubclassId = 1;
+        constexpr UINT_PTR EditorTabControlSubclassId = 2;
         constexpr const wchar_t* WorkspaceBackgroundWindowClassName = L"XelqoriaEditorWorkspaceBackground";
         constexpr const wchar_t* EditorPanelWindowClassName = L"XelqoriaEditorPanel";
         constexpr const wchar_t* DockPreviewWindowClassName = L"XelqoriaDockPreviewWindow";
@@ -75,6 +76,20 @@ namespace Xelqoria::Editor
             SelectObject(deviceContext, previousBrush);
             SelectObject(deviceContext, previousPen);
             DeleteObject(pen);
+        }
+
+        [[nodiscard]] int GetHoveredTabIndex(HWND tabControl)
+        {
+            POINT cursorPoint{};
+            if (FALSE == GetCursorPos(&cursorPoint))
+            {
+                return -1;
+            }
+
+            ScreenToClient(tabControl, &cursorPoint);
+            TCHITTESTINFO hitTestInfo{};
+            hitTestInfo.pt = cursorPoint;
+            return TabCtrl_HitTest(tabControl, &hitTestInfo);
         }
 
         LRESULT CALLBACK WorkspaceBackgroundWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
@@ -650,11 +665,15 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        constexpr DWORD tabStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS;
+        constexpr DWORD tabStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS | TCS_OWNERDRAWFIXED;
         m_leftTopDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
         m_leftBottomDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
         m_centerDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
         m_rightDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
+        ConfigureEditorTabControl(m_leftTopDockTab);
+        ConfigureEditorTabControl(m_leftBottomDockTab);
+        ConfigureEditorTabControl(m_centerDockTab);
+        ConfigureEditorTabControl(m_rightDockTab);
         m_dockPreviewWindow = CreateChildWindow(
             parentWindow,
             hInstance,
@@ -1334,11 +1353,12 @@ namespace Xelqoria::Editor
             hInstance,
             WC_TABCONTROLW,
             L"",
-            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS);
+            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS | TCS_OWNERDRAWFIXED);
         if (nullptr == m_logOutputTabControl)
         {
             return false;
         }
+        ConfigureEditorTabControl(m_logOutputTabControl);
 
         const std::array<const wchar_t*, 3> tabNames{ L"ゲームログ", L"ビルドログ", L"エディタログ" };
         for (std::size_t index = 0; index < tabNames.size(); ++index)
@@ -2756,6 +2776,17 @@ namespace Xelqoria::Editor
         return true;
     }
 
+    bool EditorShell::HandleDrawItem(LPARAM drawItemParameter) const
+    {
+        const DRAWITEMSTRUCT* drawItem = reinterpret_cast<const DRAWITEMSTRUCT*>(drawItemParameter);
+        if (nullptr == drawItem)
+        {
+            return false;
+        }
+
+        return DrawEditorTabControl(*drawItem);
+    }
+
     void EditorShell::ShowPanelControls(EditorPanelId panelId, bool visible) const
     {
         const int showCommand = visible ? SW_SHOW : SW_HIDE;
@@ -3676,10 +3707,11 @@ namespace Xelqoria::Editor
             reinterpret_cast<HINSTANCE>(GetWindowLongPtrW(parentWindow, GWLP_HINSTANCE)),
             WC_TABCONTROLW,
             L"",
-            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS);
+            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS | TCS_OWNERDRAWFIXED);
         if (nullptr != tabControl)
         {
             SendMessageW(tabControl, WM_SETFONT, reinterpret_cast<WPARAM>(m_defaultFont), TRUE);
+            ConfigureEditorTabControl(tabControl);
         }
         m_floatingPanelGroups.push_back(FloatingPanelGroup{
             floatingWindow,
@@ -4099,7 +4131,7 @@ namespace Xelqoria::Editor
             return nullptr;
         }
 
-        constexpr DWORD tabStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS;
+        constexpr DWORD tabStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS | TCS_OWNERDRAWFIXED;
         HWND tabControl = CreateChildWindow(
             parentWindow,
             reinterpret_cast<HINSTANCE>(GetWindowLongPtrW(parentWindow, GWLP_HINSTANCE)),
@@ -4112,6 +4144,7 @@ namespace Xelqoria::Editor
         }
 
         SendMessageW(tabControl, WM_SETFONT, reinterpret_cast<WPARAM>(m_defaultFont), TRUE);
+        ConfigureEditorTabControl(tabControl);
         ShowWindow(tabControl, SW_HIDE);
         m_dynamicDockTabs.push_back(tabControl);
         return tabControl;
@@ -4142,6 +4175,87 @@ namespace Xelqoria::Editor
             m_logOutputDockTab = tabControl;
         }
         return tabControl;
+    }
+
+    void EditorShell::ConfigureEditorTabControl(HWND tabControl) const
+    {
+        if (nullptr == tabControl)
+        {
+            return;
+        }
+
+        SendMessageW(tabControl, TCM_SETITEMSIZE, 0, MAKELPARAM(ScaleMetric(132), ScaleMetric(28)));
+        SetWindowSubclass(
+            tabControl,
+            EditorShell::EditorTabControlSubclassProc,
+            EditorTabControlSubclassId,
+            0);
+    }
+
+    bool EditorShell::DrawEditorTabControl(const DRAWITEMSTRUCT& drawItem) const
+    {
+        if (ODT_TAB != drawItem.CtlType || nullptr == drawItem.hwndItem || nullptr == drawItem.hDC)
+        {
+            return false;
+        }
+
+        const int tabIndex = static_cast<int>(drawItem.itemID);
+        if (tabIndex < 0)
+        {
+            return true;
+        }
+
+        const int activeTabIndex = TabCtrl_GetCurSel(drawItem.hwndItem);
+        const int hoveredTabIndex = GetHoveredTabIndex(drawItem.hwndItem);
+        const bool isActive = tabIndex == activeTabIndex;
+        const bool isHovered = tabIndex == hoveredTabIndex;
+
+        EditorColor backgroundColor = EditorThemes::XelqoriaDark.panelBackground;
+        EditorColor textColor = EditorThemes::XelqoriaDark.textSecondary;
+        if (isHovered)
+        {
+            backgroundColor = EditorThemes::XelqoriaDark.hover;
+            textColor = EditorThemes::XelqoriaDark.textPrimary;
+        }
+        if (isActive)
+        {
+            backgroundColor = EditorThemes::XelqoriaDark.panelHeaderBackground;
+            textColor = EditorThemes::XelqoriaDark.textPrimary;
+        }
+
+        RECT tabRect = drawItem.rcItem;
+        FillRectWithThemeColor(drawItem.hDC, tabRect, backgroundColor);
+        DrawRectBorder(drawItem.hDC, tabRect, EditorThemes::XelqoriaDark.panelBorder);
+
+        if (isActive)
+        {
+            RECT accentRect = tabRect;
+            accentRect.top = (std::max)(accentRect.top, accentRect.bottom - ScaleMetric(3));
+            FillRectWithThemeColor(drawItem.hDC, accentRect, EditorThemes::XelqoriaDark.accent);
+        }
+
+        wchar_t tabText[128]{};
+        TCITEMW item{};
+        item.mask = TCIF_TEXT;
+        item.pszText = tabText;
+        item.cchTextMax = static_cast<int>(std::size(tabText));
+        TabCtrl_GetItem(drawItem.hwndItem, tabIndex, &item);
+
+        SetBkMode(drawItem.hDC, TRANSPARENT);
+        SetTextColor(drawItem.hDC, ToColorRef(textColor));
+
+        RECT textRect = tabRect;
+        textRect.left += ScaleMetric(10);
+        textRect.right -= ScaleMetric(10);
+        textRect.bottom -= ScaleMetric(2);
+        DrawTextW(
+            drawItem.hDC,
+            tabText,
+            -1,
+            &textRect,
+            DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+
+        return true;
     }
 
     std::wstring EditorShell::GetDockTabLayoutKey(HWND tabControl) const
@@ -4729,6 +4843,14 @@ namespace Xelqoria::Editor
                 }
             }
 
+            if (WM_DRAWITEM == message)
+            {
+                if (windowData->shell->HandleDrawItem(lParam))
+                {
+                    return TRUE;
+                }
+            }
+
             if (WM_MOVING == message)
             {
                 windowData->shell->BeginFloatingWindowDockDrag(windowData->shell->GetActiveFloatingPanel(window));
@@ -4754,6 +4876,38 @@ namespace Xelqoria::Editor
         }
 
         return DefWindowProcW(window, message, wParam, lParam);
+    }
+
+    LRESULT CALLBACK EditorShell::EditorTabControlSubclassProc(
+        HWND window,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData)
+    {
+        (void)subclassId;
+        (void)referenceData;
+
+        if (WM_MOUSEMOVE == message)
+        {
+            TRACKMOUSEEVENT trackMouseEvent{};
+            trackMouseEvent.cbSize = sizeof(trackMouseEvent);
+            trackMouseEvent.dwFlags = TME_LEAVE;
+            trackMouseEvent.hwndTrack = window;
+            TrackMouseEvent(&trackMouseEvent);
+            InvalidateRect(window, nullptr, FALSE);
+        }
+        else if (WM_MOUSELEAVE == message)
+        {
+            InvalidateRect(window, nullptr, FALSE);
+        }
+        else if (WM_NCDESTROY == message)
+        {
+            RemoveWindowSubclass(window, EditorShell::EditorTabControlSubclassProc, EditorTabControlSubclassId);
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
     }
 
     LRESULT CALLBACK EditorShell::ParentWindowSubclassProc(
