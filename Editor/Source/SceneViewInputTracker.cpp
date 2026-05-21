@@ -27,6 +27,17 @@ namespace Xelqoria::Editor
     {
         constexpr float UntexturedSpriteSizeWorldUnits = 64.0f;
 
+        /// <summary>
+        /// 未テクスチャ Sprite のプレースホルダー当たり判定対象かを判定する。
+        /// </summary>
+        /// <param name="spriteComponent">判定対象の SpriteComponent。</param>
+        /// <returns>SpriteAsset と MaterialAsset のどちらも参照していない場合は true。</returns>
+        bool ShouldUseUntexturedSpriteHitTarget(const Game::SpriteComponent& spriteComponent)
+        {
+            return spriteComponent.spriteAssetRef.IsEmpty()
+                && spriteComponent.materialAssetRef.IsEmpty();
+        }
+
         [[nodiscard]] POINT ToWin32Point(Platform::Point point)
         {
             return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
@@ -86,6 +97,7 @@ namespace Xelqoria::Editor
     SceneViewInteractionResult SceneViewInputTracker::UpdateInteraction(
         Game::Scene* scene,
         const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
+        const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
         const Graphics::TextureAssetRegistry& textureAssetRegistry,
         const AssetsPanelController& assetsPanelController,
         const EditorCamera2D& camera,
@@ -133,6 +145,18 @@ namespace Xelqoria::Editor
         const bool isAssetDragActive = assetsPanelController.IsDragActive();
         const bool isScenePlacementDrag = isAssetDragActive
             && assetsPanelController.CanPlaceDraggingAssetInScene();
+        if (false == isCursorInside
+            && true == isLeftButtonDown
+            && false == m_sceneViewLeftButtonDown
+            && false == isAssetDragActive
+            && true == currentSelectedEntityId.has_value())
+        {
+            result.selectionChanged = true;
+            result.selectedEntityId = std::nullopt;
+            m_editMode = SceneViewEditMode::None;
+            ClearEntityDrag();
+        }
+
         if (isCursorInside && isLeftButtonDown && false == m_sceneViewLeftButtonDown)
         {
             POINT clientPoint = screenPoint;
@@ -148,10 +172,14 @@ namespace Xelqoria::Editor
 
             if (false == isAssetDragActive && nullptr != scene)
             {
-                const auto resolvedSprites = scene->ResolveSceneSprites(spriteAssetRegistry, textureAssetRegistry);
+                const auto resolvedSprites = scene->ResolveSceneSprites(
+                    spriteAssetRegistry,
+                    materialAssetResolver,
+                    textureAssetRegistry);
                 const auto renderItems = scene->CollectSpriteRenderItems();
                 const auto hitTargets = BuildSceneHitTargets(resolvedSprites, renderItems, currentSelectedEntityId);
                 const auto selectedEntityId = PickTopmostEntityAtWorldPoint(hitTargets, worldPoint.x, worldPoint.y);
+                result.spriteClicked = selectedEntityId.has_value();
                 if (selectedEntityId != currentSelectedEntityId)
                 {
                     result.selectionChanged = true;
@@ -467,7 +495,7 @@ namespace Xelqoria::Editor
         {
             if (nullptr == renderItem.transform
                 || nullptr == renderItem.spriteComponent
-                || false == renderItem.spriteComponent->spriteAssetRef.IsEmpty())
+                || false == ShouldUseUntexturedSpriteHitTarget(*renderItem.spriteComponent))
             {
                 continue;
             }

@@ -60,10 +60,12 @@
   <Folder Name="/ソリューション項目/Assets/" />
   <Folder Name="/ソリューション項目/Assets/Editor/" />
   <Folder Name="/ソリューション項目/Assets/Editor/Icons/">
+    <File Path="Assets/Editor/Icons/file_default.png" />
+    <File Path="Assets/Editor/Icons/file_material.png" />
+    <File Path="Assets/Editor/Icons/file_proj.png" />
+    <File Path="Assets/Editor/Icons/file_script.png" />
+    <File Path="Assets/Editor/Icons/file_sprite.png" />
     <File Path="Assets/Editor/Icons/folder.png" />
-    <File Path="Assets/Editor/Icons/proj.png" />
-    <File Path="Assets/Editor/Icons/script.png" />
-    <File Path="Assets/Editor/Icons/spite.png" />
   </Folder>
   <Folder Name="/ソリューション項目/docs/" />
   <Folder Name="/ソリューション項目/docs/agents/">

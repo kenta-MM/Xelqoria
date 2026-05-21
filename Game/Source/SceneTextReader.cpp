@@ -276,6 +276,13 @@ namespace
 			return std::nullopt;
 		}
 
+		if (fieldKey == "materialRef")
+		{
+			record.hasSpriteComponent = true;
+			record.materialRef = Xelqoria::Game::SceneMaterialRefRecord{ Xelqoria::Core::AssetId(value) };
+			return std::nullopt;
+		}
+
 		if (false == fieldKey.starts_with(Xelqoria::Game::SceneSaveExtensionFieldPrefix))
 		{
 			return MakeError(lineNumber, key, "未対応の Scene フィールドです。");
@@ -394,15 +401,21 @@ namespace Xelqoria::Game
 			{
 				entity.SetName(record.name);
 			}
-			if (record.hasSpriteComponent || record.spriteRef.has_value())
+			if (record.hasSpriteComponent || record.spriteRef.has_value() || record.materialRef.has_value())
 			{
 				const Core::AssetId spriteAssetRef = record.spriteRef.has_value()
 					? record.spriteRef->spriteAssetRef
 					: Core::AssetId{};
-				entity.SetSpriteComponent(SpriteComponent{
+				SpriteComponent spriteComponent{
 					spriteAssetRef,
 					{}
-				});
+				};
+				if (record.materialRef.has_value())
+				{
+					spriteComponent.materialAssetRef = record.materialRef->materialAssetRef;
+				}
+
+				entity.SetSpriteComponent(spriteComponent);
 			}
 		}
 

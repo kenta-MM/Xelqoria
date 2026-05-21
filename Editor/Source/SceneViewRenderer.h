@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 
+#include "Assets/IMaterialAssetResolver.h"
 #include "Assets/SpriteAssetRegistry.h"
 #include "EditorCamera2D.h"
 #include "GraphicsAPI.h"
@@ -56,6 +57,7 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <param name="scene">描画対象の Scene。</param>
         /// <param name="spriteAssetRegistry">SpriteAsset レジストリ。</param>
+        /// <param name="materialAssetResolver">MaterialAsset Resolver。</param>
         /// <param name="textureAssetRegistry">Texture レジストリ。</param>
         /// <param name="camera">SceneView 用カメラ。</param>
         /// <param name="selectedEntityId">現在選択中の EntityId。</param>
@@ -64,6 +66,7 @@ namespace Xelqoria::Editor
         void RenderFrame(
             Game::Scene* scene,
             Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
             Graphics::TextureAssetRegistry& textureAssetRegistry,
             const EditorCamera2D& camera,
             std::optional<Game::EntityId> selectedEntityId,

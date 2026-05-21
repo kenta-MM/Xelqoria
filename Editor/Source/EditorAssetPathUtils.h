@@ -21,6 +21,13 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
     [[nodiscard]] bool IsSpriteAssetFile(const std::filesystem::path& path);
 
     /// <summary>
+    /// 指定パスが Material Asset ファイルかを判定する。
+    /// </summary>
+    /// <param name="path">判定対象パス。</param>
+    /// <returns>Material Asset ファイルの場合は true。</returns>
+    [[nodiscard]] bool IsMaterialAssetFile(const std::filesystem::path& path);
+
+    /// <summary>
     /// プロジェクトルート基準の画像ファイルパスから TextureAssetId を生成する。
     /// </summary>
     /// <param name="path">画像ファイルパス。</param>
@@ -37,6 +44,16 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
     /// <param name="assetsRootDirectory">AssetId の基準になるプロジェクトルート。</param>
     /// <returns>SpriteAssetId。生成できない場合は空。</returns>
     [[nodiscard]] Core::AssetId BuildSpriteAssetId(
+        const std::filesystem::path& path,
+        const std::filesystem::path& assetsRootDirectory);
+
+    /// <summary>
+    /// プロジェクトルート基準の Material Asset ファイルパスから MaterialAssetId を生成する。
+    /// </summary>
+    /// <param name="path">Material Asset ファイルパス。</param>
+    /// <param name="assetsRootDirectory">AssetId の基準になるプロジェクトルート。</param>
+    /// <returns>MaterialAssetId。生成できない場合は空。</returns>
+    [[nodiscard]] Core::AssetId BuildMaterialAssetId(
         const std::filesystem::path& path,
         const std::filesystem::path& assetsRootDirectory);
 }

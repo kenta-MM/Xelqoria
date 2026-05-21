@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "Assets/IMaterialAssetResolver.h"
 #include "Assets/ISpriteAssetResolver.h"
 #include "Entity.h"
 #include "ITextureAssetResolver.h"
@@ -139,6 +140,20 @@ namespace Xelqoria::Game
 		/// Scene 内の Sprite 描画候補を Asset 解決済み Sprite 一覧へ変換する。
 		/// </summary>
 		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
+		/// <param name="materialAssetResolver">MaterialAsset を解決する Resolver。</param>
+		/// <param name="textureAssetResolver">Texture2D を解決する Resolver。</param>
+		/// <param name="logger">解決状況を受け取るロガー。未指定時はログ出力しない。</param>
+		/// <returns>描画可能な Sprite 一覧。</returns>
+		std::vector<ResolvedSceneSprite> ResolveSceneSprites(
+			const Assets::ISpriteAssetResolver& spriteAssetResolver,
+			const Assets::IMaterialAssetResolver& materialAssetResolver,
+			const Graphics::ITextureAssetResolver& textureAssetResolver,
+			const std::function<void(const std::string&)>& logger = {}) const;
+
+		/// <summary>
+		/// Scene 内の Sprite 描画候補を旧 SpriteAsset Texture 解決経由で Sprite 一覧へ変換する。
+		/// </summary>
+		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
 		/// <param name="textureAssetResolver">Texture2D を解決する Resolver。</param>
 		/// <param name="logger">解決状況を受け取るロガー。未指定時はログ出力しない。</param>
 		/// <returns>描画可能な Sprite 一覧。</returns>
@@ -149,6 +164,20 @@ namespace Xelqoria::Game
 
 		/// <summary>
 		/// Scene 内の Sprite 描画候補を Asset 解決経由で描画用 Sprite に変換する。
+		/// </summary>
+		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
+		/// <param name="materialAssetResolver">MaterialAsset を解決する Resolver。</param>
+		/// <param name="textureAssetResolver">Texture2D を解決する Resolver。</param>
+		/// <param name="logger">解決状況を受け取るロガー。未指定時はログ出力しない。</param>
+		/// <returns>描画可能な Sprite 一覧。</returns>
+		std::vector<Graphics::Sprite> ResolveSprites(
+			const Assets::ISpriteAssetResolver& spriteAssetResolver,
+			const Assets::IMaterialAssetResolver& materialAssetResolver,
+			const Graphics::ITextureAssetResolver& textureAssetResolver,
+			const std::function<void(const std::string&)>& logger = {}) const;
+
+		/// <summary>
+		/// Scene 内の Sprite 描画候補を旧 SpriteAsset Texture 解決経由で描画用 Sprite に変換する。
 		/// </summary>
 		/// <param name="spriteAssetResolver">SpriteAsset を解決する Resolver。</param>
 		/// <param name="textureAssetResolver">Texture2D を解決する Resolver。</param>

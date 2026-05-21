@@ -68,6 +68,10 @@ namespace Xelqoria::Game
 			if (spriteComponent.has_value())
 			{
 				stream << prefix << ".spriteRef=" << spriteComponent->get().spriteAssetRef.GetValue() << "\n";
+				if (false == spriteComponent->get().materialAssetRef.IsEmpty())
+				{
+					stream << prefix << ".materialRef=" << spriteComponent->get().materialAssetRef.GetValue() << "\n";
+				}
 			}
 		}
 

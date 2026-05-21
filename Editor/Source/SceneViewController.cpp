@@ -7,6 +7,7 @@
 #include "EditorCamera2D.h"
 #include "EditorShell.h"
 #include "SceneViewInteractionTypes.h"
+#include <Assets/IMaterialAssetResolver.h>
 #include <Assets/SpriteAssetRegistry.h>
 #include <Entity.h>
 #include <Scene.h>
@@ -33,6 +34,7 @@ namespace Xelqoria::Editor
     SceneViewInteractionResult SceneViewController::UpdateInteraction(
         Game::Scene* scene,
         const Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
+        const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
         const Graphics::TextureAssetRegistry& textureAssetRegistry,
         const AssetsPanelController& assetsPanelController,
         std::optional<Game::EntityId> currentSelectedEntityId,
@@ -41,6 +43,7 @@ namespace Xelqoria::Editor
         const SceneViewInteractionResult result = m_inputTracker.UpdateInteraction(
             scene,
             spriteAssetRegistry,
+            materialAssetResolver,
             textureAssetRegistry,
             assetsPanelController,
             m_sceneViewCamera,

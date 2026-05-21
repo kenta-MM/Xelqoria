@@ -8,6 +8,7 @@
 
 #include "AssetId.h"
 #include "Assets/SpriteAssetRegistry.h"
+#include "Assets/SpriteMaterialAssetRegistry.h"
 #include "Entity.h"
 #include "EditorProject.h"
 #include "IGraphicsContext.h"
@@ -108,6 +109,47 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool RegisterSpriteAssetFile(const std::filesystem::path& spriteAssetPath);
 
         /// <summary>
+        /// 指定 Material Asset ファイルを SpriteMaterialAsset として登録する。
+        /// </summary>
+        /// <param name="materialAssetPath">登録対象の Material Asset ファイルパス。</param>
+        /// <returns>登録に成功した場合は true。</returns>
+        [[nodiscard]] bool RegisterMaterialAssetFile(const std::filesystem::path& materialAssetPath);
+
+        /// <summary>
+        /// 現在のプロジェクト配下へ Material Asset ファイルを作成する。
+        /// </summary>
+        /// <param name="targetDirectory">作成先フォルダ。空またはプロジェクト外の場合は Assets 直下。</param>
+        /// <param name="textureAssetId">初期 TextureAssetId。</param>
+        /// <returns>作成した MaterialAssetId。作成できない場合は空。</returns>
+        [[nodiscard]] std::optional<Core::AssetId> CreateMaterialAssetFile(
+            const std::filesystem::path& targetDirectory,
+            const Core::AssetId& textureAssetId = {});
+
+        /// <summary>
+        /// MaterialAssetId から対応する Material Asset ファイルパスを解決する。
+        /// </summary>
+        /// <param name="materialAssetId">解決対象 MaterialAssetId。</param>
+        /// <returns>Material Asset ファイルパス。解決できない場合は空。</returns>
+        [[nodiscard]] std::optional<std::filesystem::path> ResolveMaterialAssetPath(
+            const Core::AssetId& materialAssetId) const;
+
+        /// <summary>
+        /// Material Asset ファイルの内容を更新する。
+        /// </summary>
+        /// <param name="materialAssetId">更新対象 MaterialAssetId。</param>
+        /// <param name="materialAsset">保存する Material 内容。</param>
+        /// <returns>更新に成功した場合は true。</returns>
+        [[nodiscard]] bool SaveMaterialAsset(
+            const Core::AssetId& materialAssetId,
+            const Game::Assets::SpriteMaterialAsset& materialAsset);
+
+        /// <summary>
+        /// Scene 内の旧 SpriteAsset 参照から Material 参照を自動作成する。
+        /// </summary>
+        /// <returns>Scene が変更された場合は true。</returns>
+        [[nodiscard]] bool MigrateSpriteComponentsToMaterialAssets();
+
+        /// <summary>
         /// SpriteAssetId から対応する Sprite Asset ファイルパスを解決する。
         /// </summary>
         /// <param name="spriteAssetId">解決対象 SpriteAssetId。</param>
@@ -203,6 +245,18 @@ namespace Xelqoria::Editor
         [[nodiscard]] const Game::Assets::SpriteAssetRegistry& GetSpriteAssetRegistry() const;
 
         /// <summary>
+        /// MaterialAsset レジストリを取得する。
+        /// </summary>
+        /// <returns>MaterialAsset レジストリ。</returns>
+        [[nodiscard]] Game::Assets::SpriteMaterialAssetRegistry& GetMaterialAssetRegistry();
+
+        /// <summary>
+        /// MaterialAsset レジストリを読み取り専用で取得する。
+        /// </summary>
+        /// <returns>MaterialAsset レジストリ。</returns>
+        [[nodiscard]] const Game::Assets::SpriteMaterialAssetRegistry& GetMaterialAssetRegistry() const;
+
+        /// <summary>
         /// Texture レジストリを取得する。
         /// </summary>
         /// <returns>Texture レジストリ。</returns>
@@ -244,8 +298,10 @@ namespace Xelqoria::Editor
         std::unique_ptr<Game::Scene> m_scene;
         RHI::IGraphicsContext* m_graphicsContext = nullptr;
         Game::Assets::SpriteAssetRegistry m_spriteAssetRegistry{};
+        Game::Assets::SpriteMaterialAssetRegistry m_materialAssetRegistry{};
         Graphics::TextureAssetRegistry m_textureAssetRegistry{};
         std::vector<Core::AssetId> m_registeredSpriteAssetIds{};
+        std::vector<Core::AssetId> m_registeredMaterialAssetIds{};
         EditorProject m_project{};
     };
 }

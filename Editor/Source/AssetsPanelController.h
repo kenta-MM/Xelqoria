@@ -140,6 +140,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] const Core::AssetId& GetDraggingScriptAssetId() const;
 
         /// <summary>
+        /// 現在ドラッグ中の MaterialAssetId を取得する。
+        /// </summary>
+        /// <returns>ドラッグ中 MaterialAssetId。</returns>
+        [[nodiscard]] const Core::AssetId& GetDraggingMaterialAssetId() const;
+
+        /// <summary>
         /// 現在ドラッグ中の Script Asset ファイルパスを取得する。
         /// </summary>
         /// <returns>ドラッグ中 Script Asset ファイルパス。</returns>
@@ -192,6 +198,34 @@ namespace Xelqoria::Editor
         void ClearCreateScriptRequest();
 
         /// <summary>
+        /// Assets 空白右クリックから Material 作成が要求されたかを取得する。
+        /// </summary>
+        /// <returns>Material 作成要求がある場合は true。</returns>
+        [[nodiscard]] bool HasCreateMaterialRequest() const;
+
+        /// <summary>
+        /// Material 作成要求を消費する。
+        /// </summary>
+        void ClearCreateMaterialRequest();
+
+        /// <summary>
+        /// Material Asset を Material タブで開く要求があるかを取得する。
+        /// </summary>
+        /// <returns>Material を開く要求がある場合は true。</returns>
+        [[nodiscard]] bool HasOpenMaterialRequest() const;
+
+        /// <summary>
+        /// Material タブで開く MaterialAssetId を取得する。
+        /// </summary>
+        /// <returns>開く MaterialAssetId。</returns>
+        [[nodiscard]] const Core::AssetId& GetOpenMaterialAssetId() const;
+
+        /// <summary>
+        /// Material を開く要求を消費する。
+        /// </summary>
+        void ClearOpenMaterialRequest();
+
+        /// <summary>
         /// Sprite Asset への Script 割り当て要求があるかを取得する。
         /// </summary>
         /// <returns>割り当て要求がある場合は true。</returns>
@@ -213,6 +247,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>作成先フォルダ。未指定時は空。</returns>
         [[nodiscard]] const std::filesystem::path& GetCreateScriptTargetDirectory() const;
+
+        /// <summary>
+        /// Material Asset ファイルの作成先フォルダを取得する。
+        /// </summary>
+        /// <returns>作成先フォルダ。未指定時は空。</returns>
+        [[nodiscard]] const std::filesystem::path& GetCreateMaterialTargetDirectory() const;
 
         /// <summary>
         /// Script を割り当てる Sprite Asset ファイルパスを取得する。
@@ -420,6 +460,7 @@ namespace Xelqoria::Editor
         Core::AssetId m_draggingSpriteAssetId{};
         Core::AssetId m_draggingTextureAssetId{};
         Core::AssetId m_draggingScriptAssetId{};
+        Core::AssetId m_draggingMaterialAssetId{};
         std::filesystem::path m_draggingImagePath{};
         std::filesystem::path m_draggingScriptAssetPath{};
         ULONGLONG m_lastClickTick = 0;
@@ -431,6 +472,10 @@ namespace Xelqoria::Editor
         std::filesystem::path m_createSpriteTargetDirectory{};
         bool m_createScriptRequested = false;
         std::filesystem::path m_createScriptTargetDirectory{};
+        bool m_createMaterialRequested = false;
+        std::filesystem::path m_createMaterialTargetDirectory{};
+        bool m_openMaterialRequested = false;
+        Core::AssetId m_openMaterialAssetId{};
         bool m_assignScriptRequested = false;
         std::filesystem::path m_assignScriptSpriteAssetPath{};
         bool m_listViewInitialized = false;
