@@ -52,6 +52,17 @@ TEST(InspectorPanelControllerTests, FormatScriptDisplayTextShowsFileNameOrNone)
         Xelqoria::Editor::InspectorPanelController::FormatScriptDisplayText({}));
 }
 
+TEST(InspectorPanelControllerTests, FormatMaterialDisplayTextShowsFileNameOrNone)
+{
+    EXPECT_EQ(
+        L"Player.material",
+        Xelqoria::Editor::InspectorPanelController::FormatMaterialDisplayText(
+            Xelqoria::Core::AssetId("materials/Characters/Player.material")));
+    EXPECT_EQ(
+        L"None",
+        Xelqoria::Editor::InspectorPanelController::FormatMaterialDisplayText({}));
+}
+
 TEST(InspectorPanelControllerTests, ComputeScriptActionStateReflectsSpriteAndScriptAvailability)
 {
     const auto unavailableState =

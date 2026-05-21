@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <iomanip>
 #include <memory>
@@ -13,6 +14,8 @@
 
 #include "Assets/SpriteAsset.h"
 #include "Assets/SpriteAssetLoader.h"
+#include "Assets/SpriteMaterialAsset.h"
+#include "Assets/SpriteMaterialAssetLoader.h"
 #include "SceneSerializer.h"
 #include "SpriteComponent.h"
 #include "Texture2D.h"
@@ -144,6 +147,60 @@ namespace Xelqoria::Editor
             }
 
             return outputDirectory / (ToWideString(entityName) + L".sprite");
+        }
+
+        [[nodiscard]] std::filesystem::path ResolveAssetOutputDirectory(
+            const std::filesystem::path& rootDirectory,
+            const std::filesystem::path& targetDirectory)
+        {
+            std::filesystem::path outputDirectory = rootDirectory;
+            std::error_code errorCode;
+            if (false == targetDirectory.empty()
+                && std::filesystem::is_directory(targetDirectory, errorCode)
+                && false == static_cast<bool>(errorCode)
+                && EditorPathSecurity::IsPathInsideOrEqual(targetDirectory, rootDirectory))
+            {
+                outputDirectory = targetDirectory;
+            }
+
+            return outputDirectory;
+        }
+
+        [[nodiscard]] std::filesystem::path BuildUniqueMaterialAssetFilePath(
+            const std::filesystem::path& rootDirectory,
+            const std::filesystem::path& targetDirectory)
+        {
+            const std::filesystem::path outputDirectory = ResolveAssetOutputDirectory(rootDirectory, targetDirectory);
+            std::filesystem::path candidate = outputDirectory / L"NewMaterial.material";
+            for (int index = 1; std::filesystem::exists(candidate); ++index)
+            {
+                candidate = outputDirectory / (L"NewMaterial" + std::to_wstring(index) + L".material");
+            }
+
+            return candidate;
+        }
+
+        void AppendColor(std::ostringstream& stream, const std::array<float, 4>& color)
+        {
+            stream << color[0] << "," << color[1] << "," << color[2] << "," << color[3];
+        }
+
+        [[nodiscard]] std::string WriteMaterialAssetText(const Game::Assets::SpriteMaterialAsset& materialAsset)
+        {
+            std::ostringstream text;
+            text << std::fixed << std::setprecision(6);
+            text << "magic=XelqoriaSpriteMaterialAsset\n";
+            text << "version=1\n";
+            text << "textureAssetId=" << materialAsset.textureAssetId.GetValue() << "\n";
+            text << "color=";
+            AppendColor(text, materialAsset.color);
+            text << "\n";
+            text << "outline.enabled=" << (materialAsset.outlineEnabled ? "true" : "false") << "\n";
+            text << "outline.thickness=" << materialAsset.outlineThickness << "\n";
+            text << "outline.color=";
+            AppendColor(text, materialAsset.outlineColor);
+            text << "\n";
+            return text.str();
         }
     }
 
@@ -334,6 +391,10 @@ namespace Xelqoria::Editor
                 {
                     (void)RegisterSpriteAssetFile(entry.path());
                 }
+                else if (EditorAssetPathUtils::IsMaterialAssetFile(entry.path()))
+                {
+                    (void)RegisterMaterialAssetFile(entry.path());
+                }
             }
         }
     }
@@ -386,6 +447,203 @@ namespace Xelqoria::Editor
         }
 
         return true;
+    }
+
+    bool EditorSceneDocument::RegisterMaterialAssetFile(const std::filesystem::path& materialAssetPath)
+    {
+        if (false == m_project.GetInfo().has_value()
+            || false == EditorAssetPathUtils::IsMaterialAssetFile(materialAssetPath))
+        {
+            return false;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(materialAssetPath, rootDirectory))
+        {
+            return false;
+        }
+
+        std::ifstream input(materialAssetPath, std::ios::binary);
+        if (false == input.is_open())
+        {
+            return false;
+        }
+
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+        const auto loadResult = Game::Assets::SpriteMaterialAssetLoader::LoadFromText(buffer.str());
+        if (false == loadResult.IsSuccess() || false == loadResult.asset.has_value())
+        {
+            return false;
+        }
+
+        const Core::AssetId materialAssetId =
+            EditorAssetPathUtils::BuildMaterialAssetId(materialAssetPath, rootDirectory);
+        if (materialAssetId.IsEmpty())
+        {
+            return false;
+        }
+
+        m_materialAssetRegistry.RegisterMaterialAsset(materialAssetId, *loadResult.asset);
+        const auto alreadyRegistered = std::find(
+            m_registeredMaterialAssetIds.begin(),
+            m_registeredMaterialAssetIds.end(),
+            materialAssetId);
+        if (alreadyRegistered == m_registeredMaterialAssetIds.end())
+        {
+            m_registeredMaterialAssetIds.push_back(materialAssetId);
+        }
+
+        return true;
+    }
+
+    std::optional<Core::AssetId> EditorSceneDocument::CreateMaterialAssetFile(
+        const std::filesystem::path& targetDirectory,
+        const Core::AssetId& textureAssetId)
+    {
+        if (false == m_project.GetInfo().has_value())
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        const std::filesystem::path materialAssetPath =
+            BuildUniqueMaterialAssetFilePath(rootDirectory, targetDirectory);
+        std::error_code errorCode;
+        std::filesystem::create_directories(materialAssetPath.parent_path(), errorCode);
+        if (errorCode)
+        {
+            return std::nullopt;
+        }
+
+        Game::Assets::SpriteMaterialAsset materialAsset{};
+        materialAsset.textureAssetId = textureAssetId;
+        std::ofstream output(materialAssetPath, std::ios::binary | std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return std::nullopt;
+        }
+
+        output << WriteMaterialAssetText(materialAsset);
+        if (false == static_cast<bool>(output))
+        {
+            return std::nullopt;
+        }
+        output.close();
+
+        if (false == RegisterMaterialAssetFile(materialAssetPath))
+        {
+            return std::nullopt;
+        }
+
+        return EditorAssetPathUtils::BuildMaterialAssetId(materialAssetPath, rootDirectory);
+    }
+
+    std::optional<std::filesystem::path> EditorSceneDocument::ResolveMaterialAssetPath(
+        const Core::AssetId& materialAssetId) const
+    {
+        if (false == m_project.GetInfo().has_value() || materialAssetId.IsEmpty())
+        {
+            return std::nullopt;
+        }
+
+        constexpr std::string_view materialAssetPrefix = "materials/";
+        const std::string& assetValue = materialAssetId.GetValue();
+        if (false == std::string_view(assetValue).starts_with(materialAssetPrefix))
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path relativePath =
+            ToWideString(std::string_view(assetValue).substr(materialAssetPrefix.size()));
+        if (relativePath.empty()
+            || false == EditorPathSecurity::IsSafeRelativePath(relativePath)
+            || false == EditorAssetPathUtils::IsMaterialAssetFile(relativePath))
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        const std::filesystem::path materialAssetPath = rootDirectory / relativePath;
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(materialAssetPath, rootDirectory)
+            || false == std::filesystem::exists(materialAssetPath))
+        {
+            return std::nullopt;
+        }
+
+        return materialAssetPath;
+    }
+
+    bool EditorSceneDocument::SaveMaterialAsset(
+        const Core::AssetId& materialAssetId,
+        const Game::Assets::SpriteMaterialAsset& materialAsset)
+    {
+        const auto materialAssetPath = ResolveMaterialAssetPath(materialAssetId);
+        if (false == materialAssetPath.has_value())
+        {
+            return false;
+        }
+
+        std::ofstream output(*materialAssetPath, std::ios::binary | std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return false;
+        }
+
+        output << WriteMaterialAssetText(materialAsset);
+        if (false == static_cast<bool>(output))
+        {
+            return false;
+        }
+        output.close();
+
+        return RegisterMaterialAssetFile(*materialAssetPath);
+    }
+
+    bool EditorSceneDocument::MigrateSpriteComponentsToMaterialAssets()
+    {
+        if (nullptr == m_scene || false == m_project.GetInfo().has_value())
+        {
+            return false;
+        }
+
+        bool changed = false;
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        for (const Game::Entity& constEntity : m_scene->GetEntities())
+        {
+            const auto entity = m_scene->FindEntity(constEntity.GetId());
+            if (false == entity.has_value())
+            {
+                continue;
+            }
+
+            auto spriteComponent = entity->get().GetSpriteComponent();
+            if (false == spriteComponent.has_value()
+                || false == spriteComponent->get().materialAssetRef.IsEmpty()
+                || true == spriteComponent->get().spriteAssetRef.IsEmpty())
+            {
+                continue;
+            }
+
+            const auto spriteAsset = m_spriteAssetRegistry.ResolveSpriteAsset(spriteComponent->get().spriteAssetRef);
+            if (false == spriteAsset.has_value())
+            {
+                continue;
+            }
+
+            const std::filesystem::path targetPath =
+                BuildUniqueMaterialAssetFilePath(rootDirectory, rootDirectory);
+            const auto materialAssetId = CreateMaterialAssetFile(targetPath.parent_path(), spriteAsset->textureAssetId);
+            if (false == materialAssetId.has_value())
+            {
+                continue;
+            }
+
+            spriteComponent->get().materialAssetRef = *materialAssetId;
+            changed = true;
+        }
+
+        return changed;
     }
 
     bool EditorSceneDocument::RegisterSpriteAssetFile(const std::filesystem::path& spriteAssetPath)
@@ -795,6 +1053,16 @@ namespace Xelqoria::Editor
     const Game::Assets::SpriteAssetRegistry& EditorSceneDocument::GetSpriteAssetRegistry() const
     {
         return m_spriteAssetRegistry;
+    }
+
+    Game::Assets::SpriteMaterialAssetRegistry& EditorSceneDocument::GetMaterialAssetRegistry()
+    {
+        return m_materialAssetRegistry;
+    }
+
+    const Game::Assets::SpriteMaterialAssetRegistry& EditorSceneDocument::GetMaterialAssetRegistry() const
+    {
+        return m_materialAssetRegistry;
     }
 
     Graphics::TextureAssetRegistry& EditorSceneDocument::GetTextureAssetRegistry()

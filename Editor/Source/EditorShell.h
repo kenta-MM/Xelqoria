@@ -26,6 +26,7 @@ namespace Xelqoria::Editor
             Assets,
             SceneView,
             Inspector,
+            Material,
             LogOutput
         };
 
@@ -49,6 +50,11 @@ namespace Xelqoria::Editor
         /// <param name="parentWindow">親となる Editor メインウィンドウ。</param>
         /// <returns>SceneView サイズが変化した場合は true。</returns>
         bool UpdateLayout(HWND parentWindow);
+
+        /// <summary>
+        /// 現在アクティブでない Dock / Floating パネルの child window を非表示に同期する。
+        /// </summary>
+        void HideInactivePanelControls();
 
         /// <summary>
         /// Hierarchy パネルの ListBox を取得する。
@@ -141,10 +147,52 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSpriteRefEdit() const;
 
         /// <summary>
+        /// SpriteComponent の Material 参照を Material タブで開くボタンを取得する。
+        /// </summary>
+        /// <returns>Material Open ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialOpenButton() const;
+
+        /// <summary>
         /// SpriteRef ドロップ先ハイライトを取得する。
         /// </summary>
         /// <returns>SpriteRef ドロップ先ハイライトの HWND。</returns>
         [[nodiscard]] HWND GetSpriteRefDropHighlight() const;
+
+        /// <summary>
+        /// Material パネルの要約ラベルを取得する。
+        /// </summary>
+        /// <returns>Material 要約ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialSummaryLabel() const;
+
+        /// <summary>
+        /// Material パネルの共有編集注意ラベルを取得する。
+        /// </summary>
+        /// <returns>共有編集注意ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialSharedNoticeLabel() const;
+
+        /// <summary>
+        /// Material 詳細セクション見出しラベルを取得する。
+        /// </summary>
+        /// <returns>Material 詳細セクション見出しの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialDetailsSectionLabel() const;
+
+        /// <summary>
+        /// Material 詳細項目ラベル群を取得する。
+        /// </summary>
+        /// <returns>Material 詳細ラベル配列。</returns>
+        [[nodiscard]] const std::array<HWND, 5>& GetMaterialDetailLabels() const;
+
+        /// <summary>
+        /// Material 詳細入力欄群を取得する。
+        /// </summary>
+        /// <returns>Material 詳細入力欄配列。</returns>
+        [[nodiscard]] const std::array<HWND, 5>& GetMaterialDetailEditControls() const;
+
+        /// <summary>
+        /// Material Texture 欄のドロップ先ハイライトを取得する。
+        /// </summary>
+        /// <returns>Material Texture ドロップ先ハイライトの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialTextureDropHighlight() const;
 
         /// <summary>
         /// Script Asset ラベルを取得する。
@@ -293,6 +341,12 @@ namespace Xelqoria::Editor
         void ShowPanelAtDefaultDock(EditorPanelId panelId);
 
         /// <summary>
+        /// 指定ビューがある Dock または Floating のタブをアクティブにする。
+        /// </summary>
+        /// <param name="panelId">アクティブ化するビュー。</param>
+        void ActivatePanel(EditorPanelId panelId);
+
+        /// <summary>
         /// 現在の Dock / Floating レイアウトを保存する。
         /// </summary>
         /// <param name="layoutPath">保存先ファイル。</param>
@@ -373,6 +427,11 @@ namespace Xelqoria::Editor
         bool InitializeInspectorPanel(HWND parentWindow, HINSTANCE hInstance);
 
         /// <summary>
+        /// Material パネル用 child window 群を生成する。
+        /// </summary>
+        bool InitializeMaterialPanel(HWND parentWindow, HINSTANCE hInstance);
+
+        /// <summary>
         /// SceneView パネル用 child window 群を生成する。
         /// </summary>
         bool InitializeSceneViewPanel(HWND parentWindow, HINSTANCE hInstance);
@@ -398,6 +457,11 @@ namespace Xelqoria::Editor
         void LayoutInspectorPanel(const LayoutMetrics& metrics);
 
         /// <summary>
+        /// Material パネルをレイアウトする。
+        /// </summary>
+        void LayoutMaterialPanel(const LayoutMetrics& metrics);
+
+        /// <summary>
         /// SceneView パネルをレイアウトする。
         /// </summary>
         void LayoutSceneViewPanel(const LayoutMetrics& metrics);
@@ -416,6 +480,11 @@ namespace Xelqoria::Editor
         /// 指定矩形へ Inspector パネルをレイアウトする。
         /// </summary>
         void LayoutInspectorPanelInRect(const RECT& panelRect);
+
+        /// <summary>
+        /// 指定矩形へ Material パネルをレイアウトする。
+        /// </summary>
+        void LayoutMaterialPanelInRect(const RECT& panelRect);
 
         /// <summary>
         /// 指定矩形へ SceneView パネルをレイアウトする。
@@ -775,7 +844,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 65> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 81> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -874,11 +943,13 @@ namespace Xelqoria::Editor
         HWND m_assetsFloatingWindow = nullptr;
         HWND m_sceneViewFloatingWindow = nullptr;
         HWND m_inspectorFloatingWindow = nullptr;
+        HWND m_materialFloatingWindow = nullptr;
         HWND m_logOutputFloatingWindow = nullptr;
         std::vector<FloatingPanelGroup> m_floatingPanelGroups{};
         HWND m_hierarchyPanel = nullptr;
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;
+        HWND m_materialPanel = nullptr;
         HWND m_sceneViewPanel = nullptr;
         HWND m_sceneViewPlanLabel = nullptr;
         HWND m_projectSummaryLabel = nullptr;
@@ -911,6 +982,13 @@ namespace Xelqoria::Editor
         HWND m_spriteRefLabel = nullptr;
         HWND m_spriteRefDropHighlight = nullptr;
         HWND m_spriteRefEdit = nullptr;
+        HWND m_materialOpenButton = nullptr;
+        HWND m_materialSummaryLabel = nullptr;
+        HWND m_materialSharedNoticeLabel = nullptr;
+        HWND m_materialDetailsSectionLabel = nullptr;
+        std::array<HWND, 5> m_materialDetailLabels{};
+        std::array<HWND, 5> m_materialDetailEditControls{};
+        HWND m_materialTextureDropHighlight = nullptr;
         HWND m_scriptAssetLabel = nullptr;
         HWND m_scriptAssetEdit = nullptr;
         HWND m_scriptCreateButton = nullptr;

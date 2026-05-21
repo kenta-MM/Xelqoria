@@ -41,6 +41,17 @@ namespace Xelqoria::Editor
         constexpr float UntexturedSpriteSizePixels = 64.0f;
 
         /// <summary>
+        /// 未テクスチャ Sprite のプレースホルダー描画対象かを判定する。
+        /// </summary>
+        /// <param name="spriteComponent">判定対象の SpriteComponent。</param>
+        /// <returns>SpriteAsset と MaterialAsset のどちらも参照していない場合は true。</returns>
+        bool ShouldDrawUntexturedSpritePlaceholder(const Game::SpriteComponent& spriteComponent)
+        {
+            return spriteComponent.spriteAssetRef.IsEmpty()
+                && spriteComponent.materialAssetRef.IsEmpty();
+        }
+
+        /// <summary>
         /// SceneView オーバーレイ描画に使う色定義を返す。
         /// </summary>
         /// <returns>色定義一覧。</returns>
@@ -325,6 +336,7 @@ namespace Xelqoria::Editor
     void SceneViewRenderer::RenderFrame(
         Game::Scene* scene,
         Game::Assets::SpriteAssetRegistry& spriteAssetRegistry,
+        const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
         Graphics::TextureAssetRegistry& textureAssetRegistry,
         const EditorCamera2D& camera,
         std::optional<Game::EntityId> selectedEntityId,
@@ -341,7 +353,7 @@ namespace Xelqoria::Editor
         {
             scene->ValidateSpriteReferences(spriteAssetRegistry);
             std::vector<Game::ResolvedSceneSprite> resolvedSprites =
-                scene->ResolveSceneSprites(spriteAssetRegistry, textureAssetRegistry);
+                scene->ResolveSceneSprites(spriteAssetRegistry, materialAssetResolver, textureAssetRegistry);
             resolvedSprites = OrderSceneRenderSpritesForSceneView(std::move(resolvedSprites), selectedEntityId);
 
             m_spriteRenderer->Begin();
@@ -417,7 +429,7 @@ namespace Xelqoria::Editor
                 {
                     if (nullptr == renderItem.transform
                         || nullptr == renderItem.spriteComponent
-                        || false == renderItem.spriteComponent->spriteAssetRef.IsEmpty())
+                        || false == ShouldDrawUntexturedSpritePlaceholder(*renderItem.spriteComponent))
                     {
                         continue;
                     }

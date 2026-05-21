@@ -68,5 +68,11 @@ namespace Xelqoria::Game
 		/// 正常時は空を保持する。
 		/// </summary>
 		Core::AssetId missingSpriteAssetRef{};
+
+		/// <summary>
+		/// 描画に使用する Material アセット識別子を表す。
+		/// 空の場合は旧 SpriteAsset 参照から移行されていないことを表す。
+		/// </summary>
+		Core::AssetId materialAssetRef{};
 	};
 }

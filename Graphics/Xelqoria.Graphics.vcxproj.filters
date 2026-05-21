@@ -9,6 +9,9 @@
     <ClCompile Include="Source\Sprite.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\SpriteMaterial.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\SpriteRenderer.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -33,6 +36,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\SpriteDrawInput.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SpriteMaterial.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\SpriteRenderMath.h">

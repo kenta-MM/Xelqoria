@@ -9,6 +9,7 @@
 
 #include "AssetId.h"
 #include "Assets/ISpriteAssetResolver.h"
+#include "Assets/IMaterialAssetResolver.h"
 #include "Assets/SpriteAsset.h"
 #include "EditorStringUtils.h"
 #include "EditorShell.h"
@@ -62,6 +63,16 @@ namespace Xelqoria::Editor
         /// 履歴へ記録する操作名を表す。
         /// </summary>
         std::string operationName{};
+
+        /// <summary>
+        /// Material タブで開く要求があるかを表す。
+        /// </summary>
+        bool openMaterialRequested = false;
+
+        /// <summary>
+        /// Material タブで開く MaterialAssetId を表す。
+        /// </summary>
+        Core::AssetId openMaterialAssetId{};
     };
 
     /// <summary>
@@ -139,7 +150,8 @@ namespace Xelqoria::Editor
             const Game::Scene* scene,
             std::optional<Game::EntityId> selectedEntityId,
             bool canAddSpriteComponent,
-            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver);
+            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver);
 
         /// <summary>
         /// Inspector 入力値を現在選択中 Entity へ反映する。
@@ -154,20 +166,24 @@ namespace Xelqoria::Editor
             std::optional<Game::EntityId> selectedEntityId,
             bool canAddSpriteComponent,
             const Core::InputSnapshot& inputSnapshot,
-            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver);
+            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver);
 
         /// <summary>
-        /// Assets から Texture 欄へドロップされた画像を SpriteComponent へ反映する。
+        /// Assets から Material 欄へドロップされた Material を SpriteComponent へ反映する。
         /// </summary>
         /// <param name="scene">更新対象の Scene。</param>
         /// <param name="selectedEntityId">現在選択中の EntityId。</param>
         /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
+        /// <param name="spriteAssetResolver">SpriteAsset 参照の表示更新に使う Resolver。</param>
+        /// <param name="materialAssetResolver">MaterialAsset 参照の表示更新に使う Resolver。</param>
         /// <returns>適用結果。</returns>
-        InspectorApplyResult ApplyTextureDrop(
+        InspectorApplyResult ApplyMaterialDrop(
             Game::Scene* scene,
             std::optional<Game::EntityId> selectedEntityId,
             const AssetsPanelController& assetsPanelController,
-            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver);
+            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver);
 
         /// <summary>
         /// Assets から Script 欄へドロップされた Script Asset を SpriteAsset へ割り当てる要求に変換する。
@@ -182,10 +198,10 @@ namespace Xelqoria::Editor
             const AssetsPanelController& assetsPanelController) const;
 
         /// <summary>
-        /// Texture 欄のドロップ先ハイライトを現在のドラッグ状態へ同期する。
+        /// Material 欄と Script 欄のドロップ先ハイライトを現在のドラッグ状態へ同期する。
         /// </summary>
         /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
-        void UpdateTextureDropHighlight(const AssetsPanelController& assetsPanelController);
+        void UpdateDropHighlight(const AssetsPanelController& assetsPanelController);
 
         /// <summary>
         /// 現在のカーソル位置が Script ドロップ対象内かを取得する。
@@ -244,6 +260,36 @@ namespace Xelqoria::Editor
             }
 
             const std::wstring relativePath = ToWideString(scriptRefValue);
+            const std::filesystem::path displayPath(relativePath);
+            const std::wstring fileName = displayPath.filename().wstring();
+            if (false == fileName.empty())
+            {
+                return fileName;
+            }
+
+            return relativePath;
+        }
+
+        /// <summary>
+        /// MaterialAssetId から Material 欄に表示するファイル名を取得する。
+        /// </summary>
+        /// <param name="materialAssetId">表示対象の MaterialAssetId。</param>
+        /// <returns>Material 欄表示文字列。</returns>
+        [[nodiscard]] static std::wstring FormatMaterialDisplayText(const Core::AssetId& materialAssetId)
+        {
+            if (materialAssetId.IsEmpty())
+            {
+                return L"None";
+            }
+
+            std::string materialRefValue = materialAssetId.GetValue();
+            constexpr std::string_view materialAssetPrefix = "materials/";
+            if (materialRefValue.starts_with(materialAssetPrefix))
+            {
+                materialRefValue = materialRefValue.substr(materialAssetPrefix.size());
+            }
+
+            const std::wstring relativePath = ToWideString(materialRefValue);
             const std::filesystem::path displayPath(relativePath);
             const std::wstring fileName = displayPath.filename().wstring();
             if (false == fileName.empty())
@@ -344,11 +390,11 @@ namespace Xelqoria::Editor
         void FinishButtonClickTracking(const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
-        /// 現在のカーソル位置が Texture ドロップ対象内かを取得する。
+        /// 現在のカーソル位置が Material ドロップ対象内かを取得する。
         /// </summary>
         /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
         /// <returns>ドロップ対象内の場合は true。</returns>
-        [[nodiscard]] bool IsTextureDropTargetHovered(const AssetsPanelController& assetsPanelController) const;
+        [[nodiscard]] bool IsMaterialDropTargetHovered(const AssetsPanelController& assetsPanelController) const;
 
         HWND m_inspectorSummaryLabel = nullptr;
         HWND m_transformSectionLabel = nullptr;
@@ -363,6 +409,7 @@ namespace Xelqoria::Editor
         HWND m_scriptAssignButton = nullptr;
         HWND m_scriptClearButton = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
+        HWND m_materialOpenButton = nullptr;
         Platform::ICursor* m_cursor = nullptr;
         std::optional<Game::EntityId> m_lastInspectorEntityId{};
         Core::AssetId m_lastSpriteRefAssetId{};

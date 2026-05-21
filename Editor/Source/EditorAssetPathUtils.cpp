@@ -52,6 +52,11 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
         return path.extension() == L".sprite";
     }
 
+    bool IsMaterialAssetFile(const std::filesystem::path& path)
+    {
+        return path.extension() == L".material";
+    }
+
     Core::AssetId BuildTextureAssetId(
         const std::filesystem::path& path,
         const std::filesystem::path& assetsRootDirectory)
@@ -64,5 +69,12 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
         const std::filesystem::path& assetsRootDirectory)
     {
         return BuildAssetId("sprites", path, assetsRootDirectory);
+    }
+
+    Core::AssetId BuildMaterialAssetId(
+        const std::filesystem::path& path,
+        const std::filesystem::path& assetsRootDirectory)
+    {
+        return BuildAssetId("materials", path, assetsRootDirectory);
     }
 }

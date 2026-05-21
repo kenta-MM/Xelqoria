@@ -8,7 +8,7 @@ namespace
 {
     constexpr float MoveSpeed = 240.0f;
 
-    float g_spriteX = 219.0f;ss
+    float g_spriteX = 219.0f;
     float g_spriteY = 30.0f;
     float g_spriteZ = 0.0f;
 }

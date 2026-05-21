@@ -16,6 +16,7 @@
 #include "HierarchyPanelController.h"
 #include "InspectorPanelController.h"
 #include "LogOutputPanelController.h"
+#include "MaterialPanelController.h"
 #include "ProjectPanelController.h"
 #include "SceneViewController.h"
 #include "SceneViewRenderer.h"
@@ -229,6 +230,12 @@ namespace Xelqoria::Editor
         void RefreshSceneViewSelectionStatus();
 
         /// <summary>
+        /// Material タブで指定 Material Asset を開く。
+        /// </summary>
+        /// <param name="materialAssetId">開く MaterialAssetId。</param>
+        void OpenMaterialAsset(const Core::AssetId& materialAssetId);
+
+        /// <summary>
         /// 選択 Entity を更新し、関連パネルを再同期する。
         /// </summary>
         /// <param name="selectedEntityId">更新後の選択 EntityId。</param>
@@ -306,6 +313,7 @@ namespace Xelqoria::Editor
         AssetsPanelController m_assetsPanelController{};
         HierarchyPanelController m_hierarchyPanelController{};
         InspectorPanelController m_inspectorPanelController{};
+        MaterialPanelController m_materialPanelController{};
         LogOutputPanelController m_logOutputPanelController{};
         ProjectPanelController m_projectPanelController{};
         SceneViewController m_sceneViewController{};
