@@ -145,6 +145,18 @@ namespace Xelqoria::Editor
         const bool isAssetDragActive = assetsPanelController.IsDragActive();
         const bool isScenePlacementDrag = isAssetDragActive
             && assetsPanelController.CanPlaceDraggingAssetInScene();
+        if (false == isCursorInside
+            && true == isLeftButtonDown
+            && false == m_sceneViewLeftButtonDown
+            && false == isAssetDragActive
+            && true == currentSelectedEntityId.has_value())
+        {
+            result.selectionChanged = true;
+            result.selectedEntityId = std::nullopt;
+            m_editMode = SceneViewEditMode::None;
+            ClearEntityDrag();
+        }
+
         if (isCursorInside && isLeftButtonDown && false == m_sceneViewLeftButtonDown)
         {
             POINT clientPoint = screenPoint;
@@ -167,6 +179,7 @@ namespace Xelqoria::Editor
                 const auto renderItems = scene->CollectSpriteRenderItems();
                 const auto hitTargets = BuildSceneHitTargets(resolvedSprites, renderItems, currentSelectedEntityId);
                 const auto selectedEntityId = PickTopmostEntityAtWorldPoint(hitTargets, worldPoint.x, worldPoint.y);
+                result.spriteClicked = selectedEntityId.has_value();
                 if (selectedEntityId != currentSelectedEntityId)
                 {
                     result.selectionChanged = true;

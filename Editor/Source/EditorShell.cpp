@@ -619,6 +619,56 @@ namespace Xelqoria::Editor
         return UpdateSceneViewHostSize();
     }
 
+    void EditorShell::HideInactivePanelControls()
+    {
+        std::array<bool, 6> activePanels{};
+        const auto markActivePanel =
+            [&activePanels](EditorPanelId panelId)
+            {
+                activePanels[static_cast<std::size_t>(panelId)] = true;
+            };
+
+        std::vector<DockNodeId> dockLeafNodeIds{};
+        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        for (DockNodeId dockNodeId : dockLeafNodeIds)
+        {
+            if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+            {
+                continue;
+            }
+
+            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            if (DockNodeKind::Leaf != dockNode.kind || dockNode.panels.empty())
+            {
+                continue;
+            }
+
+            const int activeIndex =
+                (std::max)(0, (std::min)(dockNode.activeTabIndex, static_cast<int>(dockNode.panels.size()) - 1));
+            markActivePanel(dockNode.panels[static_cast<std::size_t>(activeIndex)]);
+        }
+
+        for (const FloatingPanelGroup& group : m_floatingPanelGroups)
+        {
+            if (nullptr == group.window || false == IsWindowVisible(group.window) || group.panels.empty())
+            {
+                continue;
+            }
+
+            const int activeIndex =
+                (std::max)(0, (std::min)(group.activeTabIndex, static_cast<int>(group.panels.size()) - 1));
+            markActivePanel(group.panels[static_cast<std::size_t>(activeIndex)]);
+        }
+
+        for (EditorPanelId panelId : GetAllEditorPanels())
+        {
+            if (false == activePanels[static_cast<std::size_t>(panelId)])
+            {
+                ShowPanelControls(panelId, false);
+            }
+        }
+    }
+
     bool EditorShell::InitializeHierarchyPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE | BS_GROUPBOX;

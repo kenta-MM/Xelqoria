@@ -52,6 +52,11 @@ namespace Xelqoria::Editor
         bool UpdateLayout(HWND parentWindow);
 
         /// <summary>
+        /// 現在アクティブでない Dock / Floating パネルの child window を非表示に同期する。
+        /// </summary>
+        void HideInactivePanelControls();
+
+        /// <summary>
         /// Hierarchy パネルの ListBox を取得する。
         /// </summary>
         /// <returns>Hierarchy ListBox の HWND。</returns>

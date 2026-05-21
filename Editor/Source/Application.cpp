@@ -1456,6 +1456,10 @@ namespace Xelqoria::Editor
         {
             ApplySelectionChange(interactionResult.selectedEntityId, canAddSpriteComponent, true, false);
         }
+        if (true == interactionResult.spriteClicked)
+        {
+            m_editorShell.ActivatePanel(EditorShell::EditorPanelId::Inspector);
+        }
 
         if (true == interactionResult.sceneChanged)
         {
@@ -1507,6 +1511,8 @@ namespace Xelqoria::Editor
             RefreshProjectDirtyState();
             ApplySelectionChange(commandResult.selectedEntityId, canAddSpriteComponent, true, true);
         }
+
+        m_editorShell.HideInactivePanelControls();
     }
 
     void Application::Render()

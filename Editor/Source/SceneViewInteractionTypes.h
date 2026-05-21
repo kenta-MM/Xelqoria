@@ -119,6 +119,11 @@ namespace Xelqoria::Editor
         bool selectionChanged = false;
 
         /// <summary>
+        /// SceneView 上の Sprite がクリックされたかを表す。
+        /// </summary>
+        bool spriteClicked = false;
+
+        /// <summary>
         /// 更新後の選択 EntityId を表す。
         /// </summary>
         std::optional<Game::EntityId> selectedEntityId{};
