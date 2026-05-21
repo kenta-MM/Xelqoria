@@ -1,0 +1,129 @@
+#pragma once
+
+namespace Xelqoria::Editor
+{
+    /// <summary>
+    /// Editor UI で共有する OS 非依存の RGBA 色を表す。
+    /// </summary>
+    struct EditorColor
+    {
+        /// <summary>
+        /// 赤成分。0.0 から 1.0 の範囲で扱う。
+        /// </summary>
+        float red = 0.0f;
+
+        /// <summary>
+        /// 緑成分。0.0 から 1.0 の範囲で扱う。
+        /// </summary>
+        float green = 0.0f;
+
+        /// <summary>
+        /// 青成分。0.0 から 1.0 の範囲で扱う。
+        /// </summary>
+        float blue = 0.0f;
+
+        /// <summary>
+        /// 透明度。0.0 から 1.0 の範囲で扱う。
+        /// </summary>
+        float alpha = 1.0f;
+
+        /// <summary>
+        /// 8bit RGB 値から不透明な EditorColor を作成する。
+        /// </summary>
+        /// <param name="redValue">赤成分。0 から 255 の範囲で扱う。</param>
+        /// <param name="greenValue">緑成分。0 から 255 の範囲で扱う。</param>
+        /// <param name="blueValue">青成分。0 から 255 の範囲で扱う。</param>
+        /// <returns>正規化済み RGBA 色。</returns>
+        [[nodiscard]] static constexpr EditorColor FromRgb8(int redValue, int greenValue, int blueValue)
+        {
+            constexpr float MaxChannelValue = 255.0f;
+            return EditorColor{
+                static_cast<float>(redValue) / MaxChannelValue,
+                static_cast<float>(greenValue) / MaxChannelValue,
+                static_cast<float>(blueValue) / MaxChannelValue,
+                1.0f
+            };
+        }
+    };
+
+    /// <summary>
+    /// Editor UI の見た目に使う共通テーマ色を保持する。
+    /// </summary>
+    struct EditorTheme
+    {
+        /// <summary>
+        /// Editor Window 全体の背景色。
+        /// </summary>
+        EditorColor windowBackground{};
+
+        /// <summary>
+        /// パネル本文の背景色。
+        /// </summary>
+        EditorColor panelBackground{};
+
+        /// <summary>
+        /// パネルヘッダーの背景色。
+        /// </summary>
+        EditorColor panelHeaderBackground{};
+
+        /// <summary>
+        /// パネル境界線の色。
+        /// </summary>
+        EditorColor panelBorder{};
+
+        /// <summary>
+        /// 主要テキスト色。
+        /// </summary>
+        EditorColor textPrimary{};
+
+        /// <summary>
+        /// 補助テキスト色。
+        /// </summary>
+        EditorColor textSecondary{};
+
+        /// <summary>
+        /// 強調表示に使うアクセント色。
+        /// </summary>
+        EditorColor accent{};
+
+        /// <summary>
+        /// 選択状態の背景色。
+        /// </summary>
+        EditorColor selection{};
+
+        /// <summary>
+        /// hover 状態の背景色。
+        /// </summary>
+        EditorColor hover{};
+
+        /// <summary>
+        /// 警告ログなどに使う色。
+        /// </summary>
+        EditorColor warning{};
+
+        /// <summary>
+        /// エラーログなどに使う色。
+        /// </summary>
+        EditorColor error{};
+    };
+
+    namespace EditorThemes
+    {
+        /// <summary>
+        /// Xelqoria Editor の既定暗色テーマ。
+        /// </summary>
+        inline constexpr EditorTheme XelqoriaDark{
+            EditorColor::FromRgb8(0x18, 0x1A, 0x20),
+            EditorColor::FromRgb8(0x20, 0x23, 0x2B),
+            EditorColor::FromRgb8(0x2A, 0x2D, 0x36),
+            EditorColor::FromRgb8(0x3A, 0x3F, 0x4B),
+            EditorColor::FromRgb8(0xE6, 0xEA, 0xF2),
+            EditorColor::FromRgb8(0x9A, 0xA3, 0xB2),
+            EditorColor::FromRgb8(0x5B, 0x7C, 0xFF),
+            EditorColor::FromRgb8(0x26, 0x36, 0x5F),
+            EditorColor::FromRgb8(0x2A, 0x2F, 0x3A),
+            EditorColor::FromRgb8(0xE6, 0xB4, 0x50),
+            EditorColor::FromRgb8(0xFF, 0x6B, 0x6B)
+        };
+    }
+}
