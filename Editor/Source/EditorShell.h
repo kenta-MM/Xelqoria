@@ -844,7 +844,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 81> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 82> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -857,6 +857,26 @@ namespace Xelqoria::Editor
         /// フローティングビュー用 window procedure。
         /// </summary>
         static LRESULT CALLBACK FloatingPanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
+        /// <summary>
+        /// Editor 親ウィンドウのテーマ背景と標準コントロール色を処理する。
+        /// </summary>
+        static LRESULT CALLBACK ParentWindowSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
+        /// <summary>
+        /// 親ウィンドウへ届くテーマ関連メッセージを処理する。
+        /// </summary>
+        /// <param name="message">Win32 メッセージ。</param>
+        /// <param name="wParam">メッセージ WPARAM。</param>
+        /// <param name="lParam">メッセージ LPARAM。</param>
+        /// <returns>処理結果。未処理の場合は空。</returns>
+        [[nodiscard]] std::optional<LRESULT> HandleThemeMessage(UINT message, WPARAM wParam, LPARAM lParam) const;
 
     private:
         /// <summary>
@@ -928,6 +948,8 @@ namespace Xelqoria::Editor
         };
 
         HFONT m_defaultFont = nullptr;
+        HBRUSH m_windowBackgroundBrush = nullptr;
+        HBRUSH m_panelBackgroundBrush = nullptr;
         UINT m_currentDpi = 96;
         bool m_ownsDefaultFont = false;
         HWND m_parentWindow = nullptr;
@@ -946,6 +968,7 @@ namespace Xelqoria::Editor
         HWND m_materialFloatingWindow = nullptr;
         HWND m_logOutputFloatingWindow = nullptr;
         std::vector<FloatingPanelGroup> m_floatingPanelGroups{};
+        HWND m_workspaceBackground = nullptr;
         HWND m_hierarchyPanel = nullptr;
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;
