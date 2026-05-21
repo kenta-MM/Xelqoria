@@ -122,7 +122,8 @@ namespace Xelqoria::Editor
                 RECT clientRect{};
                 GetClientRect(window, &clientRect);
 
-                const int headerHeight = (std::min)(26, (std::max)(0, clientRect.bottom - clientRect.top));
+                const int clientHeight = static_cast<int>(clientRect.bottom - clientRect.top);
+                const int headerHeight = (std::min)(26, (std::max)(0, clientHeight));
                 RECT headerRect = clientRect;
                 headerRect.bottom = headerRect.top + headerHeight;
 
