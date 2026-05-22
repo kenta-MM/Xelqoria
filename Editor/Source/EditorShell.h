@@ -885,7 +885,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 82> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 87> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -1047,6 +1047,11 @@ namespace Xelqoria::Editor
         HWND m_logOutputFloatingWindow = nullptr;
         std::vector<FloatingPanelGroup> m_floatingPanelGroups{};
         HWND m_workspaceBackground = nullptr;
+        HWND m_topBar = nullptr;
+        HWND m_topBarProjectButton = nullptr;
+        HWND m_topBarPlayButton = nullptr;
+        HWND m_topBarLayoutButton = nullptr;
+        HWND m_statusBar = nullptr;
         HWND m_hierarchyPanel = nullptr;
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;
