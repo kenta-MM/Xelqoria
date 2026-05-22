@@ -774,6 +774,13 @@ namespace Xelqoria::Editor
         bool DrawHierarchyListBoxItem(const DRAWITEMSTRUCT& drawItem) const;
 
         /// <summary>
+        /// Inspector セクション見出しの owner draw 描画を行う。
+        /// </summary>
+        /// <param name="drawItem">描画情報。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool DrawInspectorSectionLabel(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
         /// Assets ListView の custom draw 色をテーマに沿って設定する。
         /// </summary>
         /// <param name="customDrawParameter">NMLVCUSTOMDRAW の LPARAM。</param>
@@ -934,6 +941,20 @@ namespace Xelqoria::Editor
         /// <returns>処理結果。未処理の場合は空。</returns>
         [[nodiscard]] std::optional<LRESULT> HandleThemeMessage(UINT message, WPARAM wParam, LPARAM lParam) const;
 
+        /// <summary>
+        /// Inspector 入力欄かを判定する。
+        /// </summary>
+        /// <param name="window">判定対象 HWND。</param>
+        /// <returns>Inspector 入力欄の場合は true。</returns>
+        [[nodiscard]] bool IsInspectorInputControl(HWND window) const;
+
+        /// <summary>
+        /// Inspector 補助ラベルかを判定する。
+        /// </summary>
+        /// <param name="window">判定対象 HWND。</param>
+        /// <returns>Inspector 補助ラベルの場合は true。</returns>
+        [[nodiscard]] bool IsInspectorSecondaryLabel(HWND window) const;
+
     private:
         /// <summary>
         /// 共通設定を適用した子ウィンドウを生成する。
@@ -1006,6 +1027,7 @@ namespace Xelqoria::Editor
         HFONT m_defaultFont = nullptr;
         HBRUSH m_windowBackgroundBrush = nullptr;
         HBRUSH m_panelBackgroundBrush = nullptr;
+        HBRUSH m_inputBackgroundBrush = nullptr;
         UINT m_currentDpi = 96;
         bool m_ownsDefaultFont = false;
         HWND m_parentWindow = nullptr;
