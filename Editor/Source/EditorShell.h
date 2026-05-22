@@ -330,6 +330,13 @@ namespace Xelqoria::Editor
         bool HandleNotify(LPARAM notifyParameter);
 
         /// <summary>
+        /// EditorShell が所有する owner draw control の描画を処理する。
+        /// </summary>
+        /// <param name="drawItemParameter">WM_DRAWITEM の LPARAM。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool HandleDrawItem(LPARAM drawItemParameter) const;
+
+        /// <summary>
         /// 現在開いているプロジェクト画面レイアウトを初期状態へ戻す。
         /// </summary>
         void ResetDockLayout();
@@ -747,6 +754,19 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND CreateDockTabControlForLayoutKey(const std::wstring& layoutKey);
 
         /// <summary>
+        /// Editor 用 TabControl の共通外観設定を適用する。
+        /// </summary>
+        /// <param name="tabControl">設定対象 TabControl。</param>
+        void ConfigureEditorTabControl(HWND tabControl) const;
+
+        /// <summary>
+        /// Editor 用 TabControl の owner draw 描画を行う。
+        /// </summary>
+        /// <param name="drawItem">描画情報。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool DrawEditorTabControl(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
         /// Dock leaf の TabControl を保存用識別子へ変換する。
         /// </summary>
         [[nodiscard]] std::wstring GetDockTabLayoutKey(HWND tabControl) const;
@@ -857,6 +877,17 @@ namespace Xelqoria::Editor
         /// フローティングビュー用 window procedure。
         /// </summary>
         static LRESULT CALLBACK FloatingPanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
+        /// <summary>
+        /// Editor 用 TabControl の hover 再描画を処理する。
+        /// </summary>
+        static LRESULT CALLBACK EditorTabControlSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
 
         /// <summary>
         /// Editor 親ウィンドウのテーマ背景と標準コントロール色を処理する。
