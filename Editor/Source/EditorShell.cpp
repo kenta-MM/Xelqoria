@@ -113,6 +113,46 @@ namespace Xelqoria::Editor
             DeleteObject(pen);
         }
 
+        void FillTabControlBackground(HWND tabControl, HDC deviceContext)
+        {
+            if (nullptr == tabControl || nullptr == deviceContext)
+            {
+                return;
+            }
+
+            RECT clientRect{};
+            GetClientRect(tabControl, &clientRect);
+            HRGN backgroundRegion = CreateRectRgn(clientRect.left, clientRect.top, clientRect.right, clientRect.bottom);
+            if (nullptr == backgroundRegion)
+            {
+                FillRectWithThemeColor(deviceContext, clientRect, EditorColor::FromRgb8(0x13, 0x0F, 0x2A));
+                return;
+            }
+
+            const int itemCount = TabCtrl_GetItemCount(tabControl);
+            for (int index = 0; index < itemCount; ++index)
+            {
+                RECT itemRect{};
+                if (FALSE == TabCtrl_GetItemRect(tabControl, index, &itemRect))
+                {
+                    continue;
+                }
+
+                InflateRect(&itemRect, 1, 1);
+                HRGN itemRegion = CreateRectRgn(itemRect.left, itemRect.top, itemRect.right, itemRect.bottom);
+                if (nullptr != itemRegion)
+                {
+                    CombineRgn(backgroundRegion, backgroundRegion, itemRegion, RGN_DIFF);
+                    DeleteObject(itemRegion);
+                }
+            }
+
+            HBRUSH backgroundBrush = CreateSolidBrush(ToColorRef(EditorColor::FromRgb8(0x13, 0x0F, 0x2A)));
+            FillRgn(deviceContext, backgroundRegion, backgroundBrush);
+            DeleteObject(backgroundBrush);
+            DeleteObject(backgroundRegion);
+        }
+
         [[nodiscard]] int GetHoveredTabIndex(HWND tabControl)
         {
             POINT cursorPoint{};
@@ -4491,17 +4531,17 @@ namespace Xelqoria::Editor
         const bool isActive = tabIndex == activeTabIndex;
         const bool isHovered = tabIndex == hoveredTabIndex;
 
-        EditorColor backgroundColor = EditorThemes::XelqoriaDark.windowBackground;
-        EditorColor textColor = EditorThemes::XelqoriaDark.textSecondary;
+        EditorColor backgroundColor = EditorColor::FromRgb8(0x13, 0x0F, 0x2A);
+        EditorColor textColor = EditorColor::FromRgb8(0xB8, 0x8C, 0xFF);
         if (isHovered)
         {
-            backgroundColor = EditorThemes::XelqoriaDark.hover;
-            textColor = EditorThemes::XelqoriaDark.textPrimary;
+            backgroundColor = EditorColor::FromRgb8(0x1D, 0x16, 0x42);
+            textColor = EditorColor::FromRgb8(0xD6, 0xAE, 0xFF);
         }
         if (isActive)
         {
             backgroundColor = EditorThemes::XelqoriaDark.selection;
-            textColor = EditorThemes::XelqoriaDark.textPrimary;
+            textColor = EditorColor::FromRgb8(0xF0, 0xB7, 0xFF);
         }
 
         RECT tabRect = drawItem.rcItem;
@@ -5371,6 +5411,24 @@ namespace Xelqoria::Editor
     {
         (void)subclassId;
         (void)referenceData;
+
+        if (WM_ERASEBKGND == message)
+        {
+            FillTabControlBackground(window, reinterpret_cast<HDC>(wParam));
+            return 1;
+        }
+
+        if (WM_PAINT == message)
+        {
+            const LRESULT result = DefSubclassProc(window, message, wParam, lParam);
+            HDC deviceContext = GetDC(window);
+            if (nullptr != deviceContext)
+            {
+                FillTabControlBackground(window, deviceContext);
+                ReleaseDC(window, deviceContext);
+            }
+            return result;
+        }
 
         if (WM_MOUSEMOVE == message)
         {
