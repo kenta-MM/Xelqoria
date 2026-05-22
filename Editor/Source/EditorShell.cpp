@@ -23,6 +23,8 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR ParentWindowSubclassId = 1;
         constexpr UINT_PTR SpriteRefEditSubclassId = 1;
         constexpr UINT_PTR EditorTabControlSubclassId = 2;
+        constexpr UINT_PTR EditorRowControlSubclassId = 3;
+        constexpr int EditorRowHeight = 22;
         constexpr const wchar_t* WorkspaceBackgroundWindowClassName = L"XelqoriaEditorWorkspaceBackground";
         constexpr const wchar_t* EditorPanelWindowClassName = L"XelqoriaEditorPanel";
         constexpr const wchar_t* DockPreviewWindowClassName = L"XelqoriaDockPreviewWindow";
@@ -90,6 +92,56 @@ namespace Xelqoria::Editor
             TCHITTESTINFO hitTestInfo{};
             hitTestInfo.pt = cursorPoint;
             return TabCtrl_HitTest(tabControl, &hitTestInfo);
+        }
+
+        [[nodiscard]] int GetHoveredListBoxIndex(HWND listBox)
+        {
+            POINT cursorPoint{};
+            if (FALSE == GetCursorPos(&cursorPoint))
+            {
+                return -1;
+            }
+
+            ScreenToClient(listBox, &cursorPoint);
+            RECT clientRect{};
+            GetClientRect(listBox, &clientRect);
+            if (FALSE == PtInRect(&clientRect, cursorPoint))
+            {
+                return -1;
+            }
+
+            const LRESULT hitResult = SendMessageW(
+                listBox,
+                LB_ITEMFROMPOINT,
+                0,
+                MAKELPARAM(cursorPoint.x, cursorPoint.y));
+            if (0 != HIWORD(hitResult))
+            {
+                return -1;
+            }
+
+            return LOWORD(hitResult);
+        }
+
+        [[nodiscard]] int GetHoveredListViewIndex(HWND listView)
+        {
+            POINT cursorPoint{};
+            if (FALSE == GetCursorPos(&cursorPoint))
+            {
+                return -1;
+            }
+
+            ScreenToClient(listView, &cursorPoint);
+            RECT clientRect{};
+            GetClientRect(listView, &clientRect);
+            if (FALSE == PtInRect(&clientRect, cursorPoint))
+            {
+                return -1;
+            }
+
+            LVHITTESTINFO hitTestInfo{};
+            hitTestInfo.pt = cursorPoint;
+            return ListView_HitTest(listView, &hitTestInfo);
         }
 
         LRESULT CALLBACK WorkspaceBackgroundWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
@@ -902,11 +954,14 @@ namespace Xelqoria::Editor
             hInstance,
             L"ListBox",
             L"",
-            WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_BORDER);
+            WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | WS_BORDER);
         if (nullptr == m_hierarchyListBox)
         {
             return false;
         }
+
+        SendMessageW(m_hierarchyListBox, LB_SETITEMHEIGHT, 0, static_cast<LPARAM>(ScaleMetric(EditorRowHeight)));
+        SetWindowSubclass(m_hierarchyListBox, EditorRowControlSubclassProc, EditorRowControlSubclassId, 0);
 
         m_hierarchyNameEdit = CreateChildWindow(
             parentWindow,
@@ -980,10 +1035,11 @@ namespace Xelqoria::Editor
         {
             ListView_SetExtendedListViewStyle(
                 m_assetsListView,
-                LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+                LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
             ListView_SetBkColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.panelBackground));
             ListView_SetTextBkColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.panelBackground));
             ListView_SetTextColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
+            SetWindowSubclass(m_assetsListView, EditorRowControlSubclassProc, EditorRowControlSubclassId, 0);
         }
 
         return nullptr != m_assetsListView;
@@ -2785,7 +2841,12 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        return DrawEditorTabControl(*drawItem);
+        if (DrawEditorTabControl(*drawItem))
+        {
+            return true;
+        }
+
+        return DrawHierarchyListBoxItem(*drawItem);
     }
 
     void EditorShell::ShowPanelControls(EditorPanelId panelId, bool visible) const
@@ -4259,6 +4320,101 @@ namespace Xelqoria::Editor
         return true;
     }
 
+    bool EditorShell::DrawHierarchyListBoxItem(const DRAWITEMSTRUCT& drawItem) const
+    {
+        if (ODT_LISTBOX != drawItem.CtlType
+            || drawItem.hwndItem != m_hierarchyListBox
+            || nullptr == drawItem.hDC)
+        {
+            return false;
+        }
+
+        if (static_cast<UINT>(-1) == drawItem.itemID)
+        {
+            FillRectWithThemeColor(drawItem.hDC, drawItem.rcItem, EditorThemes::XelqoriaDark.panelBackground);
+            return true;
+        }
+
+        const bool isSelected = 0 != (drawItem.itemState & ODS_SELECTED);
+        const bool isHovered = static_cast<int>(drawItem.itemID) == GetHoveredListBoxIndex(drawItem.hwndItem);
+
+        EditorColor backgroundColor = EditorThemes::XelqoriaDark.panelBackground;
+        EditorColor textColor = EditorThemes::XelqoriaDark.textPrimary;
+        if (isHovered)
+        {
+            backgroundColor = EditorThemes::XelqoriaDark.hover;
+        }
+        if (isSelected)
+        {
+            backgroundColor = EditorThemes::XelqoriaDark.selection;
+        }
+
+        FillRectWithThemeColor(drawItem.hDC, drawItem.rcItem, backgroundColor);
+
+        wchar_t itemText[256]{};
+        SendMessageW(
+            drawItem.hwndItem,
+            LB_GETTEXT,
+            drawItem.itemID,
+            reinterpret_cast<LPARAM>(itemText));
+
+        SetBkMode(drawItem.hDC, TRANSPARENT);
+        SetTextColor(drawItem.hDC, ToColorRef(textColor));
+
+        RECT textRect = drawItem.rcItem;
+        textRect.left += ScaleMetric(8);
+        textRect.right -= ScaleMetric(8);
+        DrawTextW(
+            drawItem.hDC,
+            itemText,
+            -1,
+            &textRect,
+            DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+
+        return true;
+    }
+
+    std::optional<LRESULT> EditorShell::DrawAssetsListViewItem(LPARAM customDrawParameter) const
+    {
+        const NMLVCUSTOMDRAW* customDraw = reinterpret_cast<const NMLVCUSTOMDRAW*>(customDrawParameter);
+        if (nullptr == customDraw
+            || customDraw->nmcd.hdr.hwndFrom != m_assetsListView
+            || customDraw->nmcd.hdr.code != NM_CUSTOMDRAW)
+        {
+            return std::nullopt;
+        }
+
+        if (CDDS_PREPAINT == customDraw->nmcd.dwDrawStage)
+        {
+            return CDRF_NOTIFYITEMDRAW;
+        }
+
+        if (CDDS_ITEMPREPAINT != customDraw->nmcd.dwDrawStage)
+        {
+            return CDRF_DODEFAULT;
+        }
+
+        NMLVCUSTOMDRAW* mutableCustomDraw = const_cast<NMLVCUSTOMDRAW*>(customDraw);
+        const int itemIndex = static_cast<int>(customDraw->nmcd.dwItemSpec);
+        const bool isSelected = 0 != (customDraw->nmcd.uItemState & CDIS_SELECTED);
+        const bool isHovered = itemIndex == GetHoveredListViewIndex(m_assetsListView);
+
+        EditorColor backgroundColor = EditorThemes::XelqoriaDark.panelBackground;
+        EditorColor textColor = EditorThemes::XelqoriaDark.textPrimary;
+        if (isHovered)
+        {
+            backgroundColor = EditorThemes::XelqoriaDark.hover;
+        }
+        if (isSelected)
+        {
+            backgroundColor = EditorThemes::XelqoriaDark.selection;
+        }
+
+        mutableCustomDraw->clrText = ToColorRef(textColor);
+        mutableCustomDraw->clrTextBk = ToColorRef(backgroundColor);
+        return CDRF_DODEFAULT;
+    }
+
     std::wstring EditorShell::GetDockTabLayoutKey(HWND tabControl) const
     {
         if (tabControl == m_leftTopDockTab)
@@ -4697,6 +4853,11 @@ namespace Xelqoria::Editor
             }
         }
 
+        if (nullptr != m_hierarchyListBox)
+        {
+            SendMessageW(m_hierarchyListBox, LB_SETITEMHEIGHT, 0, static_cast<LPARAM>(ScaleMetric(EditorRowHeight)));
+        }
+
         if (ownedPreviousFont && nullptr != previousFont)
         {
             DeleteObject(previousFont);
@@ -4829,6 +4990,13 @@ namespace Xelqoria::Editor
 
             if (WM_NOTIFY == message)
             {
+                const std::optional<LRESULT> themeResult =
+                    windowData->shell->HandleThemeMessage(message, wParam, lParam);
+                if (true == themeResult.has_value())
+                {
+                    return *themeResult;
+                }
+
                 NMHDR* notifyHeader = reinterpret_cast<NMHDR*>(lParam);
                 const int groupIndex = windowData->shell->FindFloatingPanelGroupIndex(window);
                 if (nullptr != notifyHeader
@@ -4911,6 +5079,38 @@ namespace Xelqoria::Editor
         return DefSubclassProc(window, message, wParam, lParam);
     }
 
+    LRESULT CALLBACK EditorShell::EditorRowControlSubclassProc(
+        HWND window,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData)
+    {
+        (void)subclassId;
+        (void)referenceData;
+
+        if (WM_MOUSEMOVE == message)
+        {
+            TRACKMOUSEEVENT trackMouseEvent{};
+            trackMouseEvent.cbSize = sizeof(trackMouseEvent);
+            trackMouseEvent.dwFlags = TME_LEAVE;
+            trackMouseEvent.hwndTrack = window;
+            TrackMouseEvent(&trackMouseEvent);
+            InvalidateRect(window, nullptr, FALSE);
+        }
+        else if (WM_MOUSELEAVE == message)
+        {
+            InvalidateRect(window, nullptr, FALSE);
+        }
+        else if (WM_NCDESTROY == message)
+        {
+            RemoveWindowSubclass(window, EditorShell::EditorRowControlSubclassProc, EditorRowControlSubclassId);
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
+    }
+
     LRESULT CALLBACK EditorShell::ParentWindowSubclassProc(
         HWND window,
         UINT message,
@@ -4936,6 +5136,17 @@ namespace Xelqoria::Editor
 
     std::optional<LRESULT> EditorShell::HandleThemeMessage(UINT message, WPARAM wParam, LPARAM lParam) const
     {
+        if (WM_NOTIFY == message)
+        {
+            const NMHDR* notifyHeader = reinterpret_cast<const NMHDR*>(lParam);
+            if (nullptr != notifyHeader
+                && notifyHeader->hwndFrom == m_assetsListView
+                && notifyHeader->code == NM_CUSTOMDRAW)
+            {
+                return DrawAssetsListViewItem(lParam);
+            }
+        }
+
         if (WM_ERASEBKGND == message)
         {
             HDC deviceContext = reinterpret_cast<HDC>(wParam);
