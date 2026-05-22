@@ -1671,17 +1671,17 @@ namespace Xelqoria::Editor
     {
         m_dockNodes.clear();
 
-        DockNode hierarchyNode{};
-        hierarchyNode.kind = DockNodeKind::Leaf;
-        hierarchyNode.panels = { EditorPanelId::Hierarchy };
-        hierarchyNode.tabControl = m_leftTopDockTab;
-        const DockNodeId hierarchyNodeId = AddDockNode(std::move(hierarchyNode));
-
         DockNode assetsNode{};
         assetsNode.kind = DockNodeKind::Leaf;
         assetsNode.panels = { EditorPanelId::Assets };
-        assetsNode.tabControl = m_leftBottomDockTab;
+        assetsNode.tabControl = m_leftTopDockTab;
         const DockNodeId assetsNodeId = AddDockNode(std::move(assetsNode));
+
+        DockNode hierarchyNode{};
+        hierarchyNode.kind = DockNodeKind::Leaf;
+        hierarchyNode.panels = { EditorPanelId::Hierarchy };
+        hierarchyNode.tabControl = m_leftBottomDockTab;
+        const DockNodeId hierarchyNodeId = AddDockNode(std::move(hierarchyNode));
 
         DockNode sceneViewNode{};
         sceneViewNode.kind = DockNodeKind::Leaf;
@@ -1705,9 +1705,9 @@ namespace Xelqoria::Editor
         DockNode leftColumnNode{};
         leftColumnNode.kind = DockNodeKind::Split;
         leftColumnNode.splitOrientation = DockSplitOrientation::Vertical;
-        leftColumnNode.splitRatio = 0.32f;
-        leftColumnNode.firstChild = hierarchyNodeId;
-        leftColumnNode.secondChild = assetsNodeId;
+        leftColumnNode.splitRatio = 0.46f;
+        leftColumnNode.firstChild = assetsNodeId;
+        leftColumnNode.secondChild = hierarchyNodeId;
         const DockNodeId leftColumnNodeId = AddDockNode(leftColumnNode);
 
         DockNode centerColumnNode{};
@@ -1729,7 +1729,7 @@ namespace Xelqoria::Editor
         DockNode rootNode{};
         rootNode.kind = DockNodeKind::Split;
         rootNode.splitOrientation = DockSplitOrientation::Horizontal;
-        rootNode.splitRatio = 0.12f;
+        rootNode.splitRatio = 0.22f;
         rootNode.firstChild = leftColumnNodeId;
         rootNode.secondChild = centerRightNodeId;
         m_rootDockNodeId = AddDockNode(rootNode);
@@ -2435,6 +2435,20 @@ namespace Xelqoria::Editor
         {
             return false;
         }
+
+        if (inputSnapshot.WasKeyPressed('R') && inputSnapshot.IsKeyDown(VK_CONTROL))
+        {
+            ResetDockLayout();
+            return true;
+        }
+
+        m_dragKind = DockDragKind::None;
+        m_dragPanelId.reset();
+        m_pendingDockDragPanelId.reset();
+        m_hasDockPreview = false;
+        HideDockGuideWindows();
+        ShowWindow(m_dockPreviewWindow, SW_HIDE);
+        return false;
 
         bool changed = false;
         const POINT cursorScreenPoint = ToWin32Point(inputSnapshot.GetCursorScreenPoint());
@@ -4315,6 +4329,13 @@ namespace Xelqoria::Editor
                 item.mask = TCIF_TEXT;
                 item.pszText = const_cast<LPWSTR>(GetPanelTitle(dockNode.panels[index]));
                 TabCtrl_InsertItem(dockNode.tabControl, static_cast<int>(index), &item);
+                if (EditorPanelId::SceneView == dockNode.panels[index])
+                {
+                    TCITEMW gameItem{};
+                    gameItem.mask = TCIF_TEXT;
+                    gameItem.pszText = const_cast<LPWSTR>(L"Game");
+                    TabCtrl_InsertItem(dockNode.tabControl, static_cast<int>(index + 1), &gameItem);
+                }
             }
 
             dockNode.activeTabIndex = (std::max)(0, (std::min)(dockNode.activeTabIndex, static_cast<int>(dockNode.panels.size()) - 1));
@@ -4720,7 +4741,7 @@ namespace Xelqoria::Editor
         case EditorPanelId::Assets:
             return L"Assets";
         case EditorPanelId::SceneView:
-            return L"SceneView";
+            return L"Scene";
         case EditorPanelId::Inspector:
             return L"Inspector";
         case EditorPanelId::Material:
