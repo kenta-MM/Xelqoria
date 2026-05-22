@@ -339,6 +339,40 @@ namespace Xelqoria::Editor
                 DrawRotateModeIndicator(renderer, viewX, viewY);
             }
         }
+
+        void DrawCameraFrame(Graphics::SolidQuadRenderer& renderer, const EditorCamera2D& camera)
+        {
+            constexpr float CameraWidthWorldUnits = 1280.0f;
+            constexpr float CameraHeightWorldUnits = 720.0f;
+            constexpr float LineThicknessPixels = 2.0f;
+            const float centerX = camera.TransformWorldToViewX(0.0f);
+            const float centerY = camera.TransformWorldToViewY(0.0f);
+            const float width = camera.TransformWorldScale(CameraWidthWorldUnits);
+            const float height = camera.TransformWorldScale(CameraHeightWorldUnits);
+            const float halfWidth = width * 0.5f;
+            const float halfHeight = height * 0.5f;
+            const std::array<float, 4> cameraColor = MakeThemeColor(EditorThemes::XelqoriaDark.warning, 0.84f);
+
+            renderer.Draw(Graphics::SolidQuad{ centerX, centerY - halfHeight, width, LineThicknessPixels, cameraColor });
+            renderer.Draw(Graphics::SolidQuad{ centerX, centerY + halfHeight, width, LineThicknessPixels, cameraColor });
+            renderer.Draw(Graphics::SolidQuad{ centerX - halfWidth, centerY, LineThicknessPixels, height, cameraColor });
+            renderer.Draw(Graphics::SolidQuad{ centerX + halfWidth, centerY, LineThicknessPixels, height, cameraColor });
+        }
+
+        void DrawAxisGizmo(Graphics::SolidQuadRenderer& renderer, std::uint32_t sceneViewWidth, std::uint32_t sceneViewHeight)
+        {
+            const float originX = static_cast<float>(sceneViewWidth) * 0.5f - 54.0f;
+            const float originY = -static_cast<float>(sceneViewHeight) * 0.5f + 42.0f;
+            const std::array<float, 4> xColor = MakeColor(0.91f, 0.35f, 0.31f, 0.95f);
+            const std::array<float, 4> yColor = MakeColor(0.31f, 0.76f, 0.43f, 0.95f);
+            const std::array<float, 4> centerColor = MakeThemeColor(EditorThemes::XelqoriaDark.textPrimary, 0.9f);
+
+            renderer.Draw(Graphics::SolidQuad{ originX + 18.0f, originY, 36.0f, 3.0f, xColor });
+            renderer.Draw(Graphics::SolidQuad{ originX + 38.0f, originY, 9.0f, 9.0f, xColor });
+            renderer.Draw(Graphics::SolidQuad{ originX, originY - 18.0f, 3.0f, 36.0f, yColor });
+            renderer.Draw(Graphics::SolidQuad{ originX, originY - 38.0f, 9.0f, 9.0f, yColor });
+            renderer.Draw(Graphics::SolidQuad{ originX, originY, 8.0f, 8.0f, centerColor });
+        }
     }
 
     bool SceneViewRenderer::Initialize(
@@ -475,6 +509,8 @@ namespace Xelqoria::Editor
                     SceneAxisLineThicknessPixels,
                     MakeColor(0.31f, 0.76f, 0.43f, 0.8f)
                 });
+                DrawCameraFrame(*m_solidQuadRenderer, camera);
+                DrawAxisGizmo(*m_solidQuadRenderer, m_sceneViewWidth, m_sceneViewHeight);
             }
 
             for (Game::ResolvedSceneSprite& renderSprite : resolvedSprites)
