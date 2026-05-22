@@ -308,48 +308,13 @@ namespace Xelqoria::Editor
                 RECT clientRect{};
                 GetClientRect(window, &clientRect);
 
-                const int clientHeight = static_cast<int>(clientRect.bottom - clientRect.top);
-                const int headerHeight = (std::min)(30, (std::max)(0, clientHeight));
-                RECT headerRect = clientRect;
-                headerRect.bottom = headerRect.top + headerHeight;
-
                 const int panelRadius = EditorThemes::XelqoriaDark.panelCornerRadius;
                 FillRoundRectWithThemeColor(
                     deviceContext,
                     clientRect,
                     EditorThemes::XelqoriaDark.panelBackground,
                     panelRadius);
-                FillRectWithThemeColor(deviceContext, headerRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
                 DrawRoundRectBorder(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBorder, panelRadius);
-
-                wchar_t title[64]{};
-                GetWindowTextW(window, title, static_cast<int>(std::size(title)));
-                if (L'\0' != title[0])
-                {
-                    SetBkMode(deviceContext, TRANSPARENT);
-                    SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.accent));
-
-                    RECT iconRect = headerRect;
-                    iconRect.left += 10;
-                    iconRect.right = iconRect.left + 12;
-                    DrawTextW(deviceContext, L"■", -1, &iconRect, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
-
-                    RECT textRect = headerRect;
-                    textRect.left += 28;
-                    textRect.right -= 28;
-                    DrawTextW(
-                        deviceContext,
-                        title,
-                        -1,
-                        &textRect,
-                        DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
-
-                    RECT closeRect = headerRect;
-                    closeRect.left = closeRect.right - 24;
-                    closeRect.right -= 8;
-                    SetTextColor(deviceContext, ToColorRef(ScaleColor(EditorThemes::XelqoriaDark.textSecondary, 0.72f)));
-                    DrawTextW(deviceContext, L"x", -1, &closeRect, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
-                }
 
                 EndPaint(window, &paintStruct);
                 return 0;
@@ -787,7 +752,7 @@ namespace Xelqoria::Editor
         int panelSpacing = 12;
         int leftPaneWidth = 260;
         int rightPaneWidth = 300;
-        int groupHeaderHeight = 26;
+        int groupHeaderHeight = 0;
         int hierarchyHeight = 280;
         int labelHeight = 24;
         int buttonHeight = 28;
@@ -2028,7 +1993,7 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutHierarchyPanelInRect(const RECT& panelRect)
     {
         const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
+        const int groupHeaderHeight = 0;
         const int labelHeight = ScaleMetric(24);
         const int buttonHeight = ScaleMetric(28);
         int hierarchyButtonGap = ScaleMetric(8);
@@ -2069,7 +2034,7 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutAssetsPanelInRect(const RECT& panelRect)
     {
         const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
+        const int groupHeaderHeight = 0;
         const int labelHeight = ScaleMetric(24);
         const int width = panelRect.right - panelRect.left;
         const int height = panelRect.bottom - panelRect.top;
@@ -2087,7 +2052,7 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutInspectorPanelInRect(const RECT& panelRect)
     {
         const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
+        const int groupHeaderHeight = 0;
         const int labelHeight = ScaleMetric(24);
         const int rowHeight = ScaleMetric(26);
         const int rowSpacing = ScaleMetric(6);
@@ -2140,7 +2105,7 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutMaterialPanelInRect(const RECT& panelRect)
     {
         const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
+        const int groupHeaderHeight = 0;
         const int labelHeight = ScaleMetric(24);
         const int rowHeight = ScaleMetric(24);
         const int rowSpacing = ScaleMetric(8);
@@ -2538,14 +2503,6 @@ namespace Xelqoria::Editor
             ResetDockLayout();
             return true;
         }
-
-        m_dragKind = DockDragKind::None;
-        m_dragPanelId.reset();
-        m_pendingDockDragPanelId.reset();
-        m_hasDockPreview = false;
-        HideDockGuideWindows();
-        ShowWindow(m_dockPreviewWindow, SW_HIDE);
-        return false;
 
         bool changed = false;
         const POINT cursorScreenPoint = ToWin32Point(inputSnapshot.GetCursorScreenPoint());
