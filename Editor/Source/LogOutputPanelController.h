@@ -23,6 +23,16 @@ namespace Xelqoria::Editor
     };
 
     /// <summary>
+    /// LogOutput の表示 severity を表す。
+    /// </summary>
+    enum class LogOutputSeverity
+    {
+        Normal = 0,
+        Warning = 1,
+        Error = 2
+    };
+
+    /// <summary>
     /// LogOutput パネルの表示と操作を管理する。
     /// </summary>
     class LogOutputPanelController
@@ -68,7 +78,7 @@ namespace Xelqoria::Editor
         struct LogOutputEntry
         {
             std::wstring message{};
-            bool isError = false;
+            LogOutputSeverity severity = LogOutputSeverity::Normal;
         };
 
         /// <summary>

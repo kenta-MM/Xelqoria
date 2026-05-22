@@ -330,6 +330,13 @@ namespace Xelqoria::Editor
         bool HandleNotify(LPARAM notifyParameter);
 
         /// <summary>
+        /// EditorShell が所有する owner draw control の描画を処理する。
+        /// </summary>
+        /// <param name="drawItemParameter">WM_DRAWITEM の LPARAM。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool HandleDrawItem(LPARAM drawItemParameter) const;
+
+        /// <summary>
         /// 現在開いているプロジェクト画面レイアウトを初期状態へ戻す。
         /// </summary>
         void ResetDockLayout();
@@ -747,6 +754,40 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND CreateDockTabControlForLayoutKey(const std::wstring& layoutKey);
 
         /// <summary>
+        /// Editor 用 TabControl の共通外観設定を適用する。
+        /// </summary>
+        /// <param name="tabControl">設定対象 TabControl。</param>
+        void ConfigureEditorTabControl(HWND tabControl) const;
+
+        /// <summary>
+        /// Editor 用 TabControl の owner draw 描画を行う。
+        /// </summary>
+        /// <param name="drawItem">描画情報。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool DrawEditorTabControl(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
+        /// Hierarchy ListBox の owner draw 描画を行う。
+        /// </summary>
+        /// <param name="drawItem">描画情報。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool DrawHierarchyListBoxItem(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
+        /// Inspector セクション見出しの owner draw 描画を行う。
+        /// </summary>
+        /// <param name="drawItem">描画情報。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool DrawInspectorSectionLabel(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
+        /// Assets ListView の custom draw 色をテーマに沿って設定する。
+        /// </summary>
+        /// <param name="customDrawParameter">NMLVCUSTOMDRAW の LPARAM。</param>
+        /// <returns>custom draw の戻り値。対象外の場合は空。</returns>
+        [[nodiscard]] std::optional<LRESULT> DrawAssetsListViewItem(LPARAM customDrawParameter) const;
+
+        /// <summary>
         /// Dock leaf の TabControl を保存用識別子へ変換する。
         /// </summary>
         [[nodiscard]] std::wstring GetDockTabLayoutKey(HWND tabControl) const;
@@ -844,7 +885,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 81> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 82> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -857,6 +898,62 @@ namespace Xelqoria::Editor
         /// フローティングビュー用 window procedure。
         /// </summary>
         static LRESULT CALLBACK FloatingPanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
+        /// <summary>
+        /// Editor 用 TabControl の hover 再描画を処理する。
+        /// </summary>
+        static LRESULT CALLBACK EditorTabControlSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
+        /// <summary>
+        /// 行表示コントロールの hover 再描画を処理する。
+        /// </summary>
+        static LRESULT CALLBACK EditorRowControlSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
+        /// <summary>
+        /// Editor 親ウィンドウのテーマ背景と標準コントロール色を処理する。
+        /// </summary>
+        static LRESULT CALLBACK ParentWindowSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
+        /// <summary>
+        /// 親ウィンドウへ届くテーマ関連メッセージを処理する。
+        /// </summary>
+        /// <param name="message">Win32 メッセージ。</param>
+        /// <param name="wParam">メッセージ WPARAM。</param>
+        /// <param name="lParam">メッセージ LPARAM。</param>
+        /// <returns>処理結果。未処理の場合は空。</returns>
+        [[nodiscard]] std::optional<LRESULT> HandleThemeMessage(UINT message, WPARAM wParam, LPARAM lParam) const;
+
+        /// <summary>
+        /// Inspector 入力欄かを判定する。
+        /// </summary>
+        /// <param name="window">判定対象 HWND。</param>
+        /// <returns>Inspector 入力欄の場合は true。</returns>
+        [[nodiscard]] bool IsInspectorInputControl(HWND window) const;
+
+        /// <summary>
+        /// Inspector 補助ラベルかを判定する。
+        /// </summary>
+        /// <param name="window">判定対象 HWND。</param>
+        /// <returns>Inspector 補助ラベルの場合は true。</returns>
+        [[nodiscard]] bool IsInspectorSecondaryLabel(HWND window) const;
 
     private:
         /// <summary>
@@ -928,6 +1025,9 @@ namespace Xelqoria::Editor
         };
 
         HFONT m_defaultFont = nullptr;
+        HBRUSH m_windowBackgroundBrush = nullptr;
+        HBRUSH m_panelBackgroundBrush = nullptr;
+        HBRUSH m_inputBackgroundBrush = nullptr;
         UINT m_currentDpi = 96;
         bool m_ownsDefaultFont = false;
         HWND m_parentWindow = nullptr;
@@ -946,6 +1046,7 @@ namespace Xelqoria::Editor
         HWND m_materialFloatingWindow = nullptr;
         HWND m_logOutputFloatingWindow = nullptr;
         std::vector<FloatingPanelGroup> m_floatingPanelGroups{};
+        HWND m_workspaceBackground = nullptr;
         HWND m_hierarchyPanel = nullptr;
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;

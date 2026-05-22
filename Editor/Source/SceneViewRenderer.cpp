@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "Assets/ISpriteAssetResolver.h"
+#include "EditorTheme.h"
 #include "ITextureAssetResolver.h"
 #include "RenderBackendBootstrap.h"
 #include "Sprite.h"
@@ -35,6 +36,7 @@ namespace Xelqoria::Editor
         constexpr float SceneAxisLineThicknessPixels = 2.0f;
         constexpr float SelectionOutlineThicknessPixels = 2.0f;
         constexpr float SelectionPivotSizePixels = 8.0f;
+        constexpr float SceneViewBorderThicknessPixels = 1.0f;
         constexpr float EditModeIndicatorLineThicknessPixels = 5.0f;
         constexpr float EditModeIndicatorHandleSizePixels = 10.0f;
         constexpr float EditModeIndicatorCenterSizePixels = 13.0f;
@@ -58,6 +60,70 @@ namespace Xelqoria::Editor
         std::array<float, 4> MakeColor(float red, float green, float blue, float alpha)
         {
             return std::array<float, 4>{ red, green, blue, alpha };
+        }
+
+        /// <summary>
+        /// EditorTheme の色を SceneView オーバーレイ描画用の RGBA 配列へ変換する。
+        /// </summary>
+        /// <param name="color">変換対象の Editor 色。</param>
+        /// <param name="alpha">描画に使用する alpha。</param>
+        /// <returns>RGBA 順の色配列。</returns>
+        std::array<float, 4> MakeThemeColor(EditorColor color, float alpha = 1.0f)
+        {
+            return MakeColor(color.red, color.green, color.blue, alpha);
+        }
+
+        /// <summary>
+        /// SceneView の背景と境界線をテーマ色で描画する。
+        /// </summary>
+        /// <param name="renderer">描画に使用する SolidQuadRenderer。</param>
+        /// <param name="width">SceneView 幅。</param>
+        /// <param name="height">SceneView 高さ。</param>
+        void DrawSceneViewThemeSurface(Graphics::SolidQuadRenderer& renderer, std::uint32_t width, std::uint32_t height)
+        {
+            const float viewWidth = static_cast<float>(width);
+            const float viewHeight = static_cast<float>(height);
+            const std::array<float, 4> backgroundColor =
+                MakeThemeColor(EditorThemes::XelqoriaDark.windowBackground);
+            const std::array<float, 4> borderColor =
+                MakeThemeColor(EditorThemes::XelqoriaDark.panelBorder);
+
+            renderer.Draw(Graphics::SolidQuad{
+                0.0f,
+                0.0f,
+                viewWidth,
+                viewHeight,
+                backgroundColor
+            });
+
+            renderer.Draw(Graphics::SolidQuad{
+                0.0f,
+                (viewHeight * -0.5f) + (SceneViewBorderThicknessPixels * 0.5f),
+                viewWidth,
+                SceneViewBorderThicknessPixels,
+                borderColor
+            });
+            renderer.Draw(Graphics::SolidQuad{
+                0.0f,
+                (viewHeight * 0.5f) - (SceneViewBorderThicknessPixels * 0.5f),
+                viewWidth,
+                SceneViewBorderThicknessPixels,
+                borderColor
+            });
+            renderer.Draw(Graphics::SolidQuad{
+                (viewWidth * -0.5f) + (SceneViewBorderThicknessPixels * 0.5f),
+                0.0f,
+                SceneViewBorderThicknessPixels,
+                viewHeight,
+                borderColor
+            });
+            renderer.Draw(Graphics::SolidQuad{
+                (viewWidth * 0.5f) - (SceneViewBorderThicknessPixels * 0.5f),
+                0.0f,
+                SceneViewBorderThicknessPixels,
+                viewHeight,
+                borderColor
+            });
         }
 
         /// <summary>
@@ -349,6 +415,11 @@ namespace Xelqoria::Editor
         }
 
         m_graphics->BeginFrame();
+        if (nullptr != m_solidQuadRenderer && 0 != m_sceneViewWidth && 0 != m_sceneViewHeight)
+        {
+            DrawSceneViewThemeSurface(*m_solidQuadRenderer, m_sceneViewWidth, m_sceneViewHeight);
+        }
+
         if (nullptr != m_spriteRenderer && nullptr != scene)
         {
             scene->ValidateSpriteReferences(spriteAssetRegistry);
@@ -370,7 +441,7 @@ namespace Xelqoria::Editor
                         0.0f,
                         SceneGridLineThicknessPixels,
                         static_cast<float>(m_sceneViewHeight),
-                        MakeColor(0.25f, 0.27f, 0.31f, 0.45f)
+                        MakeThemeColor(EditorThemes::XelqoriaDark.panelBorder, 0.42f)
                     });
                 }
 
@@ -383,7 +454,7 @@ namespace Xelqoria::Editor
                         viewY,
                         static_cast<float>(m_sceneViewWidth),
                         SceneGridLineThicknessPixels,
-                        MakeColor(0.25f, 0.27f, 0.31f, 0.45f)
+                        MakeThemeColor(EditorThemes::XelqoriaDark.panelBorder, 0.42f)
                     });
                 }
 
@@ -452,7 +523,8 @@ namespace Xelqoria::Editor
                     {
                         const float horizontalBorderY = (heightPixels * 0.5f) + (SelectionOutlineThicknessPixels * 0.5f);
                         const float verticalBorderX = (widthPixels * 0.5f) + (SelectionOutlineThicknessPixels * 0.5f);
-                        const std::array<float, 4> outlineColor = MakeColor(0.98f, 0.86f, 0.18f, 0.95f);
+                        const std::array<float, 4> outlineColor =
+                            MakeThemeColor(EditorThemes::XelqoriaDark.accent, 0.95f);
 
                         m_solidQuadRenderer->Draw(Graphics::SolidQuad{
                             viewX,
@@ -487,7 +559,7 @@ namespace Xelqoria::Editor
                             viewY,
                             SelectionPivotSizePixels,
                             SelectionPivotSizePixels,
-                            MakeColor(1.0f, 0.94f, 0.45f, 1.0f)
+                            MakeThemeColor(EditorThemes::XelqoriaDark.selection)
                         });
                         DrawEditModeIndicator(*m_solidQuadRenderer, viewX, viewY, editMode);
                     }
@@ -514,7 +586,8 @@ namespace Xelqoria::Editor
                         const float heightPixels = static_cast<float>(texture->GetHeight()) * std::abs(scale.y);
                         const float horizontalBorderY = (heightPixels * 0.5f) + (SelectionOutlineThicknessPixels * 0.5f);
                         const float verticalBorderX = (widthPixels * 0.5f) + (SelectionOutlineThicknessPixels * 0.5f);
-                        const std::array<float, 4> outlineColor = MakeColor(0.98f, 0.86f, 0.18f, 0.95f);
+                        const std::array<float, 4> outlineColor =
+                            MakeThemeColor(EditorThemes::XelqoriaDark.accent, 0.95f);
 
                         m_solidQuadRenderer->Draw(Graphics::SolidQuad{
                             position.x,
@@ -549,7 +622,7 @@ namespace Xelqoria::Editor
                             position.y,
                             SelectionPivotSizePixels,
                             SelectionPivotSizePixels,
-                            MakeColor(1.0f, 0.94f, 0.45f, 1.0f)
+                            MakeThemeColor(EditorThemes::XelqoriaDark.selection)
                         });
                         DrawEditModeIndicator(*m_solidQuadRenderer, position.x, position.y, editMode);
                     }
@@ -570,7 +643,11 @@ namespace Xelqoria::Editor
                 previewSprite.SetRotationDegrees(0.0f);
                 previewSprite.SetOutlineEnabled(true);
                 previewSprite.SetOutlineThickness(1.0f);
-                previewSprite.SetOutlineColor(1.0f, 0.84f, 0.04f, 1.0f);
+                previewSprite.SetOutlineColor(
+                    EditorThemes::XelqoriaDark.accent.red,
+                    EditorThemes::XelqoriaDark.accent.green,
+                    EditorThemes::XelqoriaDark.accent.blue,
+                    1.0f);
                 m_spriteRenderer->Draw(previewSprite);
             }
 
