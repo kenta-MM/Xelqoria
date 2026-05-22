@@ -506,7 +506,7 @@ namespace Xelqoria::Editor
                     rootDirectory,
                     std::filesystem::directory_options::skip_permission_denied,
                     errorCode);
-                false == errorCode && iterator != std::filesystem::recursive_directory_iterator{};
+                false == static_cast<bool>(errorCode) && iterator != std::filesystem::recursive_directory_iterator{};
                 iterator.increment(errorCode))
             {
                 if (MaxVisitedEntries <= visitedCount)
