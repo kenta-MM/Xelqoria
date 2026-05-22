@@ -773,6 +773,13 @@ namespace Xelqoria::Editor
         bool DrawEditorTabControl(const DRAWITEMSTRUCT& drawItem) const;
 
         /// <summary>
+        /// Editor 標準ボタンの owner draw 描画を行う。
+        /// </summary>
+        /// <param name="drawItem">描画情報。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool DrawEditorButton(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
         /// Hierarchy ListBox の owner draw 描画を行う。
         /// </summary>
         /// <param name="drawItem">描画情報。</param>

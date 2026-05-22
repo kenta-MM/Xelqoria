@@ -31,7 +31,7 @@ namespace Xelqoria::Editor
 {
     namespace
     {
-        constexpr float SceneGridStepWorldUnits = 64.0f;
+        constexpr float SceneGridStepWorldUnits = 48.0f;
         constexpr float SceneGridLineThicknessPixels = 1.0f;
         constexpr float SceneAxisLineThicknessPixels = 2.0f;
         constexpr float SelectionOutlineThicknessPixels = 2.0f;
@@ -94,6 +94,21 @@ namespace Xelqoria::Editor
                 viewWidth,
                 viewHeight,
                 backgroundColor
+            });
+
+            renderer.Draw(Graphics::SolidQuad{
+                viewWidth * 0.12f,
+                viewHeight * -0.04f,
+                viewWidth * 0.56f,
+                viewHeight * 0.52f,
+                MakeColor(0.04f, 0.12f, 0.32f, 0.34f)
+            });
+            renderer.Draw(Graphics::SolidQuad{
+                viewWidth * 0.24f,
+                viewHeight * -0.02f,
+                viewWidth * 0.30f,
+                viewHeight * 0.40f,
+                MakeColor(0.20f, 0.10f, 0.58f, 0.28f)
             });
 
             renderer.Draw(Graphics::SolidQuad{
@@ -351,7 +366,7 @@ namespace Xelqoria::Editor
             const float height = camera.TransformWorldScale(CameraHeightWorldUnits);
             const float halfWidth = width * 0.5f;
             const float halfHeight = height * 0.5f;
-            const std::array<float, 4> cameraColor = MakeThemeColor(EditorThemes::XelqoriaDark.warning, 0.84f);
+            const std::array<float, 4> cameraColor = MakeThemeColor(EditorThemes::XelqoriaDark.textSecondary, 0.70f);
 
             renderer.Draw(Graphics::SolidQuad{ centerX, centerY - halfHeight, width, LineThicknessPixels, cameraColor });
             renderer.Draw(Graphics::SolidQuad{ centerX, centerY + halfHeight, width, LineThicknessPixels, cameraColor });
@@ -475,7 +490,7 @@ namespace Xelqoria::Editor
                         0.0f,
                         SceneGridLineThicknessPixels,
                         static_cast<float>(m_sceneViewHeight),
-                        MakeThemeColor(EditorThemes::XelqoriaDark.panelBorder, 0.42f)
+                        MakeThemeColor(EditorThemes::XelqoriaDark.panelBorder, 0.34f)
                     });
                 }
 
@@ -488,7 +503,7 @@ namespace Xelqoria::Editor
                         viewY,
                         static_cast<float>(m_sceneViewWidth),
                         SceneGridLineThicknessPixels,
-                        MakeThemeColor(EditorThemes::XelqoriaDark.panelBorder, 0.42f)
+                        MakeThemeColor(EditorThemes::XelqoriaDark.panelBorder, 0.34f)
                     });
                 }
 
