@@ -1,9 +1,11 @@
 #include "LogOutputPanelController.h"
 
+#include <algorithm>
 #include <CommCtrl.h>
 #include <utility>
 
 #include "ButtonClickWin32Adapter.h"
+#include "EditorTheme.h"
 
 namespace Xelqoria::Editor
 {
@@ -22,6 +24,43 @@ namespace Xelqoria::Editor
             }
 
             return text.find(filter) != std::wstring::npos;
+        }
+
+        [[nodiscard]] BYTE ToColorByte(float value)
+        {
+            const float clampedValue = (std::max)(0.0f, (std::min)(1.0f, value));
+            return static_cast<BYTE>((clampedValue * 255.0f) + 0.5f);
+        }
+
+        [[nodiscard]] COLORREF ToColorRef(EditorColor color)
+        {
+            return RGB(ToColorByte(color.red), ToColorByte(color.green), ToColorByte(color.blue));
+        }
+
+        void FillRectWithThemeColor(HDC deviceContext, const RECT& rect, EditorColor color)
+        {
+            HBRUSH brush = CreateSolidBrush(ToColorRef(color));
+            FillRect(deviceContext, &rect, brush);
+            DeleteObject(brush);
+        }
+
+        [[nodiscard]] LogOutputSeverity InferSeverity(
+            const std::wstring& message,
+            bool isError)
+        {
+            if (isError)
+            {
+                return LogOutputSeverity::Error;
+            }
+
+            if (message.find(L"warning") != std::wstring::npos
+                || message.find(L"Warning") != std::wstring::npos
+                || message.find(L"警告") != std::wstring::npos)
+            {
+                return LogOutputSeverity::Warning;
+            }
+
+            return LogOutputSeverity::Normal;
         }
     }
 
@@ -44,7 +83,8 @@ namespace Xelqoria::Editor
             return;
         }
 
-        m_logs[index].push_back(LogOutputEntry{ std::move(message), isError });
+        const LogOutputSeverity severity = InferSeverity(message, isError);
+        m_logs[index].push_back(LogOutputEntry{ std::move(message), severity });
         if (GetActiveCategory() == category)
         {
             RefreshVisibleRows();
@@ -113,15 +153,20 @@ namespace Xelqoria::Editor
         }
 
         const bool isSelected = 0 != (drawItem->itemState & ODS_SELECTED);
-        const COLORREF backgroundColor = GetSysColor(isSelected ? COLOR_HIGHLIGHT : COLOR_WINDOW);
-        const COLORREF textColor =
-            0 != drawItem->itemData
-                ? RGB(190, 0, 0)
-                : GetSysColor(isSelected ? COLOR_HIGHLIGHTTEXT : COLOR_WINDOWTEXT);
+        const auto severity = static_cast<LogOutputSeverity>(drawItem->itemData);
+        const EditorColor backgroundColor =
+            isSelected ? EditorThemes::XelqoriaDark.selection : EditorThemes::XelqoriaDark.panelBackground;
+        EditorColor textColor = EditorThemes::XelqoriaDark.textPrimary;
+        if (LogOutputSeverity::Warning == severity)
+        {
+            textColor = EditorThemes::XelqoriaDark.warning;
+        }
+        else if (LogOutputSeverity::Error == severity)
+        {
+            textColor = EditorThemes::XelqoriaDark.error;
+        }
 
-        HBRUSH backgroundBrush = CreateSolidBrush(backgroundColor);
-        FillRect(drawItem->hDC, &drawItem->rcItem, backgroundBrush);
-        DeleteObject(backgroundBrush);
+        FillRectWithThemeColor(drawItem->hDC, drawItem->rcItem, backgroundColor);
 
         const LRESULT textLength = SendMessageW(
             drawItem->hwndItem,
@@ -139,8 +184,9 @@ namespace Xelqoria::Editor
             text.resize(static_cast<std::size_t>(textLength));
 
             RECT textRect = drawItem->rcItem;
-            textRect.left += 2;
-            const COLORREF previousTextColor = SetTextColor(drawItem->hDC, textColor);
+            textRect.left += 8;
+            textRect.right -= 8;
+            const COLORREF previousTextColor = SetTextColor(drawItem->hDC, ToColorRef(textColor));
             const int previousBackgroundMode = SetBkMode(drawItem->hDC, TRANSPARENT);
             DrawTextW(
                 drawItem->hDC,
@@ -154,7 +200,15 @@ namespace Xelqoria::Editor
 
         if (0 != (drawItem->itemState & ODS_FOCUS))
         {
-            DrawFocusRect(drawItem->hDC, &drawItem->rcItem);
+            RECT focusRect = drawItem->rcItem;
+            InflateRect(&focusRect, -1, -1);
+            HPEN focusPen = CreatePen(PS_SOLID, 1, ToColorRef(EditorThemes::XelqoriaDark.accent));
+            HGDIOBJ previousPen = SelectObject(drawItem->hDC, focusPen);
+            HGDIOBJ previousBrush = SelectObject(drawItem->hDC, GetStockObject(NULL_BRUSH));
+            Rectangle(drawItem->hDC, focusRect.left, focusRect.top, focusRect.right, focusRect.bottom);
+            SelectObject(drawItem->hDC, previousBrush);
+            SelectObject(drawItem->hDC, previousPen);
+            DeleteObject(focusPen);
         }
 
         return true;
@@ -182,7 +236,7 @@ namespace Xelqoria::Editor
                         m_listBox,
                         LB_SETITEMDATA,
                         static_cast<WPARAM>(itemIndex),
-                        static_cast<LPARAM>(log.isError ? 1 : 0));
+                        static_cast<LPARAM>(log.severity));
                 }
             }
         }
