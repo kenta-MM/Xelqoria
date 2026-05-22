@@ -105,6 +105,21 @@ namespace Xelqoria::Editor
         /// エラーログなどに使う色。
         /// </summary>
         EditorColor error{};
+
+        /// <summary>
+        /// 標準パネルの角丸半径。96 DPI 基準の pixel 単位で扱う。
+        /// </summary>
+        int panelCornerRadius = 0;
+
+        /// <summary>
+        /// 標準コントロールの角丸半径。96 DPI 基準の pixel 単位で扱う。
+        /// </summary>
+        int controlCornerRadius = 0;
+
+        /// <summary>
+        /// パネル境界線の太さ。96 DPI 基準の pixel 単位で扱う。
+        /// </summary>
+        int panelBorderThickness = 1;
     };
 
     namespace EditorThemes
@@ -123,7 +138,10 @@ namespace Xelqoria::Editor
             EditorColor::FromRgb8(0x26, 0x36, 0x5F),
             EditorColor::FromRgb8(0x2A, 0x2F, 0x3A),
             EditorColor::FromRgb8(0xE6, 0xB4, 0x50),
-            EditorColor::FromRgb8(0xFF, 0x6B, 0x6B)
+            EditorColor::FromRgb8(0xFF, 0x6B, 0x6B),
+            8,
+            5,
+            1
         };
     }
 }
