@@ -80,6 +80,28 @@ namespace Xelqoria::Editor
             DeleteObject(pen);
         }
 
+        void FillRoundRectWithThemeColor(HDC deviceContext, const RECT& rect, EditorColor color, int radius)
+        {
+            HBRUSH brush = CreateSolidBrush(ToColorRef(color));
+            HGDIOBJ previousBrush = SelectObject(deviceContext, brush);
+            HGDIOBJ previousPen = SelectObject(deviceContext, GetStockObject(NULL_PEN));
+            RoundRect(deviceContext, rect.left, rect.top, rect.right, rect.bottom, radius, radius);
+            SelectObject(deviceContext, previousPen);
+            SelectObject(deviceContext, previousBrush);
+            DeleteObject(brush);
+        }
+
+        void DrawRoundRectBorder(HDC deviceContext, const RECT& rect, EditorColor color, int radius)
+        {
+            HPEN pen = CreatePen(PS_SOLID, 1, ToColorRef(color));
+            HGDIOBJ previousPen = SelectObject(deviceContext, pen);
+            HGDIOBJ previousBrush = SelectObject(deviceContext, GetStockObject(NULL_BRUSH));
+            RoundRect(deviceContext, rect.left, rect.top, rect.right, rect.bottom, radius, radius);
+            SelectObject(deviceContext, previousBrush);
+            SelectObject(deviceContext, previousPen);
+            DeleteObject(pen);
+        }
+
         [[nodiscard]] int GetHoveredTabIndex(HWND tabControl)
         {
             POINT cursorPoint{};
@@ -179,9 +201,14 @@ namespace Xelqoria::Editor
                 RECT headerRect = clientRect;
                 headerRect.bottom = headerRect.top + headerHeight;
 
-                FillRectWithThemeColor(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBackground);
+                const int panelRadius = EditorThemes::XelqoriaDark.panelCornerRadius;
+                FillRoundRectWithThemeColor(
+                    deviceContext,
+                    clientRect,
+                    EditorThemes::XelqoriaDark.panelBackground,
+                    panelRadius);
                 FillRectWithThemeColor(deviceContext, headerRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
-                DrawRectBorder(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBorder);
+                DrawRoundRectBorder(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBorder, panelRadius);
 
                 wchar_t title[64]{};
                 GetWindowTextW(window, title, static_cast<int>(std::size(title)));
