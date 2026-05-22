@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Windows.h>
-#include <array>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -82,7 +82,12 @@ namespace Xelqoria::Editor
         };
 
         /// <summary>
-        /// 現在選択中カテゴリのログ一覧を ListBox へ反映する。
+        /// ダミーログを初期投入する。
+        /// </summary>
+        void EnsureDummyLogs();
+
+        /// <summary>
+        /// 現在選択中フィルターのログ一覧を ListBox へ反映する。
         /// </summary>
         void RefreshVisibleRows();
 
@@ -92,10 +97,10 @@ namespace Xelqoria::Editor
         void CopySelectedRow() const;
 
         /// <summary>
-        /// 現在選択中のログカテゴリを取得する。
+        /// 現在選択中の severity フィルターを取得する。
         /// </summary>
-        /// <returns>選択中ログカテゴリ。</returns>
-        [[nodiscard]] LogOutputCategory GetActiveCategory() const;
+        /// <returns>severity フィルター。すべての場合は空。</returns>
+        [[nodiscard]] std::optional<LogOutputSeverity> GetActiveSeverityFilter() const;
 
         /// <summary>
         /// 現在のフィルタ文字列を取得する。
@@ -110,7 +115,7 @@ namespace Xelqoria::Editor
         HWND m_filterEdit = nullptr;
         HWND m_listBox = nullptr;
         Platform::IClipboard* m_clipboard = nullptr;
-        std::array<std::vector<LogOutputEntry>, 3> m_logs{};
+        std::vector<LogOutputEntry> m_logs{};
         ButtonClickInputState m_buttonInputState{};
         int m_lastActiveTab = 0;
         std::wstring m_lastFilterText{};

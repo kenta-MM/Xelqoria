@@ -1560,7 +1560,7 @@ namespace Xelqoria::Editor
         }
         ConfigureEditorTabControl(m_logOutputTabControl);
 
-        const std::array<const wchar_t*, 3> tabNames{ L"ゲームログ", L"ビルドログ", L"エディタログ" };
+        const std::array<const wchar_t*, 4> tabNames{ L"すべて", L"ログ", L"警告", L"エラー" };
         for (std::size_t index = 0; index < tabNames.size(); ++index)
         {
             TCITEMW item{};
