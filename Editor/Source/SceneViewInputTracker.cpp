@@ -100,7 +100,7 @@ namespace Xelqoria::Editor
         const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
         const Graphics::TextureAssetRegistry& textureAssetRegistry,
         const AssetsPanelController& assetsPanelController,
-        const EditorCamera2D& camera,
+        EditorCamera2D& camera,
         std::uint32_t sceneViewWidth,
         std::uint32_t sceneViewHeight,
         std::optional<Game::EntityId> currentSelectedEntityId,
@@ -142,9 +142,37 @@ namespace Xelqoria::Editor
             && screenPoint.y < sceneHostRect.bottom;
 
         const bool isLeftButtonDown = inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left);
+        const bool isPanModifierDown = inputSnapshot.IsKeyDown(VK_SPACE);
         const bool isAssetDragActive = assetsPanelController.IsDragActive();
         const bool isScenePlacementDrag = isAssetDragActive
             && assetsPanelController.CanPlaceDraggingAssetInScene();
+        if (isCursorInside && isLeftButtonDown && isPanModifierDown && false == isAssetDragActive)
+        {
+            if (false == m_sceneViewPanActive)
+            {
+                m_sceneViewPanActive = true;
+                m_lastPanScreenPoint = screenPoint;
+            }
+            else
+            {
+                const float deltaX = static_cast<float>(screenPoint.x - m_lastPanScreenPoint.x);
+                const float deltaY = static_cast<float>(screenPoint.y - m_lastPanScreenPoint.y);
+                camera.SetCenter(
+                    camera.GetCenterX() - (deltaX / camera.GetZoom()),
+                    camera.GetCenterY() + (deltaY / camera.GetZoom()));
+                m_lastPanScreenPoint = screenPoint;
+            }
+
+            m_sceneViewLeftButtonDown = isLeftButtonDown;
+            m_lastObservedSelectedEntityId =
+                true == result.selectionChanged ? result.selectedEntityId : currentSelectedEntityId;
+            return result;
+        }
+        else if (false == isLeftButtonDown)
+        {
+            m_sceneViewPanActive = false;
+        }
+
         if (false == isCursorInside
             && true == isLeftButtonDown
             && false == m_sceneViewLeftButtonDown
@@ -295,6 +323,17 @@ namespace Xelqoria::Editor
         }
 
         const float wheelDirection = GetMouseWheelDirection(inputSnapshot.GetMouseWheelDelta());
+        if (0.0f != wheelDirection
+            && true == isCursorInside
+            && false == isAssetDragActive
+            && (false == currentSelectedEntityId.has_value()
+                || SceneViewEditMode::Scale != m_editMode && SceneViewEditMode::Rotate != m_editMode))
+        {
+            const float zoomStep = true == inputSnapshot.IsKeyDown(VK_CONTROL) ? 1.04f : 1.12f;
+            const float zoomScale = 0.0f < wheelDirection ? zoomStep : (1.0f / zoomStep);
+            camera.SetZoom(camera.GetZoom() * zoomScale);
+        }
+
         if (0.0f != wheelDirection
             && false == isAssetDragActive
             && true == currentSelectedEntityId.has_value()
