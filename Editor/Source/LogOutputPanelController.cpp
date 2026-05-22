@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <CommCtrl.h>
+#include <chrono>
+#include <ctime>
+#include <cwchar>
 #include <utility>
 
 #include "ButtonClickWin32Adapter.h"
@@ -11,11 +14,6 @@ namespace Xelqoria::Editor
 {
     namespace
     {
-        [[nodiscard]] std::size_t ToLogIndex(LogOutputCategory category)
-        {
-            return static_cast<std::size_t>(category);
-        }
-
         [[nodiscard]] bool ContainsFilter(const std::wstring& text, const std::wstring& filter)
         {
             if (filter.empty())
@@ -62,6 +60,44 @@ namespace Xelqoria::Editor
 
             return LogOutputSeverity::Normal;
         }
+
+        [[nodiscard]] const wchar_t* ToCategoryText(LogOutputCategory category)
+        {
+            switch (category)
+            {
+            case LogOutputCategory::Game:
+                return L"Game";
+            case LogOutputCategory::Build:
+                return L"Build";
+            case LogOutputCategory::Editor:
+                return L"Editor";
+            default:
+                return L"Log";
+            }
+        }
+
+        [[nodiscard]] std::wstring BuildTimestampText()
+        {
+            using clock = std::chrono::system_clock;
+            const std::time_t currentTime = clock::to_time_t(clock::now());
+            std::tm localTime{};
+            localtime_s(&localTime, &currentTime);
+
+            wchar_t text[32]{};
+            std::wcsftime(text, std::size(text), L"%H:%M:%S", &localTime);
+            return text;
+        }
+
+        [[nodiscard]] std::wstring FormatLogLine(LogOutputCategory category, const std::wstring& message)
+        {
+            std::wstring line = L"[";
+            line += BuildTimestampText();
+            line += L"] [";
+            line += ToCategoryText(category);
+            line += L"] ";
+            line += message;
+            return line;
+        }
     }
 
     void LogOutputPanelController::Bind(const EditorShell& shell, Platform::IClipboard& clipboard)
@@ -72,33 +108,26 @@ namespace Xelqoria::Editor
         m_filterEdit = shell.GetLogFilterEdit();
         m_listBox = shell.GetLogListBox();
         m_clipboard = &clipboard;
+        EnsureDummyLogs();
         RefreshVisibleRows();
     }
 
     void LogOutputPanelController::Append(LogOutputCategory category, std::wstring message, bool isError)
     {
-        const std::size_t index = ToLogIndex(category);
-        if (m_logs.size() <= index)
-        {
-            return;
-        }
-
         const LogOutputSeverity severity = InferSeverity(message, isError);
-        m_logs[index].push_back(LogOutputEntry{ std::move(message), severity });
-        if (GetActiveCategory() == category)
-        {
-            RefreshVisibleRows();
-        }
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(category, message), severity });
+        RefreshVisibleRows();
     }
 
     void LogOutputPanelController::SelectCategory(LogOutputCategory category)
     {
+        (void)category;
         if (nullptr == m_tabControl)
         {
             return;
         }
 
-        const int tabIndex = static_cast<int>(ToLogIndex(category));
+        const int tabIndex = 0;
         TabCtrl_SetCurSel(m_tabControl, tabIndex);
         m_lastActiveTab = tabIndex;
         RefreshVisibleRows();
@@ -121,7 +150,7 @@ namespace Xelqoria::Editor
         };
         if (TryConsumeButtonClick(BuildButtonClickTarget(m_clearButton), frameInput, m_buttonInputState))
         {
-            m_logs[ToLogIndex(GetActiveCategory())].clear();
+            m_logs.clear();
             RefreshVisibleRows();
             m_buttonInputState.pressedButtonId = 0;
         }
@@ -214,6 +243,20 @@ namespace Xelqoria::Editor
         return true;
     }
 
+    void LogOutputPanelController::EnsureDummyLogs()
+    {
+        if (false == m_logs.empty())
+        {
+            return;
+        }
+
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Editor, L"Xelqoria Editor started"), LogOutputSeverity::Normal });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Editor, L"Project loaded"), LogOutputSeverity::Normal });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Editor, L"Assets scan completed"), LogOutputSeverity::Normal });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Game, L"Scene initialized"), LogOutputSeverity::Warning });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Build, L"Renderer ready"), LogOutputSeverity::Error });
+    }
+
     void LogOutputPanelController::RefreshVisibleRows()
     {
         if (nullptr == m_listBox)
@@ -222,11 +265,12 @@ namespace Xelqoria::Editor
         }
 
         SendMessageW(m_listBox, LB_RESETCONTENT, 0, 0);
-        const std::vector<LogOutputEntry>& logs = m_logs[ToLogIndex(GetActiveCategory())];
         const std::wstring filterText = GetFilterText();
-        for (const LogOutputEntry& log : logs)
+        const std::optional<LogOutputSeverity> severityFilter = GetActiveSeverityFilter();
+        for (const LogOutputEntry& log : m_logs)
         {
-            if (ContainsFilter(log.message, filterText))
+            const bool severityMatched = false == severityFilter.has_value() || log.severity == *severityFilter;
+            if (severityMatched && ContainsFilter(log.message, filterText))
             {
                 const LRESULT itemIndex =
                     SendMessageW(m_listBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(log.message.c_str()));
@@ -276,19 +320,23 @@ namespace Xelqoria::Editor
         }
     }
 
-    LogOutputCategory LogOutputPanelController::GetActiveCategory() const
+    std::optional<LogOutputSeverity> LogOutputPanelController::GetActiveSeverityFilter() const
     {
         const int activeTab = nullptr != m_tabControl ? TabCtrl_GetCurSel(m_tabControl) : 0;
         if (1 == activeTab)
         {
-            return LogOutputCategory::Build;
+            return LogOutputSeverity::Normal;
         }
         if (2 == activeTab)
         {
-            return LogOutputCategory::Editor;
+            return LogOutputSeverity::Warning;
+        }
+        if (3 == activeTab)
+        {
+            return LogOutputSeverity::Error;
         }
 
-        return LogOutputCategory::Game;
+        return std::nullopt;
     }
 
     std::wstring LogOutputPanelController::GetFilterText() const
