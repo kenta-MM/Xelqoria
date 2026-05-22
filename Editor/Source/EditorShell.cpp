@@ -26,6 +26,7 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR EditorRowControlSubclassId = 3;
         constexpr int EditorRowHeight = 22;
         constexpr const wchar_t* WorkspaceBackgroundWindowClassName = L"XelqoriaEditorWorkspaceBackground";
+        constexpr const wchar_t* EditorChromeWindowClassName = L"XelqoriaEditorChrome";
         constexpr const wchar_t* EditorPanelWindowClassName = L"XelqoriaEditorPanel";
         constexpr const wchar_t* DockPreviewWindowClassName = L"XelqoriaDockPreviewWindow";
         constexpr const wchar_t* DockGuideWindowClassName = L"XelqoriaDockGuideWindow";
@@ -75,6 +76,28 @@ namespace Xelqoria::Editor
             HGDIOBJ previousPen = SelectObject(deviceContext, pen);
             HGDIOBJ previousBrush = SelectObject(deviceContext, GetStockObject(NULL_BRUSH));
             Rectangle(deviceContext, rect.left, rect.top, rect.right, rect.bottom);
+            SelectObject(deviceContext, previousBrush);
+            SelectObject(deviceContext, previousPen);
+            DeleteObject(pen);
+        }
+
+        void FillRoundRectWithThemeColor(HDC deviceContext, const RECT& rect, EditorColor color, int radius)
+        {
+            HBRUSH brush = CreateSolidBrush(ToColorRef(color));
+            HGDIOBJ previousBrush = SelectObject(deviceContext, brush);
+            HGDIOBJ previousPen = SelectObject(deviceContext, GetStockObject(NULL_PEN));
+            RoundRect(deviceContext, rect.left, rect.top, rect.right, rect.bottom, radius, radius);
+            SelectObject(deviceContext, previousPen);
+            SelectObject(deviceContext, previousBrush);
+            DeleteObject(brush);
+        }
+
+        void DrawRoundRectBorder(HDC deviceContext, const RECT& rect, EditorColor color, int radius)
+        {
+            HPEN pen = CreatePen(PS_SOLID, 1, ToColorRef(color));
+            HGDIOBJ previousPen = SelectObject(deviceContext, pen);
+            HGDIOBJ previousBrush = SelectObject(deviceContext, GetStockObject(NULL_BRUSH));
+            RoundRect(deviceContext, rect.left, rect.top, rect.right, rect.bottom, radius, radius);
             SelectObject(deviceContext, previousBrush);
             SelectObject(deviceContext, previousPen);
             DeleteObject(pen);
@@ -165,6 +188,47 @@ namespace Xelqoria::Editor
             return DefWindowProcW(window, message, wParam, lParam);
         }
 
+        LRESULT CALLBACK EditorChromeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+        {
+            if (WM_PAINT == message)
+            {
+                PAINTSTRUCT paintStruct{};
+                HDC deviceContext = BeginPaint(window, &paintStruct);
+                RECT clientRect{};
+                GetClientRect(window, &clientRect);
+                FillRectWithThemeColor(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
+
+                HPEN borderPen = CreatePen(PS_SOLID, 1, ToColorRef(EditorThemes::XelqoriaDark.panelBorder));
+                HGDIOBJ previousPen = SelectObject(deviceContext, borderPen);
+                MoveToEx(deviceContext, clientRect.left, clientRect.bottom - 1, nullptr);
+                LineTo(deviceContext, clientRect.right, clientRect.bottom - 1);
+                SelectObject(deviceContext, previousPen);
+                DeleteObject(borderPen);
+
+                wchar_t text[128]{};
+                GetWindowTextW(window, text, static_cast<int>(std::size(text)));
+                if (L'\0' != text[0])
+                {
+                    SetBkMode(deviceContext, TRANSPARENT);
+                    SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
+                    RECT textRect = clientRect;
+                    textRect.left += 12;
+                    textRect.right -= 12;
+                    DrawTextW(deviceContext, text, -1, &textRect, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+                }
+
+                EndPaint(window, &paintStruct);
+                return 0;
+            }
+
+            if (WM_ERASEBKGND == message)
+            {
+                return 1;
+            }
+
+            return DefWindowProcW(window, message, wParam, lParam);
+        }
+
         LRESULT CALLBACK EditorPanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (WM_PAINT == message)
@@ -179,9 +243,14 @@ namespace Xelqoria::Editor
                 RECT headerRect = clientRect;
                 headerRect.bottom = headerRect.top + headerHeight;
 
-                FillRectWithThemeColor(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBackground);
+                const int panelRadius = EditorThemes::XelqoriaDark.panelCornerRadius;
+                FillRoundRectWithThemeColor(
+                    deviceContext,
+                    clientRect,
+                    EditorThemes::XelqoriaDark.panelBackground,
+                    panelRadius);
                 FillRectWithThemeColor(deviceContext, headerRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
-                DrawRectBorder(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBorder);
+                DrawRoundRectBorder(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBorder, panelRadius);
 
                 wchar_t title[64]{};
                 GetWindowTextW(window, title, static_cast<int>(std::size(title)));
@@ -473,6 +542,22 @@ namespace Xelqoria::Editor
             return 0 != RegisterClassW(&windowClass);
         }
 
+        bool RegisterEditorChromeWindowClass(HINSTANCE hInstance)
+        {
+            WNDCLASSW existingClass{};
+            if (GetClassInfoW(hInstance, EditorChromeWindowClassName, &existingClass))
+            {
+                return true;
+            }
+
+            WNDCLASSW windowClass{};
+            windowClass.lpfnWndProc = EditorChromeWindowProc;
+            windowClass.hInstance = hInstance;
+            windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
+            windowClass.lpszClassName = EditorChromeWindowClassName;
+            return 0 != RegisterClassW(&windowClass);
+        }
+
         bool RegisterEditorPanelWindowClass(HINSTANCE hInstance)
         {
             WNDCLASSW existingClass{};
@@ -661,6 +746,11 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        if (false == RegisterEditorChromeWindowClass(hInstance))
+        {
+            return false;
+        }
+
         if (false == RegisterEditorPanelWindowClass(hInstance))
         {
             return false;
@@ -715,6 +805,30 @@ namespace Xelqoria::Editor
             L"",
             WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS);
         if (nullptr == m_workspaceBackground)
+        {
+            return false;
+        }
+
+        m_topBar = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            EditorChromeWindowClassName,
+            L"Xelqoria Editor",
+            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS);
+        m_statusBar = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            EditorChromeWindowClassName,
+            L"Ready  |  Fixed Layout  |  Xelqoria Dark",
+            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS);
+        m_topBarProjectButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Project", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_topBarPlayButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Play", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_topBarLayoutButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Layout", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        if (nullptr == m_topBar
+            || nullptr == m_statusBar
+            || nullptr == m_topBarProjectButton
+            || nullptr == m_topBarPlayButton
+            || nullptr == m_topBarLayoutButton)
         {
             return false;
         }
@@ -829,7 +943,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 82> controls = CollectControls();
+            const std::array<HWND, 87> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -868,12 +982,22 @@ namespace Xelqoria::Editor
         }
 
         const int outerPadding = ScaleMetric(12);
+        const int topBarHeight = ScaleMetric(42);
+        const int statusBarHeight = ScaleMetric(24);
+        const int topButtonWidth = ScaleMetric(84);
+        const int topButtonHeight = ScaleMetric(26);
+        const int topButtonGap = ScaleMetric(8);
         MoveChildWindowNoRedraw(m_workspaceBackground, 0, 0, clientWidth, clientHeight);
+        MoveChildWindowNoRedraw(m_topBar, 0, 0, clientWidth, topBarHeight);
+        MoveChildWindowNoRedraw(m_topBarProjectButton, clientWidth - outerPadding - (topButtonWidth + topButtonGap) * 3, ScaleMetric(8), topButtonWidth, topButtonHeight);
+        MoveChildWindowNoRedraw(m_topBarPlayButton, clientWidth - outerPadding - (topButtonWidth + topButtonGap) * 2, ScaleMetric(8), topButtonWidth, topButtonHeight);
+        MoveChildWindowNoRedraw(m_topBarLayoutButton, clientWidth - outerPadding - topButtonWidth, ScaleMetric(8), topButtonWidth, topButtonHeight);
+        MoveChildWindowNoRedraw(m_statusBar, 0, clientHeight - statusBarHeight, clientWidth, statusBarHeight);
         const RECT rootRect{
             outerPadding,
-            outerPadding,
+            topBarHeight + outerPadding,
             clientWidth - outerPadding,
-            clientHeight - outerPadding
+            clientHeight - statusBarHeight - outerPadding
         };
         LayoutDockNode(m_rootDockNodeId, rootRect);
         HideDockGuideWindows();
@@ -4894,7 +5018,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 82> controls = CollectControls();
+        const std::array<HWND, 87> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -4917,10 +5041,15 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 82> EditorShell::CollectControls() const
+    std::array<HWND, 87> EditorShell::CollectControls() const
     {
         return {
             m_workspaceBackground,
+            m_topBar,
+            m_topBarProjectButton,
+            m_topBarPlayButton,
+            m_topBarLayoutButton,
+            m_statusBar,
             m_leftTopDockTab,
             m_leftBottomDockTab,
             m_centerDockTab,
