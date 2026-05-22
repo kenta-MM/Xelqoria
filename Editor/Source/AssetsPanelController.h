@@ -121,6 +121,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] const Core::AssetId& GetSelectedAssetId() const;
 
         /// <summary>
+        /// 現在選択中の Assets ファイルパスを取得する。
+        /// </summary>
+        /// <returns>選択中ファイルパス。未選択時は空。</returns>
+        [[nodiscard]] const std::filesystem::path& GetSelectedFilePath() const;
+
+        /// <summary>
         /// 現在ドラッグ中の SpriteAssetId を取得する。
         /// </summary>
         /// <returns>ドラッグ中 SpriteAssetId。</returns>

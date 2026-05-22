@@ -1557,7 +1557,8 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.GetSelectedEntityId(),
             canAddSpriteComponent,
             m_sceneDocument.GetSpriteAssetRegistry(),
-            m_sceneDocument.GetMaterialAssetRegistry());
+            m_sceneDocument.GetMaterialAssetRegistry(),
+            m_assetsPanelController.GetSelectedFilePath());
         m_materialPanelController.Refresh(m_sceneDocument.GetMaterialAssetRegistry());
     }
 
