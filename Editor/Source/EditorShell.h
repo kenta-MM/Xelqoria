@@ -767,6 +767,20 @@ namespace Xelqoria::Editor
         bool DrawEditorTabControl(const DRAWITEMSTRUCT& drawItem) const;
 
         /// <summary>
+        /// Hierarchy ListBox の owner draw 描画を行う。
+        /// </summary>
+        /// <param name="drawItem">描画情報。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool DrawHierarchyListBoxItem(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
+        /// Assets ListView の custom draw 色をテーマに沿って設定する。
+        /// </summary>
+        /// <param name="customDrawParameter">NMLVCUSTOMDRAW の LPARAM。</param>
+        /// <returns>custom draw の戻り値。対象外の場合は空。</returns>
+        [[nodiscard]] std::optional<LRESULT> DrawAssetsListViewItem(LPARAM customDrawParameter) const;
+
+        /// <summary>
         /// Dock leaf の TabControl を保存用識別子へ変換する。
         /// </summary>
         [[nodiscard]] std::wstring GetDockTabLayoutKey(HWND tabControl) const;
@@ -882,6 +896,17 @@ namespace Xelqoria::Editor
         /// Editor 用 TabControl の hover 再描画を処理する。
         /// </summary>
         static LRESULT CALLBACK EditorTabControlSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
+        /// <summary>
+        /// 行表示コントロールの hover 再描画を処理する。
+        /// </summary>
+        static LRESULT CALLBACK EditorRowControlSubclassProc(
             HWND window,
             UINT message,
             WPARAM wParam,
