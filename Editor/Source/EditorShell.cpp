@@ -196,27 +196,6 @@ namespace Xelqoria::Editor
             return LOWORD(hitResult);
         }
 
-        [[nodiscard]] int GetHoveredListViewIndex(HWND listView)
-        {
-            POINT cursorPoint{};
-            if (FALSE == GetCursorPos(&cursorPoint))
-            {
-                return -1;
-            }
-
-            ScreenToClient(listView, &cursorPoint);
-            RECT clientRect{};
-            GetClientRect(listView, &clientRect);
-            if (FALSE == PtInRect(&clientRect, cursorPoint))
-            {
-                return -1;
-            }
-
-            LVHITTESTINFO hitTestInfo{};
-            hitTestInfo.pt = cursorPoint;
-            return ListView_HitTest(listView, &hitTestInfo);
-        }
-
         LRESULT CALLBACK WorkspaceBackgroundWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (WM_PAINT == message)
@@ -4700,24 +4679,77 @@ namespace Xelqoria::Editor
         }
 
         NMLVCUSTOMDRAW* mutableCustomDraw = const_cast<NMLVCUSTOMDRAW*>(customDraw);
-        const int itemIndex = static_cast<int>(customDraw->nmcd.dwItemSpec);
-        const bool isSelected = 0 != (customDraw->nmcd.uItemState & CDIS_SELECTED);
-        const bool isHovered = itemIndex == GetHoveredListViewIndex(m_assetsListView);
+        mutableCustomDraw->nmcd.uItemState &= ~(CDIS_SELECTED | CDIS_HOT);
 
-        EditorColor backgroundColor = EditorThemes::XelqoriaDark.panelBackground;
-        EditorColor textColor = EditorThemes::XelqoriaDark.textPrimary;
-        if (isHovered)
+        mutableCustomDraw->clrText = ToColorRef(EditorThemes::XelqoriaDark.textPrimary);
+        mutableCustomDraw->clrTextBk = ToColorRef(EditorThemes::XelqoriaDark.panelBackground);
+        return CDRF_NEWFONT;
+    }
+
+    std::optional<LRESULT> EditorShell::DrawAssetsListViewHeader(LPARAM customDrawParameter) const
+    {
+        const NMCUSTOMDRAW* customDraw = reinterpret_cast<const NMCUSTOMDRAW*>(customDrawParameter);
+        const HWND headerWindow = nullptr != m_assetsListView ? ListView_GetHeader(m_assetsListView) : nullptr;
+        if (nullptr == customDraw
+            || nullptr == headerWindow
+            || customDraw->hdr.hwndFrom != headerWindow
+            || customDraw->hdr.code != NM_CUSTOMDRAW)
         {
-            backgroundColor = EditorThemes::XelqoriaDark.hover;
-        }
-        if (isSelected)
-        {
-            backgroundColor = EditorThemes::XelqoriaDark.selection;
+            return std::nullopt;
         }
 
-        mutableCustomDraw->clrText = ToColorRef(textColor);
-        mutableCustomDraw->clrTextBk = ToColorRef(backgroundColor);
-        return CDRF_DODEFAULT;
+        if (CDDS_PREPAINT == customDraw->dwDrawStage)
+        {
+            RECT clientRect{};
+            GetClientRect(headerWindow, &clientRect);
+            FillRectWithThemeColor(customDraw->hdc, clientRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
+            return CDRF_NOTIFYITEMDRAW;
+        }
+
+        if (CDDS_ITEMPREPAINT != customDraw->dwDrawStage)
+        {
+            return CDRF_DODEFAULT;
+        }
+
+        const int columnIndex = static_cast<int>(customDraw->dwItemSpec);
+        RECT itemRect{};
+        if (FALSE == Header_GetItemRect(headerWindow, columnIndex, &itemRect))
+        {
+            return CDRF_DODEFAULT;
+        }
+
+        FillRectWithThemeColor(customDraw->hdc, itemRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
+        DrawRectBorder(customDraw->hdc, itemRect, EditorThemes::XelqoriaDark.panelBorder);
+
+        wchar_t text[128]{};
+        HDITEMW item{};
+        item.mask = HDI_TEXT | HDI_FORMAT;
+        item.pszText = text;
+        item.cchTextMax = static_cast<int>(std::size(text));
+        Header_GetItem(headerWindow, columnIndex, &item);
+
+        RECT textRect = itemRect;
+        textRect.left += ScaleMetric(8);
+        textRect.right -= ScaleMetric(8);
+
+        UINT textFormat = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
+        if (0 != (item.fmt & HDF_CENTER))
+        {
+            textFormat |= DT_CENTER;
+        }
+        else if (0 != (item.fmt & HDF_RIGHT))
+        {
+            textFormat |= DT_RIGHT;
+        }
+        else
+        {
+            textFormat |= DT_LEFT;
+        }
+
+        SetBkMode(customDraw->hdc, TRANSPARENT);
+        SetTextColor(customDraw->hdc, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
+        DrawTextW(customDraw->hdc, text, -1, &textRect, textFormat);
+        return CDRF_SKIPDEFAULT;
     }
 
     std::wstring EditorShell::GetDockTabLayoutKey(HWND tabControl) const
@@ -5473,6 +5505,15 @@ namespace Xelqoria::Editor
                 && notifyHeader->code == NM_CUSTOMDRAW)
             {
                 return DrawAssetsListViewItem(lParam);
+            }
+
+            const HWND assetsHeader = nullptr != m_assetsListView ? ListView_GetHeader(m_assetsListView) : nullptr;
+            if (nullptr != notifyHeader
+                && nullptr != assetsHeader
+                && notifyHeader->hwndFrom == assetsHeader
+                && notifyHeader->code == NM_CUSTOMDRAW)
+            {
+                return DrawAssetsListViewHeader(lParam);
             }
         }
 

@@ -801,6 +801,13 @@ namespace Xelqoria::Editor
         [[nodiscard]] std::optional<LRESULT> DrawAssetsListViewItem(LPARAM customDrawParameter) const;
 
         /// <summary>
+        /// Assets ListView のヘッダー custom draw をテーマに沿って描画する。
+        /// </summary>
+        /// <param name="customDrawParameter">NMCUSTOMDRAW の LPARAM。</param>
+        /// <returns>custom draw の戻り値。対象外の場合は空。</returns>
+        [[nodiscard]] std::optional<LRESULT> DrawAssetsListViewHeader(LPARAM customDrawParameter) const;
+
+        /// <summary>
         /// Dock leaf の TabControl を保存用識別子へ変換する。
         /// </summary>
         [[nodiscard]] std::wstring GetDockTabLayoutKey(HWND tabControl) const;
