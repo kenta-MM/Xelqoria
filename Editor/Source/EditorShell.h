@@ -75,6 +75,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetHierarchyNameEdit() const;
 
         /// <summary>
+        /// Hierarchy パネルの検索入力欄を取得する。
+        /// </summary>
+        /// <returns>Hierarchy 検索入力欄の HWND。</returns>
+        [[nodiscard]] HWND GetHierarchySearchEdit() const;
+
+        /// <summary>
         /// Hierarchy パネルの新規作成ボタンを取得する。
         /// </summary>
         /// <returns>新規作成ボタンの HWND。</returns>
@@ -885,7 +891,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 87> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 88> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -1076,6 +1082,7 @@ namespace Xelqoria::Editor
         HWND m_assetsSummaryLabel = nullptr;
         HWND m_hierarchySummaryLabel = nullptr;
         HWND m_hierarchyListBox = nullptr;
+        HWND m_hierarchySearchEdit = nullptr;
         HWND m_hierarchyNameEdit = nullptr;
         HWND m_hierarchyCreateButton = nullptr;
         HWND m_hierarchyDuplicateButton = nullptr;

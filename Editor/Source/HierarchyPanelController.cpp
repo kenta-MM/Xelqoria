@@ -19,6 +19,7 @@ namespace Xelqoria::Editor
     {
         m_hierarchyListBox = shell.GetHierarchyListBox();
         m_hierarchySummaryLabel = shell.GetHierarchySummaryLabel();
+        m_hierarchySearchEdit = shell.GetHierarchySearchEdit();
         m_hierarchyNameEdit = shell.GetHierarchyNameEdit();
         m_hierarchyCreateButton = shell.GetHierarchyCreateButton();
         m_hierarchyDuplicateButton = shell.GetHierarchyDuplicateButton();
@@ -30,13 +31,25 @@ namespace Xelqoria::Editor
         m_visibleEntityIds.clear();
 
         SendMessageW(m_hierarchyListBox, LB_RESETCONTENT, 0, 0);
+        wchar_t searchBuffer[128]{};
+        if (nullptr != m_hierarchySearchEdit)
+        {
+            GetWindowTextW(m_hierarchySearchEdit, searchBuffer, static_cast<int>(std::size(searchBuffer)));
+        }
+        const std::wstring searchText = searchBuffer;
         if (nullptr != scene)
         {
             for (const Game::Entity& entity : scene->GetEntities())
             {
+                std::wstring label = ToWideString(entity.GetName());
+                if (false == searchText.empty() && std::wstring::npos == label.find(searchText))
+                {
+                    continue;
+                }
+
                 m_visibleEntityIds.push_back(entity.GetId());
 
-                std::wstring label = ToWideString(entity.GetName());
+                label.insert(0, L"+ ");
                 SendMessageW(m_hierarchyListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
             }
         }
@@ -140,6 +153,18 @@ namespace Xelqoria::Editor
         if (nullptr == scene)
         {
             return result;
+        }
+
+        wchar_t searchBuffer[128]{};
+        if (nullptr != m_hierarchySearchEdit)
+        {
+            GetWindowTextW(m_hierarchySearchEdit, searchBuffer, static_cast<int>(std::size(searchBuffer)));
+        }
+        const std::wstring currentSearchText = searchBuffer;
+        if (currentSearchText != m_lastSearchText)
+        {
+            m_lastSearchText = currentSearchText;
+            Refresh(scene);
         }
 
         const auto selectedEntity = m_selectedEntityId.has_value()

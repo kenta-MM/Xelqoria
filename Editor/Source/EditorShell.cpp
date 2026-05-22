@@ -943,7 +943,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 87> controls = CollectControls();
+            const std::array<HWND, 88> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -1079,6 +1079,18 @@ namespace Xelqoria::Editor
         {
             return false;
         }
+
+        m_hierarchySearchEdit = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Edit",
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+        if (nullptr == m_hierarchySearchEdit)
+        {
+            return false;
+        }
+        SendMessageW(m_hierarchySearchEdit, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(L"Search Entity"));
 
         m_hierarchyListBox = CreateChildWindow(
             parentWindow,
@@ -1946,10 +1958,12 @@ namespace Xelqoria::Editor
             hierarchyButtonGap = 0;
         }
 
-        const int buttonTop = panelRect.top + outerPadding + groupHeaderHeight + labelHeight + ScaleMetric(6);
+        const int searchTop = panelRect.top + groupHeaderHeight + labelHeight + ScaleMetric(6);
+        const int buttonTop = searchTop + labelHeight + ScaleMetric(6);
         const int buttonWidth = (std::max)(0, (innerWidth - hierarchyButtonGap * 2) / 3);
         MoveChildWindowNoRedraw(m_hierarchyPanel, panelRect.left, panelRect.top, width, height);
         MoveChildWindowNoRedraw(m_hierarchySummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_hierarchySearchEdit, panelRect.left + outerPadding, searchTop, innerWidth, labelHeight);
         MoveChildWindowNoRedraw(m_hierarchyCreateButton, panelRect.left + outerPadding, buttonTop, buttonWidth, buttonHeight);
         MoveChildWindowNoRedraw(
             m_hierarchyDuplicateButton,
@@ -5039,7 +5053,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 87> controls = CollectControls();
+        const std::array<HWND, 88> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -5062,7 +5076,7 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 87> EditorShell::CollectControls() const
+    std::array<HWND, 88> EditorShell::CollectControls() const
     {
         return {
             m_workspaceBackground,
@@ -5108,6 +5122,7 @@ namespace Xelqoria::Editor
             m_assetsListView,
             m_assetsSummaryLabel,
             m_hierarchySummaryLabel,
+            m_hierarchySearchEdit,
             m_hierarchyListBox,
             m_hierarchyNameEdit,
             m_hierarchyCreateButton,
@@ -5445,6 +5460,11 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetHierarchyNameEdit() const
     {
         return m_hierarchyNameEdit;
+    }
+
+    HWND EditorShell::GetHierarchySearchEdit() const
+    {
+        return m_hierarchySearchEdit;
     }
 
     HWND EditorShell::GetHierarchyCreateButton() const
