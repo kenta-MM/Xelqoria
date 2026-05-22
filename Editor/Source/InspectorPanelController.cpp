@@ -50,13 +50,24 @@ namespace Xelqoria::Editor
         std::optional<Game::EntityId> selectedEntityId,
         bool canAddSpriteComponent,
         const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
-        const Game::Assets::IMaterialAssetResolver& materialAssetResolver)
+        const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
+        const std::filesystem::path& selectedAssetPath)
     {
         (void)materialAssetResolver;
 
         if (false == selectedEntityId.has_value() || nullptr == scene)
         {
-            SetWindowTextW(m_inspectorSummaryLabel, L"Inspector: no entity selected");
+            if (false == selectedAssetPath.empty())
+            {
+                const std::wstring assetName = selectedAssetPath.filename().wstring();
+                std::wstring summaryText = L"Inspector: Asset ";
+                summaryText += assetName.empty() ? selectedAssetPath.wstring() : assetName;
+                SetWindowTextW(m_inspectorSummaryLabel, summaryText.c_str());
+            }
+            else
+            {
+                SetWindowTextW(m_inspectorSummaryLabel, L"Inspector: no entity selected");
+            }
             SetWindowTextW(m_spriteRefEdit, L"");
             SetWindowTextW(m_scriptAssetEdit, L"");
             ShowWindow(m_scriptAssetLabel, SW_HIDE);

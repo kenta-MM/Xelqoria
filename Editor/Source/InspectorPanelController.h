@@ -151,7 +151,8 @@ namespace Xelqoria::Editor
             std::optional<Game::EntityId> selectedEntityId,
             bool canAddSpriteComponent,
             const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
-            const Game::Assets::IMaterialAssetResolver& materialAssetResolver);
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
+            const std::filesystem::path& selectedAssetPath = {});
 
         /// <summary>
         /// Inspector 入力値を現在選択中 Entity へ反映する。

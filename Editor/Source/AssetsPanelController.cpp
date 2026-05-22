@@ -911,6 +911,11 @@ namespace Xelqoria::Editor
         return m_selectedSpriteAssetId;
     }
 
+    const std::filesystem::path& AssetsPanelController::GetSelectedFilePath() const
+    {
+        return m_selectedFilePath;
+    }
+
     const Core::AssetId& AssetsPanelController::GetDraggingSpriteAssetId() const
     {
         return m_draggingSpriteAssetId;
