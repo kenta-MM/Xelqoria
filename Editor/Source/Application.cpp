@@ -1072,6 +1072,7 @@ namespace Xelqoria::Editor
         }
 
         m_assetsPanelController.UpdateDragState(inputSnapshot);
+        m_assetsPanelController.UpdateFileSystemWatch();
         m_inspectorPanelController.UpdateDropHighlight(m_assetsPanelController);
         m_materialPanelController.UpdateTextureDropHighlight(m_assetsPanelController);
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
