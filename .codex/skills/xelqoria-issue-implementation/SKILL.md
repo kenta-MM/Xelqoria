@@ -1,7 +1,7 @@
 ---
 name: xelqoria-issue-implementation
 description: Use when implementing a GitHub issue in the Xelqoria repository. Supports both a single issue and a parent issue with child issues. Follow the repo architecture rules, inspect the affected layer before editing, implement with minimal changes, create PRs according to the branch rules, and verify with appropriate build or tests before reporting.
-allowed-tools: Bash(git fetch:*) Bash(git checkout:*) Bash(git branch:*) Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git push:*) Bash(rg:*) Bash(sed:*) Bash(find:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue view:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue comment:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue edit:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" repo view:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" pr create:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth status:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth setup-git:*) Read Edit
+allowed-tools: Bash(git fetch:*) Bash(git checkout:*) Bash(git branch:*) Bash(git merge:*) Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git push:*) Bash(rg:*) Bash(sed:*) Bash(find:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue view:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue comment:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" issue edit:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" repo view:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" pr create:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth status:*) Bash("/mnt/c/Program Files/GitHub CLI/gh.exe" auth setup-git:*) Read Edit
 ---
 
 # Xelqoria Issue Implementation
@@ -119,7 +119,25 @@ Xelqoria で GitHub Issue を実装する時に使う。
 - 親 Issue 番号と子 Issue 番号を PR 本文に含める
 - コンフリクトが発生する可能性がある場合でも PR は作成し、解消は本フローでは行わない
 
-### 5. 結果統合
+### 5. 先行 Issue ブランチの取り込み
+
+後続 Issue が先行 Issue の変更を前提としており、先行 Issue の PR がまだ親ブランチへマージされていないため後続 Issue の実装を進められない場合は、中断しない。  
+ローカル上で後続 Issue の作業ブランチへ先行 Issue の作業ブランチをマージし、実装を継続する。
+
+手順は次の通り。
+
+1. `git fetch` で最新状態を取得する
+2. `git status` で未コミット変更がないことを確認する
+3. 後続 Issue の作業ブランチ `issue-<後続番号>` にチェックアウトする
+4. 先行 Issue の作業ブランチ `issue-<先行番号>` を `git merge issue-<先行番号>` で取り込む
+5. コンフリクトが発生した場合は、解消可能な範囲で解消して続行する
+6. コンフリクト解消が困難、または要件判断が必要な場合のみ中断し、状況を報告する
+7. マージ後、後続 Issue の実装・検証・commit・push・PR 作成を続行する
+
+この取り込みは、後続 Issue の実装を進めるためのローカル作業ブランチ上の統合であり、先行 Issue の PR が正式に親ブランチへマージされたことを意味しない。  
+報告時には、どの後続 Issue ブランチにどの先行 Issue ブランチを取り込んだかを明記する。
+
+### 6. 結果統合
 
 1. 全 PR を確認する
 2. base が正しいことを確認する
@@ -131,6 +149,7 @@ Xelqoria で GitHub Issue を実装する時に使う。
 - 単体 Issue と親 Issue の使い分けは、Issue 本文とユーザー依頼から判断する
 - 親 Issue に子 Issue がある場合、実装は子 Issue 単位で行う
 - 子 Issue がある親 Issue では、親 Issue ブランチ上で直接実装しない
+- 先行 Issue の変更がないと後続 Issue を実装できない場合は、後続 Issue ブランチへ先行 Issue ブランチをマージして継続する
 - 要件にない変更は禁止
 - 不要なリファクタは禁止
 - 変更対象の責務は `AGENTS.md` と `docs/agents` を優先する
@@ -145,6 +164,7 @@ Xelqoria で GitHub Issue を実装する時に使う。
 - PR base を子ブランチにしない
 - 担当外の Issue まで変更しない
 - 親 Issue モードで親 Issue 自体に実装変更を入れない
+- 先行 Issue の取り込みが必要なだけで後続 Issue の実装を中断しない
 - 不明点を推測で埋めて大きな設計変更をしない
 
 ## 完了条件
@@ -161,6 +181,7 @@ Xelqoria で GitHub Issue を実装する時に使う。
 - 各 PR の base が正しい
 - 未処理 Issue が存在しない
 - 並列 / 直列の分類と処理結果が説明できる
+- 先行 Issue ブランチを取り込んだ後続 Issue がある場合、その組み合わせを説明できる
 
 ## 出力
 
@@ -178,6 +199,7 @@ Xelqoria で GitHub Issue を実装する時に使う。
 - 親 Issue 番号
 - 子 Issue 分類（並列 / 直列）
 - 処理順
+- 先行 Issue ブランチを取り込んだ後続 Issue ブランチ（ある場合）
 - 各子 Issue の実装結果、commit、PR URL
 - 中断理由（ある場合）
 
