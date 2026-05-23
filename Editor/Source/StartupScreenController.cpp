@@ -26,9 +26,6 @@ namespace Xelqoria::Editor
         constexpr int CreateCancelButtonId = 4305;
         constexpr int ProjectTabButtonId = 4306;
         constexpr int ViewTabButtonId = 4307;
-        constexpr int MinimizeButtonId = 4308;
-        constexpr int MaximizeButtonId = 4309;
-        constexpr int CloseButtonId = 4310;
         constexpr int RecentProjectsListBoxId = 4311;
         constexpr int AllProjectsListBoxId = 4312;
         constexpr const wchar_t* CreateProjectWindowClassName = L"XelqoriaCreateProjectWindow";
@@ -196,9 +193,6 @@ namespace Xelqoria::Editor
 
         m_projectTabButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクト", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW);
         m_viewTabButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"表示", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW);
-        m_minimizeButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"ー", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW);
-        m_maximizeButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"□", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW);
-        m_closeButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"×", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW);
         m_createButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクト作成", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW);
         m_openButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"プロジェクトを開く", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW);
         m_recentLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"最近使ったプロジェクト一覧", WS_CHILD | WS_VISIBLE);
@@ -218,9 +212,6 @@ namespace Xelqoria::Editor
 
         if (nullptr == m_projectTabButton
             || nullptr == m_viewTabButton
-            || nullptr == m_minimizeButton
-            || nullptr == m_maximizeButton
-            || nullptr == m_closeButton
             || nullptr == m_createButton
             || nullptr == m_openButton
             || nullptr == m_recentLabel
@@ -278,9 +269,6 @@ namespace Xelqoria::Editor
 
         SetWindowLongPtrW(m_projectTabButton, GWLP_ID, ProjectTabButtonId);
         SetWindowLongPtrW(m_viewTabButton, GWLP_ID, ViewTabButtonId);
-        SetWindowLongPtrW(m_minimizeButton, GWLP_ID, MinimizeButtonId);
-        SetWindowLongPtrW(m_maximizeButton, GWLP_ID, MaximizeButtonId);
-        SetWindowLongPtrW(m_closeButton, GWLP_ID, CloseButtonId);
         SetWindowLongPtrW(m_createButton, GWLP_ID, CreateProjectButtonId);
         SetWindowLongPtrW(m_openButton, GWLP_ID, OpenProjectButtonId);
         SetWindowLongPtrW(m_recentListBox, GWLP_ID, RecentProjectsListBoxId);
@@ -305,12 +293,9 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 19> controls{
+            const std::array<HWND, 16> controls{
                 m_projectTabButton,
                 m_viewTabButton,
-                m_minimizeButton,
-                m_maximizeButton,
-                m_closeButton,
                 m_nameLabel,
                 m_projectNameEdit,
                 m_folderLabel,
@@ -375,9 +360,6 @@ namespace Xelqoria::Editor
 
         MoveWindow(m_projectTabButton, ScaleMetric(16), headerHeight, ScaleMetric(130), tabHeight, TRUE);
         MoveWindow(m_viewTabButton, ScaleMetric(154), headerHeight, ScaleMetric(90), tabHeight, TRUE);
-        MoveWindow(m_minimizeButton, clientWidth - ScaleMetric(156), ScaleMetric(8), ScaleMetric(42), ScaleMetric(32), TRUE);
-        MoveWindow(m_maximizeButton, clientWidth - ScaleMetric(108), ScaleMetric(8), ScaleMetric(42), ScaleMetric(32), TRUE);
-        MoveWindow(m_closeButton, clientWidth - ScaleMetric(60), ScaleMetric(8), ScaleMetric(42), ScaleMetric(32), TRUE);
         MoveWindow(m_createButton, contentLeft, contentTop, actualCardWidth, cardHeight, TRUE);
         MoveWindow(m_openButton, secondCardLeft, secondCardTop, actualCardWidth, cardHeight, TRUE);
         MoveWindow(m_recentLabel, contentLeft + ScaleMetric(20), listTop - ScaleMetric(38), contentWidth, ScaleMetric(28), TRUE);
@@ -408,9 +390,6 @@ namespace Xelqoria::Editor
         case BrowseFolderButtonId:
         case CreateConfirmButtonId:
         case CreateCancelButtonId:
-        case MinimizeButtonId:
-        case MaximizeButtonId:
-        case CloseButtonId:
             DrawThemedButton(*drawItem);
             return true;
         case ProjectTabButtonId:
@@ -456,25 +435,6 @@ namespace Xelqoria::Editor
         {
             RefreshAllProjects();
             SetActiveTab(StartupTab::View);
-            return;
-        }
-
-        if (clickedWindow == m_minimizeButton)
-        {
-            ShowWindow(m_parentWindow, SW_MINIMIZE);
-            return;
-        }
-
-        if (clickedWindow == m_maximizeButton)
-        {
-            const bool isMaximized = IsZoomed(m_parentWindow);
-            ShowWindow(m_parentWindow, isMaximized ? SW_RESTORE : SW_MAXIMIZE);
-            return;
-        }
-
-        if (clickedWindow == m_closeButton)
-        {
-            PostMessageW(m_parentWindow, WM_CLOSE, 0, 0);
             return;
         }
 
@@ -564,12 +524,9 @@ namespace Xelqoria::Editor
     void StartupScreenController::Hide()
     {
         m_hidden = true;
-        std::array<HWND, 11> controls{
+        std::array<HWND, 8> controls{
             m_projectTabButton,
             m_viewTabButton,
-            m_minimizeButton,
-            m_maximizeButton,
-            m_closeButton,
             m_createButton,
             m_openButton,
             m_recentLabel,
@@ -594,12 +551,9 @@ namespace Xelqoria::Editor
     {
         HWND parentWindow = m_parentWindow;
 
-        std::array<HWND*, 11> startupControls{
+        std::array<HWND*, 8> startupControls{
             &m_projectTabButton,
             &m_viewTabButton,
-            &m_minimizeButton,
-            &m_maximizeButton,
-            &m_closeButton,
             &m_createButton,
             &m_openButton,
             &m_recentLabel,
@@ -843,15 +797,6 @@ namespace Xelqoria::Editor
 
         SetBkMode(deviceContext, TRANSPARENT);
         SetTextColor(deviceContext, TextColor);
-        RECT logoRect{ ScaleMetric(12), ScaleMetric(8), ScaleMetric(38), ScaleMetric(38) };
-        SelectObject(deviceContext, m_accentPen);
-        MoveToEx(deviceContext, logoRect.left, logoRect.top, nullptr);
-        LineTo(deviceContext, logoRect.right, logoRect.bottom);
-        MoveToEx(deviceContext, logoRect.right, logoRect.top, nullptr);
-        LineTo(deviceContext, logoRect.left, logoRect.bottom);
-
-        RECT titleRect{ ScaleMetric(52), ScaleMetric(10), ScaleMetric(360), ScaleMetric(42) };
-        DrawTextW(deviceContext, L"Xelqoria Editor", -1, &titleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
         SelectObject(deviceContext, m_blueAccentPen);
         const int baseX = clientRect.right - ScaleMetric(210);
@@ -859,16 +804,16 @@ namespace Xelqoria::Editor
         for (int index = 0; index < 6; ++index)
         {
             const int offset = ScaleMetric(index * 22);
-            POINT points[6]{
+            POINT points[7]{
                 { baseX + offset, baseY - ScaleMetric(40) - offset / 2 },
                 { baseX + ScaleMetric(58) + offset, baseY - ScaleMetric(12) - offset / 2 },
                 { baseX + ScaleMetric(58) + offset, baseY + ScaleMetric(48) - offset / 2 },
                 { baseX + offset, baseY + ScaleMetric(78) - offset / 2 },
                 { baseX - ScaleMetric(58) + offset, baseY + ScaleMetric(48) - offset / 2 },
-                { baseX - ScaleMetric(58) + offset, baseY - ScaleMetric(12) - offset / 2 }
+                { baseX - ScaleMetric(58) + offset, baseY - ScaleMetric(12) - offset / 2 },
+                { baseX + offset, baseY - ScaleMetric(40) - offset / 2 }
             };
-            Polyline(deviceContext, points, 6);
-            LineTo(deviceContext, points[0].x, points[0].y);
+            Polyline(deviceContext, points, 7);
         }
     }
 
@@ -1303,12 +1248,9 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 19> controls{
+        const std::array<HWND, 16> controls{
             m_projectTabButton,
             m_viewTabButton,
-            m_minimizeButton,
-            m_maximizeButton,
-            m_closeButton,
             m_nameLabel,
             m_projectNameEdit,
             m_folderLabel,

@@ -278,9 +278,6 @@ namespace Xelqoria::Editor
         HPEN m_blueAccentPen = nullptr;
         HWND m_projectTabButton = nullptr;
         HWND m_viewTabButton = nullptr;
-        HWND m_minimizeButton = nullptr;
-        HWND m_maximizeButton = nullptr;
-        HWND m_closeButton = nullptr;
         HWND m_nameLabel = nullptr;
         HWND m_projectNameEdit = nullptr;
         HWND m_folderLabel = nullptr;
