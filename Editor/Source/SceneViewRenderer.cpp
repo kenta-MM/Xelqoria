@@ -340,25 +340,6 @@ namespace Xelqoria::Editor
             }
         }
 
-        void DrawCameraFrame(Graphics::SolidQuadRenderer& renderer, const EditorCamera2D& camera)
-        {
-            constexpr float CameraWidthWorldUnits = 1280.0f;
-            constexpr float CameraHeightWorldUnits = 720.0f;
-            constexpr float LineThicknessPixels = 2.0f;
-            const float centerX = camera.TransformWorldToViewX(0.0f);
-            const float centerY = camera.TransformWorldToViewY(0.0f);
-            const float width = camera.TransformWorldScale(CameraWidthWorldUnits);
-            const float height = camera.TransformWorldScale(CameraHeightWorldUnits);
-            const float halfWidth = width * 0.5f;
-            const float halfHeight = height * 0.5f;
-            const std::array<float, 4> cameraColor = MakeThemeColor(EditorThemes::XelqoriaDark.textSecondary, 0.70f);
-
-            renderer.Draw(Graphics::SolidQuad{ centerX, centerY - halfHeight, width, LineThicknessPixels, cameraColor });
-            renderer.Draw(Graphics::SolidQuad{ centerX, centerY + halfHeight, width, LineThicknessPixels, cameraColor });
-            renderer.Draw(Graphics::SolidQuad{ centerX - halfWidth, centerY, LineThicknessPixels, height, cameraColor });
-            renderer.Draw(Graphics::SolidQuad{ centerX + halfWidth, centerY, LineThicknessPixels, height, cameraColor });
-        }
-
         void DrawAxisGizmo(Graphics::SolidQuadRenderer& renderer, std::uint32_t sceneViewWidth, std::uint32_t sceneViewHeight)
         {
             const float originX = static_cast<float>(sceneViewWidth) * 0.5f - 54.0f;
@@ -509,7 +490,6 @@ namespace Xelqoria::Editor
                     SceneAxisLineThicknessPixels,
                     MakeColor(0.31f, 0.76f, 0.43f, 0.8f)
                 });
-                DrawCameraFrame(*m_solidQuadRenderer, camera);
                 DrawAxisGizmo(*m_solidQuadRenderer, m_sceneViewWidth, m_sceneViewHeight);
             }
 
