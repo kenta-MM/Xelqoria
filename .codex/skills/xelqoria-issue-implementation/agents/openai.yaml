@@ -1,7 +1,7 @@
 interface:
   display_name: "Xelqoria Issue Implementation"
-  short_description: "Xelqoria の GitHub Issue 実装フロー"
-  default_prompt: "$xelqoria-issue-implementation を使って、この Xelqoria の GitHub Issue を実装します。"
+  short_description: "単体 Issue と親子 Issue の実装フロー"
+  default_prompt: "$xelqoria-issue-implementation を使って、Xelqoria の GitHub Issue を実装します。単体 Issue と親子 Issue のどちらかを Issue 内容から判断して進めます。"
 
 policy:
   allow_implicit_invocation: true
