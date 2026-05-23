@@ -10,6 +10,7 @@
 #include <iterator>
 #include <optional>
 #include <AssetId.h>
+#include <Collider2DComponent.h>
 #include "AssetsPanelController.h"
 #include "EditorShell.h"
 #include <Entity.h>
@@ -22,6 +23,55 @@ namespace Xelqoria::Editor
         [[nodiscard]] POINT ToWin32Point(Platform::Point point)
         {
             return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
+        }
+
+        void SetWindowVisible(HWND window, bool visible)
+        {
+            ShowWindow(window, visible ? SW_SHOW : SW_HIDE);
+        }
+
+        void SetEditFloat(HWND editControl, float value)
+        {
+            wchar_t valueText[32]{};
+            std::swprintf(valueText, std::size(valueText), L"%.3f", value);
+            SetWindowTextW(editControl, valueText);
+        }
+
+        std::optional<float> ReadEditFloat(HWND editControl)
+        {
+            wchar_t buffer[64]{};
+            GetWindowTextW(editControl, buffer, static_cast<int>(std::size(buffer)));
+
+            wchar_t* end = nullptr;
+            const float parsed = std::wcstof(buffer, &end);
+            if (end == buffer || *end != L'\0')
+            {
+                return std::nullopt;
+            }
+
+            return parsed;
+        }
+
+        void SetCollider2DControlsVisible(
+            HWND enabledCheckBox,
+            HWND triggerCheckBox,
+            HWND shapeTypeLabel,
+            HWND shapeTypeEdit,
+            HWND offsetLabel,
+            HWND sizeLabel,
+            const std::array<HWND, 4>& editControls,
+            bool visible)
+        {
+            SetWindowVisible(enabledCheckBox, visible);
+            SetWindowVisible(triggerCheckBox, visible);
+            SetWindowVisible(shapeTypeLabel, visible);
+            SetWindowVisible(shapeTypeEdit, visible);
+            SetWindowVisible(offsetLabel, visible);
+            SetWindowVisible(sizeLabel, visible);
+            for (HWND editControl : editControls)
+            {
+                SetWindowVisible(editControl, visible);
+            }
         }
     }
 
@@ -40,6 +90,15 @@ namespace Xelqoria::Editor
         m_scriptAssignButton = shell.GetScriptAssignButton();
         m_scriptClearButton = shell.GetScriptClearButton();
         m_spriteComponentActionButton = shell.GetSpriteComponentActionButton();
+        m_collider2DComponentSectionLabel = shell.GetCollider2DComponentSectionLabel();
+        m_collider2DEnabledCheckBox = shell.GetCollider2DEnabledCheckBox();
+        m_collider2DTriggerCheckBox = shell.GetCollider2DTriggerCheckBox();
+        m_collider2DShapeTypeLabel = shell.GetCollider2DShapeTypeLabel();
+        m_collider2DShapeTypeEdit = shell.GetCollider2DShapeTypeEdit();
+        m_collider2DOffsetLabel = shell.GetCollider2DOffsetLabel();
+        m_collider2DSizeLabel = shell.GetCollider2DSizeLabel();
+        m_collider2DEditControls = shell.GetCollider2DEditControls();
+        m_collider2DComponentActionButton = shell.GetCollider2DComponentActionButton();
         m_materialOpenButton = shell.GetMaterialOpenButton();
         m_cursor = &cursor;
         SetWindowTextW(m_spriteRefLabel, L"Material");
@@ -76,6 +135,17 @@ namespace Xelqoria::Editor
             ShowWindow(m_scriptAssignButton, SW_HIDE);
             ShowWindow(m_scriptClearButton, SW_HIDE);
             ShowWindow(m_materialOpenButton, SW_HIDE);
+            SetWindowTextW(m_collider2DComponentSectionLabel, L"Collider2DComponent (not attached)");
+            SetWindowTextW(m_collider2DComponentActionButton, L"Add Collider2DComponent");
+            SetCollider2DControlsVisible(
+                m_collider2DEnabledCheckBox,
+                m_collider2DTriggerCheckBox,
+                m_collider2DShapeTypeLabel,
+                m_collider2DShapeTypeEdit,
+                m_collider2DOffsetLabel,
+                m_collider2DSizeLabel,
+                m_collider2DEditControls,
+                false);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
             m_lastScriptAssetId = {};
@@ -95,6 +165,17 @@ namespace Xelqoria::Editor
             ShowWindow(m_scriptAssignButton, SW_HIDE);
             ShowWindow(m_scriptClearButton, SW_HIDE);
             ShowWindow(m_materialOpenButton, SW_HIDE);
+            SetWindowTextW(m_collider2DComponentSectionLabel, L"Collider2DComponent (not attached)");
+            SetWindowTextW(m_collider2DComponentActionButton, L"Add Collider2DComponent");
+            SetCollider2DControlsVisible(
+                m_collider2DEnabledCheckBox,
+                m_collider2DTriggerCheckBox,
+                m_collider2DShapeTypeLabel,
+                m_collider2DShapeTypeEdit,
+                m_collider2DOffsetLabel,
+                m_collider2DSizeLabel,
+                m_collider2DEditControls,
+                false);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
             m_lastScriptAssetId = {};
@@ -175,6 +256,32 @@ namespace Xelqoria::Editor
             m_lastSpriteRefDisplayText.clear();
             m_lastScriptAssetId = {};
             m_lastScriptDisplayText.clear();
+        }
+
+        const auto collider2DComponent = entity->get().GetCollider2DComponent();
+        const InspectorCollider2DComponentActionState colliderActionState =
+            ComputeCollider2DComponentActionState(collider2DComponent.has_value());
+        SetWindowTextW(m_collider2DComponentSectionLabel, colliderActionState.sectionLabel);
+        SetWindowTextW(m_collider2DComponentActionButton, colliderActionState.buttonLabel);
+        SetCollider2DControlsVisible(
+            m_collider2DEnabledCheckBox,
+            m_collider2DTriggerCheckBox,
+            m_collider2DShapeTypeLabel,
+            m_collider2DShapeTypeEdit,
+            m_collider2DOffsetLabel,
+            m_collider2DSizeLabel,
+            m_collider2DEditControls,
+            colliderActionState.showColliderControls);
+        if (collider2DComponent.has_value())
+        {
+            const Game::Collider2DComponent& collider = collider2DComponent->get();
+            SendMessageW(m_collider2DEnabledCheckBox, BM_SETCHECK, collider.enabled ? BST_CHECKED : BST_UNCHECKED, 0);
+            SendMessageW(m_collider2DTriggerCheckBox, BM_SETCHECK, collider.isTrigger ? BST_CHECKED : BST_UNCHECKED, 0);
+            SetWindowTextW(m_collider2DShapeTypeEdit, L"Box");
+            SetEditFloat(m_collider2DEditControls[0], collider.offset.x);
+            SetEditFloat(m_collider2DEditControls[1], collider.offset.y);
+            SetEditFloat(m_collider2DEditControls[2], collider.size.x);
+            SetEditFloat(m_collider2DEditControls[3], collider.size.y);
         }
 
         wchar_t summaryText[128]{};
@@ -265,6 +372,68 @@ namespace Xelqoria::Editor
             if (false == entity->get().HasSpriteComponent())
             {
                 SetWindowTextW(m_spriteRefEdit, L"");
+            }
+        }
+
+        if (true == ConsumeButtonClick(m_collider2DComponentActionButton, inputSnapshot))
+        {
+            const bool hadCollider2DComponent = entity->get().HasCollider2DComponent();
+            const bool actionChanged = ApplyCollider2DComponentAction(entity->get());
+            result.changed = actionChanged || result.changed;
+            if (actionChanged)
+            {
+                result.operationName = hadCollider2DComponent
+                    ? "Remove Collider2DComponent"
+                    : "Add Collider2DComponent";
+            }
+        }
+
+        auto collider2DComponent = entity->get().GetCollider2DComponent();
+        if (collider2DComponent.has_value())
+        {
+            Game::Collider2DComponent& collider = collider2DComponent->get();
+            const bool enabled = SendMessageW(m_collider2DEnabledCheckBox, BM_GETCHECK, 0, 0) == BST_CHECKED;
+            const bool isTrigger = SendMessageW(m_collider2DTriggerCheckBox, BM_GETCHECK, 0, 0) == BST_CHECKED;
+            if (collider.enabled != enabled)
+            {
+                collider.enabled = enabled;
+                result.changed = true;
+                result.operationName = "Edit Collider2DComponent";
+            }
+            if (collider.isTrigger != isTrigger)
+            {
+                collider.isTrigger = isTrigger;
+                result.changed = true;
+                result.operationName = "Edit Collider2DComponent";
+            }
+
+            const std::optional<float> offsetX = ReadEditFloat(m_collider2DEditControls[0]);
+            const std::optional<float> offsetY = ReadEditFloat(m_collider2DEditControls[1]);
+            const std::optional<float> sizeX = ReadEditFloat(m_collider2DEditControls[2]);
+            const std::optional<float> sizeY = ReadEditFloat(m_collider2DEditControls[3]);
+            if (offsetX.has_value() && collider.offset.x != *offsetX)
+            {
+                collider.offset.x = *offsetX;
+                result.changed = true;
+                result.operationName = "Edit Collider2DComponent";
+            }
+            if (offsetY.has_value() && collider.offset.y != *offsetY)
+            {
+                collider.offset.y = *offsetY;
+                result.changed = true;
+                result.operationName = "Edit Collider2DComponent";
+            }
+            if (sizeX.has_value() && *sizeX > 0.0f && collider.size.x != *sizeX)
+            {
+                collider.size.x = *sizeX;
+                result.changed = true;
+                result.operationName = "Edit Collider2DComponent";
+            }
+            if (sizeY.has_value() && *sizeY > 0.0f && collider.size.y != *sizeY)
+            {
+                collider.size.y = *sizeY;
+                result.changed = true;
+                result.operationName = "Edit Collider2DComponent";
             }
         }
 

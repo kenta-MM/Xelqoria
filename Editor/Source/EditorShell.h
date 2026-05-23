@@ -242,6 +242,60 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSpriteComponentActionButton() const;
 
         /// <summary>
+        /// Collider2DComponent セクション見出しラベルを取得する。
+        /// </summary>
+        /// <returns>Collider2DComponent セクション見出しの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DComponentSectionLabel() const;
+
+        /// <summary>
+        /// Collider2DComponent enabled チェックボックスを取得する。
+        /// </summary>
+        /// <returns>enabled チェックボックスの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DEnabledCheckBox() const;
+
+        /// <summary>
+        /// Collider2DComponent isTrigger チェックボックスを取得する。
+        /// </summary>
+        /// <returns>isTrigger チェックボックスの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DTriggerCheckBox() const;
+
+        /// <summary>
+        /// Collider2D shapeType ラベルを取得する。
+        /// </summary>
+        /// <returns>shapeType ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DShapeTypeLabel() const;
+
+        /// <summary>
+        /// Collider2D shapeType 表示欄を取得する。
+        /// </summary>
+        /// <returns>shapeType 表示欄の HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DShapeTypeEdit() const;
+
+        /// <summary>
+        /// Collider2D offset ラベルを取得する。
+        /// </summary>
+        /// <returns>offset ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DOffsetLabel() const;
+
+        /// <summary>
+        /// Collider2D size ラベルを取得する。
+        /// </summary>
+        /// <returns>size ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DSizeLabel() const;
+
+        /// <summary>
+        /// Collider2D 数値入力欄群を取得する。
+        /// </summary>
+        /// <returns>offset.x, offset.y, size.x, size.y の入力欄配列。</returns>
+        [[nodiscard]] const std::array<HWND, 4>& GetCollider2DEditControls() const;
+
+        /// <summary>
+        /// Collider2DComponent 操作ボタンを取得する。
+        /// </summary>
+        /// <returns>Collider2DComponent 操作用ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DComponentActionButton() const;
+
+        /// <summary>
         /// SceneView の状態ラベルを取得する。
         /// </summary>
         /// <returns>SceneView サイズラベルの HWND。</returns>
@@ -910,7 +964,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 88> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 100> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -1138,6 +1192,15 @@ namespace Xelqoria::Editor
         HWND m_scriptAssignButton = nullptr;
         HWND m_scriptClearButton = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
+        HWND m_collider2DComponentSectionLabel = nullptr;
+        HWND m_collider2DEnabledCheckBox = nullptr;
+        HWND m_collider2DTriggerCheckBox = nullptr;
+        HWND m_collider2DShapeTypeLabel = nullptr;
+        HWND m_collider2DShapeTypeEdit = nullptr;
+        HWND m_collider2DOffsetLabel = nullptr;
+        HWND m_collider2DSizeLabel = nullptr;
+        std::array<HWND, 4> m_collider2DEditControls{};
+        HWND m_collider2DComponentActionButton = nullptr;
         std::uint32_t m_sceneViewWidth = 0;
         std::uint32_t m_sceneViewHeight = 0;
         std::vector<EditorPanelId> m_leftTopDockPanels{};

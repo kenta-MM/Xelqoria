@@ -172,3 +172,32 @@ TEST(InspectorPanelControllerTests, ApplySpriteComponentActionSkipsAddWhenNoVisi
     EXPECT_FALSE(changed);
     EXPECT_FALSE(entity.HasSpriteComponent());
 }
+
+TEST(InspectorPanelControllerTests, ComputeCollider2DComponentActionStateReflectsAttachment)
+{
+    const auto detachedState =
+        Xelqoria::Editor::InspectorPanelController::ComputeCollider2DComponentActionState(false);
+
+    EXPECT_FALSE(detachedState.showColliderControls);
+    EXPECT_STREQ(L"Collider2DComponent (not attached)", detachedState.sectionLabel);
+    EXPECT_STREQ(L"Add Collider2DComponent", detachedState.buttonLabel);
+
+    const auto attachedState =
+        Xelqoria::Editor::InspectorPanelController::ComputeCollider2DComponentActionState(true);
+
+    EXPECT_TRUE(attachedState.showColliderControls);
+    EXPECT_STREQ(L"Collider2DComponent", attachedState.sectionLabel);
+    EXPECT_STREQ(L"Remove Collider2DComponent", attachedState.buttonLabel);
+}
+
+TEST(InspectorPanelControllerTests, ApplyCollider2DComponentActionTogglesComponent)
+{
+    Xelqoria::Game::Scene scene;
+    auto& entity = scene.CreateEntity();
+
+    EXPECT_TRUE(Xelqoria::Editor::InspectorPanelController::ApplyCollider2DComponentAction(entity));
+    EXPECT_TRUE(entity.HasCollider2DComponent());
+
+    EXPECT_TRUE(Xelqoria::Editor::InspectorPanelController::ApplyCollider2DComponentAction(entity));
+    EXPECT_FALSE(entity.HasCollider2DComponent());
+}
