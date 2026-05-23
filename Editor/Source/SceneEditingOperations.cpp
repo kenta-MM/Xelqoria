@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <Collider2DComponent.h>
 #include <Entity.h>
 #include <Scene.h>
 #include <SpriteComponent.h>
@@ -84,6 +85,11 @@ namespace Xelqoria::Editor
             /// Entity の SpriteComponent を保持する。
             /// </summary>
             std::optional<Game::SpriteComponent> spriteComponent{};
+
+            /// <summary>
+            /// Entity の Collider2DComponent を保持する。
+            /// </summary>
+            std::optional<Game::Collider2DComponent> collider2DComponent{};
         };
 
         /// <summary>
@@ -102,6 +108,11 @@ namespace Xelqoria::Editor
                 snapshot.spriteComponent = spriteComponent->get();
             }
 
+            if (const auto collider2DComponent = source.GetCollider2DComponent(); collider2DComponent.has_value())
+            {
+                snapshot.collider2DComponent = collider2DComponent->get();
+            }
+
             return snapshot;
         }
 
@@ -118,10 +129,19 @@ namespace Xelqoria::Editor
             if (snapshot.spriteComponent.has_value())
             {
                 destination.SetSpriteComponent(*snapshot.spriteComponent);
+            }
+            else
+            {
+                destination.RemoveSpriteComponent();
+            }
+
+            if (snapshot.collider2DComponent.has_value())
+            {
+                destination.SetCollider2DComponent(*snapshot.collider2DComponent);
                 return;
             }
 
-            destination.RemoveSpriteComponent();
+            destination.RemoveCollider2DComponent();
         }
     }
 
@@ -334,6 +354,28 @@ namespace Xelqoria::Editor
         }
 
         entity.RemoveSpriteComponent();
+        return true;
+    }
+
+    bool SceneEditingOperations::AddCollider2DComponent(Game::Entity& entity)
+    {
+        if (entity.HasCollider2DComponent())
+        {
+            return false;
+        }
+
+        entity.SetCollider2DComponent(Game::Collider2DComponent{});
+        return true;
+    }
+
+    bool SceneEditingOperations::RemoveCollider2DComponent(Game::Entity& entity)
+    {
+        if (false == entity.HasCollider2DComponent())
+        {
+            return false;
+        }
+
+        entity.RemoveCollider2DComponent();
         return true;
     }
 }
