@@ -14,6 +14,7 @@
 #include <system_error>
 #include <utility>
 #include <AssetId.h>
+#include "Collider2DComponent.h"
 #include "Scene.h"
 #include "SpriteComponent.h"
 #include "Transform.h"
@@ -147,6 +148,11 @@ namespace
 				return index == 2 ? std::optional<Xelqoria::Math::Vector3>(vector) : std::nullopt;
 			}
 
+			if (index == 2)
+			{
+				return std::nullopt;
+			}
+
 			cursor = separator + 1;
 		}
 
@@ -156,6 +162,66 @@ namespace
 		}
 
 		return vector;
+	}
+
+	/// <summary>
+	/// `x,y` 形式の文字列を Vector2 へ変換する。
+	/// </summary>
+	/// <param name="value">変換対象の文字列。</param>
+	/// <returns>変換に成功した Vector2。失敗時は nullopt。</returns>
+	std::optional<Xelqoria::Math::Vector2> ParseVector2(std::string_view value)
+	{
+		Xelqoria::Math::Vector2 vector{};
+		std::size_t cursor = 0;
+		float* components[2] = { &vector.x, &vector.y };
+
+		for (int index = 0; index < 2; ++index)
+		{
+			const std::size_t separator = value.find(',', cursor);
+			const std::string_view token = separator == std::string_view::npos
+				? value.substr(cursor)
+				: value.substr(cursor, separator - cursor);
+			const auto parsedComponent = ParseFloat(Trim(token));
+			if (false == parsedComponent.has_value())
+			{
+				return std::nullopt;
+			}
+
+			*components[index] = *parsedComponent;
+			if (separator == std::string_view::npos)
+			{
+				return index == 1 ? std::optional<Xelqoria::Math::Vector2>(vector) : std::nullopt;
+			}
+
+			if (index == 1)
+			{
+				return std::nullopt;
+			}
+
+			cursor = separator + 1;
+		}
+
+		if (value.find(',', cursor) != std::string_view::npos)
+		{
+			return std::nullopt;
+		}
+
+		return vector;
+	}
+
+	/// <summary>
+	/// Collider2D の shapeType 文字列を変換する。
+	/// </summary>
+	/// <param name="value">変換対象の文字列。</param>
+	/// <returns>変換に成功した shapeType。失敗時は nullopt。</returns>
+	std::optional<Xelqoria::Game::Collider2DShapeType> ParseCollider2DShapeType(std::string_view value)
+	{
+		if (value == "Box")
+		{
+			return Xelqoria::Game::Collider2DShapeType::Box;
+		}
+
+		return std::nullopt;
 	}
 
 	/// <summary>
@@ -233,6 +299,22 @@ namespace
 			return std::nullopt;
 		}
 
+		if (fieldKey == "hasCollider2DComponent")
+		{
+			const auto hasCollider2DComponent = ParseBool(value);
+			if (false == hasCollider2DComponent.has_value())
+			{
+				return MakeError(lineNumber, key, "hasCollider2DComponent は true または false である必要があります。");
+			}
+
+			record.hasCollider2DComponent = *hasCollider2DComponent;
+			if (*hasCollider2DComponent && false == record.collider2D.has_value())
+			{
+				record.collider2D = Xelqoria::Game::SceneCollider2DRecord{};
+			}
+			return std::nullopt;
+		}
+
 		if (fieldKey == "transform.position")
 		{
 			const auto parsedVector = ParseVector3(value);
@@ -280,6 +362,96 @@ namespace
 		{
 			record.hasSpriteComponent = true;
 			record.materialRef = Xelqoria::Game::SceneMaterialRefRecord{ Xelqoria::Core::AssetId(value) };
+			return std::nullopt;
+		}
+
+		if (fieldKey == "collider2D.enabled")
+		{
+			const auto enabled = ParseBool(value);
+			if (false == enabled.has_value())
+			{
+				return MakeError(lineNumber, key, "collider2D.enabled は true または false である必要があります。");
+			}
+
+			record.hasCollider2DComponent = true;
+			if (false == record.collider2D.has_value())
+			{
+				record.collider2D = Xelqoria::Game::SceneCollider2DRecord{};
+			}
+			record.collider2D->enabled = *enabled;
+			return std::nullopt;
+		}
+
+		if (fieldKey == "collider2D.isTrigger")
+		{
+			const auto isTrigger = ParseBool(value);
+			if (false == isTrigger.has_value())
+			{
+				return MakeError(lineNumber, key, "collider2D.isTrigger は true または false である必要があります。");
+			}
+
+			record.hasCollider2DComponent = true;
+			if (false == record.collider2D.has_value())
+			{
+				record.collider2D = Xelqoria::Game::SceneCollider2DRecord{};
+			}
+			record.collider2D->isTrigger = *isTrigger;
+			return std::nullopt;
+		}
+
+		if (fieldKey == "collider2D.shapeType")
+		{
+			const auto shapeType = ParseCollider2DShapeType(value);
+			if (false == shapeType.has_value())
+			{
+				return MakeError(lineNumber, key, "collider2D.shapeType は Box である必要があります。");
+			}
+
+			record.hasCollider2DComponent = true;
+			if (false == record.collider2D.has_value())
+			{
+				record.collider2D = Xelqoria::Game::SceneCollider2DRecord{};
+			}
+			record.collider2D->shapeType = *shapeType;
+			return std::nullopt;
+		}
+
+		if (fieldKey == "collider2D.offset")
+		{
+			const auto offset = ParseVector2(value);
+			if (false == offset.has_value())
+			{
+				return MakeError(lineNumber, key, "collider2D.offset は x,y 形式である必要があります。");
+			}
+
+			record.hasCollider2DComponent = true;
+			if (false == record.collider2D.has_value())
+			{
+				record.collider2D = Xelqoria::Game::SceneCollider2DRecord{};
+			}
+			record.collider2D->offset = *offset;
+			return std::nullopt;
+		}
+
+		if (fieldKey == "collider2D.size")
+		{
+			const auto size = ParseVector2(value);
+			if (false == size.has_value())
+			{
+				return MakeError(lineNumber, key, "collider2D.size は x,y 形式である必要があります。");
+			}
+
+			if (size->x <= 0.0f || size->y <= 0.0f)
+			{
+				return MakeError(lineNumber, key, "collider2D.size は 0 より大きい必要があります。");
+			}
+
+			record.hasCollider2DComponent = true;
+			if (false == record.collider2D.has_value())
+			{
+				record.collider2D = Xelqoria::Game::SceneCollider2DRecord{};
+			}
+			record.collider2D->size = *size;
 			return std::nullopt;
 		}
 
@@ -376,7 +548,7 @@ namespace Xelqoria::Game
 			return MakeError(0, "magic", "SceneSaveFormatMagic と一致する magic が必要です。");
 		}
 
-		if (false == version.has_value() || *version != SceneSaveFormatVersion)
+		if (false == version.has_value() || (*version != 1 && *version != SceneSaveFormatVersion))
 		{
 			return MakeError(0, "version", "対応していない Scene 保存バージョンです。");
 		}
@@ -416,6 +588,17 @@ namespace Xelqoria::Game
 				}
 
 				entity.SetSpriteComponent(spriteComponent);
+			}
+			if (record.hasCollider2DComponent || record.collider2D.has_value())
+			{
+				const SceneCollider2DRecord colliderRecord = record.collider2D.value_or(SceneCollider2DRecord{});
+				entity.SetCollider2DComponent(Collider2DComponent{
+					colliderRecord.enabled,
+					colliderRecord.isTrigger,
+					colliderRecord.shapeType,
+					colliderRecord.offset,
+					colliderRecord.size
+				});
 			}
 		}
 
