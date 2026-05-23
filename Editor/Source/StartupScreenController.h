@@ -38,6 +38,13 @@ namespace Xelqoria::Editor
         void UpdateLayout(HWND parentWindow);
 
         /// <summary>
+        /// 起動画面に属する owner draw コントロールを描画する。
+        /// </summary>
+        /// <param name="drawItemParameter">WM_DRAWITEM の LPARAM。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool HandleDrawItem(LPARAM drawItemParameter);
+
+        /// <summary>
         /// 入力状態を更新し、プロジェクト操作要求を検出する。
         /// </summary>
         /// <param name="inputSnapshot">現在フレームの入力状態。</param>
@@ -47,6 +54,16 @@ namespace Xelqoria::Editor
         /// 起動画面を非表示にする。
         /// </summary>
         void Hide();
+
+        /// <summary>
+        /// 起動画面の親ウィンドウメッセージを処理する。
+        /// </summary>
+        LRESULT HandleParentWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
+        /// <summary>
+        /// プロジェクト作成ダイアログのメッセージを処理する。
+        /// </summary>
+        LRESULT HandleCreateProjectWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 
         /// <summary>
         /// 起動画面のウィンドウ群を破棄する。
@@ -89,10 +106,91 @@ namespace Xelqoria::Editor
         void ClearRequests();
 
     private:
+        enum class StartupTab
+        {
+            Projects,
+            View
+        };
+
         /// <summary>
         /// 最近使ったプロジェクト一覧を再表示する。
         /// </summary>
         void RefreshRecentProjects();
+
+        /// <summary>
+        /// 表示タブのプロジェクト一覧を再表示する。
+        /// </summary>
+        void RefreshAllProjects();
+
+        /// <summary>
+        /// 起動画面の現在タブを変更する。
+        /// </summary>
+        /// <param name="tab">変更後のタブ。</param>
+        void SetActiveTab(StartupTab tab);
+
+        /// <summary>
+        /// 起動画面用のブラシなどの GDI リソースを作成する。
+        /// </summary>
+        void EnsureThemeResources();
+
+        /// <summary>
+        /// 起動画面用の GDI リソースを破棄する。
+        /// </summary>
+        void DestroyThemeResources();
+
+        /// <summary>
+        /// 起動画面の親ウィンドウをサブクラス化する。
+        /// </summary>
+        /// <param name="parentWindow">サブクラス化する親ウィンドウ。</param>
+        void SubclassParentWindow(HWND parentWindow);
+
+        /// <summary>
+        /// 起動画面の親ウィンドウのサブクラス化を解除する。
+        /// </summary>
+        void UnsubclassParentWindow();
+
+        /// <summary>
+        /// 起動画面の背景を描画する。
+        /// </summary>
+        /// <param name="deviceContext">描画先。</param>
+        void PaintStartupBackground(HDC deviceContext);
+
+        /// <summary>
+        /// プロジェクト作成ダイアログの背景を描画する。
+        /// </summary>
+        /// <param name="deviceContext">描画先。</param>
+        void PaintCreateProjectBackground(HDC deviceContext);
+
+        /// <summary>
+        /// テーマ適用済みボタンを描画する。
+        /// </summary>
+        /// <param name="drawItem">owner draw 情報。</param>
+        void DrawThemedButton(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
+        /// テーマ適用済みタブを描画する。
+        /// </summary>
+        /// <param name="drawItem">owner draw 情報。</param>
+        /// <param name="tab">描画対象タブ。</param>
+        void DrawTabButton(const DRAWITEMSTRUCT& drawItem, StartupTab tab) const;
+
+        /// <summary>
+        /// テーマ適用済みリスト行を描画する。
+        /// </summary>
+        /// <param name="drawItem">owner draw 情報。</param>
+        void DrawProjectListItem(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
+        /// プロジェクト一覧行に対応するプロジェクトを開く要求として設定する。
+        /// </summary>
+        /// <param name="listBox">対象 ListBox。</param>
+        /// <param name="projects">ListBox に対応するプロジェクト一覧。</param>
+        /// <param name="cursorPosition">スクリーン座標のカーソル位置。</param>
+        /// <returns>要求を設定した場合は true。</returns>
+        bool HandleProjectListDoubleClick(
+            HWND listBox,
+            const std::vector<EditorProjectInfo>& projects,
+            POINT cursorPosition);
 
         /// <summary>
         /// プロジェクト作成ウィンドウを表示する。
@@ -143,6 +241,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] std::optional<EditorProjectInfo> GetSelectedRecentProject() const;
 
         /// <summary>
+        /// 表示タブ ListBox の選択行に対応するプロジェクトを取得する。
+        /// </summary>
+        /// <returns>選択中プロジェクト。未選択時は空。</returns>
+        [[nodiscard]] std::optional<EditorProjectInfo> GetSelectedAllProject() const;
+
+        /// <summary>
         /// 子ウィンドウを生成する。
         /// </summary>
         HWND CreateChildWindow(
@@ -162,6 +266,18 @@ namespace Xelqoria::Editor
         HFONT m_defaultFont = nullptr;
         UINT m_currentDpi = 96;
         bool m_ownsDefaultFont = false;
+        bool m_hidden = false;
+        StartupTab m_activeTab = StartupTab::Projects;
+        HWND m_parentWindow = nullptr;
+        WNDPROC m_originalParentWindowProc = nullptr;
+        HBRUSH m_darkBackgroundBrush = nullptr;
+        HBRUSH m_panelBackgroundBrush = nullptr;
+        HBRUSH m_editBackgroundBrush = nullptr;
+        HPEN m_accentPen = nullptr;
+        HPEN m_dimAccentPen = nullptr;
+        HPEN m_blueAccentPen = nullptr;
+        HWND m_projectTabButton = nullptr;
+        HWND m_viewTabButton = nullptr;
         HWND m_nameLabel = nullptr;
         HWND m_projectNameEdit = nullptr;
         HWND m_folderLabel = nullptr;
@@ -174,13 +290,18 @@ namespace Xelqoria::Editor
         HWND m_openButton = nullptr;
         HWND m_recentLabel = nullptr;
         HWND m_recentListBox = nullptr;
+        HWND m_allProjectsLabel = nullptr;
+        HWND m_allProjectsListBox = nullptr;
         RecentProjectsStore m_recentProjectsStore{};
         Platform::IFileDialog* m_fileDialog = nullptr;
         std::vector<EditorProjectInfo> m_recentProjects{};
+        std::vector<EditorProjectInfo> m_allProjects{};
         bool m_createRequested = false;
         bool m_wasLeftMouseDown = false;
         DWORD m_lastRecentClickTime = 0;
         int m_lastRecentClickIndex = -1;
+        DWORD m_lastAllProjectsClickTime = 0;
+        int m_lastAllProjectsClickIndex = -1;
         bool m_layoutInitialized = false;
         int m_lastLayoutClientWidth = 0;
         int m_lastLayoutClientHeight = 0;

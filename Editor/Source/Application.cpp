@@ -285,6 +285,8 @@ namespace Xelqoria::Editor
             });
 
         InitializeProjectMenu();
+        SetMenu(GetMainWindowHandle(), nullptr);
+        DrawMenuBar(GetMainWindowHandle());
         m_window.SetCommandHandler(
             [this](unsigned commandId)
             {
@@ -303,6 +305,12 @@ namespace Xelqoria::Editor
         m_window.SetDrawItemHandler(
             [this](Platform::NativeMessageParameter drawItemParameter)
             {
+                if (false == m_editorInitialized
+                    && m_startupScreenController.HandleDrawItem(static_cast<LPARAM>(drawItemParameter)))
+                {
+                    return true;
+                }
+
                 if (m_editorShell.HandleDrawItem(static_cast<LPARAM>(drawItemParameter)))
                 {
                     return true;
@@ -336,6 +344,12 @@ namespace Xelqoria::Editor
         if (m_editorInitialized)
         {
             return true;
+        }
+
+        if (nullptr != m_menuBar && nullptr == GetMenu(GetMainWindowHandle()))
+        {
+            SetMenu(GetMainWindowHandle(), m_menuBar);
+            DrawMenuBar(GetMainWindowHandle());
         }
 
         constexpr RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D11;
@@ -410,10 +424,10 @@ namespace Xelqoria::Editor
         AppendMenuW(m_viewMenu, MF_STRING, ViewMenuMaterialCommandId, L"Material");
         AppendMenuW(m_viewMenu, MF_STRING, ViewMenuLogOutputCommandId, L"LogOutput");
 
-        HMENU menuBar = CreateMenu();
-        AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_projectMenu), L"プロジェクト");
-        AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_viewMenu), L"表示");
-        SetMenu(GetMainWindowHandle(), menuBar);
+        m_menuBar = CreateMenu();
+        AppendMenuW(m_menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_projectMenu), L"プロジェクト");
+        AppendMenuW(m_menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_viewMenu), L"表示");
+        SetMenu(GetMainWindowHandle(), m_menuBar);
     }
 
     void Application::HandleProjectMenuCommand(unsigned commandId)
