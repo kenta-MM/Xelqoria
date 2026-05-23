@@ -105,6 +105,11 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetAssetsListView() const;
 
         /// <summary>
+        /// Assets ListView の Header コントロールへテーマ描画を適用する。
+        /// </summary>
+        void ConfigureAssetsListHeaderTheme() const;
+
+        /// <summary>
         /// Assets パネルの要約ラベルを取得する。
         /// </summary>
         /// <returns>Assets 要約ラベルの HWND。</returns>
@@ -934,6 +939,17 @@ namespace Xelqoria::Editor
         /// 行表示コントロールの hover 再描画を処理する。
         /// </summary>
         static LRESULT CALLBACK EditorRowControlSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
+        /// <summary>
+        /// Assets ListView ヘッダーのテーマ描画を処理する。
+        /// </summary>
+        static LRESULT CALLBACK EditorHeaderControlSubclassProc(
             HWND window,
             UINT message,
             WPARAM wParam,

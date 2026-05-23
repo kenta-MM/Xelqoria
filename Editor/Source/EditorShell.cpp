@@ -24,6 +24,7 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR SpriteRefEditSubclassId = 1;
         constexpr UINT_PTR EditorTabControlSubclassId = 2;
         constexpr UINT_PTR EditorRowControlSubclassId = 3;
+        constexpr UINT_PTR EditorHeaderControlSubclassId = 4;
         constexpr int EditorRowHeight = 22;
         constexpr const wchar_t* WorkspaceBackgroundWindowClassName = L"XelqoriaEditorWorkspaceBackground";
         constexpr const wchar_t* EditorChromeWindowClassName = L"XelqoriaEditorChrome";
@@ -151,6 +152,60 @@ namespace Xelqoria::Editor
             FillRgn(deviceContext, backgroundRegion, backgroundBrush);
             DeleteObject(backgroundBrush);
             DeleteObject(backgroundRegion);
+        }
+
+        void DrawAssetsHeaderControl(HWND headerWindow, HDC deviceContext)
+        {
+            if (nullptr == headerWindow || nullptr == deviceContext)
+            {
+                return;
+            }
+
+            RECT clientRect{};
+            GetClientRect(headerWindow, &clientRect);
+            FillRectWithThemeColor(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
+
+            const int itemCount = Header_GetItemCount(headerWindow);
+            for (int itemIndex = 0; itemIndex < itemCount; ++itemIndex)
+            {
+                RECT itemRect{};
+                if (FALSE == Header_GetItemRect(headerWindow, itemIndex, &itemRect))
+                {
+                    continue;
+                }
+
+                FillRectWithThemeColor(deviceContext, itemRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
+                DrawRectBorder(deviceContext, itemRect, EditorThemes::XelqoriaDark.panelBorder);
+
+                wchar_t text[128]{};
+                HDITEMW item{};
+                item.mask = HDI_TEXT | HDI_FORMAT;
+                item.pszText = text;
+                item.cchTextMax = static_cast<int>(std::size(text));
+                Header_GetItem(headerWindow, itemIndex, &item);
+
+                RECT textRect = itemRect;
+                textRect.left += 8;
+                textRect.right -= 8;
+
+                UINT textFormat = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
+                if (0 != (item.fmt & HDF_CENTER))
+                {
+                    textFormat |= DT_CENTER;
+                }
+                else if (0 != (item.fmt & HDF_RIGHT))
+                {
+                    textFormat |= DT_RIGHT;
+                }
+                else
+                {
+                    textFormat |= DT_LEFT;
+                }
+
+                SetBkMode(deviceContext, TRANSPARENT);
+                SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
+                DrawTextW(deviceContext, text, -1, &textRect, textFormat);
+            }
         }
 
         [[nodiscard]] int GetHoveredTabIndex(HWND tabControl)
@@ -1209,6 +1264,7 @@ namespace Xelqoria::Editor
             ListView_SetTextBkColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.panelBackground));
             ListView_SetTextColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
             SetWindowSubclass(m_assetsListView, EditorRowControlSubclassProc, EditorRowControlSubclassId, 0);
+            ConfigureAssetsListHeaderTheme();
         }
 
         return nullptr != m_assetsListView;
@@ -5472,6 +5528,44 @@ namespace Xelqoria::Editor
         return DefSubclassProc(window, message, wParam, lParam);
     }
 
+    LRESULT CALLBACK EditorShell::EditorHeaderControlSubclassProc(
+        HWND window,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData)
+    {
+        (void)subclassId;
+        (void)referenceData;
+
+        if (WM_ERASEBKGND == message)
+        {
+            DrawAssetsHeaderControl(window, reinterpret_cast<HDC>(wParam));
+            return 1;
+        }
+
+        if (WM_PAINT == message)
+        {
+            PAINTSTRUCT paintStruct{};
+            HDC deviceContext = BeginPaint(window, &paintStruct);
+            DrawAssetsHeaderControl(window, deviceContext);
+            EndPaint(window, &paintStruct);
+            return 0;
+        }
+
+        if (WM_MOUSEMOVE == message || WM_LBUTTONDOWN == message || WM_LBUTTONUP == message)
+        {
+            InvalidateRect(window, nullptr, FALSE);
+        }
+        else if (WM_NCDESTROY == message)
+        {
+            RemoveWindowSubclass(window, EditorShell::EditorHeaderControlSubclassProc, EditorHeaderControlSubclassId);
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
+    }
+
     LRESULT CALLBACK EditorShell::ParentWindowSubclassProc(
         HWND window,
         UINT message,
@@ -5639,6 +5733,23 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetAssetsListView() const
     {
         return m_assetsListView;
+    }
+
+    void EditorShell::ConfigureAssetsListHeaderTheme() const
+    {
+        if (nullptr == m_assetsListView)
+        {
+            return;
+        }
+
+        HWND assetsHeader = ListView_GetHeader(m_assetsListView);
+        if (nullptr == assetsHeader)
+        {
+            return;
+        }
+
+        SetWindowSubclass(assetsHeader, EditorHeaderControlSubclassProc, EditorHeaderControlSubclassId, 0);
+        InvalidateRect(assetsHeader, nullptr, TRUE);
     }
 
     HWND EditorShell::GetAssetsSummaryLabel() const

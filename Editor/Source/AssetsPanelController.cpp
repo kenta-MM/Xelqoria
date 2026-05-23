@@ -577,6 +577,7 @@ namespace Xelqoria::Editor
         m_assetsSummaryLabel = shell.GetAssetsSummaryLabel();
         m_cursor = &cursor;
         InitializeListView();
+        shell.ConfigureAssetsListHeaderTheme();
     }
 
     void AssetsPanelController::Refresh(const std::optional<EditorProjectInfo>& projectInfo)
