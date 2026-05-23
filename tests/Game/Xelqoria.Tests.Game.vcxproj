@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\EntityTests.cpp" />
     <ClCompile Include="Source\Physics2DTests.cpp" />
     <ClCompile Include="Source\TransformTests.cpp" />
   </ItemGroup>

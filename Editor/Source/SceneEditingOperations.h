@@ -136,5 +136,19 @@ namespace Xelqoria::Editor
         /// <param name="entity">削除対象の Entity。</param>
         /// <returns>削除で変更が発生した場合は true。</returns>
         static bool RemoveSpriteComponent(Game::Entity& entity);
+
+        /// <summary>
+        /// Entity に既定の Collider2DComponent を追加する。
+        /// </summary>
+        /// <param name="entity">追加対象の Entity。</param>
+        /// <returns>追加で変更が発生した場合は true。</returns>
+        static bool AddCollider2DComponent(Game::Entity& entity);
+
+        /// <summary>
+        /// Entity から Collider2DComponent を削除する。
+        /// </summary>
+        /// <param name="entity">削除対象の Entity。</param>
+        /// <returns>削除で変更が発生した場合は true。</returns>
+        static bool RemoveCollider2DComponent(Game::Entity& entity);
     };
 }

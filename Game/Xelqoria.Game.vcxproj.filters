@@ -11,6 +11,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Collider2DComponent.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Assets\SpriteAssetRegistry.cpp">
       <Filter>Source\Assets</Filter>
     </ClCompile>
@@ -46,6 +49,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Collider2DComponent.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Assets\ISpriteAssetResolver.h">
       <Filter>Source\Assets</Filter>
     </ClInclude>
