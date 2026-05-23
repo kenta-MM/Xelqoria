@@ -13,8 +13,11 @@
 #include <string>
 #include <system_error>
 #include <utility>
+#include <UxTheme.h>
 
 #include "EditorTheme.h"
+
+#pragma comment(lib, "uxtheme.lib")
 
 namespace Xelqoria::Editor
 {
@@ -90,6 +93,25 @@ namespace Xelqoria::Editor
             SelectObject(deviceContext, previousBrush);
             SelectObject(deviceContext, previousPen);
             DeleteObject(pen);
+        }
+
+        void ApplyDarkExplorerTheme(HWND window)
+        {
+            if (nullptr == window)
+            {
+                return;
+            }
+
+            SetWindowTheme(window, L"DarkMode_Explorer", nullptr);
+            SetWindowPos(
+                window,
+                nullptr,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            RedrawWindow(window, nullptr, nullptr, RDW_INVALIDATE | RDW_FRAME | RDW_ERASE | RDW_UPDATENOW);
         }
 
         void FillRoundRectWithThemeColor(HDC deviceContext, const RECT& rect, EditorColor color, int radius)
@@ -292,22 +314,7 @@ namespace Xelqoria::Editor
                 wchar_t text[128]{};
                 GetWindowTextW(window, text, static_cast<int>(std::size(text)));
                 SetBkMode(deviceContext, TRANSPARENT);
-                if (0 == wcscmp(text, L"Xelqoria Editor"))
-                {
-                    SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
-                    RECT logoRect{ clientRect.left + 12, clientRect.top + 6, clientRect.left + 34, clientRect.bottom - 6 };
-                    SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.accent));
-                    DrawTextW(deviceContext, L"X", -1, &logoRect, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
-
-                    RECT titleRect{ logoRect.right + 10, clientRect.top + 6, logoRect.right + 180, clientRect.top + 24 };
-                    SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
-                    DrawTextW(deviceContext, L"Xelqoria Editor", -1, &titleRect, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
-
-                    RECT menuRect{ logoRect.right + 10, clientRect.top + 25, clientRect.right / 2, clientRect.bottom - 3 };
-                    SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.textSecondary));
-                    DrawTextW(deviceContext, L"プロジェクト      表示      ツール      ヘルプ", -1, &menuRect, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
-                }
-                else if (L'\0' != text[0])
+                if (L'\0' != text[0])
                 {
                     SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.textSecondary));
                     RECT textRect = clientRect;
@@ -893,17 +900,17 @@ namespace Xelqoria::Editor
             parentWindow,
             hInstance,
             EditorChromeWindowClassName,
-            L"Xelqoria Editor",
-            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS);
+            L"",
+            WS_CHILD | WS_CLIPSIBLINGS);
         m_statusBar = CreateChildWindow(
             parentWindow,
             hInstance,
             EditorChromeWindowClassName,
             L"Ready  |  Fixed Layout  |  Xelqoria Dark",
             WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS);
-        m_topBarProjectButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"SampleProject  v", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_OWNERDRAW);
-        m_topBarPlayButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"▶", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_OWNERDRAW);
-        m_topBarLayoutButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"■", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_OWNERDRAW);
+        m_topBarProjectButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"SampleProject  v", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW);
+        m_topBarPlayButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"▶", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW);
+        m_topBarLayoutButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"■", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW);
         if (nullptr == m_topBar
             || nullptr == m_statusBar
             || nullptr == m_topBarProjectButton
@@ -1062,21 +1069,20 @@ namespace Xelqoria::Editor
         }
 
         const int outerPadding = ScaleMetric(8);
-        const int topBarHeight = ScaleMetric(48);
         const int statusBarHeight = ScaleMetric(18);
-        const int topButtonWidth = ScaleMetric(112);
-        const int topButtonHeight = ScaleMetric(26);
-        const int topButtonGap = ScaleMetric(8);
-        const int playButtonWidth = ScaleMetric(38);
         MoveChildWindowNoRedraw(m_workspaceBackground, 0, 0, clientWidth, clientHeight);
-        MoveChildWindowNoRedraw(m_topBar, 0, 0, clientWidth, topBarHeight);
-        MoveChildWindowNoRedraw(m_topBarProjectButton, clientWidth - outerPadding - topButtonWidth - ScaleMetric(82), ScaleMetric(10), topButtonWidth, topButtonHeight);
-        MoveChildWindowNoRedraw(m_topBarPlayButton, (clientWidth / 2) - playButtonWidth - ScaleMetric(4), ScaleMetric(8), playButtonWidth, topButtonHeight);
-        MoveChildWindowNoRedraw(m_topBarLayoutButton, (clientWidth / 2) + ScaleMetric(4), ScaleMetric(8), playButtonWidth, topButtonHeight);
+        MoveChildWindowNoRedraw(m_topBar, 0, 0, 0, 0);
+        MoveChildWindowNoRedraw(m_topBarProjectButton, 0, 0, 0, 0);
+        MoveChildWindowNoRedraw(m_topBarPlayButton, 0, 0, 0, 0);
+        MoveChildWindowNoRedraw(m_topBarLayoutButton, 0, 0, 0, 0);
+        ShowWindow(m_topBar, SW_HIDE);
+        ShowWindow(m_topBarProjectButton, SW_HIDE);
+        ShowWindow(m_topBarPlayButton, SW_HIDE);
+        ShowWindow(m_topBarLayoutButton, SW_HIDE);
         MoveChildWindowNoRedraw(m_statusBar, 0, clientHeight - statusBarHeight, clientWidth, statusBarHeight);
         const RECT rootRect{
             outerPadding,
-            topBarHeight + outerPadding,
+            outerPadding,
             clientWidth - outerPadding,
             clientHeight - statusBarHeight - outerPadding
         };
@@ -1155,7 +1161,7 @@ namespace Xelqoria::Editor
             hInstance,
             L"Static",
             L"Entities: pending",
-            WS_CHILD | WS_VISIBLE);
+            WS_CHILD);
         if (nullptr == m_hierarchySummaryLabel)
         {
             return false;
@@ -1243,7 +1249,7 @@ namespace Xelqoria::Editor
             hInstance,
             L"Static",
             L"Assets: pending",
-            WS_CHILD | WS_VISIBLE);
+            WS_CHILD);
         if (nullptr == m_assetsSummaryLabel)
         {
             return false;
@@ -1263,6 +1269,7 @@ namespace Xelqoria::Editor
             ListView_SetBkColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.panelBackground));
             ListView_SetTextBkColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.panelBackground));
             ListView_SetTextColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
+            ApplyDarkExplorerTheme(m_assetsListView);
             SetWindowSubclass(m_assetsListView, EditorRowControlSubclassProc, EditorRowControlSubclassId, 0);
             ConfigureAssetsListHeaderTheme();
         }
@@ -1450,7 +1457,7 @@ namespace Xelqoria::Editor
             hInstance,
             L"Static",
             L"Material: no material selected",
-            WS_CHILD | WS_VISIBLE);
+            WS_CHILD);
         if (nullptr == m_materialSummaryLabel)
         {
             return false;
@@ -2040,11 +2047,11 @@ namespace Xelqoria::Editor
             hierarchyButtonGap = 0;
         }
 
-        const int searchTop = panelRect.top + groupHeaderHeight + labelHeight + ScaleMetric(6);
+        const int searchTop = panelRect.top + groupHeaderHeight + ScaleMetric(6);
         const int buttonTop = searchTop + labelHeight + ScaleMetric(6);
         const int buttonWidth = (std::max)(0, (innerWidth - hierarchyButtonGap * 2) / 3);
         MoveChildWindowNoRedraw(m_hierarchyPanel, panelRect.left, panelRect.top, width, height);
-        MoveChildWindowNoRedraw(m_hierarchySummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_hierarchySummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, 0, 0);
         MoveChildWindowNoRedraw(m_hierarchySearchEdit, panelRect.left + outerPadding, searchTop, innerWidth, labelHeight);
         MoveChildWindowNoRedraw(m_hierarchyCreateButton, panelRect.left + outerPadding, buttonTop, buttonWidth, buttonHeight);
         MoveChildWindowNoRedraw(
@@ -2075,13 +2082,13 @@ namespace Xelqoria::Editor
         const int height = panelRect.bottom - panelRect.top;
         const int innerWidth = (std::max)(0, width - outerPadding * 2);
         MoveChildWindowNoRedraw(m_assetsPanel, panelRect.left, panelRect.top, width, height);
-        MoveChildWindowNoRedraw(m_assetsSummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_assetsSummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, 0, 0);
         MoveChildWindowNoRedraw(
             m_assetsListView,
             panelRect.left + outerPadding,
-            panelRect.top + groupHeaderHeight + labelHeight + ScaleMetric(6),
+            panelRect.top + groupHeaderHeight + ScaleMetric(6),
             innerWidth,
-            (std::max)(0, height - groupHeaderHeight - labelHeight - outerPadding - ScaleMetric(12)));
+            (std::max)(0, height - groupHeaderHeight - outerPadding - ScaleMetric(12)));
     }
 
     void EditorShell::LayoutInspectorPanelInRect(const RECT& panelRect)
@@ -2149,14 +2156,13 @@ namespace Xelqoria::Editor
         const int height = panelRect.bottom - panelRect.top;
         const int innerX = panelRect.left + outerPadding;
         const int innerWidth = (std::max)(0, width - outerPadding * 2);
-        const int summaryTop = panelRect.top + groupHeaderHeight;
-        const int noticeTop = summaryTop + labelHeight + ScaleMetric(6);
+        const int noticeTop = panelRect.top + groupHeaderHeight + ScaleMetric(6);
         const int sectionTop = noticeTop + labelHeight + ScaleMetric(10);
         const int firstRowTop = sectionTop + labelHeight + ScaleMetric(4);
         const int editWidth = (std::max)(0, innerWidth - labelWidth);
 
         MoveChildWindowNoRedraw(m_materialPanel, panelRect.left, panelRect.top, width, height);
-        MoveChildWindowNoRedraw(m_materialSummaryLabel, innerX, summaryTop, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_materialSummaryLabel, innerX, panelRect.top + groupHeaderHeight, 0, 0);
         MoveChildWindowNoRedraw(m_materialSharedNoticeLabel, innerX, noticeTop, innerWidth, labelHeight);
         MoveChildWindowNoRedraw(m_materialDetailsSectionLabel, innerX, sectionTop, innerWidth, labelHeight);
 
@@ -3099,16 +3105,18 @@ namespace Xelqoria::Editor
         switch (panelId)
         {
         case EditorPanelId::Hierarchy:
-            for (HWND control : { m_hierarchyPanel, m_hierarchySummaryLabel, m_hierarchyListBox, m_hierarchyNameEdit, m_hierarchyCreateButton, m_hierarchyDuplicateButton, m_hierarchyDeleteButton })
+            for (HWND control : { m_hierarchyPanel, m_hierarchyListBox, m_hierarchyNameEdit, m_hierarchyCreateButton, m_hierarchyDuplicateButton, m_hierarchyDeleteButton })
             {
                 ShowWindow(control, showCommand);
             }
+            ShowWindow(m_hierarchySummaryLabel, SW_HIDE);
             break;
         case EditorPanelId::Assets:
-            for (HWND control : { m_assetsPanel, m_assetsSummaryLabel, m_assetsListView })
+            for (HWND control : { m_assetsPanel, m_assetsListView })
             {
                 ShowWindow(control, showCommand);
             }
+            ShowWindow(m_assetsSummaryLabel, SW_HIDE);
             break;
         case EditorPanelId::SceneView:
             for (HWND control : { m_sceneViewPanel, m_sceneViewHost, m_buildAndPlayButton, m_pauseResumePlayButton, m_endPlayButton })
@@ -3132,10 +3140,11 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::Material:
-            for (HWND control : { m_materialPanel, m_materialSummaryLabel, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4] })
+            for (HWND control : { m_materialPanel, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4] })
             {
                 ShowWindow(control, showCommand);
             }
+            ShowWindow(m_materialSummaryLabel, SW_HIDE);
             if (false == visible)
             {
                 ShowWindow(m_materialTextureDropHighlight, SW_HIDE);
@@ -5748,8 +5757,9 @@ namespace Xelqoria::Editor
             return;
         }
 
+        ApplyDarkExplorerTheme(assetsHeader);
         SetWindowSubclass(assetsHeader, EditorHeaderControlSubclassProc, EditorHeaderControlSubclassId, 0);
-        InvalidateRect(assetsHeader, nullptr, TRUE);
+        RedrawWindow(assetsHeader, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
     }
 
     HWND EditorShell::GetAssetsSummaryLabel() const
