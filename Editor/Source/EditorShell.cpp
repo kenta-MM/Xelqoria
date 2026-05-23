@@ -13,8 +13,11 @@
 #include <string>
 #include <system_error>
 #include <utility>
+#include <UxTheme.h>
 
 #include "EditorTheme.h"
+
+#pragma comment(lib, "uxtheme.lib")
 
 namespace Xelqoria::Editor
 {
@@ -24,8 +27,10 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR SpriteRefEditSubclassId = 1;
         constexpr UINT_PTR EditorTabControlSubclassId = 2;
         constexpr UINT_PTR EditorRowControlSubclassId = 3;
+        constexpr UINT_PTR EditorHeaderControlSubclassId = 4;
         constexpr int EditorRowHeight = 22;
         constexpr const wchar_t* WorkspaceBackgroundWindowClassName = L"XelqoriaEditorWorkspaceBackground";
+        constexpr const wchar_t* EditorChromeWindowClassName = L"XelqoriaEditorChrome";
         constexpr const wchar_t* EditorPanelWindowClassName = L"XelqoriaEditorPanel";
         constexpr const wchar_t* DockPreviewWindowClassName = L"XelqoriaDockPreviewWindow";
         constexpr const wchar_t* DockGuideWindowClassName = L"XelqoriaDockGuideWindow";
@@ -62,6 +67,16 @@ namespace Xelqoria::Editor
             return RGB(ToColorByte(color.red), ToColorByte(color.green), ToColorByte(color.blue));
         }
 
+        [[nodiscard]] EditorColor ScaleColor(EditorColor color, float scale)
+        {
+            return EditorColor{
+                (std::max)(0.0f, (std::min)(1.0f, color.red * scale)),
+                (std::max)(0.0f, (std::min)(1.0f, color.green * scale)),
+                (std::max)(0.0f, (std::min)(1.0f, color.blue * scale)),
+                color.alpha
+            };
+        }
+
         void FillRectWithThemeColor(HDC deviceContext, const RECT& rect, EditorColor color)
         {
             HBRUSH brush = CreateSolidBrush(ToColorRef(color));
@@ -78,6 +93,141 @@ namespace Xelqoria::Editor
             SelectObject(deviceContext, previousBrush);
             SelectObject(deviceContext, previousPen);
             DeleteObject(pen);
+        }
+
+        void ApplyDarkExplorerTheme(HWND window)
+        {
+            if (nullptr == window)
+            {
+                return;
+            }
+
+            SetWindowTheme(window, L"DarkMode_Explorer", nullptr);
+            SetWindowPos(
+                window,
+                nullptr,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            RedrawWindow(window, nullptr, nullptr, RDW_INVALIDATE | RDW_FRAME | RDW_ERASE | RDW_UPDATENOW);
+        }
+
+        void FillRoundRectWithThemeColor(HDC deviceContext, const RECT& rect, EditorColor color, int radius)
+        {
+            HBRUSH brush = CreateSolidBrush(ToColorRef(color));
+            HGDIOBJ previousBrush = SelectObject(deviceContext, brush);
+            HGDIOBJ previousPen = SelectObject(deviceContext, GetStockObject(NULL_PEN));
+            RoundRect(deviceContext, rect.left, rect.top, rect.right, rect.bottom, radius, radius);
+            SelectObject(deviceContext, previousPen);
+            SelectObject(deviceContext, previousBrush);
+            DeleteObject(brush);
+        }
+
+        void DrawRoundRectBorder(HDC deviceContext, const RECT& rect, EditorColor color, int radius)
+        {
+            HPEN pen = CreatePen(PS_SOLID, 1, ToColorRef(color));
+            HGDIOBJ previousPen = SelectObject(deviceContext, pen);
+            HGDIOBJ previousBrush = SelectObject(deviceContext, GetStockObject(NULL_BRUSH));
+            RoundRect(deviceContext, rect.left, rect.top, rect.right, rect.bottom, radius, radius);
+            SelectObject(deviceContext, previousBrush);
+            SelectObject(deviceContext, previousPen);
+            DeleteObject(pen);
+        }
+
+        void FillTabControlBackground(HWND tabControl, HDC deviceContext)
+        {
+            if (nullptr == tabControl || nullptr == deviceContext)
+            {
+                return;
+            }
+
+            RECT clientRect{};
+            GetClientRect(tabControl, &clientRect);
+            HRGN backgroundRegion = CreateRectRgn(clientRect.left, clientRect.top, clientRect.right, clientRect.bottom);
+            if (nullptr == backgroundRegion)
+            {
+                FillRectWithThemeColor(deviceContext, clientRect, EditorColor::FromRgb8(0x13, 0x0F, 0x2A));
+                return;
+            }
+
+            const int itemCount = TabCtrl_GetItemCount(tabControl);
+            for (int index = 0; index < itemCount; ++index)
+            {
+                RECT itemRect{};
+                if (FALSE == TabCtrl_GetItemRect(tabControl, index, &itemRect))
+                {
+                    continue;
+                }
+
+                InflateRect(&itemRect, 1, 1);
+                HRGN itemRegion = CreateRectRgn(itemRect.left, itemRect.top, itemRect.right, itemRect.bottom);
+                if (nullptr != itemRegion)
+                {
+                    CombineRgn(backgroundRegion, backgroundRegion, itemRegion, RGN_DIFF);
+                    DeleteObject(itemRegion);
+                }
+            }
+
+            HBRUSH backgroundBrush = CreateSolidBrush(ToColorRef(EditorColor::FromRgb8(0x13, 0x0F, 0x2A)));
+            FillRgn(deviceContext, backgroundRegion, backgroundBrush);
+            DeleteObject(backgroundBrush);
+            DeleteObject(backgroundRegion);
+        }
+
+        void DrawAssetsHeaderControl(HWND headerWindow, HDC deviceContext)
+        {
+            if (nullptr == headerWindow || nullptr == deviceContext)
+            {
+                return;
+            }
+
+            RECT clientRect{};
+            GetClientRect(headerWindow, &clientRect);
+            FillRectWithThemeColor(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
+
+            const int itemCount = Header_GetItemCount(headerWindow);
+            for (int itemIndex = 0; itemIndex < itemCount; ++itemIndex)
+            {
+                RECT itemRect{};
+                if (FALSE == Header_GetItemRect(headerWindow, itemIndex, &itemRect))
+                {
+                    continue;
+                }
+
+                FillRectWithThemeColor(deviceContext, itemRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
+                DrawRectBorder(deviceContext, itemRect, EditorThemes::XelqoriaDark.panelBorder);
+
+                wchar_t text[128]{};
+                HDITEMW item{};
+                item.mask = HDI_TEXT | HDI_FORMAT;
+                item.pszText = text;
+                item.cchTextMax = static_cast<int>(std::size(text));
+                Header_GetItem(headerWindow, itemIndex, &item);
+
+                RECT textRect = itemRect;
+                textRect.left += 8;
+                textRect.right -= 8;
+
+                UINT textFormat = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
+                if (0 != (item.fmt & HDF_CENTER))
+                {
+                    textFormat |= DT_CENTER;
+                }
+                else if (0 != (item.fmt & HDF_RIGHT))
+                {
+                    textFormat |= DT_RIGHT;
+                }
+                else
+                {
+                    textFormat |= DT_LEFT;
+                }
+
+                SetBkMode(deviceContext, TRANSPARENT);
+                SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
+                DrawTextW(deviceContext, text, -1, &textRect, textFormat);
+            }
         }
 
         [[nodiscard]] int GetHoveredTabIndex(HWND tabControl)
@@ -123,27 +273,6 @@ namespace Xelqoria::Editor
             return LOWORD(hitResult);
         }
 
-        [[nodiscard]] int GetHoveredListViewIndex(HWND listView)
-        {
-            POINT cursorPoint{};
-            if (FALSE == GetCursorPos(&cursorPoint))
-            {
-                return -1;
-            }
-
-            ScreenToClient(listView, &cursorPoint);
-            RECT clientRect{};
-            GetClientRect(listView, &clientRect);
-            if (FALSE == PtInRect(&clientRect, cursorPoint))
-            {
-                return -1;
-            }
-
-            LVHITTESTINFO hitTestInfo{};
-            hitTestInfo.pt = cursorPoint;
-            return ListView_HitTest(listView, &hitTestInfo);
-        }
-
         LRESULT CALLBACK WorkspaceBackgroundWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (WM_PAINT == message)
@@ -165,6 +294,52 @@ namespace Xelqoria::Editor
             return DefWindowProcW(window, message, wParam, lParam);
         }
 
+        LRESULT CALLBACK EditorChromeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+        {
+            if (WM_PAINT == message)
+            {
+                PAINTSTRUCT paintStruct{};
+                HDC deviceContext = BeginPaint(window, &paintStruct);
+                RECT clientRect{};
+                GetClientRect(window, &clientRect);
+                FillRectWithThemeColor(deviceContext, clientRect, EditorThemes::XelqoriaDark.windowBackground);
+
+                HPEN borderPen = CreatePen(PS_SOLID, 1, ToColorRef(EditorThemes::XelqoriaDark.panelBorder));
+                HGDIOBJ previousPen = SelectObject(deviceContext, borderPen);
+                MoveToEx(deviceContext, clientRect.left, clientRect.bottom - 1, nullptr);
+                LineTo(deviceContext, clientRect.right, clientRect.bottom - 1);
+                SelectObject(deviceContext, previousPen);
+                DeleteObject(borderPen);
+
+                wchar_t text[128]{};
+                GetWindowTextW(window, text, static_cast<int>(std::size(text)));
+                SetBkMode(deviceContext, TRANSPARENT);
+                if (L'\0' != text[0])
+                {
+                    SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.textSecondary));
+                    RECT textRect = clientRect;
+                    textRect.left += 10;
+                    textRect.right -= 12;
+                    DrawTextW(deviceContext, text, -1, &textRect, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+
+                    RECT versionRect = clientRect;
+                    versionRect.right -= 12;
+                    SetTextColor(deviceContext, ToColorRef(ScaleColor(EditorThemes::XelqoriaDark.textSecondary, 0.78f)));
+                    DrawTextW(deviceContext, L"X E L Q O R I A   E N G I N E   v0.1.0", -1, &versionRect, DT_RIGHT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+                }
+
+                EndPaint(window, &paintStruct);
+                return 0;
+            }
+
+            if (WM_ERASEBKGND == message)
+            {
+                return 1;
+            }
+
+            return DefWindowProcW(window, message, wParam, lParam);
+        }
+
         LRESULT CALLBACK EditorPanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (WM_PAINT == message)
@@ -174,32 +349,13 @@ namespace Xelqoria::Editor
                 RECT clientRect{};
                 GetClientRect(window, &clientRect);
 
-                const int clientHeight = static_cast<int>(clientRect.bottom - clientRect.top);
-                const int headerHeight = (std::min)(26, (std::max)(0, clientHeight));
-                RECT headerRect = clientRect;
-                headerRect.bottom = headerRect.top + headerHeight;
-
-                FillRectWithThemeColor(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBackground);
-                FillRectWithThemeColor(deviceContext, headerRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
-                DrawRectBorder(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBorder);
-
-                wchar_t title[64]{};
-                GetWindowTextW(window, title, static_cast<int>(std::size(title)));
-                if (L'\0' != title[0])
-                {
-                    SetBkMode(deviceContext, TRANSPARENT);
-                    SetTextColor(deviceContext, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
-
-                    RECT textRect = headerRect;
-                    textRect.left += 10;
-                    textRect.right -= 10;
-                    DrawTextW(
-                        deviceContext,
-                        title,
-                        -1,
-                        &textRect,
-                        DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
-                }
+                const int panelRadius = EditorThemes::XelqoriaDark.panelCornerRadius;
+                FillRoundRectWithThemeColor(
+                    deviceContext,
+                    clientRect,
+                    EditorThemes::XelqoriaDark.panelBackground,
+                    panelRadius);
+                DrawRoundRectBorder(deviceContext, clientRect, EditorThemes::XelqoriaDark.panelBorder, panelRadius);
 
                 EndPaint(window, &paintStruct);
                 return 0;
@@ -473,6 +629,22 @@ namespace Xelqoria::Editor
             return 0 != RegisterClassW(&windowClass);
         }
 
+        bool RegisterEditorChromeWindowClass(HINSTANCE hInstance)
+        {
+            WNDCLASSW existingClass{};
+            if (GetClassInfoW(hInstance, EditorChromeWindowClassName, &existingClass))
+            {
+                return true;
+            }
+
+            WNDCLASSW windowClass{};
+            windowClass.lpfnWndProc = EditorChromeWindowProc;
+            windowClass.hInstance = hInstance;
+            windowClass.hCursor = LoadCursor(nullptr, IDC_ARROW);
+            windowClass.lpszClassName = EditorChromeWindowClassName;
+            return 0 != RegisterClassW(&windowClass);
+        }
+
         bool RegisterEditorPanelWindowClass(HINSTANCE hInstance)
         {
             WNDCLASSW existingClass{};
@@ -621,7 +793,7 @@ namespace Xelqoria::Editor
         int panelSpacing = 12;
         int leftPaneWidth = 260;
         int rightPaneWidth = 300;
-        int groupHeaderHeight = 26;
+        int groupHeaderHeight = 0;
         int hierarchyHeight = 280;
         int labelHeight = 24;
         int buttonHeight = 28;
@@ -657,6 +829,11 @@ namespace Xelqoria::Editor
     {
         m_cursor = &cursor;
         if (false == RegisterWorkspaceBackgroundWindowClass(hInstance))
+        {
+            return false;
+        }
+
+        if (false == RegisterEditorChromeWindowClass(hInstance))
         {
             return false;
         }
@@ -715,6 +892,30 @@ namespace Xelqoria::Editor
             L"",
             WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS);
         if (nullptr == m_workspaceBackground)
+        {
+            return false;
+        }
+
+        m_topBar = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            EditorChromeWindowClassName,
+            L"",
+            WS_CHILD | WS_CLIPSIBLINGS);
+        m_statusBar = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            EditorChromeWindowClassName,
+            L"Ready  |  Fixed Layout  |  Xelqoria Dark",
+            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS);
+        m_topBarProjectButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"SampleProject  v", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW);
+        m_topBarPlayButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"▶", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW);
+        m_topBarLayoutButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"■", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW);
+        if (nullptr == m_topBar
+            || nullptr == m_statusBar
+            || nullptr == m_topBarProjectButton
+            || nullptr == m_topBarPlayButton
+            || nullptr == m_topBarLayoutButton)
         {
             return false;
         }
@@ -829,7 +1030,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 82> controls = CollectControls();
+            const std::array<HWND, 88> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -867,13 +1068,23 @@ namespace Xelqoria::Editor
             return UpdateSceneViewHostSize();
         }
 
-        const int outerPadding = ScaleMetric(12);
+        const int outerPadding = ScaleMetric(8);
+        const int statusBarHeight = ScaleMetric(18);
         MoveChildWindowNoRedraw(m_workspaceBackground, 0, 0, clientWidth, clientHeight);
+        MoveChildWindowNoRedraw(m_topBar, 0, 0, 0, 0);
+        MoveChildWindowNoRedraw(m_topBarProjectButton, 0, 0, 0, 0);
+        MoveChildWindowNoRedraw(m_topBarPlayButton, 0, 0, 0, 0);
+        MoveChildWindowNoRedraw(m_topBarLayoutButton, 0, 0, 0, 0);
+        ShowWindow(m_topBar, SW_HIDE);
+        ShowWindow(m_topBarProjectButton, SW_HIDE);
+        ShowWindow(m_topBarPlayButton, SW_HIDE);
+        ShowWindow(m_topBarLayoutButton, SW_HIDE);
+        MoveChildWindowNoRedraw(m_statusBar, 0, clientHeight - statusBarHeight, clientWidth, statusBarHeight);
         const RECT rootRect{
             outerPadding,
             outerPadding,
             clientWidth - outerPadding,
-            clientHeight - outerPadding
+            clientHeight - statusBarHeight - outerPadding
         };
         LayoutDockNode(m_rootDockNodeId, rootRect);
         HideDockGuideWindows();
@@ -939,7 +1150,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeHierarchyPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE;
-        m_hierarchyPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"Hierarchy", panelStyle);
+        m_hierarchyPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"HIERARCHY", panelStyle);
         if (nullptr == m_hierarchyPanel)
         {
             return false;
@@ -950,11 +1161,23 @@ namespace Xelqoria::Editor
             hInstance,
             L"Static",
             L"Entities: pending",
-            WS_CHILD | WS_VISIBLE);
+            WS_CHILD);
         if (nullptr == m_hierarchySummaryLabel)
         {
             return false;
         }
+
+        m_hierarchySearchEdit = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Edit",
+            L"",
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+        if (nullptr == m_hierarchySearchEdit)
+        {
+            return false;
+        }
+        SendMessageW(m_hierarchySearchEdit, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(L"Search Entity"));
 
         m_hierarchyListBox = CreateChildWindow(
             parentWindow,
@@ -1015,7 +1238,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeAssetsPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE;
-        m_assetsPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"Assets", panelStyle);
+        m_assetsPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"ASSETS", panelStyle);
         if (nullptr == m_assetsPanel)
         {
             return false;
@@ -1026,7 +1249,7 @@ namespace Xelqoria::Editor
             hInstance,
             L"Static",
             L"Assets: pending",
-            WS_CHILD | WS_VISIBLE);
+            WS_CHILD);
         if (nullptr == m_assetsSummaryLabel)
         {
             return false;
@@ -1046,7 +1269,9 @@ namespace Xelqoria::Editor
             ListView_SetBkColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.panelBackground));
             ListView_SetTextBkColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.panelBackground));
             ListView_SetTextColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
+            ApplyDarkExplorerTheme(m_assetsListView);
             SetWindowSubclass(m_assetsListView, EditorRowControlSubclassProc, EditorRowControlSubclassId, 0);
+            ConfigureAssetsListHeaderTheme();
         }
 
         return nullptr != m_assetsListView;
@@ -1055,7 +1280,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeInspectorPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE;
-        m_inspectorPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"Inspector", panelStyle);
+        m_inspectorPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"INSPECTOR", panelStyle);
         if (nullptr == m_inspectorPanel)
         {
             return false;
@@ -1221,7 +1446,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeMaterialPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE;
-        m_materialPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"Material", panelStyle);
+        m_materialPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"MATERIAL", panelStyle);
         if (nullptr == m_materialPanel)
         {
             return false;
@@ -1232,7 +1457,7 @@ namespace Xelqoria::Editor
             hInstance,
             L"Static",
             L"Material: no material selected",
-            WS_CHILD | WS_VISIBLE);
+            WS_CHILD);
         if (nullptr == m_materialSummaryLabel)
         {
             return false;
@@ -1299,7 +1524,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeSceneViewPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE;
-        m_sceneViewPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"Scene", panelStyle);
+        m_sceneViewPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"SCENE", panelStyle);
         if (nullptr == m_sceneViewPanel)
         {
             return false;
@@ -1376,7 +1601,7 @@ namespace Xelqoria::Editor
             parentWindow,
             hInstance,
             L"Button",
-            L"ビルドして開始",
+            L"▶",
             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         if (nullptr == m_buildAndPlayButton)
         {
@@ -1387,7 +1612,7 @@ namespace Xelqoria::Editor
             parentWindow,
             hInstance,
             L"Button",
-            L"停止",
+            L"Ⅱ",
             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         if (nullptr == m_pauseResumePlayButton)
         {
@@ -1398,7 +1623,7 @@ namespace Xelqoria::Editor
             parentWindow,
             hInstance,
             L"Button",
-            L"終了",
+            L"■",
             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         return nullptr != m_endPlayButton;
     }
@@ -1406,7 +1631,7 @@ namespace Xelqoria::Editor
     bool EditorShell::InitializeLogOutputPanel(HWND parentWindow, HINSTANCE hInstance)
     {
         constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE;
-        m_logOutputPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"Console", panelStyle);
+        m_logOutputPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"CONSOLE", panelStyle);
         if (nullptr == m_logOutputPanel)
         {
             return false;
@@ -1424,7 +1649,7 @@ namespace Xelqoria::Editor
         }
         ConfigureEditorTabControl(m_logOutputTabControl);
 
-        const std::array<const wchar_t*, 3> tabNames{ L"ゲームログ", L"ビルドログ", L"エディタログ" };
+        const std::array<const wchar_t*, 4> tabNames{ L"すべて", L"ログ", L"警告", L"エラー" };
         for (std::size_t index = 0; index < tabNames.size(); ++index)
         {
             TCITEMW item{};
@@ -1547,17 +1772,17 @@ namespace Xelqoria::Editor
     {
         m_dockNodes.clear();
 
-        DockNode hierarchyNode{};
-        hierarchyNode.kind = DockNodeKind::Leaf;
-        hierarchyNode.panels = { EditorPanelId::Hierarchy };
-        hierarchyNode.tabControl = m_leftTopDockTab;
-        const DockNodeId hierarchyNodeId = AddDockNode(std::move(hierarchyNode));
-
         DockNode assetsNode{};
         assetsNode.kind = DockNodeKind::Leaf;
         assetsNode.panels = { EditorPanelId::Assets };
-        assetsNode.tabControl = m_leftBottomDockTab;
+        assetsNode.tabControl = m_leftTopDockTab;
         const DockNodeId assetsNodeId = AddDockNode(std::move(assetsNode));
+
+        DockNode hierarchyNode{};
+        hierarchyNode.kind = DockNodeKind::Leaf;
+        hierarchyNode.panels = { EditorPanelId::Hierarchy };
+        hierarchyNode.tabControl = m_leftBottomDockTab;
+        const DockNodeId hierarchyNodeId = AddDockNode(std::move(hierarchyNode));
 
         DockNode sceneViewNode{};
         sceneViewNode.kind = DockNodeKind::Leaf;
@@ -1581,15 +1806,15 @@ namespace Xelqoria::Editor
         DockNode leftColumnNode{};
         leftColumnNode.kind = DockNodeKind::Split;
         leftColumnNode.splitOrientation = DockSplitOrientation::Vertical;
-        leftColumnNode.splitRatio = 0.32f;
-        leftColumnNode.firstChild = hierarchyNodeId;
-        leftColumnNode.secondChild = assetsNodeId;
+        leftColumnNode.splitRatio = 0.49f;
+        leftColumnNode.firstChild = assetsNodeId;
+        leftColumnNode.secondChild = hierarchyNodeId;
         const DockNodeId leftColumnNodeId = AddDockNode(leftColumnNode);
 
         DockNode centerColumnNode{};
         centerColumnNode.kind = DockNodeKind::Split;
         centerColumnNode.splitOrientation = DockSplitOrientation::Vertical;
-        centerColumnNode.splitRatio = 0.70f;
+        centerColumnNode.splitRatio = 0.74f;
         centerColumnNode.firstChild = sceneViewNodeId;
         centerColumnNode.secondChild = logOutputNodeId;
         const DockNodeId centerColumnNodeId = AddDockNode(centerColumnNode);
@@ -1597,7 +1822,7 @@ namespace Xelqoria::Editor
         DockNode centerRightNode{};
         centerRightNode.kind = DockNodeKind::Split;
         centerRightNode.splitOrientation = DockSplitOrientation::Horizontal;
-        centerRightNode.splitRatio = 0.84f;
+        centerRightNode.splitRatio = 0.68f;
         centerRightNode.firstChild = centerColumnNodeId;
         centerRightNode.secondChild = inspectorNodeId;
         const DockNodeId centerRightNodeId = AddDockNode(centerRightNode);
@@ -1605,7 +1830,7 @@ namespace Xelqoria::Editor
         DockNode rootNode{};
         rootNode.kind = DockNodeKind::Split;
         rootNode.splitOrientation = DockSplitOrientation::Horizontal;
-        rootNode.splitRatio = 0.12f;
+        rootNode.splitRatio = 0.245f;
         rootNode.firstChild = leftColumnNodeId;
         rootNode.secondChild = centerRightNodeId;
         m_rootDockNodeId = AddDockNode(rootNode);
@@ -1626,7 +1851,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const int panelSpacing = ScaleMetric(12);
+        const int panelSpacing = ScaleMetric(8);
         dockNode.splitRatio = ClampDockSplitRatio(dockNodeId, dockNode.splitRatio);
         if (DockSplitOrientation::Horizontal == dockNode.splitOrientation)
         {
@@ -1810,7 +2035,7 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutHierarchyPanelInRect(const RECT& panelRect)
     {
         const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
+        const int groupHeaderHeight = 0;
         const int labelHeight = ScaleMetric(24);
         const int buttonHeight = ScaleMetric(28);
         int hierarchyButtonGap = ScaleMetric(8);
@@ -1822,10 +2047,12 @@ namespace Xelqoria::Editor
             hierarchyButtonGap = 0;
         }
 
-        const int buttonTop = panelRect.top + outerPadding + groupHeaderHeight + labelHeight + ScaleMetric(6);
+        const int searchTop = panelRect.top + groupHeaderHeight + ScaleMetric(6);
+        const int buttonTop = searchTop + labelHeight + ScaleMetric(6);
         const int buttonWidth = (std::max)(0, (innerWidth - hierarchyButtonGap * 2) / 3);
         MoveChildWindowNoRedraw(m_hierarchyPanel, panelRect.left, panelRect.top, width, height);
-        MoveChildWindowNoRedraw(m_hierarchySummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_hierarchySummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, 0, 0);
+        MoveChildWindowNoRedraw(m_hierarchySearchEdit, panelRect.left + outerPadding, searchTop, innerWidth, labelHeight);
         MoveChildWindowNoRedraw(m_hierarchyCreateButton, panelRect.left + outerPadding, buttonTop, buttonWidth, buttonHeight);
         MoveChildWindowNoRedraw(
             m_hierarchyDuplicateButton,
@@ -1849,25 +2076,25 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutAssetsPanelInRect(const RECT& panelRect)
     {
         const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
+        const int groupHeaderHeight = 0;
         const int labelHeight = ScaleMetric(24);
         const int width = panelRect.right - panelRect.left;
         const int height = panelRect.bottom - panelRect.top;
         const int innerWidth = (std::max)(0, width - outerPadding * 2);
         MoveChildWindowNoRedraw(m_assetsPanel, panelRect.left, panelRect.top, width, height);
-        MoveChildWindowNoRedraw(m_assetsSummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_assetsSummaryLabel, panelRect.left + outerPadding, panelRect.top + groupHeaderHeight, 0, 0);
         MoveChildWindowNoRedraw(
             m_assetsListView,
             panelRect.left + outerPadding,
-            panelRect.top + groupHeaderHeight + labelHeight + ScaleMetric(6),
+            panelRect.top + groupHeaderHeight + ScaleMetric(6),
             innerWidth,
-            (std::max)(0, height - groupHeaderHeight - labelHeight - outerPadding - ScaleMetric(12)));
+            (std::max)(0, height - groupHeaderHeight - outerPadding - ScaleMetric(12)));
     }
 
     void EditorShell::LayoutInspectorPanelInRect(const RECT& panelRect)
     {
         const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
+        const int groupHeaderHeight = 0;
         const int labelHeight = ScaleMetric(24);
         const int rowHeight = ScaleMetric(26);
         const int rowSpacing = ScaleMetric(6);
@@ -1920,7 +2147,7 @@ namespace Xelqoria::Editor
     void EditorShell::LayoutMaterialPanelInRect(const RECT& panelRect)
     {
         const int outerPadding = ScaleMetric(12);
-        const int groupHeaderHeight = ScaleMetric(26);
+        const int groupHeaderHeight = 0;
         const int labelHeight = ScaleMetric(24);
         const int rowHeight = ScaleMetric(24);
         const int rowSpacing = ScaleMetric(8);
@@ -1929,14 +2156,13 @@ namespace Xelqoria::Editor
         const int height = panelRect.bottom - panelRect.top;
         const int innerX = panelRect.left + outerPadding;
         const int innerWidth = (std::max)(0, width - outerPadding * 2);
-        const int summaryTop = panelRect.top + groupHeaderHeight;
-        const int noticeTop = summaryTop + labelHeight + ScaleMetric(6);
+        const int noticeTop = panelRect.top + groupHeaderHeight + ScaleMetric(6);
         const int sectionTop = noticeTop + labelHeight + ScaleMetric(10);
         const int firstRowTop = sectionTop + labelHeight + ScaleMetric(4);
         const int editWidth = (std::max)(0, innerWidth - labelWidth);
 
         MoveChildWindowNoRedraw(m_materialPanel, panelRect.left, panelRect.top, width, height);
-        MoveChildWindowNoRedraw(m_materialSummaryLabel, innerX, summaryTop, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_materialSummaryLabel, innerX, panelRect.top + groupHeaderHeight, 0, 0);
         MoveChildWindowNoRedraw(m_materialSharedNoticeLabel, innerX, noticeTop, innerWidth, labelHeight);
         MoveChildWindowNoRedraw(m_materialDetailsSectionLabel, innerX, sectionTop, innerWidth, labelHeight);
 
@@ -1967,11 +2193,11 @@ namespace Xelqoria::Editor
 
     void EditorShell::LayoutSceneViewPanelInRect(const RECT& panelRect)
     {
-        const int borderInset = ScaleMetric(4);
-        const int toolbarHeight = ScaleMetric(36);
+        const int borderInset = ScaleMetric(8);
+        const int toolbarHeight = ScaleMetric(26);
         const int toolbarGap = ScaleMetric(8);
-        const int buttonGap = ScaleMetric(8);
-        const int buttonWidth = ScaleMetric(120);
+        const int buttonGap = ScaleMetric(6);
+        const int buttonWidth = ScaleMetric(42);
         const int width = panelRect.right - panelRect.left;
         const int height = panelRect.bottom - panelRect.top;
         const int sceneHostWidth = (std::max)(0, width - borderInset * 2);
@@ -2013,9 +2239,9 @@ namespace Xelqoria::Editor
 
     void EditorShell::LayoutLogOutputPanelInRect(const RECT& panelRect)
     {
-        const int outerPadding = ScaleMetric(12);
-        const int rowHeight = ScaleMetric(32);
-        const int gap = ScaleMetric(8);
+        const int outerPadding = ScaleMetric(8);
+        const int rowHeight = ScaleMetric(24);
+        const int gap = ScaleMetric(6);
         const int panelLeft = static_cast<int>(panelRect.left);
         const int panelTop = static_cast<int>(panelRect.top);
         const int panelRight = static_cast<int>(panelRect.right);
@@ -2023,21 +2249,22 @@ namespace Xelqoria::Editor
         const int width = panelRight - panelLeft;
         const int height = panelBottom - panelTop;
         const int innerWidth = (std::max)(0, width - outerPadding * 2);
-        const int buttonWidth = ScaleMetric(72);
-        const int tabWidth = (std::min)(innerWidth, ScaleMetric(420));
-        const int tabLeft = (std::max)(panelLeft + outerPadding, panelRight - outerPadding - tabWidth);
+        const int buttonWidth = ScaleMetric(64);
+        const int tabWidth = (std::min)(innerWidth - buttonWidth - gap, ScaleMetric(300));
+        const int tabLeft = panelLeft + outerPadding;
         const int toolbarTop = panelTop + outerPadding;
-        const int filterLeft = panelLeft + outerPadding + buttonWidth + gap;
-        const int filterRight = tabLeft - gap;
+        const int filterLeft = panelLeft;
+        const int filterRight = panelLeft;
         const int filterWidth = (std::max)(0, filterRight - filterLeft);
         const int listTop = toolbarTop + rowHeight + gap;
 
         MoveChildWindowNoRedraw(m_logOutputPanel, panelLeft, panelTop, width, height);
         MoveChildWindowNoRedraw(m_logOutputTabControl, tabLeft, toolbarTop, tabWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_logClearButton, panelLeft + outerPadding, toolbarTop, buttonWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_logClearButton, panelRight - outerPadding - buttonWidth, toolbarTop, buttonWidth, rowHeight);
         MoveChildWindowNoRedraw(m_logCopyButton, panelLeft, panelTop, 0, 0);
         ShowWindow(m_logCopyButton, SW_HIDE);
         MoveChildWindowNoRedraw(m_logFilterEdit, filterLeft, toolbarTop, filterWidth, rowHeight);
+        ShowWindow(m_logFilterEdit, SW_HIDE);
         MoveChildWindowNoRedraw(
             m_logListBox,
             panelLeft + outerPadding,
@@ -2310,6 +2537,12 @@ namespace Xelqoria::Editor
         if (nullptr == parentWindow)
         {
             return false;
+        }
+
+        if (inputSnapshot.WasKeyPressed('R') && inputSnapshot.IsKeyDown(VK_CONTROL))
+        {
+            ResetDockLayout();
+            return true;
         }
 
         bool changed = false;
@@ -2853,6 +3086,11 @@ namespace Xelqoria::Editor
             return true;
         }
 
+        if (DrawEditorButton(*drawItem))
+        {
+            return true;
+        }
+
         if (DrawInspectorSectionLabel(*drawItem))
         {
             return true;
@@ -2867,16 +3105,18 @@ namespace Xelqoria::Editor
         switch (panelId)
         {
         case EditorPanelId::Hierarchy:
-            for (HWND control : { m_hierarchyPanel, m_hierarchySummaryLabel, m_hierarchyListBox, m_hierarchyNameEdit, m_hierarchyCreateButton, m_hierarchyDuplicateButton, m_hierarchyDeleteButton })
+            for (HWND control : { m_hierarchyPanel, m_hierarchyListBox, m_hierarchyNameEdit, m_hierarchyCreateButton, m_hierarchyDuplicateButton, m_hierarchyDeleteButton })
             {
                 ShowWindow(control, showCommand);
             }
+            ShowWindow(m_hierarchySummaryLabel, SW_HIDE);
             break;
         case EditorPanelId::Assets:
-            for (HWND control : { m_assetsPanel, m_assetsSummaryLabel, m_assetsListView })
+            for (HWND control : { m_assetsPanel, m_assetsListView })
             {
                 ShowWindow(control, showCommand);
             }
+            ShowWindow(m_assetsSummaryLabel, SW_HIDE);
             break;
         case EditorPanelId::SceneView:
             for (HWND control : { m_sceneViewPanel, m_sceneViewHost, m_buildAndPlayButton, m_pauseResumePlayButton, m_endPlayButton })
@@ -2900,10 +3140,11 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::Material:
-            for (HWND control : { m_materialPanel, m_materialSummaryLabel, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4] })
+            for (HWND control : { m_materialPanel, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4] })
             {
                 ShowWindow(control, showCommand);
             }
+            ShowWindow(m_materialSummaryLabel, SW_HIDE);
             if (false == visible)
             {
                 ShowWindow(m_materialTextureDropHighlight, SW_HIDE);
@@ -4191,6 +4432,13 @@ namespace Xelqoria::Editor
                 item.mask = TCIF_TEXT;
                 item.pszText = const_cast<LPWSTR>(GetPanelTitle(dockNode.panels[index]));
                 TabCtrl_InsertItem(dockNode.tabControl, static_cast<int>(index), &item);
+                if (EditorPanelId::SceneView == dockNode.panels[index])
+                {
+                    TCITEMW gameItem{};
+                    gameItem.mask = TCIF_TEXT;
+                    gameItem.pszText = const_cast<LPWSTR>(L"Game");
+                    TabCtrl_InsertItem(dockNode.tabControl, static_cast<int>(index + 1), &gameItem);
+                }
             }
 
             dockNode.activeTabIndex = (std::max)(0, (std::min)(dockNode.activeTabIndex, static_cast<int>(dockNode.panels.size()) - 1));
@@ -4258,7 +4506,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        SendMessageW(tabControl, TCM_SETITEMSIZE, 0, MAKELPARAM(ScaleMetric(132), ScaleMetric(28)));
+        SendMessageW(tabControl, TCM_SETITEMSIZE, 0, MAKELPARAM(ScaleMetric(96), ScaleMetric(28)));
         SetWindowSubclass(
             tabControl,
             EditorShell::EditorTabControlSubclassProc,
@@ -4284,27 +4532,27 @@ namespace Xelqoria::Editor
         const bool isActive = tabIndex == activeTabIndex;
         const bool isHovered = tabIndex == hoveredTabIndex;
 
-        EditorColor backgroundColor = EditorThemes::XelqoriaDark.panelBackground;
-        EditorColor textColor = EditorThemes::XelqoriaDark.textSecondary;
+        EditorColor backgroundColor = EditorColor::FromRgb8(0x13, 0x0F, 0x2A);
+        EditorColor textColor = EditorColor::FromRgb8(0xB8, 0x8C, 0xFF);
         if (isHovered)
         {
-            backgroundColor = EditorThemes::XelqoriaDark.hover;
-            textColor = EditorThemes::XelqoriaDark.textPrimary;
+            backgroundColor = EditorColor::FromRgb8(0x1D, 0x16, 0x42);
+            textColor = EditorColor::FromRgb8(0xD6, 0xAE, 0xFF);
         }
         if (isActive)
         {
-            backgroundColor = EditorThemes::XelqoriaDark.panelHeaderBackground;
-            textColor = EditorThemes::XelqoriaDark.textPrimary;
+            backgroundColor = EditorThemes::XelqoriaDark.selection;
+            textColor = EditorColor::FromRgb8(0xF0, 0xB7, 0xFF);
         }
 
         RECT tabRect = drawItem.rcItem;
-        FillRectWithThemeColor(drawItem.hDC, tabRect, backgroundColor);
-        DrawRectBorder(drawItem.hDC, tabRect, EditorThemes::XelqoriaDark.panelBorder);
+        InflateRect(&tabRect, -2, -2);
+        FillRoundRectWithThemeColor(drawItem.hDC, tabRect, backgroundColor, ScaleMetric(6));
 
         if (isActive)
         {
             RECT accentRect = tabRect;
-            accentRect.top = (std::max)(accentRect.top, accentRect.bottom - ScaleMetric(3));
+            accentRect.right = (std::min)(accentRect.right, accentRect.left + ScaleMetric(4));
             FillRectWithThemeColor(drawItem.hDC, accentRect, EditorThemes::XelqoriaDark.accent);
         }
 
@@ -4319,15 +4567,65 @@ namespace Xelqoria::Editor
         SetTextColor(drawItem.hDC, ToColorRef(textColor));
 
         RECT textRect = tabRect;
-        textRect.left += ScaleMetric(10);
-        textRect.right -= ScaleMetric(10);
-        textRect.bottom -= ScaleMetric(2);
+        textRect.left += ScaleMetric(12);
+        textRect.right -= ScaleMetric(8);
         DrawTextW(
             drawItem.hDC,
             tabText,
             -1,
             &textRect,
             DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+
+        return true;
+    }
+
+    bool EditorShell::DrawEditorButton(const DRAWITEMSTRUCT& drawItem) const
+    {
+        if (ODT_BUTTON != drawItem.CtlType || nullptr == drawItem.hwndItem || nullptr == drawItem.hDC)
+        {
+            return false;
+        }
+
+        wchar_t buttonText[128]{};
+        GetWindowTextW(drawItem.hwndItem, buttonText, static_cast<int>(std::size(buttonText)));
+
+        const bool isPressed = 0 != (drawItem.itemState & ODS_SELECTED);
+        const bool isDisabled = 0 != (drawItem.itemState & ODS_DISABLED);
+        const bool isDefaultAction =
+            drawItem.hwndItem == m_topBarPlayButton
+            || drawItem.hwndItem == m_buildAndPlayButton
+            || 0 == wcscmp(buttonText, L"すべて");
+
+        EditorColor backgroundColor = isDefaultAction
+            ? EditorThemes::XelqoriaDark.selection
+            : EditorThemes::XelqoriaDark.panelHeaderBackground;
+        if (isPressed)
+        {
+            backgroundColor = EditorThemes::XelqoriaDark.accent;
+        }
+
+        const EditorColor borderColor = isDefaultAction
+            ? EditorThemes::XelqoriaDark.accent
+            : EditorThemes::XelqoriaDark.panelBorder;
+        const EditorColor textColor = isDisabled
+            ? EditorThemes::XelqoriaDark.textSecondary
+            : EditorThemes::XelqoriaDark.textPrimary;
+
+        RECT buttonRect = drawItem.rcItem;
+        FillRoundRectWithThemeColor(drawItem.hDC, buttonRect, backgroundColor, ScaleMetric(6));
+        DrawRoundRectBorder(drawItem.hDC, buttonRect, borderColor, ScaleMetric(6));
+
+        SetBkMode(drawItem.hDC, TRANSPARENT);
+        SetTextColor(drawItem.hDC, ToColorRef(textColor));
+        RECT textRect = buttonRect;
+        textRect.left += ScaleMetric(8);
+        textRect.right -= ScaleMetric(8);
+        DrawTextW(
+            drawItem.hDC,
+            buttonText,
+            -1,
+            &textRect,
+            DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
 
         return true;
     }
@@ -4446,24 +4744,77 @@ namespace Xelqoria::Editor
         }
 
         NMLVCUSTOMDRAW* mutableCustomDraw = const_cast<NMLVCUSTOMDRAW*>(customDraw);
-        const int itemIndex = static_cast<int>(customDraw->nmcd.dwItemSpec);
-        const bool isSelected = 0 != (customDraw->nmcd.uItemState & CDIS_SELECTED);
-        const bool isHovered = itemIndex == GetHoveredListViewIndex(m_assetsListView);
+        mutableCustomDraw->nmcd.uItemState &= ~(CDIS_SELECTED | CDIS_HOT);
 
-        EditorColor backgroundColor = EditorThemes::XelqoriaDark.panelBackground;
-        EditorColor textColor = EditorThemes::XelqoriaDark.textPrimary;
-        if (isHovered)
+        mutableCustomDraw->clrText = ToColorRef(EditorThemes::XelqoriaDark.textPrimary);
+        mutableCustomDraw->clrTextBk = ToColorRef(EditorThemes::XelqoriaDark.panelBackground);
+        return CDRF_NEWFONT;
+    }
+
+    std::optional<LRESULT> EditorShell::DrawAssetsListViewHeader(LPARAM customDrawParameter) const
+    {
+        const NMCUSTOMDRAW* customDraw = reinterpret_cast<const NMCUSTOMDRAW*>(customDrawParameter);
+        const HWND headerWindow = nullptr != m_assetsListView ? ListView_GetHeader(m_assetsListView) : nullptr;
+        if (nullptr == customDraw
+            || nullptr == headerWindow
+            || customDraw->hdr.hwndFrom != headerWindow
+            || customDraw->hdr.code != NM_CUSTOMDRAW)
         {
-            backgroundColor = EditorThemes::XelqoriaDark.hover;
-        }
-        if (isSelected)
-        {
-            backgroundColor = EditorThemes::XelqoriaDark.selection;
+            return std::nullopt;
         }
 
-        mutableCustomDraw->clrText = ToColorRef(textColor);
-        mutableCustomDraw->clrTextBk = ToColorRef(backgroundColor);
-        return CDRF_DODEFAULT;
+        if (CDDS_PREPAINT == customDraw->dwDrawStage)
+        {
+            RECT clientRect{};
+            GetClientRect(headerWindow, &clientRect);
+            FillRectWithThemeColor(customDraw->hdc, clientRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
+            return CDRF_NOTIFYITEMDRAW;
+        }
+
+        if (CDDS_ITEMPREPAINT != customDraw->dwDrawStage)
+        {
+            return CDRF_DODEFAULT;
+        }
+
+        const int columnIndex = static_cast<int>(customDraw->dwItemSpec);
+        RECT itemRect{};
+        if (FALSE == Header_GetItemRect(headerWindow, columnIndex, &itemRect))
+        {
+            return CDRF_DODEFAULT;
+        }
+
+        FillRectWithThemeColor(customDraw->hdc, itemRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
+        DrawRectBorder(customDraw->hdc, itemRect, EditorThemes::XelqoriaDark.panelBorder);
+
+        wchar_t text[128]{};
+        HDITEMW item{};
+        item.mask = HDI_TEXT | HDI_FORMAT;
+        item.pszText = text;
+        item.cchTextMax = static_cast<int>(std::size(text));
+        Header_GetItem(headerWindow, columnIndex, &item);
+
+        RECT textRect = itemRect;
+        textRect.left += ScaleMetric(8);
+        textRect.right -= ScaleMetric(8);
+
+        UINT textFormat = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
+        if (0 != (item.fmt & HDF_CENTER))
+        {
+            textFormat |= DT_CENTER;
+        }
+        else if (0 != (item.fmt & HDF_RIGHT))
+        {
+            textFormat |= DT_RIGHT;
+        }
+        else
+        {
+            textFormat |= DT_LEFT;
+        }
+
+        SetBkMode(customDraw->hdc, TRANSPARENT);
+        SetTextColor(customDraw->hdc, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
+        DrawTextW(customDraw->hdc, text, -1, &textRect, textFormat);
+        return CDRF_SKIPDEFAULT;
     }
 
     std::wstring EditorShell::GetDockTabLayoutKey(HWND tabControl) const
@@ -4596,7 +4947,7 @@ namespace Xelqoria::Editor
         case EditorPanelId::Assets:
             return L"Assets";
         case EditorPanelId::SceneView:
-            return L"SceneView";
+            return L"Scene";
         case EditorPanelId::Inspector:
             return L"Inspector";
         case EditorPanelId::Material:
@@ -4894,7 +5245,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 82> controls = CollectControls();
+        const std::array<HWND, 88> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -4917,10 +5268,15 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 82> EditorShell::CollectControls() const
+    std::array<HWND, 88> EditorShell::CollectControls() const
     {
         return {
             m_workspaceBackground,
+            m_topBar,
+            m_topBarProjectButton,
+            m_topBarPlayButton,
+            m_topBarLayoutButton,
+            m_statusBar,
             m_leftTopDockTab,
             m_leftBottomDockTab,
             m_centerDockTab,
@@ -4958,6 +5314,7 @@ namespace Xelqoria::Editor
             m_assetsListView,
             m_assetsSummaryLabel,
             m_hierarchySummaryLabel,
+            m_hierarchySearchEdit,
             m_hierarchyListBox,
             m_hierarchyNameEdit,
             m_hierarchyCreateButton,
@@ -5109,6 +5466,24 @@ namespace Xelqoria::Editor
         (void)subclassId;
         (void)referenceData;
 
+        if (WM_ERASEBKGND == message)
+        {
+            FillTabControlBackground(window, reinterpret_cast<HDC>(wParam));
+            return 1;
+        }
+
+        if (WM_PAINT == message)
+        {
+            const LRESULT result = DefSubclassProc(window, message, wParam, lParam);
+            HDC deviceContext = GetDC(window);
+            if (nullptr != deviceContext)
+            {
+                FillTabControlBackground(window, deviceContext);
+                ReleaseDC(window, deviceContext);
+            }
+            return result;
+        }
+
         if (WM_MOUSEMOVE == message)
         {
             TRACKMOUSEEVENT trackMouseEvent{};
@@ -5162,6 +5537,44 @@ namespace Xelqoria::Editor
         return DefSubclassProc(window, message, wParam, lParam);
     }
 
+    LRESULT CALLBACK EditorShell::EditorHeaderControlSubclassProc(
+        HWND window,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData)
+    {
+        (void)subclassId;
+        (void)referenceData;
+
+        if (WM_ERASEBKGND == message)
+        {
+            DrawAssetsHeaderControl(window, reinterpret_cast<HDC>(wParam));
+            return 1;
+        }
+
+        if (WM_PAINT == message)
+        {
+            PAINTSTRUCT paintStruct{};
+            HDC deviceContext = BeginPaint(window, &paintStruct);
+            DrawAssetsHeaderControl(window, deviceContext);
+            EndPaint(window, &paintStruct);
+            return 0;
+        }
+
+        if (WM_MOUSEMOVE == message || WM_LBUTTONDOWN == message || WM_LBUTTONUP == message)
+        {
+            InvalidateRect(window, nullptr, FALSE);
+        }
+        else if (WM_NCDESTROY == message)
+        {
+            RemoveWindowSubclass(window, EditorShell::EditorHeaderControlSubclassProc, EditorHeaderControlSubclassId);
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
+    }
+
     LRESULT CALLBACK EditorShell::ParentWindowSubclassProc(
         HWND window,
         UINT message,
@@ -5195,6 +5608,15 @@ namespace Xelqoria::Editor
                 && notifyHeader->code == NM_CUSTOMDRAW)
             {
                 return DrawAssetsListViewItem(lParam);
+            }
+
+            const HWND assetsHeader = nullptr != m_assetsListView ? ListView_GetHeader(m_assetsListView) : nullptr;
+            if (nullptr != notifyHeader
+                && nullptr != assetsHeader
+                && notifyHeader->hwndFrom == assetsHeader
+                && notifyHeader->code == NM_CUSTOMDRAW)
+            {
+                return DrawAssetsListViewHeader(lParam);
             }
         }
 
@@ -5297,6 +5719,11 @@ namespace Xelqoria::Editor
         return m_hierarchyNameEdit;
     }
 
+    HWND EditorShell::GetHierarchySearchEdit() const
+    {
+        return m_hierarchySearchEdit;
+    }
+
     HWND EditorShell::GetHierarchyCreateButton() const
     {
         return m_hierarchyCreateButton;
@@ -5315,6 +5742,24 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetAssetsListView() const
     {
         return m_assetsListView;
+    }
+
+    void EditorShell::ConfigureAssetsListHeaderTheme() const
+    {
+        if (nullptr == m_assetsListView)
+        {
+            return;
+        }
+
+        HWND assetsHeader = ListView_GetHeader(m_assetsListView);
+        if (nullptr == assetsHeader)
+        {
+            return;
+        }
+
+        ApplyDarkExplorerTheme(assetsHeader);
+        SetWindowSubclass(assetsHeader, EditorHeaderControlSubclassProc, EditorHeaderControlSubclassId, 0);
+        RedrawWindow(assetsHeader, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
     }
 
     HWND EditorShell::GetAssetsSummaryLabel() const
@@ -5509,6 +5954,11 @@ namespace Xelqoria::Editor
         DWORD style,
         DWORD exStyle) const
     {
+        if (nullptr != className && 0 == wcscmp(className, L"Button"))
+        {
+            style |= BS_OWNERDRAW;
+        }
+
         HWND handle = CreateWindowExW(
             exStyle,
             className,

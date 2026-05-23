@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "ButtonClickInput.h"
@@ -60,6 +61,7 @@ namespace Xelqoria::Editor
     private:
         HWND m_hierarchyListBox = nullptr;
         HWND m_hierarchySummaryLabel = nullptr;
+        HWND m_hierarchySearchEdit = nullptr;
         HWND m_hierarchyNameEdit = nullptr;
         HWND m_hierarchyCreateButton = nullptr;
         HWND m_hierarchyDuplicateButton = nullptr;
@@ -67,6 +69,7 @@ namespace Xelqoria::Editor
         std::vector<Game::EntityId> m_visibleEntityIds{};
         std::optional<Game::EntityId> m_selectedEntityId{};
         std::optional<Game::EntityId> m_lastEditedEntityId{};
+        std::wstring m_lastSearchText{};
         ButtonClickInputState m_buttonInputState{};
         bool m_preserveNoSelection = false;
     };

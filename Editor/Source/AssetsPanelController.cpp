@@ -5,6 +5,7 @@
 #include <CommCtrl.h>
 #include <cstdio>
 #include <cwctype>
+#include <functional>
 #include <iterator>
 #include <objbase.h>
 #include <ShObjIdl.h>
@@ -479,6 +480,61 @@ namespace Xelqoria::Editor
             return result;
         }
 
+        void CombineHash(std::uint64_t& seed, std::uint64_t value)
+        {
+            seed ^= value + 0x9E3779B97F4A7C15ull + (seed << 6) + (seed >> 2);
+        }
+
+        [[nodiscard]] std::uint64_t BuildProjectTreeSignature(const std::filesystem::path& rootDirectory)
+        {
+            if (rootDirectory.empty())
+            {
+                return 0;
+            }
+
+            std::error_code errorCode;
+            if (false == std::filesystem::is_directory(rootDirectory, errorCode) || errorCode)
+            {
+                return 0;
+            }
+
+            std::uint64_t signature = 1469598103934665603ull;
+            std::size_t visitedCount = 0;
+            constexpr std::size_t MaxVisitedEntries = 4096;
+            const std::hash<std::wstring> pathHasher{};
+            for (std::filesystem::recursive_directory_iterator iterator(
+                    rootDirectory,
+                    std::filesystem::directory_options::skip_permission_denied,
+                    errorCode);
+                false == static_cast<bool>(errorCode) && iterator != std::filesystem::recursive_directory_iterator{};
+                iterator.increment(errorCode))
+            {
+                if (MaxVisitedEntries <= visitedCount)
+                {
+                    break;
+                }
+
+                const std::filesystem::directory_entry& entry = *iterator;
+                CombineHash(signature, static_cast<std::uint64_t>(pathHasher(entry.path().wstring())));
+                const auto writeTime = entry.last_write_time(errorCode);
+                if (false == static_cast<bool>(errorCode))
+                {
+                    CombineHash(signature, static_cast<std::uint64_t>(writeTime.time_since_epoch().count()));
+                }
+                errorCode.clear();
+
+                if (false == entry.is_directory(errorCode) && false == static_cast<bool>(errorCode))
+                {
+                    CombineHash(signature, static_cast<std::uint64_t>(entry.file_size(errorCode)));
+                }
+                errorCode.clear();
+                ++visitedCount;
+            }
+
+            CombineHash(signature, static_cast<std::uint64_t>(visitedCount));
+            return signature;
+        }
+
         /// <summary>
         /// Assets の右クリックメニューから実行されたコマンド ID を表す。
         /// </summary>
@@ -521,6 +577,7 @@ namespace Xelqoria::Editor
         m_assetsSummaryLabel = shell.GetAssetsSummaryLabel();
         m_cursor = &cursor;
         InitializeListView();
+        shell.ConfigureAssetsListHeaderTheme();
     }
 
     void AssetsPanelController::Refresh(const std::optional<EditorProjectInfo>& projectInfo)
@@ -548,6 +605,8 @@ namespace Xelqoria::Editor
             m_createMaterialTargetDirectory.clear();
             m_assignScriptRequested = false;
             m_assignScriptSpriteAssetPath.clear();
+            m_lastWatchTick = 0;
+            m_projectTreeSignature = 0;
             EndDragImage();
             RefreshListView();
             RefreshSummaryLabel();
@@ -565,9 +624,11 @@ namespace Xelqoria::Editor
             m_lastClickedIndex = -1;
             m_openMaterialRequested = false;
             m_openMaterialAssetId = {};
+            m_lastWatchTick = 0;
         }
 
         ReloadEditorIconImages(m_assetsRootDirectory);
+        m_projectTreeSignature = BuildProjectTreeSignature(m_assetsRootDirectory);
         RebuildVisibleEntries();
         RefreshListView();
         RefreshSummaryLabel();
@@ -795,6 +856,44 @@ namespace Xelqoria::Editor
         }
     }
 
+    void AssetsPanelController::UpdateFileSystemWatch()
+    {
+        if (m_assetsRootDirectory.empty())
+        {
+            return;
+        }
+
+        const ULONGLONG currentTick = GetTickCount64();
+        constexpr ULONGLONG WatchIntervalMilliseconds = 800;
+        if (0 != m_lastWatchTick && currentTick - m_lastWatchTick < WatchIntervalMilliseconds)
+        {
+            return;
+        }
+
+        m_lastWatchTick = currentTick;
+        const std::uint64_t nextSignature = BuildProjectTreeSignature(m_assetsRootDirectory);
+        if (nextSignature == m_projectTreeSignature)
+        {
+            return;
+        }
+
+        m_projectTreeSignature = nextSignature;
+        if (false == m_selectedFilePath.empty() && false == std::filesystem::exists(m_selectedFilePath))
+        {
+            m_selectedFilePath.clear();
+            m_selectedSpriteAssetId = {};
+        }
+
+        if (false == std::filesystem::is_directory(m_currentDirectory))
+        {
+            m_currentDirectory = m_assetsRootDirectory;
+        }
+
+        RebuildVisibleEntries();
+        RefreshListView();
+        RefreshSummaryLabel();
+    }
+
     void AssetsPanelController::CompleteReleasedDrag()
     {
         m_draggingSpriteAssetId = {};
@@ -811,6 +910,11 @@ namespace Xelqoria::Editor
     const Core::AssetId& AssetsPanelController::GetSelectedAssetId() const
     {
         return m_selectedSpriteAssetId;
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetSelectedFilePath() const
+    {
+        return m_selectedFilePath;
     }
 
     const Core::AssetId& AssetsPanelController::GetDraggingSpriteAssetId() const

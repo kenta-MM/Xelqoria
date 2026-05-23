@@ -2,7 +2,9 @@
 
 #include "AssetsPanelController.h"
 #include "EditorSceneDocument.h"
+#include <cwchar>
 #include <cstdint>
+#include <iterator>
 #include <optional>
 #include "EditorCamera2D.h"
 #include "EditorShell.h"
@@ -65,6 +67,16 @@ namespace Xelqoria::Editor
             m_inputTracker.HasSceneClick(),
             m_inputTracker.GetLastSceneClickX(),
             m_inputTracker.GetLastSceneClickY());
+        if (nullptr != m_sceneViewPlanLabel)
+        {
+            wchar_t cameraText[160]{};
+            std::swprintf(
+                cameraText,
+                std::size(cameraText),
+                L"Scene Camera: zoom %.0f%% / pan Space + Left Drag / wheel zoom",
+                m_sceneViewCamera.GetZoom() * 100.0f);
+            SetWindowTextW(m_sceneViewPlanLabel, cameraText);
+        }
         return result;
     }
 

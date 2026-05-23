@@ -1072,6 +1072,7 @@ namespace Xelqoria::Editor
         }
 
         m_assetsPanelController.UpdateDragState(inputSnapshot);
+        m_assetsPanelController.UpdateFileSystemWatch();
         m_inspectorPanelController.UpdateDropHighlight(m_assetsPanelController);
         m_materialPanelController.UpdateTextureDropHighlight(m_assetsPanelController);
         const bool canAddSpriteComponent = m_assetsPanelController.HasVisibleSpriteAssets();
@@ -1556,7 +1557,8 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.GetSelectedEntityId(),
             canAddSpriteComponent,
             m_sceneDocument.GetSpriteAssetRegistry(),
-            m_sceneDocument.GetMaterialAssetRegistry());
+            m_sceneDocument.GetMaterialAssetRegistry(),
+            m_assetsPanelController.GetSelectedFilePath());
         m_materialPanelController.Refresh(m_sceneDocument.GetMaterialAssetRegistry());
     }
 

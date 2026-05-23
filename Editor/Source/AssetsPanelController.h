@@ -105,6 +105,11 @@ namespace Xelqoria::Editor
         void UpdateDragState(const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
+        /// プロジェクトルート全体のファイル変更を監視し、必要に応じて表示を更新する。
+        /// </summary>
+        void UpdateFileSystemWatch();
+
+        /// <summary>
         /// ドラッグ解放を SceneView 側で処理した後に状態を確定する。
         /// </summary>
         void CompleteReleasedDrag();
@@ -114,6 +119,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>選択中 SpriteAssetId。</returns>
         [[nodiscard]] const Core::AssetId& GetSelectedAssetId() const;
+
+        /// <summary>
+        /// 現在選択中の Assets ファイルパスを取得する。
+        /// </summary>
+        /// <returns>選択中ファイルパス。未選択時は空。</returns>
+        [[nodiscard]] const std::filesystem::path& GetSelectedFilePath() const;
 
         /// <summary>
         /// 現在ドラッグ中の SpriteAssetId を取得する。
@@ -479,6 +490,8 @@ namespace Xelqoria::Editor
         bool m_assignScriptRequested = false;
         std::filesystem::path m_assignScriptSpriteAssetPath{};
         bool m_listViewInitialized = false;
+        ULONGLONG m_lastWatchTick = 0;
+        std::uint64_t m_projectTreeSignature = 0;
         HIMAGELIST m_dragImageList = nullptr;
         bool m_isDragImageVisible = false;
         HWND m_dragPreviewWindow = nullptr;

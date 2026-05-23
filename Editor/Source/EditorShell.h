@@ -75,6 +75,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetHierarchyNameEdit() const;
 
         /// <summary>
+        /// Hierarchy パネルの検索入力欄を取得する。
+        /// </summary>
+        /// <returns>Hierarchy 検索入力欄の HWND。</returns>
+        [[nodiscard]] HWND GetHierarchySearchEdit() const;
+
+        /// <summary>
         /// Hierarchy パネルの新規作成ボタンを取得する。
         /// </summary>
         /// <returns>新規作成ボタンの HWND。</returns>
@@ -97,6 +103,11 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>Assets ListView の HWND。</returns>
         [[nodiscard]] HWND GetAssetsListView() const;
+
+        /// <summary>
+        /// Assets ListView の Header コントロールへテーマ描画を適用する。
+        /// </summary>
+        void ConfigureAssetsListHeaderTheme() const;
 
         /// <summary>
         /// Assets パネルの要約ラベルを取得する。
@@ -767,6 +778,13 @@ namespace Xelqoria::Editor
         bool DrawEditorTabControl(const DRAWITEMSTRUCT& drawItem) const;
 
         /// <summary>
+        /// Editor 標準ボタンの owner draw 描画を行う。
+        /// </summary>
+        /// <param name="drawItem">描画情報。</param>
+        /// <returns>描画を処理した場合は true。</returns>
+        bool DrawEditorButton(const DRAWITEMSTRUCT& drawItem) const;
+
+        /// <summary>
         /// Hierarchy ListBox の owner draw 描画を行う。
         /// </summary>
         /// <param name="drawItem">描画情報。</param>
@@ -786,6 +804,13 @@ namespace Xelqoria::Editor
         /// <param name="customDrawParameter">NMLVCUSTOMDRAW の LPARAM。</param>
         /// <returns>custom draw の戻り値。対象外の場合は空。</returns>
         [[nodiscard]] std::optional<LRESULT> DrawAssetsListViewItem(LPARAM customDrawParameter) const;
+
+        /// <summary>
+        /// Assets ListView のヘッダー custom draw をテーマに沿って描画する。
+        /// </summary>
+        /// <param name="customDrawParameter">NMCUSTOMDRAW の LPARAM。</param>
+        /// <returns>custom draw の戻り値。対象外の場合は空。</returns>
+        [[nodiscard]] std::optional<LRESULT> DrawAssetsListViewHeader(LPARAM customDrawParameter) const;
 
         /// <summary>
         /// Dock leaf の TabControl を保存用識別子へ変換する。
@@ -885,7 +910,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 82> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 88> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -914,6 +939,17 @@ namespace Xelqoria::Editor
         /// 行表示コントロールの hover 再描画を処理する。
         /// </summary>
         static LRESULT CALLBACK EditorRowControlSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
+        /// <summary>
+        /// Assets ListView ヘッダーのテーマ描画を処理する。
+        /// </summary>
+        static LRESULT CALLBACK EditorHeaderControlSubclassProc(
             HWND window,
             UINT message,
             WPARAM wParam,
@@ -1047,6 +1083,11 @@ namespace Xelqoria::Editor
         HWND m_logOutputFloatingWindow = nullptr;
         std::vector<FloatingPanelGroup> m_floatingPanelGroups{};
         HWND m_workspaceBackground = nullptr;
+        HWND m_topBar = nullptr;
+        HWND m_topBarProjectButton = nullptr;
+        HWND m_topBarPlayButton = nullptr;
+        HWND m_topBarLayoutButton = nullptr;
+        HWND m_statusBar = nullptr;
         HWND m_hierarchyPanel = nullptr;
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;
@@ -1071,6 +1112,7 @@ namespace Xelqoria::Editor
         HWND m_assetsSummaryLabel = nullptr;
         HWND m_hierarchySummaryLabel = nullptr;
         HWND m_hierarchyListBox = nullptr;
+        HWND m_hierarchySearchEdit = nullptr;
         HWND m_hierarchyNameEdit = nullptr;
         HWND m_hierarchyCreateButton = nullptr;
         HWND m_hierarchyDuplicateButton = nullptr;

@@ -50,7 +50,7 @@ namespace Xelqoria::Editor
             const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
             const Graphics::TextureAssetRegistry& textureAssetRegistry,
             const AssetsPanelController& assetsPanelController,
-            const EditorCamera2D& camera,
+            EditorCamera2D& camera,
             std::uint32_t sceneViewWidth,
             std::uint32_t sceneViewHeight,
             std::optional<Game::EntityId> currentSelectedEntityId,
@@ -213,6 +213,8 @@ namespace Xelqoria::Editor
         float m_lastSceneClickY = 0.0f;
         bool m_hasSceneClick = false;
         bool m_sceneViewLeftButtonDown = false;
+        bool m_sceneViewPanActive = false;
+        POINT m_lastPanScreenPoint{};
         ScenePendingDropState m_pendingDropState{};
         SceneDragPreviewState m_dragPreviewState{};
         SceneEntityDragState m_entityDragState{};

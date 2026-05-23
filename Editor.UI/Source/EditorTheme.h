@@ -105,6 +105,21 @@ namespace Xelqoria::Editor
         /// エラーログなどに使う色。
         /// </summary>
         EditorColor error{};
+
+        /// <summary>
+        /// 標準パネルの角丸半径。96 DPI 基準の pixel 単位で扱う。
+        /// </summary>
+        int panelCornerRadius = 0;
+
+        /// <summary>
+        /// 標準コントロールの角丸半径。96 DPI 基準の pixel 単位で扱う。
+        /// </summary>
+        int controlCornerRadius = 0;
+
+        /// <summary>
+        /// パネル境界線の太さ。96 DPI 基準の pixel 単位で扱う。
+        /// </summary>
+        int panelBorderThickness = 1;
     };
 
     namespace EditorThemes
@@ -113,17 +128,20 @@ namespace Xelqoria::Editor
         /// Xelqoria Editor の既定暗色テーマ。
         /// </summary>
         inline constexpr EditorTheme XelqoriaDark{
-            EditorColor::FromRgb8(0x18, 0x1A, 0x20),
-            EditorColor::FromRgb8(0x20, 0x23, 0x2B),
-            EditorColor::FromRgb8(0x2A, 0x2D, 0x36),
-            EditorColor::FromRgb8(0x3A, 0x3F, 0x4B),
-            EditorColor::FromRgb8(0xE6, 0xEA, 0xF2),
-            EditorColor::FromRgb8(0x9A, 0xA3, 0xB2),
-            EditorColor::FromRgb8(0x5B, 0x7C, 0xFF),
-            EditorColor::FromRgb8(0x26, 0x36, 0x5F),
-            EditorColor::FromRgb8(0x2A, 0x2F, 0x3A),
-            EditorColor::FromRgb8(0xE6, 0xB4, 0x50),
-            EditorColor::FromRgb8(0xFF, 0x6B, 0x6B)
+            EditorColor::FromRgb8(0x08, 0x0B, 0x13),
+            EditorColor::FromRgb8(0x0E, 0x13, 0x20),
+            EditorColor::FromRgb8(0x12, 0x17, 0x28),
+            EditorColor::FromRgb8(0x1C, 0x24, 0x38),
+            EditorColor::FromRgb8(0xE9, 0xEE, 0xFF),
+            EditorColor::FromRgb8(0x8D, 0x96, 0xAF),
+            EditorColor::FromRgb8(0x8B, 0x5C, 0xFF),
+            EditorColor::FromRgb8(0x2A, 0x1D, 0x5F),
+            EditorColor::FromRgb8(0x19, 0x22, 0x37),
+            EditorColor::FromRgb8(0xD9, 0xB0, 0x58),
+            EditorColor::FromRgb8(0xFF, 0x6E, 0x8A),
+            6,
+            4,
+            1
         };
     }
 }
