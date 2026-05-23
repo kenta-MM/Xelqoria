@@ -102,6 +102,27 @@ namespace Xelqoria::Editor
     };
 
     /// <summary>
+    /// Collider2DComponent 操作 UI の表示状態を表す。
+    /// </summary>
+    struct InspectorCollider2DComponentActionState
+    {
+        /// <summary>
+        /// Collider2D 編集欄を表示するかを表す。
+        /// </summary>
+        bool showColliderControls = false;
+
+        /// <summary>
+        /// Collider2DComponent セクション見出しを表す。
+        /// </summary>
+        const wchar_t* sectionLabel = L"Collider2DComponent";
+
+        /// <summary>
+        /// Collider2DComponent 操作ボタン文言を表す。
+        /// </summary>
+        const wchar_t* buttonLabel = L"Add Collider2DComponent";
+    };
+
+    /// <summary>
     /// Script 操作 UI の表示状態を表す。
     /// </summary>
     struct InspectorScriptActionState
@@ -375,6 +396,45 @@ namespace Xelqoria::Editor
             return SceneEditingOperations::AddSpriteComponent(entity);
         }
 
+        /// <summary>
+        /// Collider2DComponent 操作 UI の表示状態を計算する。
+        /// </summary>
+        /// <param name="hasCollider2DComponent">Entity が Collider2DComponent を保持しているか。</param>
+        /// <returns>UI 表示状態。</returns>
+        [[nodiscard]] static InspectorCollider2DComponentActionState ComputeCollider2DComponentActionState(
+            bool hasCollider2DComponent)
+        {
+            if (hasCollider2DComponent)
+            {
+                return InspectorCollider2DComponentActionState{
+                    true,
+                    L"Collider2DComponent",
+                    L"Remove Collider2DComponent"
+                };
+            }
+
+            return InspectorCollider2DComponentActionState{
+                false,
+                L"Collider2DComponent (not attached)",
+                L"Add Collider2DComponent"
+            };
+        }
+
+        /// <summary>
+        /// Collider2DComponent 操作ボタン押下時の追加・削除処理を適用する。
+        /// </summary>
+        /// <param name="entity">更新対象 Entity。</param>
+        /// <returns>Entity が更新された場合は true。</returns>
+        [[nodiscard]] static bool ApplyCollider2DComponentAction(Game::Entity& entity)
+        {
+            if (entity.HasCollider2DComponent())
+            {
+                return SceneEditingOperations::RemoveCollider2DComponent(entity);
+            }
+
+            return SceneEditingOperations::AddCollider2DComponent(entity);
+        }
+
     private:
         /// <summary>
         /// ボタン押下の完了を検出してクリックとして消費する。
@@ -410,6 +470,15 @@ namespace Xelqoria::Editor
         HWND m_scriptAssignButton = nullptr;
         HWND m_scriptClearButton = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
+        HWND m_collider2DComponentSectionLabel = nullptr;
+        HWND m_collider2DEnabledCheckBox = nullptr;
+        HWND m_collider2DTriggerCheckBox = nullptr;
+        HWND m_collider2DShapeTypeLabel = nullptr;
+        HWND m_collider2DShapeTypeEdit = nullptr;
+        HWND m_collider2DOffsetLabel = nullptr;
+        HWND m_collider2DSizeLabel = nullptr;
+        std::array<HWND, 4> m_collider2DEditControls{};
+        HWND m_collider2DComponentActionButton = nullptr;
         HWND m_materialOpenButton = nullptr;
         Platform::ICursor* m_cursor = nullptr;
         std::optional<Game::EntityId> m_lastInspectorEntityId{};

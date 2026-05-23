@@ -51,6 +51,12 @@ namespace Xelqoria::Editor
 
                 label.insert(0, L"+ ");
                 SendMessageW(m_hierarchyListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
+
+                if (entity.HasCollider2DComponent())
+                {
+                    m_visibleEntityIds.push_back(entity.GetId());
+                    SendMessageW(m_hierarchyListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"  Collider2DComponent"));
+                }
             }
         }
 
