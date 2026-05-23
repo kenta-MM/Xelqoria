@@ -97,21 +97,6 @@ namespace Xelqoria::Editor
             });
 
             renderer.Draw(Graphics::SolidQuad{
-                viewWidth * 0.12f,
-                viewHeight * -0.04f,
-                viewWidth * 0.56f,
-                viewHeight * 0.52f,
-                MakeColor(0.04f, 0.12f, 0.32f, 0.34f)
-            });
-            renderer.Draw(Graphics::SolidQuad{
-                viewWidth * 0.24f,
-                viewHeight * -0.02f,
-                viewWidth * 0.30f,
-                viewHeight * 0.40f,
-                MakeColor(0.20f, 0.10f, 0.58f, 0.28f)
-            });
-
-            renderer.Draw(Graphics::SolidQuad{
                 0.0f,
                 (viewHeight * -0.5f) + (SceneViewBorderThicknessPixels * 0.5f),
                 viewWidth,
