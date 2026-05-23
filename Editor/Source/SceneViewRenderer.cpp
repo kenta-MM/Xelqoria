@@ -11,6 +11,7 @@
 #include "EditorTheme.h"
 #include "ITextureAssetResolver.h"
 #include "RenderBackendBootstrap.h"
+#include "SceneViewOverlay.h"
 #include "Sprite.h"
 #include <Windows.h>
 #include <cstdint>
@@ -35,6 +36,7 @@ namespace Xelqoria::Editor
         constexpr float SceneGridLineThicknessPixels = 1.0f;
         constexpr float SceneAxisLineThicknessPixels = 2.0f;
         constexpr float SelectionOutlineThicknessPixels = 2.0f;
+        constexpr float Collider2DOutlineThicknessPixels = 2.0f;
         constexpr float SelectionPivotSizePixels = 8.0f;
         constexpr float SceneViewBorderThicknessPixels = 1.0f;
         constexpr float EditModeIndicatorLineThicknessPixels = 5.0f;
@@ -214,6 +216,69 @@ namespace Xelqoria::Editor
                 height,
                 fillColor
             });
+        }
+
+        /// <summary>
+        /// Collider2D の AABB 枠を SceneView 補助表示として描画する。
+        /// </summary>
+        /// <param name="renderer">描画に使用する SolidQuadRenderer。</param>
+        /// <param name="overlayRect">ビュー座標上の Collider 枠。</param>
+        void DrawCollider2DOverlay(
+            Graphics::SolidQuadRenderer& renderer,
+            const SceneViewCollider2DOverlayRect& overlayRect)
+        {
+            if (overlayRect.width <= 0.0f || overlayRect.height <= 0.0f)
+            {
+                return;
+            }
+
+            const float alpha = overlayRect.disabled ? 0.32f : 0.92f;
+            const std::array<float, 4> outlineColor = overlayRect.trigger
+                ? MakeColor(0.96f, 0.72f, 0.24f, alpha)
+                : MakeThemeColor(EditorThemes::XelqoriaDark.accent, alpha);
+            const float horizontalBorderY = (overlayRect.height * 0.5f) + (Collider2DOutlineThicknessPixels * 0.5f);
+            const float verticalBorderX = (overlayRect.width * 0.5f) + (Collider2DOutlineThicknessPixels * 0.5f);
+
+            renderer.Draw(Graphics::SolidQuad{
+                overlayRect.centerX,
+                overlayRect.centerY - horizontalBorderY,
+                overlayRect.width + Collider2DOutlineThicknessPixels * 2.0f,
+                Collider2DOutlineThicknessPixels,
+                outlineColor
+            });
+            renderer.Draw(Graphics::SolidQuad{
+                overlayRect.centerX,
+                overlayRect.centerY + horizontalBorderY,
+                overlayRect.width + Collider2DOutlineThicknessPixels * 2.0f,
+                Collider2DOutlineThicknessPixels,
+                outlineColor
+            });
+            renderer.Draw(Graphics::SolidQuad{
+                overlayRect.centerX - verticalBorderX,
+                overlayRect.centerY,
+                Collider2DOutlineThicknessPixels,
+                overlayRect.height + Collider2DOutlineThicknessPixels * 2.0f,
+                outlineColor
+            });
+            renderer.Draw(Graphics::SolidQuad{
+                overlayRect.centerX + verticalBorderX,
+                overlayRect.centerY,
+                Collider2DOutlineThicknessPixels,
+                overlayRect.height + Collider2DOutlineThicknessPixels * 2.0f,
+                outlineColor
+            });
+
+            if (overlayRect.trigger)
+            {
+                const float markerSize = 7.0f;
+                renderer.Draw(Graphics::SolidQuad{
+                    overlayRect.centerX,
+                    overlayRect.centerY - horizontalBorderY,
+                    markerSize,
+                    markerSize,
+                    outlineColor
+                });
+            }
         }
 
         /// <summary>
@@ -584,6 +649,21 @@ namespace Xelqoria::Editor
 
             if (nullptr != m_solidQuadRenderer && true == selectedEntityId.has_value())
             {
+                const auto selectedEntity = scene->FindEntity(*selectedEntityId);
+                if (selectedEntity.has_value())
+                {
+                    const auto collider2DComponent = selectedEntity->get().GetCollider2DComponent();
+                    if (collider2DComponent.has_value())
+                    {
+                        DrawCollider2DOverlay(
+                            *m_solidQuadRenderer,
+                            BuildCollider2DOverlayRect(
+                                selectedEntity->get().GetTransform(),
+                                collider2DComponent->get(),
+                                camera));
+                    }
+                }
+
                 const auto selectedTarget = std::find_if(
                     resolvedSprites.begin(),
                     resolvedSprites.end(),
