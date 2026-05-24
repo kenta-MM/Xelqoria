@@ -369,14 +369,13 @@ namespace Xelqoria::Editor
             return DefWindowProcW(window, message, wParam, lParam);
         }
 
-        [[nodiscard]] constexpr std::array<EditorShell::EditorPanelId, 7> GetAllEditorPanels()
+        [[nodiscard]] constexpr std::array<EditorShell::EditorPanelId, 6> GetAllEditorPanels()
         {
             return {
                 EditorShell::EditorPanelId::Hierarchy,
                 EditorShell::EditorPanelId::Assets,
                 EditorShell::EditorPanelId::SceneView,
                 EditorShell::EditorPanelId::Inspector,
-                EditorShell::EditorPanelId::Sprite,
                 EditorShell::EditorPanelId::Material,
                 EditorShell::EditorPanelId::LogOutput
             };
@@ -977,7 +976,6 @@ namespace Xelqoria::Editor
         const bool initialized = InitializeHierarchyPanel(parentWindow, hInstance)
             && InitializeAssetsPanel(parentWindow, hInstance)
             && InitializeInspectorPanel(parentWindow, hInstance)
-            && InitializeSpritePanel(parentWindow, hInstance)
             && InitializeMaterialPanel(parentWindow, hInstance)
             && InitializeSceneViewPanel(parentWindow, hInstance)
             && InitializeLogOutputPanel(parentWindow, hInstance);
@@ -1925,7 +1923,7 @@ namespace Xelqoria::Editor
 
         DockNode inspectorNode{};
         inspectorNode.kind = DockNodeKind::Leaf;
-        inspectorNode.panels = { EditorPanelId::Inspector, EditorPanelId::Sprite, EditorPanelId::Material };
+        inspectorNode.panels = { EditorPanelId::Inspector, EditorPanelId::Material };
         inspectorNode.tabControl = m_rightDockTab;
         const DockNodeId inspectorNodeId = AddDockNode(std::move(inspectorNode));
 
@@ -2912,7 +2910,7 @@ namespace Xelqoria::Editor
         m_leftTopDockPanels = { EditorPanelId::Hierarchy };
         m_leftBottomDockPanels = { EditorPanelId::Assets };
         m_centerDockPanels = { EditorPanelId::SceneView };
-        m_rightDockPanels = { EditorPanelId::Inspector, EditorPanelId::Sprite, EditorPanelId::Material };
+        m_rightDockPanels = { EditorPanelId::Inspector, EditorPanelId::Material };
         m_leftTopActiveTabIndex = 0;
         m_leftBottomActiveTabIndex = 0;
         m_centerActiveTabIndex = 0;

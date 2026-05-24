@@ -248,9 +248,6 @@ namespace Xelqoria::Editor
         const bool hasSpriteComponent = spriteComponent.has_value();
         const InspectorSpriteComponentActionState actionState =
             ComputeSpriteComponentActionState(hasSpriteComponent, canAddSpriteComponent);
-        ShowWindow(m_spriteRefLabel, actionState.showSpriteRefControls ? SW_SHOW : SW_HIDE);
-        ShowWindow(m_spriteRefEdit, actionState.showSpriteRefControls ? SW_SHOW : SW_HIDE);
-        ShowWindow(m_materialOpenButton, actionState.showSpriteRefControls ? SW_SHOW : SW_HIDE);
         EnableWindow(m_spriteComponentActionButton, actionState.enableActionButton ? TRUE : FALSE);
         SetWindowTextW(m_spriteComponentSectionLabel, actionState.sectionLabel);
         SetWindowTextW(m_spriteComponentActionButton, actionState.buttonLabel);
@@ -263,7 +260,7 @@ namespace Xelqoria::Editor
             m_scriptCreateButton,
             m_scriptAssignButton,
             m_scriptClearButton,
-            false);
+            actionState.showSpriteRefControls);
         if (true == hasSpriteComponent)
         {
             m_lastSpriteRefAssetId = spriteComponent->get().spriteAssetRef;
@@ -308,17 +305,6 @@ namespace Xelqoria::Editor
             m_lastScriptAssetId = {};
             m_lastScriptDisplayText.clear();
         }
-
-        SetSpriteAssetControlsVisible(
-            m_spriteRefLabel,
-            m_spriteRefEdit,
-            m_materialOpenButton,
-            m_scriptAssetLabel,
-            m_scriptAssetEdit,
-            m_scriptCreateButton,
-            m_scriptAssignButton,
-            m_scriptClearButton,
-            false);
 
         const auto collider2DComponent = entity->get().GetCollider2DComponent();
         const InspectorCollider2DComponentActionState colliderActionState =

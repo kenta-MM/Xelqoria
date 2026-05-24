@@ -363,7 +363,6 @@ namespace Xelqoria::Editor
         m_assetsPanelController.Bind(m_editorShell, m_cursor);
         m_hierarchyPanelController.Bind(m_editorShell);
         m_inspectorPanelController.Bind(m_editorShell, m_cursor);
-        m_spritePanelController.Bind(m_editorShell);
         m_materialPanelController.Bind(m_editorShell, m_cursor);
         m_logOutputPanelController.Bind(m_editorShell, m_clipboard);
         m_projectPanelController.Bind(m_editorShell);
@@ -1642,22 +1641,6 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetMaterialAssetRegistry(),
             m_assetsPanelController.GetSelectedFilePath());
         m_materialPanelController.Refresh(m_sceneDocument.GetMaterialAssetRegistry());
-        Core::AssetId selectedSpriteAssetId{};
-        const Game::Scene* scene = m_sceneDocument.GetScene();
-        const std::optional<Game::EntityId> selectedEntityId = m_hierarchyPanelController.GetSelectedEntityId();
-        if (nullptr != scene && selectedEntityId.has_value())
-        {
-            const auto entity = scene->FindEntity(*selectedEntityId);
-            if (entity.has_value())
-            {
-                const auto spriteComponent = entity->get().GetSpriteComponent();
-                if (spriteComponent.has_value())
-                {
-                    selectedSpriteAssetId = spriteComponent->get().spriteAssetRef;
-                }
-            }
-        }
-        m_spritePanelController.OpenSprite(selectedSpriteAssetId, m_sceneDocument.GetSpriteAssetRegistry());
     }
 
     void Application::RefreshSceneViewSelectionStatus()

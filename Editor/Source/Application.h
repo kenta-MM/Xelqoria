@@ -21,7 +21,6 @@
 #include "SceneViewController.h"
 #include "SceneViewRenderer.h"
 #include "ScriptRuntimeSession.h"
-#include "SpritePanelController.h"
 #include "StartupScreenController.h"
 #include "RecentProjectsStore.h"
 #include "Win32Clipboard.h"
@@ -326,7 +325,6 @@ namespace Xelqoria::Editor
         HierarchyPanelController m_hierarchyPanelController{};
         InspectorPanelController m_inspectorPanelController{};
         MaterialPanelController m_materialPanelController{};
-        SpritePanelController m_spritePanelController{};
         LogOutputPanelController m_logOutputPanelController{};
         ProjectPanelController m_projectPanelController{};
         SceneViewController m_sceneViewController{};
