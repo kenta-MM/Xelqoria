@@ -1102,15 +1102,14 @@ namespace Xelqoria::Editor
 
     void EditorShell::HideInactivePanelControls()
     {
-        constexpr std::size_t panelCount = GetAllEditorPanels().size();
-        std::array<bool, panelCount> activePanels{};
+        std::vector<EditorPanelId> activePanels{};
         const auto markActivePanel =
             [&activePanels](EditorPanelId panelId)
             {
-                const std::size_t panelIndex = static_cast<std::size_t>(panelId);
-                if (panelIndex < activePanels.size())
+                const auto activePanel = std::find(activePanels.begin(), activePanels.end(), panelId);
+                if (activePanels.end() == activePanel)
                 {
-                    activePanels[panelIndex] = true;
+                    activePanels.push_back(panelId);
                 }
             };
 
@@ -1148,8 +1147,8 @@ namespace Xelqoria::Editor
 
         for (EditorPanelId panelId : GetAllEditorPanels())
         {
-            const std::size_t panelIndex = static_cast<std::size_t>(panelId);
-            if (panelIndex >= activePanels.size() || false == activePanels[panelIndex])
+            const auto activePanel = std::find(activePanels.begin(), activePanels.end(), panelId);
+            if (activePanels.end() == activePanel)
             {
                 ShowPanelControls(panelId, false);
             }
