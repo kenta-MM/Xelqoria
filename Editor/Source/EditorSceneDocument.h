@@ -171,6 +171,16 @@ namespace Xelqoria::Editor
             const Game::Assets::SpriteMaterialAsset& materialAsset);
 
         /// <summary>
+        /// Material Asset の Texture が未設定の場合のみ指定 Texture を保存する。
+        /// </summary>
+        /// <param name="materialAssetId">更新対象 MaterialAssetId。</param>
+        /// <param name="textureAssetId">補完する TextureAssetId。</param>
+        /// <returns>既に設定済み、または補完に成功した場合は true。</returns>
+        [[nodiscard]] bool EnsureMaterialAssetTexture(
+            const Core::AssetId& materialAssetId,
+            const Core::AssetId& textureAssetId);
+
+        /// <summary>
         /// Sprite Asset ファイルへ Collider2D Asset の割り当てを保存する。
         /// </summary>
         /// <param name="spriteAssetId">割り当て先 SpriteAssetId。</param>

@@ -812,6 +812,31 @@ namespace Xelqoria::Editor
         return RegisterMaterialAssetFile(*materialAssetPath);
     }
 
+    bool EditorSceneDocument::EnsureMaterialAssetTexture(
+        const Core::AssetId& materialAssetId,
+        const Core::AssetId& textureAssetId)
+    {
+        if (materialAssetId.IsEmpty() || textureAssetId.IsEmpty())
+        {
+            return false;
+        }
+
+        const auto materialAsset = m_materialAssetRegistry.ResolveMaterialAsset(materialAssetId);
+        if (false == materialAsset.has_value())
+        {
+            return false;
+        }
+
+        if (false == materialAsset->textureAssetId.IsEmpty())
+        {
+            return true;
+        }
+
+        Game::Assets::SpriteMaterialAsset updatedMaterialAsset = *materialAsset;
+        updatedMaterialAsset.textureAssetId = textureAssetId;
+        return SaveMaterialAsset(materialAssetId, updatedMaterialAsset);
+    }
+
     bool EditorSceneDocument::AssignCollider2DAssetToSpriteAsset(
         const Core::AssetId& spriteAssetId,
         const Core::AssetId& collider2DAssetId)

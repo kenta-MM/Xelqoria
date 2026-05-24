@@ -236,6 +236,13 @@ namespace Xelqoria::Editor
         void OpenMaterialAsset(const Core::AssetId& materialAssetId);
 
         /// <summary>
+        /// 選択中 Sprite の Texture を、未設定の Material Texture へ補完する。
+        /// </summary>
+        /// <param name="materialAssetId">補完対象 MaterialAssetId。</param>
+        /// <returns>補完済み、または既に設定済みの場合は true。</returns>
+        [[nodiscard]] bool EnsureMaterialTextureFromSelectedSprite(const Core::AssetId& materialAssetId);
+
+        /// <summary>
         /// 選択 Entity を更新し、関連パネルを再同期する。
         /// </summary>
         /// <param name="selectedEntityId">更新後の選択 EntityId。</param>

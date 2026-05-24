@@ -1475,6 +1475,7 @@ namespace Xelqoria::Editor
             m_sceneDocument.GetMaterialAssetRegistry());
         if (true == materialDropResult.changed)
         {
+            (void)EnsureMaterialTextureFromSelectedSprite(m_assetsPanelController.GetDraggingMaterialAssetId());
             PersistSceneChanges(
                 L"Material を Sprite に設定しました。",
                 materialDropResult.operationName,
@@ -1664,10 +1665,64 @@ namespace Xelqoria::Editor
             (void)m_sceneDocument.RegisterMaterialAssetFile(*materialAssetPath);
         }
 
+        (void)EnsureMaterialTextureFromSelectedSprite(materialAssetId);
+
         m_materialPanelController.OpenMaterial(materialAssetId, m_sceneDocument.GetMaterialAssetRegistry());
         m_editorShell.ActivatePanel(EditorShell::EditorPanelId::Material);
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Material タブで Material Asset を開きました。");
         AppendEditorLog(L"Material タブで Material Asset を開きました。");
+    }
+
+    bool Application::EnsureMaterialTextureFromSelectedSprite(const Core::AssetId& materialAssetId)
+    {
+        if (materialAssetId.IsEmpty())
+        {
+            return false;
+        }
+
+        const std::optional<std::filesystem::path> materialAssetPath =
+            m_sceneDocument.ResolveMaterialAssetPath(materialAssetId);
+        if (materialAssetPath.has_value())
+        {
+            (void)m_sceneDocument.RegisterMaterialAssetFile(*materialAssetPath);
+        }
+
+        const Game::Scene* scene = m_sceneDocument.GetScene();
+        const std::optional<Game::EntityId> selectedEntityId = m_hierarchyPanelController.GetSelectedEntityId();
+        if (nullptr == scene || false == selectedEntityId.has_value())
+        {
+            return false;
+        }
+
+        const auto selectedEntity = scene->FindEntity(*selectedEntityId);
+        if (false == selectedEntity.has_value())
+        {
+            return false;
+        }
+
+        const auto spriteComponent = selectedEntity->get().GetSpriteComponent();
+        if (false == spriteComponent.has_value() || spriteComponent->get().spriteAssetRef.IsEmpty())
+        {
+            return false;
+        }
+
+        const auto spriteAsset = m_sceneDocument.GetSpriteAssetRegistry().ResolveSpriteAsset(
+            spriteComponent->get().spriteAssetRef);
+        const bool usesRequestedMaterial =
+            spriteComponent->get().materialAssetRef == materialAssetId
+            || (spriteComponent->get().materialAssetRef.IsEmpty()
+                && spriteAsset.has_value()
+                && spriteAsset->materialAssetId == materialAssetId);
+        if (false == usesRequestedMaterial
+            || false == spriteAsset.has_value()
+            || spriteAsset->textureAssetId.IsEmpty())
+        {
+            return false;
+        }
+
+        return m_sceneDocument.EnsureMaterialAssetTexture(
+            materialAssetId,
+            spriteAsset->textureAssetId);
     }
 
     void Application::ApplySelectionChange(

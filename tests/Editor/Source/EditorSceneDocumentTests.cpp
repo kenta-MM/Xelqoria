@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <sstream>
 
 #include <gtest/gtest.h>
 
@@ -31,6 +32,21 @@ namespace
         output << "name=\"Player\"\n";
         output << "textureAssetId=" << textureAssetId << "\n";
         output << "scriptAssetId=" << scriptAssetId << "\n";
+    }
+
+    void WriteMaterialAsset(
+        const std::filesystem::path& path,
+        const char* textureAssetId)
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "magic=XelqoriaMaterialAsset\n";
+        output << "version=1\n";
+        output << "name=\"Player\"\n";
+        output << "textureAssetId=" << textureAssetId << "\n";
+        output << "color=1,1,1,1\n";
+        output << "outline.enabled=false\n";
+        output << "outline.thickness=1\n";
+        output << "outline.color=1,1,0,1\n";
     }
 
     [[nodiscard]] Xelqoria::Editor::EditorSceneDocument MakeProjectDocument(
@@ -109,6 +125,34 @@ TEST(EditorSceneDocumentTests, CreateAndAssignScriptAssetToSpriteAssetWritesScri
     const auto spriteAsset = document.GetSpriteAssetRegistry().ResolveSpriteAsset(spriteAssetId);
     ASSERT_TRUE(spriteAsset.has_value());
     EXPECT_EQ(result.scriptAssetId, spriteAsset->scriptAssetId);
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorSceneDocumentTests, EnsureMaterialAssetTextureFillsEmptyMaterialTexture)
+{
+    const std::filesystem::path parentDirectory =
+        MakeTempDirectory(L"XelqoriaEditorSceneDocumentTests_EnsureMaterialTexture");
+    Xelqoria::Editor::EditorSceneDocument document = MakeProjectDocument(parentDirectory);
+    const std::filesystem::path projectRoot = parentDirectory / L"ScriptInspectorProject";
+    const std::filesystem::path materialAssetPath = projectRoot / L"Player.material";
+    const Xelqoria::Core::AssetId materialAssetId("materials/Player.material");
+    const Xelqoria::Core::AssetId textureAssetId("textures/player.png");
+    WriteMaterialAsset(materialAssetPath, "");
+
+    ASSERT_TRUE(document.RegisterMaterialAssetFile(materialAssetPath));
+    ASSERT_TRUE(document.EnsureMaterialAssetTexture(materialAssetId, textureAssetId));
+
+    const auto materialAsset = document.GetMaterialAssetRegistry().ResolveMaterialAsset(materialAssetId);
+    ASSERT_TRUE(materialAsset.has_value());
+    EXPECT_EQ(textureAssetId, materialAsset->textureAssetId);
+
+    std::ifstream input(materialAssetPath, std::ios::binary);
+    ASSERT_TRUE(input.is_open());
+    std::ostringstream buffer;
+    buffer << input.rdbuf();
+    EXPECT_NE(std::string::npos, buffer.str().find("textureAssetId=textures/player.png"));
+    input.close();
 
     std::filesystem::remove_all(parentDirectory);
 }
