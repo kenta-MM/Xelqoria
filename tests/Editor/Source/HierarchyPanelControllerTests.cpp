@@ -79,3 +79,23 @@ TEST(HierarchyPanelControllerTests, AnotherButtonCanStillConsumeReleaseAfterCrea
     EXPECT_FALSE(Xelqoria::Editor::TryConsumeButtonClick(createButtonTarget, releaseFrame, inputState));
     EXPECT_TRUE(Xelqoria::Editor::TryConsumeButtonClick(duplicateButtonTarget, releaseFrame, inputState));
 }
+
+TEST(HierarchyPanelControllerTests, FormatEntityRowLabelShowsCollider2DExpansionState)
+{
+    EXPECT_EQ(
+        L"- Player",
+        Xelqoria::Editor::HierarchyPanelController::FormatEntityRowLabel(L"Player", true, true));
+    EXPECT_EQ(
+        L"+ Player",
+        Xelqoria::Editor::HierarchyPanelController::FormatEntityRowLabel(L"Player", true, false));
+    EXPECT_EQ(
+        L"  Player",
+        Xelqoria::Editor::HierarchyPanelController::FormatEntityRowLabel(L"Player", false, false));
+}
+
+TEST(HierarchyPanelControllerTests, Collider2DChildRowVisibilityFollowsExpansionState)
+{
+    EXPECT_TRUE(Xelqoria::Editor::HierarchyPanelController::ShouldShowCollider2DChildRow(true, true));
+    EXPECT_FALSE(Xelqoria::Editor::HierarchyPanelController::ShouldShowCollider2DChildRow(true, false));
+    EXPECT_FALSE(Xelqoria::Editor::HierarchyPanelController::ShouldShowCollider2DChildRow(false, true));
+}

@@ -2,7 +2,9 @@
 
 #include <Windows.h>
 #include <optional>
+#include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "ButtonClickInput.h"
@@ -20,6 +22,53 @@ namespace Xelqoria::Editor
     class HierarchyPanelController
     {
     public:
+        /// <summary>
+        /// Hierarchy の表示行種別を表す。
+        /// </summary>
+        enum class VisibleItemKind
+        {
+            Entity,
+            Collider2DComponent
+        };
+
+        /// <summary>
+        /// Hierarchy の Entity 行ラベルを生成する。
+        /// </summary>
+        /// <param name="entityName">Entity 名。</param>
+        /// <param name="hasChildComponent">子 Component 行を持つか。</param>
+        /// <param name="isExpanded">Entity 行が展開中か。</param>
+        /// <returns>Hierarchy 表示用の Entity 行ラベル。</returns>
+        [[nodiscard]] static std::wstring FormatEntityRowLabel(
+            std::wstring_view entityName,
+            bool hasChildComponent,
+            bool isExpanded)
+        {
+            std::wstring label{ entityName };
+            if (hasChildComponent)
+            {
+                label.insert(0, isExpanded ? L"- " : L"+ ");
+            }
+            else
+            {
+                label.insert(0, L"  ");
+            }
+
+            return label;
+        }
+
+        /// <summary>
+        /// Collider2DComponent 子行を表示するかを判定する。
+        /// </summary>
+        /// <param name="hasCollider2DComponent">Entity が Collider2DComponent を保持しているか。</param>
+        /// <param name="isExpanded">Entity 行が展開中か。</param>
+        /// <returns>子行を表示する場合は true。</returns>
+        [[nodiscard]] static bool ShouldShowCollider2DChildRow(
+            bool hasCollider2DComponent,
+            bool isExpanded)
+        {
+            return hasCollider2DComponent && isExpanded;
+        }
+
         /// <summary>
         /// EditorShell の HWND 群へ接続する。
         /// </summary>
@@ -67,10 +116,20 @@ namespace Xelqoria::Editor
         HWND m_hierarchyDuplicateButton = nullptr;
         HWND m_hierarchyDeleteButton = nullptr;
         std::vector<Game::EntityId> m_visibleEntityIds{};
+        std::vector<VisibleItemKind> m_visibleItemKinds{};
+        std::set<Game::EntityId> m_collapsedEntityIds{};
         std::optional<Game::EntityId> m_selectedEntityId{};
+        VisibleItemKind m_selectedItemKind = VisibleItemKind::Entity;
         std::optional<Game::EntityId> m_lastEditedEntityId{};
         std::wstring m_lastSearchText{};
         ButtonClickInputState m_buttonInputState{};
         bool m_preserveNoSelection = false;
+
+        /// <summary>
+        /// 現在選択中の Entity 行の展開状態を切り替える。
+        /// </summary>
+        /// <param name="scene">表示対象の Scene。</param>
+        /// <returns>展開状態を変更した場合は true。</returns>
+        bool ToggleSelectedEntityExpansion(const Game::Scene& scene);
     };
 }
