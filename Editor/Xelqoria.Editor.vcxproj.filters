@@ -81,6 +81,9 @@
     <ClCompile Include="Source\ScriptRuntimeSession.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\SpritePanelController.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Application.h">
@@ -168,6 +171,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="Source\ScriptRuntimeSession.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\SpritePanelController.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

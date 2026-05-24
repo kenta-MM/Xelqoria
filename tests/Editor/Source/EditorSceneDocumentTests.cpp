@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "Assets/SpriteAsset.h"
+#include "Collider2DComponent.h"
 #include "Scene.h"
 
 namespace
@@ -108,6 +109,41 @@ TEST(EditorSceneDocumentTests, CreateAndAssignScriptAssetToSpriteAssetWritesScri
     const auto spriteAsset = document.GetSpriteAssetRegistry().ResolveSpriteAsset(spriteAssetId);
     ASSERT_TRUE(spriteAsset.has_value());
     EXPECT_EQ(result.scriptAssetId, spriteAsset->scriptAssetId);
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorSceneDocumentTests, CreateAndAssignCollider2DAssetToSpriteAssetWritesColliderReference)
+{
+    const std::filesystem::path parentDirectory =
+        MakeTempDirectory(L"XelqoriaEditorSceneDocumentTests_CreateAndAssignCollider2D");
+    Xelqoria::Editor::EditorSceneDocument document = MakeProjectDocument(parentDirectory);
+    const std::filesystem::path projectRoot = parentDirectory / L"ScriptInspectorProject";
+    const std::filesystem::path spriteAssetPath = projectRoot / L"Player.sprite";
+    const Xelqoria::Core::AssetId spriteAssetId("sprites/Player.sprite");
+    WriteSpriteAsset(spriteAssetPath, "textures/player", "");
+
+    Xelqoria::Game::Collider2DComponent collider{};
+    collider.isTrigger = true;
+    collider.offset = { 2.0f, 3.0f };
+    collider.size = { 4.0f, 5.0f };
+
+    ASSERT_TRUE(document.RegisterSpriteAssetFile(spriteAssetPath));
+    const std::optional<Xelqoria::Core::AssetId> collider2DAssetId =
+        document.CreateAndAssignCollider2DAssetToSpriteAsset(spriteAssetId, collider);
+
+    ASSERT_TRUE(collider2DAssetId.has_value());
+    ASSERT_TRUE(document.ResolveCollider2DAssetPath(*collider2DAssetId).has_value());
+
+    const auto spriteAsset = document.GetSpriteAssetRegistry().ResolveSpriteAsset(spriteAssetId);
+    ASSERT_TRUE(spriteAsset.has_value());
+    EXPECT_EQ(*collider2DAssetId, spriteAsset->collider2DAssetId);
+
+    const auto collider2DAsset = document.GetCollider2DAssetRegistry().ResolveCollider2DAsset(*collider2DAssetId);
+    ASSERT_TRUE(collider2DAsset.has_value());
+    EXPECT_TRUE(collider2DAsset->collider.isTrigger);
+    EXPECT_FLOAT_EQ(2.0f, collider2DAsset->collider.offset.x);
+    EXPECT_FLOAT_EQ(5.0f, collider2DAsset->collider.size.y);
 
     std::filesystem::remove_all(parentDirectory);
 }

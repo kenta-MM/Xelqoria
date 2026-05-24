@@ -11,6 +11,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Assets\Collider2DAssetLoader.cpp">
+      <Filter>Source\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Assets\Collider2DAssetRegistry.cpp">
+      <Filter>Source\Assets</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Collider2DComponent.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -49,6 +55,18 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Assets\Collider2DAsset.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\Collider2DAssetLoader.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\Collider2DAssetRegistry.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Assets\ICollider2DAssetResolver.h">
+      <Filter>Source\Assets</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Collider2DComponent.h">
       <Filter>Source</Filter>
     </ClInclude>

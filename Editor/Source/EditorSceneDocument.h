@@ -7,8 +7,10 @@
 #include <vector>
 
 #include "AssetId.h"
+#include "Assets/Collider2DAssetRegistry.h"
 #include "Assets/SpriteAssetRegistry.h"
 #include "Assets/SpriteMaterialAssetRegistry.h"
+#include "Collider2DComponent.h"
 #include "Entity.h"
 #include "EditorProject.h"
 #include "IGraphicsContext.h"
@@ -116,6 +118,13 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool RegisterMaterialAssetFile(const std::filesystem::path& materialAssetPath);
 
         /// <summary>
+        /// 指定 Collider2D Asset ファイルを Collider2DAsset として登録する。
+        /// </summary>
+        /// <param name="collider2DAssetPath">登録対象の Collider2D Asset ファイルパス。</param>
+        /// <returns>登録に成功した場合は true。</returns>
+        [[nodiscard]] bool RegisterCollider2DAssetFile(const std::filesystem::path& collider2DAssetPath);
+
+        /// <summary>
         /// 現在のプロジェクト配下へ Material Asset ファイルを作成する。
         /// </summary>
         /// <param name="targetDirectory">作成先フォルダ。空またはプロジェクト外の場合は Assets 直下。</param>
@@ -126,12 +135,30 @@ namespace Xelqoria::Editor
             const Core::AssetId& textureAssetId = {});
 
         /// <summary>
+        /// 現在のプロジェクト配下へ Collider2D Asset ファイルを作成する。
+        /// </summary>
+        /// <param name="targetDirectory">作成先フォルダ。空またはプロジェクト外の場合は Assets 直下。</param>
+        /// <param name="collider">初期 Collider2D 値。</param>
+        /// <returns>作成した Collider2DAssetId。作成できない場合は空。</returns>
+        [[nodiscard]] std::optional<Core::AssetId> CreateCollider2DAssetFile(
+            const std::filesystem::path& targetDirectory,
+            const Game::Collider2DComponent& collider = {});
+
+        /// <summary>
         /// MaterialAssetId から対応する Material Asset ファイルパスを解決する。
         /// </summary>
         /// <param name="materialAssetId">解決対象 MaterialAssetId。</param>
         /// <returns>Material Asset ファイルパス。解決できない場合は空。</returns>
         [[nodiscard]] std::optional<std::filesystem::path> ResolveMaterialAssetPath(
             const Core::AssetId& materialAssetId) const;
+
+        /// <summary>
+        /// Collider2DAssetId から対応する Collider2D Asset ファイルパスを解決する。
+        /// </summary>
+        /// <param name="collider2DAssetId">解決対象 Collider2DAssetId。</param>
+        /// <returns>Collider2D Asset ファイルパス。解決できない場合は空。</returns>
+        [[nodiscard]] std::optional<std::filesystem::path> ResolveCollider2DAssetPath(
+            const Core::AssetId& collider2DAssetId) const;
 
         /// <summary>
         /// Material Asset ファイルの内容を更新する。
@@ -142,6 +169,26 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool SaveMaterialAsset(
             const Core::AssetId& materialAssetId,
             const Game::Assets::SpriteMaterialAsset& materialAsset);
+
+        /// <summary>
+        /// Sprite Asset ファイルへ Collider2D Asset の割り当てを保存する。
+        /// </summary>
+        /// <param name="spriteAssetId">割り当て先 SpriteAssetId。</param>
+        /// <param name="collider2DAssetId">割り当てる Collider2DAssetId。</param>
+        /// <returns>保存に成功した場合は true。</returns>
+        [[nodiscard]] bool AssignCollider2DAssetToSpriteAsset(
+            const Core::AssetId& spriteAssetId,
+            const Core::AssetId& collider2DAssetId);
+
+        /// <summary>
+        /// SpriteAssetId と同じフォルダへ Collider2D Asset を作成し割り当てる。
+        /// </summary>
+        /// <param name="spriteAssetId">割り当て先 SpriteAssetId。</param>
+        /// <param name="collider">初期 Collider2D 値。</param>
+        /// <returns>作成し割り当てた Collider2DAssetId。失敗時は空。</returns>
+        [[nodiscard]] std::optional<Core::AssetId> CreateAndAssignCollider2DAssetToSpriteAsset(
+            const Core::AssetId& spriteAssetId,
+            const Game::Collider2DComponent& collider);
 
         /// <summary>
         /// Scene 内の旧 SpriteAsset 参照から Material 参照を自動作成する。
@@ -257,6 +304,18 @@ namespace Xelqoria::Editor
         [[nodiscard]] const Game::Assets::SpriteMaterialAssetRegistry& GetMaterialAssetRegistry() const;
 
         /// <summary>
+        /// Collider2DAsset レジストリを取得する。
+        /// </summary>
+        /// <returns>Collider2DAsset レジストリ。</returns>
+        [[nodiscard]] Game::Assets::Collider2DAssetRegistry& GetCollider2DAssetRegistry();
+
+        /// <summary>
+        /// Collider2DAsset レジストリを読み取り専用で取得する。
+        /// </summary>
+        /// <returns>Collider2DAsset レジストリ。</returns>
+        [[nodiscard]] const Game::Assets::Collider2DAssetRegistry& GetCollider2DAssetRegistry() const;
+
+        /// <summary>
         /// Texture レジストリを取得する。
         /// </summary>
         /// <returns>Texture レジストリ。</returns>
@@ -299,9 +358,11 @@ namespace Xelqoria::Editor
         RHI::IGraphicsContext* m_graphicsContext = nullptr;
         Game::Assets::SpriteAssetRegistry m_spriteAssetRegistry{};
         Game::Assets::SpriteMaterialAssetRegistry m_materialAssetRegistry{};
+        Game::Assets::Collider2DAssetRegistry m_collider2DAssetRegistry{};
         Graphics::TextureAssetRegistry m_textureAssetRegistry{};
         std::vector<Core::AssetId> m_registeredSpriteAssetIds{};
         std::vector<Core::AssetId> m_registeredMaterialAssetIds{};
+        std::vector<Core::AssetId> m_registeredCollider2DAssetIds{};
         EditorProject m_project{};
     };
 }

@@ -8,6 +8,7 @@
 #include "AssetId.h"
 #include "Assets/SpriteAssetLoader.h"
 #include "Assets/SpriteAssetRegistry.h"
+#include "Assets/Collider2DAssetLoader.h"
 #include "ITexture.h"
 #include "Scene.h"
 #include "SceneSaveFormat.h"
@@ -341,12 +342,16 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		const auto spriteAssetLoadResult = Xelqoria::Game::Assets::SpriteAssetLoader::LoadFromText(
 		"# SpriteAsset\n"
 		"textureAssetId = textures/player-idle\n"
-		"scriptAssetId = scripts/Scripts/Player.script\n");
+		"scriptAssetId = scripts/Scripts/Player.script\n"
+		"materialAssetId = materials/Player.material\n"
+		"collider2DAssetId = colliders2d/Player.collider2d\n");
 		EXPECT_TRUE(spriteAssetLoadResult.IsSuccess());
 		ASSERT_TRUE(spriteAssetLoadResult.asset.has_value());
 
 		EXPECT_EQ(spriteAssetLoadResult.asset->textureAssetId, Xelqoria::Core::AssetId("textures/player-idle"));
 		EXPECT_EQ(spriteAssetLoadResult.asset->scriptAssetId, Xelqoria::Core::AssetId("scripts/Scripts/Player.script"));
+		EXPECT_EQ(spriteAssetLoadResult.asset->materialAssetId, Xelqoria::Core::AssetId("materials/Player.material"));
+		EXPECT_EQ(spriteAssetLoadResult.asset->collider2DAssetId, Xelqoria::Core::AssetId("colliders2d/Player.collider2d"));
 
 		const auto editorSpriteAssetLoadResult = Xelqoria::Game::Assets::SpriteAssetLoader::LoadFromText(
 		"magic=XelqoriaSpriteAsset\n"
@@ -359,6 +364,8 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		"spriteAssetRef=sprites/player-idle\n"
 		"textureAssetId=textures/player-idle\n"
 		"scriptAssetId=scripts/Scripts/Player.script\n"
+		"materialAssetId=materials/Player.material\n"
+		"collider2DAssetId=colliders2d/Player.collider2d\n"
 		"texture.size=64,32\n"
 		"render.visible=true\n"
 		"render.sortOrder=0\n"
@@ -368,6 +375,8 @@ TEST(TransformTests, TransformAndSceneRuntimeApiWorks)
 		ASSERT_TRUE(editorSpriteAssetLoadResult.asset.has_value());
 		EXPECT_EQ(editorSpriteAssetLoadResult.asset->textureAssetId, Xelqoria::Core::AssetId("textures/player-idle"));
 		EXPECT_EQ(editorSpriteAssetLoadResult.asset->scriptAssetId, Xelqoria::Core::AssetId("scripts/Scripts/Player.script"));
+		EXPECT_EQ(editorSpriteAssetLoadResult.asset->materialAssetId, Xelqoria::Core::AssetId("materials/Player.material"));
+		EXPECT_EQ(editorSpriteAssetLoadResult.asset->collider2DAssetId, Xelqoria::Core::AssetId("colliders2d/Player.collider2d"));
 
 		Xelqoria::Game::Assets::SpriteAssetRegistry spriteAssetRegistry;
 		spriteAssetRegistry.RegisterSpriteAsset(
@@ -738,6 +747,46 @@ TEST(TransformTests, SpriteMaterialAssetLoaderReadsTextureColorAndOutline)
 	EXPECT_TRUE(loadResult.asset->outlineEnabled);
 	EXPECT_TRUE(IsEqual(3.5f, loadResult.asset->outlineThickness));
 	EXPECT_TRUE(IsEqual(0.25f, loadResult.asset->outlineColor[2]));
+}
+
+TEST(TransformTests, Collider2DAssetLoaderReadsBoxCollider)
+{
+	const auto loadResult = Xelqoria::Game::Assets::Collider2DAssetLoader::LoadFromText(
+		"magic=XelqoriaCollider2DAsset\n"
+		"version=1\n"
+		"enabled=true\n"
+		"isTrigger=true\n"
+		"shapeType=Box\n"
+		"offset=1.5,-2.0\n"
+		"size=3.0,4.0\n");
+
+	ASSERT_TRUE(loadResult.IsSuccess());
+	ASSERT_TRUE(loadResult.asset.has_value());
+	const Xelqoria::Game::Collider2DComponent& collider = loadResult.asset->collider;
+	EXPECT_TRUE(collider.enabled);
+	EXPECT_TRUE(collider.isTrigger);
+	EXPECT_EQ(Xelqoria::Game::Collider2DShapeType::Box, collider.shapeType);
+	EXPECT_FLOAT_EQ(1.5f, collider.offset.x);
+	EXPECT_FLOAT_EQ(-2.0f, collider.offset.y);
+	EXPECT_FLOAT_EQ(3.0f, collider.size.x);
+	EXPECT_FLOAT_EQ(4.0f, collider.size.y);
+}
+
+TEST(TransformTests, Collider2DAssetLoaderRejectsNonPositiveSize)
+{
+	const auto loadResult = Xelqoria::Game::Assets::Collider2DAssetLoader::LoadFromText(
+		"magic=XelqoriaCollider2DAsset\n"
+		"version=1\n"
+		"enabled=true\n"
+		"isTrigger=false\n"
+		"shapeType=Box\n"
+		"offset=0.0,0.0\n"
+		"size=0.0,1.0\n");
+
+	EXPECT_FALSE(loadResult.IsSuccess());
+	ASSERT_TRUE(loadResult.error.has_value());
+	EXPECT_EQ(Xelqoria::Game::Assets::Collider2DAssetLoadErrorCode::InvalidRecord, loadResult.error->code);
+	EXPECT_EQ("size", loadResult.error->fieldName);
 }
 
 TEST(TransformTests, SceneSerializerLoadAcceptsExtensionFieldsAndEmptyNames)

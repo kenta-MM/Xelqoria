@@ -59,6 +59,8 @@ namespace Xelqoria::Game::Assets
 		bool hasEditorSpriteAssetMagic = false;
 		bool hasTextureAssetId = false;
 		bool hasScriptAssetId = false;
+		bool hasMaterialAssetId = false;
+		bool hasCollider2DAssetId = false;
 		std::size_t lineNumber = 0;
 		std::size_t cursor = 0;
 
@@ -135,6 +137,30 @@ namespace Xelqoria::Game::Assets
 
 					asset.scriptAssetId = Core::AssetId(value);
 					hasScriptAssetId = true;
+				}
+				else if (key == "materialAssetId") {
+					if (hasMaterialAssetId) {
+						return MakeError(
+							SpriteAssetLoadErrorCode::DuplicateField,
+							lineNumber,
+							key,
+							"materialAssetId が重複しています。");
+					}
+
+					asset.materialAssetId = Core::AssetId(value);
+					hasMaterialAssetId = true;
+				}
+				else if (key == "collider2DAssetId") {
+					if (hasCollider2DAssetId) {
+						return MakeError(
+							SpriteAssetLoadErrorCode::DuplicateField,
+							lineNumber,
+							key,
+							"collider2DAssetId が重複しています。");
+					}
+
+					asset.collider2DAssetId = Core::AssetId(value);
+					hasCollider2DAssetId = true;
 				}
 				else if (hasEditorSpriteAssetMagic
 					&& (key == "version"

@@ -26,6 +26,7 @@ namespace Xelqoria::Editor
             Assets,
             SceneView,
             Inspector,
+            Sprite,
             Material,
             LogOutput
         };
@@ -204,6 +205,30 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>Material Texture ドロップ先ハイライトの HWND。</returns>
         [[nodiscard]] HWND GetMaterialTextureDropHighlight() const;
+
+        /// <summary>
+        /// Sprite パネルの要約ラベルを取得する。
+        /// </summary>
+        /// <returns>Sprite 要約ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetSpriteSummaryLabel() const;
+
+        /// <summary>
+        /// Sprite 詳細セクション見出しラベルを取得する。
+        /// </summary>
+        /// <returns>Sprite 詳細セクション見出しの HWND。</returns>
+        [[nodiscard]] HWND GetSpriteDetailsSectionLabel() const;
+
+        /// <summary>
+        /// Sprite 詳細項目ラベル群を取得する。
+        /// </summary>
+        /// <returns>Sprite 詳細ラベル配列。</returns>
+        [[nodiscard]] const std::array<HWND, 4>& GetSpriteDetailLabels() const;
+
+        /// <summary>
+        /// Sprite 詳細入力欄群を取得する。
+        /// </summary>
+        /// <returns>Sprite 詳細入力欄配列。</returns>
+        [[nodiscard]] const std::array<HWND, 4>& GetSpriteDetailEditControls() const;
 
         /// <summary>
         /// Script Asset ラベルを取得する。
@@ -504,6 +529,11 @@ namespace Xelqoria::Editor
         bool InitializeMaterialPanel(HWND parentWindow, HINSTANCE hInstance);
 
         /// <summary>
+        /// Sprite パネル用 child window 群を生成する。
+        /// </summary>
+        bool InitializeSpritePanel(HWND parentWindow, HINSTANCE hInstance);
+
+        /// <summary>
         /// SceneView パネル用 child window 群を生成する。
         /// </summary>
         bool InitializeSceneViewPanel(HWND parentWindow, HINSTANCE hInstance);
@@ -534,6 +564,11 @@ namespace Xelqoria::Editor
         void LayoutMaterialPanel(const LayoutMetrics& metrics);
 
         /// <summary>
+        /// Sprite パネルをレイアウトする。
+        /// </summary>
+        void LayoutSpritePanel(const LayoutMetrics& metrics);
+
+        /// <summary>
         /// SceneView パネルをレイアウトする。
         /// </summary>
         void LayoutSceneViewPanel(const LayoutMetrics& metrics);
@@ -557,6 +592,11 @@ namespace Xelqoria::Editor
         /// 指定矩形へ Material パネルをレイアウトする。
         /// </summary>
         void LayoutMaterialPanelInRect(const RECT& panelRect);
+
+        /// <summary>
+        /// 指定矩形へ Sprite パネルをレイアウトする。
+        /// </summary>
+        void LayoutSpritePanelInRect(const RECT& panelRect);
 
         /// <summary>
         /// 指定矩形へ SceneView パネルをレイアウトする。
@@ -964,7 +1004,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 100> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 111> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -1134,6 +1174,7 @@ namespace Xelqoria::Editor
         HWND m_sceneViewFloatingWindow = nullptr;
         HWND m_inspectorFloatingWindow = nullptr;
         HWND m_materialFloatingWindow = nullptr;
+        HWND m_spriteFloatingWindow = nullptr;
         HWND m_logOutputFloatingWindow = nullptr;
         std::vector<FloatingPanelGroup> m_floatingPanelGroups{};
         HWND m_workspaceBackground = nullptr;
@@ -1146,6 +1187,7 @@ namespace Xelqoria::Editor
         HWND m_assetsPanel = nullptr;
         HWND m_inspectorPanel = nullptr;
         HWND m_materialPanel = nullptr;
+        HWND m_spritePanel = nullptr;
         HWND m_sceneViewPanel = nullptr;
         HWND m_sceneViewPlanLabel = nullptr;
         HWND m_projectSummaryLabel = nullptr;
@@ -1186,6 +1228,10 @@ namespace Xelqoria::Editor
         std::array<HWND, 5> m_materialDetailLabels{};
         std::array<HWND, 5> m_materialDetailEditControls{};
         HWND m_materialTextureDropHighlight = nullptr;
+        HWND m_spriteSummaryLabel = nullptr;
+        HWND m_spriteDetailsSectionLabel = nullptr;
+        std::array<HWND, 4> m_spriteDetailLabels{};
+        std::array<HWND, 4> m_spriteDetailEditControls{};
         HWND m_scriptAssetLabel = nullptr;
         HWND m_scriptAssetEdit = nullptr;
         HWND m_scriptCreateButton = nullptr;

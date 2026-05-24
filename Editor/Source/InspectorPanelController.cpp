@@ -73,6 +73,27 @@ namespace Xelqoria::Editor
                 SetWindowVisible(editControl, visible);
             }
         }
+
+        void SetSpriteAssetControlsVisible(
+            HWND spriteRefLabel,
+            HWND spriteRefEdit,
+            HWND materialOpenButton,
+            HWND scriptAssetLabel,
+            HWND scriptAssetEdit,
+            HWND scriptCreateButton,
+            HWND scriptAssignButton,
+            HWND scriptClearButton,
+            bool visible)
+        {
+            SetWindowVisible(spriteRefLabel, visible);
+            SetWindowVisible(spriteRefEdit, visible);
+            SetWindowVisible(materialOpenButton, visible);
+            SetWindowVisible(scriptAssetLabel, visible);
+            SetWindowVisible(scriptAssetEdit, visible);
+            SetWindowVisible(scriptCreateButton, visible);
+            SetWindowVisible(scriptAssignButton, visible);
+            SetWindowVisible(scriptClearButton, visible);
+        }
     }
 
     void InspectorPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
@@ -129,6 +150,16 @@ namespace Xelqoria::Editor
             }
             SetWindowTextW(m_spriteRefEdit, L"");
             SetWindowTextW(m_scriptAssetEdit, L"");
+            SetSpriteAssetControlsVisible(
+                m_spriteRefLabel,
+                m_spriteRefEdit,
+                m_materialOpenButton,
+                m_scriptAssetLabel,
+                m_scriptAssetEdit,
+                m_scriptCreateButton,
+                m_scriptAssignButton,
+                m_scriptClearButton,
+                false);
             ShowWindow(m_scriptAssetLabel, SW_HIDE);
             ShowWindow(m_scriptAssetEdit, SW_HIDE);
             ShowWindow(m_scriptCreateButton, SW_HIDE);
@@ -159,6 +190,16 @@ namespace Xelqoria::Editor
             SetWindowTextW(m_inspectorSummaryLabel, L"Inspector: selected entity not found");
             SetWindowTextW(m_spriteRefEdit, L"");
             SetWindowTextW(m_scriptAssetEdit, L"");
+            SetSpriteAssetControlsVisible(
+                m_spriteRefLabel,
+                m_spriteRefEdit,
+                m_materialOpenButton,
+                m_scriptAssetLabel,
+                m_scriptAssetEdit,
+                m_scriptCreateButton,
+                m_scriptAssignButton,
+                m_scriptClearButton,
+                false);
             ShowWindow(m_scriptAssetLabel, SW_HIDE);
             ShowWindow(m_scriptAssetEdit, SW_HIDE);
             ShowWindow(m_scriptCreateButton, SW_HIDE);
@@ -213,6 +254,16 @@ namespace Xelqoria::Editor
         EnableWindow(m_spriteComponentActionButton, actionState.enableActionButton ? TRUE : FALSE);
         SetWindowTextW(m_spriteComponentSectionLabel, actionState.sectionLabel);
         SetWindowTextW(m_spriteComponentActionButton, actionState.buttonLabel);
+        SetSpriteAssetControlsVisible(
+            m_spriteRefLabel,
+            m_spriteRefEdit,
+            m_materialOpenButton,
+            m_scriptAssetLabel,
+            m_scriptAssetEdit,
+            m_scriptCreateButton,
+            m_scriptAssignButton,
+            m_scriptClearButton,
+            false);
         if (true == hasSpriteComponent)
         {
             m_lastSpriteRefAssetId = spriteComponent->get().spriteAssetRef;
@@ -257,6 +308,17 @@ namespace Xelqoria::Editor
             m_lastScriptAssetId = {};
             m_lastScriptDisplayText.clear();
         }
+
+        SetSpriteAssetControlsVisible(
+            m_spriteRefLabel,
+            m_spriteRefEdit,
+            m_materialOpenButton,
+            m_scriptAssetLabel,
+            m_scriptAssetEdit,
+            m_scriptCreateButton,
+            m_scriptAssignButton,
+            m_scriptClearButton,
+            false);
 
         const auto collider2DComponent = entity->get().GetCollider2DComponent();
         const InspectorCollider2DComponentActionState colliderActionState =
