@@ -11,6 +11,7 @@
 #include "Assets/ISpriteAssetResolver.h"
 #include "Assets/IMaterialAssetResolver.h"
 #include "Assets/SpriteAsset.h"
+#include "Assets/SpriteMaterialAsset.h"
 #include "EditorStringUtils.h"
 #include "EditorShell.h"
 #include "ICursor.h"
@@ -83,6 +84,21 @@ namespace Xelqoria::Editor
         /// Collider2DComponent が追加されたかを表す。
         /// </summary>
         bool collider2DComponentAdded = false;
+
+        /// <summary>
+        /// Material Asset の保存が必要かを表す。
+        /// </summary>
+        bool materialAssetChanged = false;
+
+        /// <summary>
+        /// 保存対象の MaterialAssetId を表す。
+        /// </summary>
+        Core::AssetId materialTargetAssetId{};
+
+        /// <summary>
+        /// 保存する Material 内容を表す。
+        /// </summary>
+        Game::Assets::SpriteMaterialAsset materialAsset{};
     };
 
     /// <summary>
@@ -234,6 +250,16 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
         void UpdateDropHighlight(const AssetsPanelController& assetsPanelController);
+
+        /// <summary>
+        /// Assets から Material Details の Texture 欄へドロップされた Texture を Material Asset へ反映する。
+        /// </summary>
+        [[nodiscard]] InspectorApplyResult ApplyMaterialTextureDrop(
+            const Game::Scene* scene,
+            std::optional<Game::EntityId> selectedEntityId,
+            const AssetsPanelController& assetsPanelController,
+            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver) const;
 
         /// <summary>
         /// 現在のカーソル位置が Script ドロップ対象内かを取得する。
@@ -467,6 +493,12 @@ namespace Xelqoria::Editor
         /// <returns>ドロップ対象内の場合は true。</returns>
         [[nodiscard]] bool IsMaterialDropTargetHovered(const AssetsPanelController& assetsPanelController) const;
 
+        [[nodiscard]] bool IsMaterialTextureDropTargetHovered(const AssetsPanelController& assetsPanelController) const;
+
+        void SetMaterialDetailsVisible(bool visible) const;
+
+        void SetMaterialDetailsEnabled(bool enabled) const;
+
         HWND m_inspectorSummaryLabel = nullptr;
         HWND m_transformSectionLabel = nullptr;
         std::array<HWND, 9> m_transformEditControls{};
@@ -488,9 +520,22 @@ namespace Xelqoria::Editor
         HWND m_collider2DShapeTypeEdit = nullptr;
         HWND m_collider2DOffsetLabel = nullptr;
         HWND m_collider2DSizeLabel = nullptr;
+        HWND m_collider2DRotationLabel = nullptr;
+        HWND m_collider2DRotationEdit = nullptr;
         std::array<HWND, 4> m_collider2DEditControls{};
+        HWND m_collider2DEditButton = nullptr;
         HWND m_collider2DComponentActionButton = nullptr;
+        HWND m_addComponentButton = nullptr;
         HWND m_materialOpenButton = nullptr;
+        HWND m_materialSharedNoticeLabel = nullptr;
+        HWND m_materialDetailsSectionLabel = nullptr;
+        std::array<HWND, 5> m_materialDetailLabels{};
+        std::array<HWND, 5> m_materialDetailEditControls{};
+        HWND m_materialTextureDropHighlight = nullptr;
+        HWND m_materialTextureBrowseButton = nullptr;
+        HWND m_materialTintColorButton = nullptr;
+        HWND m_materialOutlineEnabledCheckBox = nullptr;
+        HWND m_materialOutlineColorButton = nullptr;
         Platform::ICursor* m_cursor = nullptr;
         std::optional<Game::EntityId> m_lastInspectorEntityId{};
         Core::AssetId m_lastSpriteRefAssetId{};

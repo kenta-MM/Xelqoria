@@ -208,6 +208,30 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetMaterialTextureDropHighlight() const;
 
         /// <summary>
+        /// Material Texture 参照ボタンを取得する。
+        /// </summary>
+        /// <returns>Material Texture 参照ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialTextureBrowseButton() const;
+
+        /// <summary>
+        /// Material Tint 色ボタンを取得する。
+        /// </summary>
+        /// <returns>Material Tint 色ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialTintColorButton() const;
+
+        /// <summary>
+        /// Material OutlineEnabled チェックボックスを取得する。
+        /// </summary>
+        /// <returns>Material OutlineEnabled チェックボックスの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialOutlineEnabledCheckBox() const;
+
+        /// <summary>
+        /// Material OutlineColor 色ボタンを取得する。
+        /// </summary>
+        /// <returns>Material OutlineColor 色ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetMaterialOutlineColorButton() const;
+
+        /// <summary>
         /// Collider2D パネルの要約ラベルを取得する。
         /// </summary>
         /// <returns>Collider2D 要約ラベルの HWND。</returns>
@@ -316,16 +340,40 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetCollider2DSizeLabel() const;
 
         /// <summary>
+        /// Collider2D rotation ラベルを取得する。
+        /// </summary>
+        /// <returns>rotation ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DRotationLabel() const;
+
+        /// <summary>
+        /// Collider2D rotation 表示欄を取得する。
+        /// </summary>
+        /// <returns>rotation 表示欄の HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DRotationEdit() const;
+
+        /// <summary>
         /// Collider2D 数値入力欄群を取得する。
         /// </summary>
         /// <returns>offset.x, offset.y, size.x, size.y の入力欄配列。</returns>
         [[nodiscard]] const std::array<HWND, 4>& GetCollider2DEditControls() const;
 
         /// <summary>
+        /// Collider2D Scene 編集ボタンを取得する。
+        /// </summary>
+        /// <returns>Collider2D Scene 編集ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DEditButton() const;
+
+        /// <summary>
         /// Collider2DComponent 操作ボタンを取得する。
         /// </summary>
         /// <returns>Collider2DComponent 操作用ボタンの HWND。</returns>
         [[nodiscard]] HWND GetCollider2DComponentActionButton() const;
+
+        /// <summary>
+        /// Add Component ボタンを取得する。
+        /// </summary>
+        /// <returns>Add Component ボタンの HWND。</returns>
+        [[nodiscard]] HWND GetAddComponentButton() const;
 
         /// <summary>
         /// SceneView の状態ラベルを取得する。
@@ -1026,7 +1074,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 113> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 121> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -1252,6 +1300,10 @@ namespace Xelqoria::Editor
         std::array<HWND, 5> m_materialDetailLabels{};
         std::array<HWND, 5> m_materialDetailEditControls{};
         HWND m_materialTextureDropHighlight = nullptr;
+        HWND m_materialTextureBrowseButton = nullptr;
+        HWND m_materialTintColorButton = nullptr;
+        HWND m_materialOutlineEnabledCheckBox = nullptr;
+        HWND m_materialOutlineColorButton = nullptr;
         HWND m_collider2DSummaryLabel = nullptr;
         HWND m_spriteSummaryLabel = nullptr;
         HWND m_spriteDetailsSectionLabel = nullptr;
@@ -1270,8 +1322,12 @@ namespace Xelqoria::Editor
         HWND m_collider2DShapeTypeEdit = nullptr;
         HWND m_collider2DOffsetLabel = nullptr;
         HWND m_collider2DSizeLabel = nullptr;
+        HWND m_collider2DRotationLabel = nullptr;
+        HWND m_collider2DRotationEdit = nullptr;
         std::array<HWND, 4> m_collider2DEditControls{};
+        HWND m_collider2DEditButton = nullptr;
         HWND m_collider2DComponentActionButton = nullptr;
+        HWND m_addComponentButton = nullptr;
         std::uint32_t m_sceneViewWidth = 0;
         std::uint32_t m_sceneViewHeight = 0;
         std::vector<EditorPanelId> m_leftTopDockPanels{};

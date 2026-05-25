@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cwctype>
 #include <iterator>
 #include <optional>
 #include <AssetId.h>
@@ -14,6 +15,7 @@
 #include "AssetsPanelController.h"
 #include "EditorShell.h"
 #include <Entity.h>
+#include "MaterialPanelController.h"
 #include <Scene.h>
 
 namespace Xelqoria::Editor
@@ -52,6 +54,39 @@ namespace Xelqoria::Editor
             return parsed;
         }
 
+        [[nodiscard]] std::wstring_view Trim(std::wstring_view value)
+        {
+            const auto isSpace =
+                [](wchar_t character)
+                {
+                    return 0 != std::iswspace(character);
+                };
+
+            while (false == value.empty() && isSpace(value.front()))
+            {
+                value.remove_prefix(1);
+            }
+
+            while (false == value.empty() && isSpace(value.back()))
+            {
+                value.remove_suffix(1);
+            }
+
+            return value;
+        }
+
+        [[nodiscard]] std::wstring GetWindowTextString(HWND window)
+        {
+            std::array<wchar_t, 512> buffer{};
+            if (nullptr == window)
+            {
+                return {};
+            }
+
+            GetWindowTextW(window, buffer.data(), static_cast<int>(buffer.size()));
+            return std::wstring(buffer.data());
+        }
+
         void SetCollider2DControlsVisible(
             HWND enabledCheckBox,
             HWND triggerCheckBox,
@@ -60,6 +95,9 @@ namespace Xelqoria::Editor
             HWND offsetLabel,
             HWND sizeLabel,
             const std::array<HWND, 4>& editControls,
+            HWND rotationLabel,
+            HWND rotationEdit,
+            HWND editButton,
             bool visible)
         {
             SetWindowVisible(enabledCheckBox, visible);
@@ -68,6 +106,9 @@ namespace Xelqoria::Editor
             SetWindowVisible(shapeTypeEdit, visible);
             SetWindowVisible(offsetLabel, visible);
             SetWindowVisible(sizeLabel, visible);
+            SetWindowVisible(rotationLabel, visible);
+            SetWindowVisible(rotationEdit, visible);
+            SetWindowVisible(editButton, visible);
             for (HWND editControl : editControls)
             {
                 SetWindowVisible(editControl, visible);
@@ -119,11 +160,30 @@ namespace Xelqoria::Editor
         m_collider2DShapeTypeEdit = shell.GetCollider2DShapeTypeEdit();
         m_collider2DOffsetLabel = shell.GetCollider2DOffsetLabel();
         m_collider2DSizeLabel = shell.GetCollider2DSizeLabel();
+        m_collider2DRotationLabel = shell.GetCollider2DRotationLabel();
+        m_collider2DRotationEdit = shell.GetCollider2DRotationEdit();
         m_collider2DEditControls = shell.GetCollider2DEditControls();
+        m_collider2DEditButton = shell.GetCollider2DEditButton();
         m_collider2DComponentActionButton = shell.GetCollider2DComponentActionButton();
+        m_addComponentButton = shell.GetAddComponentButton();
         m_materialOpenButton = shell.GetMaterialOpenButton();
+        m_materialSharedNoticeLabel = shell.GetMaterialSharedNoticeLabel();
+        m_materialDetailsSectionLabel = shell.GetMaterialDetailsSectionLabel();
+        m_materialDetailLabels = shell.GetMaterialDetailLabels();
+        m_materialDetailEditControls = shell.GetMaterialDetailEditControls();
+        m_materialTextureDropHighlight = shell.GetMaterialTextureDropHighlight();
+        m_materialTextureBrowseButton = shell.GetMaterialTextureBrowseButton();
+        m_materialTintColorButton = shell.GetMaterialTintColorButton();
+        m_materialOutlineEnabledCheckBox = shell.GetMaterialOutlineEnabledCheckBox();
+        m_materialOutlineColorButton = shell.GetMaterialOutlineColorButton();
         m_cursor = &cursor;
         SetWindowTextW(m_spriteRefLabel, L"Material");
+        EnableWindow(m_materialTextureBrowseButton, FALSE);
+        EnableWindow(m_materialTintColorButton, FALSE);
+        EnableWindow(m_materialOutlineColorButton, FALSE);
+        SetWindowTextW(m_materialTintColorButton, L"");
+        SetWindowTextW(m_materialOutlineColorButton, L"");
+        SetWindowTextW(m_addComponentButton, L"Add Component");
     }
 
     void InspectorPanelController::Refresh(
@@ -169,7 +229,10 @@ namespace Xelqoria::Editor
             ShowWindow(m_materialOpenButton, SW_HIDE);
             SetWindowTextW(m_collider2DComponentSectionLabel, L"Collider2DComponent (not attached)");
             SetWindowTextW(m_collider2DSummaryLabel, L"Collider2D: no entity selected");
-            SetWindowTextW(m_collider2DComponentActionButton, L"Add Collider2DComponent");
+            SetWindowTextW(m_collider2DComponentActionButton, L"Remove Collider2DComponent");
+            EnableWindow(m_collider2DComponentActionButton, FALSE);
+            EnableWindow(m_addComponentButton, FALSE);
+            SetMaterialDetailsVisible(false);
             SetCollider2DControlsVisible(
                 m_collider2DEnabledCheckBox,
                 m_collider2DTriggerCheckBox,
@@ -178,6 +241,9 @@ namespace Xelqoria::Editor
                 m_collider2DOffsetLabel,
                 m_collider2DSizeLabel,
                 m_collider2DEditControls,
+                m_collider2DRotationLabel,
+                m_collider2DRotationEdit,
+                m_collider2DEditButton,
                 false);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
@@ -210,7 +276,10 @@ namespace Xelqoria::Editor
             ShowWindow(m_materialOpenButton, SW_HIDE);
             SetWindowTextW(m_collider2DComponentSectionLabel, L"Collider2DComponent (not attached)");
             SetWindowTextW(m_collider2DSummaryLabel, L"Collider2D: selected entity not found");
-            SetWindowTextW(m_collider2DComponentActionButton, L"Add Collider2DComponent");
+            SetWindowTextW(m_collider2DComponentActionButton, L"Remove Collider2DComponent");
+            EnableWindow(m_collider2DComponentActionButton, FALSE);
+            EnableWindow(m_addComponentButton, FALSE);
+            SetMaterialDetailsVisible(false);
             SetCollider2DControlsVisible(
                 m_collider2DEnabledCheckBox,
                 m_collider2DTriggerCheckBox,
@@ -219,6 +288,9 @@ namespace Xelqoria::Editor
                 m_collider2DOffsetLabel,
                 m_collider2DSizeLabel,
                 m_collider2DEditControls,
+                m_collider2DRotationLabel,
+                m_collider2DRotationEdit,
+                m_collider2DEditButton,
                 false);
             m_lastSpriteRefAssetId = {};
             m_lastSpriteRefDisplayText.clear();
@@ -292,6 +364,37 @@ namespace Xelqoria::Editor
             EnableWindow(m_scriptAssignButton, scriptActionState.enableAssignButton ? TRUE : FALSE);
             EnableWindow(m_scriptClearButton, scriptActionState.enableClearButton ? TRUE : FALSE);
             SetWindowTextW(m_scriptAssetEdit, m_lastScriptDisplayText.c_str());
+
+            const Core::AssetId selectedMaterialAssetId = false == materialAssetId.IsEmpty()
+                ? materialAssetId
+                : (spriteAsset.has_value() ? spriteAsset->materialAssetId : Core::AssetId{});
+            const auto materialAsset = materialAssetResolver.ResolveMaterialAsset(selectedMaterialAssetId);
+            SetMaterialDetailsVisible(true);
+            SetMaterialDetailsEnabled(materialAsset.has_value());
+            if (materialAsset.has_value())
+            {
+                SetWindowTextW(
+                    m_materialDetailEditControls[0],
+                    ToWideString(materialAsset->textureAssetId.GetValue()).c_str());
+                SetWindowTextW(m_materialDetailEditControls[1], MaterialPanelController::FormatColorText(materialAsset->color).c_str());
+                SendMessageW(
+                    m_materialOutlineEnabledCheckBox,
+                    BM_SETCHECK,
+                    materialAsset->outlineEnabled ? BST_CHECKED : BST_UNCHECKED,
+                    0);
+                wchar_t thicknessText[64]{};
+                std::swprintf(thicknessText, std::size(thicknessText), L"%.6g", materialAsset->outlineThickness);
+                SetWindowTextW(m_materialDetailEditControls[3], thicknessText);
+                SetWindowTextW(m_materialDetailEditControls[4], MaterialPanelController::FormatColorText(materialAsset->outlineColor).c_str());
+            }
+            else
+            {
+                SetWindowTextW(m_materialDetailEditControls[0], L"");
+                SetWindowTextW(m_materialDetailEditControls[1], L"");
+                SendMessageW(m_materialOutlineEnabledCheckBox, BM_SETCHECK, BST_UNCHECKED, 0);
+                SetWindowTextW(m_materialDetailEditControls[3], L"");
+                SetWindowTextW(m_materialDetailEditControls[4], L"");
+            }
         }
         else
         {
@@ -307,6 +410,7 @@ namespace Xelqoria::Editor
             m_lastSpriteRefDisplayText.clear();
             m_lastScriptAssetId = {};
             m_lastScriptDisplayText.clear();
+            SetMaterialDetailsVisible(false);
         }
 
         const auto collider2DComponent = entity->get().GetCollider2DComponent();
@@ -321,6 +425,8 @@ namespace Xelqoria::Editor
             static_cast<unsigned>(*selectedEntityId));
         SetWindowTextW(m_collider2DSummaryLabel, colliderSummaryText);
         SetWindowTextW(m_collider2DComponentActionButton, colliderActionState.buttonLabel);
+        EnableWindow(m_collider2DComponentActionButton, collider2DComponent.has_value() ? TRUE : FALSE);
+        EnableWindow(m_addComponentButton, true == hasSpriteComponent ? TRUE : FALSE);
         SetCollider2DControlsVisible(
             m_collider2DEnabledCheckBox,
             m_collider2DTriggerCheckBox,
@@ -329,6 +435,9 @@ namespace Xelqoria::Editor
             m_collider2DOffsetLabel,
             m_collider2DSizeLabel,
             m_collider2DEditControls,
+            m_collider2DRotationLabel,
+            m_collider2DRotationEdit,
+            m_collider2DEditButton,
             colliderActionState.showColliderControls);
         if (collider2DComponent.has_value())
         {
@@ -340,15 +449,12 @@ namespace Xelqoria::Editor
             SetEditFloat(m_collider2DEditControls[1], collider.offset.y);
             SetEditFloat(m_collider2DEditControls[2], collider.size.x);
             SetEditFloat(m_collider2DEditControls[3], collider.size.y);
+            SetWindowTextW(m_collider2DRotationEdit, L"0.000");
         }
 
-        wchar_t summaryText[128]{};
-        std::swprintf(
-            summaryText,
-            std::size(summaryText),
-            L"Inspector: Entity %u",
-            static_cast<unsigned>(*selectedEntityId));
-        SetWindowTextW(m_inspectorSummaryLabel, summaryText);
+        std::wstring summaryText = L"Inspector: ";
+        summaryText += ToWideString(entity->get().GetName());
+        SetWindowTextW(m_inspectorSummaryLabel, summaryText.c_str());
         m_lastInspectorEntityId = selectedEntityId;
     }
 
@@ -433,7 +539,20 @@ namespace Xelqoria::Editor
             }
         }
 
-        if (true == ConsumeButtonClick(m_collider2DComponentActionButton, inputSnapshot))
+        if (true == ConsumeButtonClick(m_addComponentButton, inputSnapshot)
+            && false == entity->get().HasCollider2DComponent())
+        {
+            const bool actionChanged = SceneEditingOperations::AddCollider2DComponent(entity->get());
+            result.changed = actionChanged || result.changed;
+            if (actionChanged)
+            {
+                result.operationName = "Add Collider2DComponent";
+                result.collider2DComponentAdded = true;
+            }
+        }
+
+        if (true == ConsumeButtonClick(m_collider2DComponentActionButton, inputSnapshot)
+            && true == entity->get().HasCollider2DComponent())
         {
             const bool hadCollider2DComponent = entity->get().HasCollider2DComponent();
             const bool actionChanged = ApplyCollider2DComponentAction(entity->get());
@@ -443,7 +562,6 @@ namespace Xelqoria::Editor
                 result.operationName = hadCollider2DComponent
                     ? "Remove Collider2DComponent"
                     : "Add Collider2DComponent";
-                result.openCollider2DRequested = false == hadCollider2DComponent;
                 result.collider2DComponentAdded = false == hadCollider2DComponent;
             }
         }
@@ -529,6 +647,64 @@ namespace Xelqoria::Editor
             {
                 result.openMaterialRequested = true;
                 result.openMaterialAssetId = spriteComponent->get().materialAssetRef;
+            }
+
+            const Core::AssetId materialAssetId = false == spriteComponent->get().materialAssetRef.IsEmpty()
+                ? spriteComponent->get().materialAssetRef
+                : (spriteAsset.has_value() ? spriteAsset->materialAssetId : Core::AssetId{});
+            const std::optional<Game::Assets::SpriteMaterialAsset> currentMaterialAsset =
+                materialAssetResolver.ResolveMaterialAsset(materialAssetId);
+            if (false == materialAssetId.IsEmpty() && true == currentMaterialAsset.has_value())
+            {
+                Game::Assets::SpriteMaterialAsset editedMaterialAsset = *currentMaterialAsset;
+                bool materialChanged = false;
+
+                const std::wstring textureText = GetWindowTextString(m_materialDetailEditControls[0]);
+                const std::wstring_view trimmedTextureText = Trim(textureText);
+                const Core::AssetId textureAssetId(ToNarrowString(trimmedTextureText));
+                if (editedMaterialAsset.textureAssetId != textureAssetId)
+                {
+                    editedMaterialAsset.textureAssetId = textureAssetId;
+                    materialChanged = true;
+                }
+
+                std::array<float, 4> tintColor{};
+                if (MaterialPanelController::TryParseColorText(GetWindowTextString(m_materialDetailEditControls[1]), tintColor)
+                    && editedMaterialAsset.color != tintColor)
+                {
+                    editedMaterialAsset.color = tintColor;
+                    materialChanged = true;
+                }
+
+                const bool outlineEnabled =
+                    SendMessageW(m_materialOutlineEnabledCheckBox, BM_GETCHECK, 0, 0) == BST_CHECKED;
+                if (editedMaterialAsset.outlineEnabled != outlineEnabled)
+                {
+                    editedMaterialAsset.outlineEnabled = outlineEnabled;
+                    materialChanged = true;
+                }
+
+                const std::optional<float> outlineThickness = ReadEditFloat(m_materialDetailEditControls[3]);
+                if (outlineThickness.has_value() && editedMaterialAsset.outlineThickness != *outlineThickness)
+                {
+                    editedMaterialAsset.outlineThickness = *outlineThickness;
+                    materialChanged = true;
+                }
+
+                std::array<float, 4> outlineColor{};
+                if (MaterialPanelController::TryParseColorText(GetWindowTextString(m_materialDetailEditControls[4]), outlineColor)
+                    && editedMaterialAsset.outlineColor != outlineColor)
+                {
+                    editedMaterialAsset.outlineColor = outlineColor;
+                    materialChanged = true;
+                }
+
+                if (materialChanged)
+                {
+                    result.materialAssetChanged = true;
+                    result.materialTargetAssetId = materialAssetId;
+                    result.materialAsset = editedMaterialAsset;
+                }
             }
         }
 
@@ -618,12 +794,65 @@ namespace Xelqoria::Editor
         return result;
     }
 
+    InspectorApplyResult InspectorPanelController::ApplyMaterialTextureDrop(
+        const Game::Scene* scene,
+        std::optional<Game::EntityId> selectedEntityId,
+        const AssetsPanelController& assetsPanelController,
+        const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
+        const Game::Assets::IMaterialAssetResolver& materialAssetResolver) const
+    {
+        InspectorApplyResult result{};
+        if (nullptr == scene
+            || false == selectedEntityId.has_value()
+            || true == assetsPanelController.GetDraggingTextureAssetId().IsEmpty()
+            || false == assetsPanelController.WasDragReleasedThisFrame()
+            || false == IsMaterialTextureDropTargetHovered(assetsPanelController))
+        {
+            return result;
+        }
+
+        const auto entity = scene->FindEntity(*selectedEntityId);
+        if (false == entity.has_value())
+        {
+            return result;
+        }
+
+        const auto spriteComponent = entity->get().GetSpriteComponent();
+        if (false == spriteComponent.has_value())
+        {
+            return result;
+        }
+
+        const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(spriteComponent->get().spriteAssetRef);
+        const Core::AssetId materialAssetId = false == spriteComponent->get().materialAssetRef.IsEmpty()
+            ? spriteComponent->get().materialAssetRef
+            : (spriteAsset.has_value() ? spriteAsset->materialAssetId : Core::AssetId{});
+        const std::optional<Game::Assets::SpriteMaterialAsset> currentMaterialAsset =
+            materialAssetResolver.ResolveMaterialAsset(materialAssetId);
+        if (materialAssetId.IsEmpty()
+            || false == currentMaterialAsset.has_value()
+            || currentMaterialAsset->textureAssetId == assetsPanelController.GetDraggingTextureAssetId())
+        {
+            return result;
+        }
+
+        result.materialAssetChanged = true;
+        result.materialTargetAssetId = materialAssetId;
+        result.materialAsset = *currentMaterialAsset;
+        result.materialAsset.textureAssetId = assetsPanelController.GetDraggingTextureAssetId();
+        return result;
+    }
+
     void InspectorPanelController::UpdateDropHighlight(const AssetsPanelController& assetsPanelController)
     {
         HWND targetEdit = nullptr;
         if (true == IsMaterialDropTargetHovered(assetsPanelController))
         {
             targetEdit = m_spriteRefEdit;
+        }
+        else if (true == IsMaterialTextureDropTargetHovered(assetsPanelController))
+        {
+            targetEdit = m_materialDetailEditControls[0];
         }
         else if (true == IsScriptDropTargetHovered(assetsPanelController))
         {
@@ -643,29 +872,69 @@ namespace Xelqoria::Editor
             return;
         }
 
-        ShowWindow(m_spriteRefDropHighlight, shouldShow ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_spriteRefDropHighlight, shouldShow && targetEdit != m_materialDetailEditControls[0] ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_materialTextureDropHighlight, shouldShow && targetEdit == m_materialDetailEditControls[0] ? SW_SHOW : SW_HIDE);
         if (shouldShow)
         {
             RECT targetRect{};
-            HWND parentWindow = GetParent(m_spriteRefDropHighlight);
+            HWND highlightWindow = targetEdit == m_materialDetailEditControls[0]
+                ? m_materialTextureDropHighlight
+                : m_spriteRefDropHighlight;
+            HWND parentWindow = GetParent(highlightWindow);
             GetWindowRect(targetEdit, &targetRect);
             MapWindowPoints(nullptr, parentWindow, reinterpret_cast<POINT*>(&targetRect), 2);
             InflateRect(&targetRect, 2, 2);
             SetWindowPos(
-                m_spriteRefDropHighlight,
+                highlightWindow,
                 targetEdit,
                 targetRect.left,
                 targetRect.top,
                 targetRect.right - targetRect.left,
                 targetRect.bottom - targetRect.top,
                 SWP_NOACTIVATE);
-            InvalidateRect(m_spriteRefDropHighlight, nullptr, TRUE);
+            InvalidateRect(highlightWindow, nullptr, TRUE);
         }
     }
 
     void InspectorPanelController::ResetTrackedEntity()
     {
         m_lastInspectorEntityId.reset();
+    }
+
+    void InspectorPanelController::SetMaterialDetailsVisible(bool visible) const
+    {
+        const int showCommand = visible ? SW_SHOW : SW_HIDE;
+        ShowWindow(m_materialDetailsSectionLabel, showCommand);
+        ShowWindow(m_materialSharedNoticeLabel, showCommand);
+        ShowWindow(m_materialTextureBrowseButton, showCommand);
+        ShowWindow(m_materialTintColorButton, showCommand);
+        ShowWindow(m_materialOutlineEnabledCheckBox, showCommand);
+        ShowWindow(m_materialOutlineColorButton, showCommand);
+        for (HWND label : m_materialDetailLabels)
+        {
+            ShowWindow(label, showCommand);
+        }
+        for (std::size_t index = 0; index < m_materialDetailEditControls.size(); ++index)
+        {
+            ShowWindow(m_materialDetailEditControls[index], visible && 2 != index ? SW_SHOW : SW_HIDE);
+        }
+        if (false == visible)
+        {
+            ShowWindow(m_materialTextureDropHighlight, SW_HIDE);
+        }
+    }
+
+    void InspectorPanelController::SetMaterialDetailsEnabled(bool enabled) const
+    {
+        const BOOL enableFlag = enabled ? TRUE : FALSE;
+        for (std::size_t index = 0; index < m_materialDetailEditControls.size(); ++index)
+        {
+            EnableWindow(m_materialDetailEditControls[index], 2 != index ? enableFlag : FALSE);
+        }
+        EnableWindow(m_materialOutlineEnabledCheckBox, enableFlag);
+        EnableWindow(m_materialTextureBrowseButton, FALSE);
+        EnableWindow(m_materialTintColorButton, FALSE);
+        EnableWindow(m_materialOutlineColorButton, FALSE);
     }
 
     bool InspectorPanelController::ConsumeButtonClick(
@@ -731,6 +1000,32 @@ namespace Xelqoria::Editor
         RECT materialRect{};
         GetWindowRect(m_spriteRefEdit, &materialRect);
         return PtInRect(&materialRect, cursorPoint) != FALSE;
+    }
+
+    bool InspectorPanelController::IsMaterialTextureDropTargetHovered(
+        const AssetsPanelController& assetsPanelController) const
+    {
+        const bool hasTextureDrag = assetsPanelController.IsDragActive()
+            || assetsPanelController.WasDragReleasedThisFrame();
+        if (false == hasTextureDrag
+            || true == assetsPanelController.GetDraggingTextureAssetId().IsEmpty()
+            || nullptr == m_materialDetailEditControls[0]
+            || false == IsWindowVisible(m_materialDetailEditControls[0])
+            || false == IsWindowEnabled(m_materialDetailEditControls[0]))
+        {
+            return false;
+        }
+
+        if (nullptr == m_cursor)
+        {
+            return false;
+        }
+
+        const POINT cursorPoint = ToWin32Point(m_cursor->GetScreenPosition());
+
+        RECT textureRect{};
+        GetWindowRect(m_materialDetailEditControls[0], &textureRect);
+        return PtInRect(&textureRect, cursorPoint) != FALSE;
     }
 
     bool InspectorPanelController::IsScriptDropTargetHovered(const AssetsPanelController& assetsPanelController) const
