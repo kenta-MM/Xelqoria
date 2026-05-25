@@ -57,6 +57,11 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
         return path.extension() == L".material";
     }
 
+    bool IsCollider2DAssetFile(const std::filesystem::path& path)
+    {
+        return path.extension() == L".collider2d";
+    }
+
     Core::AssetId BuildTextureAssetId(
         const std::filesystem::path& path,
         const std::filesystem::path& assetsRootDirectory)
@@ -76,5 +81,12 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
         const std::filesystem::path& assetsRootDirectory)
     {
         return BuildAssetId("materials", path, assetsRootDirectory);
+    }
+
+    Core::AssetId BuildCollider2DAssetId(
+        const std::filesystem::path& path,
+        const std::filesystem::path& assetsRootDirectory)
+    {
+        return BuildAssetId("colliders2d", path, assetsRootDirectory);
     }
 }

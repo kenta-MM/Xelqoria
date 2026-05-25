@@ -2,7 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include "Collider2DComponent.h"
 #include "Physics2D.h"
+#include "Transform.h"
 
 namespace
 {
@@ -114,4 +116,41 @@ TEST(Physics2DTests, SpatialHashRemovesDuplicatePairsAcrossCells)
 	ASSERT_EQ(pairs.size(), 1u);
 	EXPECT_EQ(pairs[0].first, 1u);
 	EXPECT_EQ(pairs[0].second, 2u);
+}
+
+TEST(Physics2DTests, BuildAabbCollider2DUsesTransformPositionOffsetAndScale)
+{
+	Xelqoria::Game::Transform transform{};
+	transform.position = { 10.0f, -20.0f, 5.0f };
+	transform.scale = { 2.0f, 3.0f, 1.0f };
+	Xelqoria::Game::Collider2DComponent collider{};
+	collider.offset = { 4.0f, -5.0f };
+	collider.size = { 6.0f, 8.0f };
+
+	const Xelqoria::Game::AabbCollider2D aabb =
+		Xelqoria::Game::BuildAabbCollider2D(transform, collider);
+
+	EXPECT_TRUE(IsEqual(aabb.center.x, 18.0f));
+	EXPECT_TRUE(IsEqual(aabb.center.y, -35.0f));
+	EXPECT_TRUE(IsEqual(aabb.halfSize.x, 6.0f));
+	EXPECT_TRUE(IsEqual(aabb.halfSize.y, 12.0f));
+}
+
+TEST(Physics2DTests, BuildAabbCollider2DUsesAbsoluteScaleAndIgnoresRotationZ)
+{
+	Xelqoria::Game::Transform transform{};
+	transform.position = { 1.0f, 2.0f, 0.0f };
+	transform.rotation = { 0.0f, 0.0f, 90.0f };
+	transform.scale = { -2.0f, -4.0f, 1.0f };
+	Xelqoria::Game::Collider2DComponent collider{};
+	collider.offset = { 3.0f, 5.0f };
+	collider.size = { 7.0f, 11.0f };
+
+	const Xelqoria::Game::AabbCollider2D aabb =
+		Xelqoria::Game::BuildAabbCollider2D(transform, collider);
+
+	EXPECT_TRUE(IsEqual(aabb.center.x, -5.0f));
+	EXPECT_TRUE(IsEqual(aabb.center.y, -18.0f));
+	EXPECT_TRUE(IsEqual(aabb.halfSize.x, 7.0f));
+	EXPECT_TRUE(IsEqual(aabb.halfSize.y, 22.0f));
 }

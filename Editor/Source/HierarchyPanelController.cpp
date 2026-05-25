@@ -29,6 +29,7 @@ namespace Xelqoria::Editor
     void HierarchyPanelController::Refresh(const Game::Scene* scene)
     {
         m_visibleEntityIds.clear();
+        m_visibleItemKinds.clear();
 
         SendMessageW(m_hierarchyListBox, LB_RESETCONTENT, 0, 0);
         wchar_t searchBuffer[128]{};
@@ -47,29 +48,60 @@ namespace Xelqoria::Editor
                     continue;
                 }
 
+                const bool hasCollider2DComponent = entity.HasCollider2DComponent();
+                const bool isExpanded = m_collapsedEntityIds.find(entity.GetId()) == m_collapsedEntityIds.end();
                 m_visibleEntityIds.push_back(entity.GetId());
+                m_visibleItemKinds.push_back(VisibleItemKind::Entity);
 
-                label.insert(0, L"+ ");
+                label = FormatEntityRowLabel(label, hasCollider2DComponent, isExpanded);
                 SendMessageW(m_hierarchyListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
+
+                if (ShouldShowCollider2DChildRow(hasCollider2DComponent, isExpanded))
+                {
+                    m_visibleEntityIds.push_back(entity.GetId());
+                    m_visibleItemKinds.push_back(VisibleItemKind::Collider2DComponent);
+                    SendMessageW(m_hierarchyListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"  Collider2DComponent"));
+                }
             }
         }
 
         int selectedIndex = LB_ERR;
         for (std::size_t index = 0; index < m_visibleEntityIds.size(); ++index)
         {
-            if (m_selectedEntityId.has_value() && m_visibleEntityIds[index] == *m_selectedEntityId)
+            if (m_selectedEntityId.has_value()
+                && m_visibleEntityIds[index] == *m_selectedEntityId
+                && index < m_visibleItemKinds.size()
+                && m_visibleItemKinds[index] == m_selectedItemKind)
             {
                 selectedIndex = static_cast<int>(index);
                 break;
+            }
+        }
+        if (selectedIndex == LB_ERR)
+        {
+            for (std::size_t index = 0; index < m_visibleEntityIds.size(); ++index)
+            {
+                if (m_selectedEntityId.has_value() && m_visibleEntityIds[index] == *m_selectedEntityId)
+                {
+                    selectedIndex = static_cast<int>(index);
+                    m_selectedItemKind = index < m_visibleItemKinds.size()
+                        ? m_visibleItemKinds[index]
+                        : VisibleItemKind::Entity;
+                    break;
+                }
             }
         }
 
         if (selectedIndex == LB_ERR)
         {
             m_selectedEntityId.reset();
+            m_selectedItemKind = VisibleItemKind::Entity;
             if (false == m_preserveNoSelection && false == m_visibleEntityIds.empty())
             {
                 m_selectedEntityId = m_visibleEntityIds.front();
+                m_selectedItemKind = m_visibleItemKinds.empty()
+                    ? VisibleItemKind::Entity
+                    : m_visibleItemKinds.front();
                 selectedIndex = 0;
             }
         }
@@ -135,9 +167,15 @@ namespace Xelqoria::Editor
         }
 
         const Game::EntityId entityId = m_visibleEntityIds[index];
-        if (false == m_selectedEntityId.has_value() || *m_selectedEntityId != entityId)
+        const VisibleItemKind itemKind = index < m_visibleItemKinds.size()
+            ? m_visibleItemKinds[index]
+            : VisibleItemKind::Entity;
+        if (false == m_selectedEntityId.has_value()
+            || *m_selectedEntityId != entityId
+            || m_selectedItemKind != itemKind)
         {
             m_selectedEntityId = entityId;
+            m_selectedItemKind = itemKind;
             m_preserveNoSelection = false;
             return true;
         }
@@ -171,11 +209,20 @@ namespace Xelqoria::Editor
             ? scene->FindEntity(*m_selectedEntityId)
             : std::optional<std::reference_wrapper<Game::Entity>>{};
         const bool isNameEditFocused = GetFocus() == m_hierarchyNameEdit;
+        const bool isHierarchyListFocused = GetFocus() == m_hierarchyListBox;
         const bool isEnterPressed = inputSnapshot.WasKeyPressed(VK_RETURN);
+        const bool isSpacePressed = inputSnapshot.WasKeyPressed(VK_SPACE);
         const ButtonClickFrameInput frameInput{
             inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left),
             inputSnapshot.GetCursorScreenPoint()
         };
+
+        if (true == isHierarchyListFocused
+            && (true == isEnterPressed || true == isSpacePressed)
+            && true == ToggleSelectedEntityExpansion(*scene))
+        {
+            Refresh(scene);
+        }
 
         if (selectedEntity.has_value())
         {
@@ -218,11 +265,41 @@ namespace Xelqoria::Editor
     void HierarchyPanelController::SetSelectedEntityId(std::optional<Game::EntityId> selectedEntityId)
     {
         m_selectedEntityId = selectedEntityId;
+        m_selectedItemKind = VisibleItemKind::Entity;
         m_preserveNoSelection = false == selectedEntityId.has_value();
     }
 
     std::optional<Game::EntityId> HierarchyPanelController::GetSelectedEntityId() const
     {
         return m_selectedEntityId;
+    }
+
+    bool HierarchyPanelController::ToggleSelectedEntityExpansion(const Game::Scene& scene)
+    {
+        if (false == m_selectedEntityId.has_value()
+            || VisibleItemKind::Entity != m_selectedItemKind)
+        {
+            return false;
+        }
+
+        const auto selectedEntity = scene.FindEntity(*m_selectedEntityId);
+        if (false == selectedEntity.has_value()
+            || false == selectedEntity->get().HasCollider2DComponent())
+        {
+            return false;
+        }
+
+        const Game::EntityId entityId = selectedEntity->get().GetId();
+        const auto collapsedIt = m_collapsedEntityIds.find(entityId);
+        if (collapsedIt == m_collapsedEntityIds.end())
+        {
+            m_collapsedEntityIds.insert(entityId);
+        }
+        else
+        {
+            m_collapsedEntityIds.erase(collapsedIt);
+        }
+
+        return true;
     }
 }

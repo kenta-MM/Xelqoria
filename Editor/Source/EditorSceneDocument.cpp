@@ -13,6 +13,8 @@
 #include <system_error>
 
 #include "Assets/SpriteAsset.h"
+#include "Assets/Collider2DAsset.h"
+#include "Assets/Collider2DAssetLoader.h"
 #include "Assets/SpriteAssetLoader.h"
 #include "Assets/SpriteMaterialAsset.h"
 #include "Assets/SpriteMaterialAssetLoader.h"
@@ -180,6 +182,25 @@ namespace Xelqoria::Editor
             return candidate;
         }
 
+        [[nodiscard]] std::filesystem::path BuildUniqueCollider2DAssetFilePath(
+            const std::filesystem::path& rootDirectory,
+            const std::filesystem::path& targetDirectory)
+        {
+            const std::filesystem::path outputDirectory = ResolveAssetOutputDirectory(rootDirectory, targetDirectory);
+            std::filesystem::path candidate = outputDirectory / L"NewCollider2D.collider2d";
+            for (int index = 1; std::filesystem::exists(candidate); ++index)
+            {
+                candidate = outputDirectory / (L"NewCollider2D" + std::to_wstring(index) + L".collider2d");
+            }
+
+            return candidate;
+        }
+
+        void AppendVector2(std::ostringstream& stream, const Math::Vector2& value)
+        {
+            stream << value.x << "," << value.y;
+        }
+
         void AppendColor(std::ostringstream& stream, const std::array<float, 4>& color)
         {
             stream << color[0] << "," << color[1] << "," << color[2] << "," << color[3];
@@ -201,6 +222,68 @@ namespace Xelqoria::Editor
             AppendColor(text, materialAsset.outlineColor);
             text << "\n";
             return text.str();
+        }
+
+        [[nodiscard]] std::string WriteCollider2DAssetText(const Game::Assets::Collider2DAsset& collider2DAsset)
+        {
+            std::ostringstream text;
+            text << std::fixed << std::setprecision(6);
+            const Game::Collider2DComponent& collider = collider2DAsset.collider;
+            text << "magic=XelqoriaCollider2DAsset\n";
+            text << "version=1\n";
+            text << "enabled=" << (collider.enabled ? "true" : "false") << "\n";
+            text << "isTrigger=" << (collider.isTrigger ? "true" : "false") << "\n";
+            text << "shapeType=Box\n";
+            text << "offset=";
+            AppendVector2(text, collider.offset);
+            text << "\n";
+            text << "size=";
+            AppendVector2(text, collider.size);
+            text << "\n";
+            return text.str();
+        }
+
+        [[nodiscard]] std::string ReplaceSpriteAssetField(
+            std::string_view source,
+            std::string_view fieldName,
+            const Core::AssetId& assetId)
+        {
+            std::ostringstream output;
+            bool wroteField = false;
+            std::size_t cursor = 0;
+            while (cursor <= source.size())
+            {
+                const std::size_t lineEnd = source.find('\n', cursor);
+                const std::size_t lineLength = lineEnd == std::string_view::npos
+                    ? source.size() - cursor
+                    : lineEnd - cursor;
+                const std::string_view line = source.substr(cursor, lineLength);
+
+                if (IsFieldLine(line, fieldName))
+                {
+                    output << fieldName << "=" << assetId.GetValue();
+                    wroteField = true;
+                }
+                else
+                {
+                    output << line;
+                }
+
+                output << "\n";
+                if (lineEnd == std::string_view::npos)
+                {
+                    break;
+                }
+
+                cursor = lineEnd + 1;
+            }
+
+            if (false == wroteField)
+            {
+                output << fieldName << "=" << assetId.GetValue() << "\n";
+            }
+
+            return output.str();
         }
     }
 
@@ -395,6 +478,10 @@ namespace Xelqoria::Editor
                 {
                     (void)RegisterMaterialAssetFile(entry.path());
                 }
+                else if (EditorAssetPathUtils::IsCollider2DAssetFile(entry.path()))
+                {
+                    (void)RegisterCollider2DAssetFile(entry.path());
+                }
             }
         }
     }
@@ -444,6 +531,54 @@ namespace Xelqoria::Editor
         if (alreadyRegistered == m_registeredSpriteAssetIds.end())
         {
             m_registeredSpriteAssetIds.push_back(spriteAssetId);
+        }
+
+        return true;
+    }
+
+    bool EditorSceneDocument::RegisterCollider2DAssetFile(const std::filesystem::path& collider2DAssetPath)
+    {
+        if (false == m_project.GetInfo().has_value()
+            || false == EditorAssetPathUtils::IsCollider2DAssetFile(collider2DAssetPath))
+        {
+            return false;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(collider2DAssetPath, rootDirectory))
+        {
+            return false;
+        }
+
+        std::ifstream input(collider2DAssetPath, std::ios::binary);
+        if (false == input.is_open())
+        {
+            return false;
+        }
+
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+        const auto loadResult = Game::Assets::Collider2DAssetLoader::LoadFromText(buffer.str());
+        if (false == loadResult.IsSuccess() || false == loadResult.asset.has_value())
+        {
+            return false;
+        }
+
+        const Core::AssetId collider2DAssetId =
+            EditorAssetPathUtils::BuildCollider2DAssetId(collider2DAssetPath, rootDirectory);
+        if (collider2DAssetId.IsEmpty())
+        {
+            return false;
+        }
+
+        m_collider2DAssetRegistry.RegisterCollider2DAsset(collider2DAssetId, *loadResult.asset);
+        const auto alreadyRegistered = std::find(
+            m_registeredCollider2DAssetIds.begin(),
+            m_registeredCollider2DAssetIds.end(),
+            collider2DAssetId);
+        if (alreadyRegistered == m_registeredCollider2DAssetIds.end())
+        {
+            m_registeredCollider2DAssetIds.push_back(collider2DAssetId);
         }
 
         return true;
@@ -539,6 +674,48 @@ namespace Xelqoria::Editor
         return EditorAssetPathUtils::BuildMaterialAssetId(materialAssetPath, rootDirectory);
     }
 
+    std::optional<Core::AssetId> EditorSceneDocument::CreateCollider2DAssetFile(
+        const std::filesystem::path& targetDirectory,
+        const Game::Collider2DComponent& collider)
+    {
+        if (false == m_project.GetInfo().has_value())
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        const std::filesystem::path collider2DAssetPath =
+            BuildUniqueCollider2DAssetFilePath(rootDirectory, targetDirectory);
+        std::error_code errorCode;
+        std::filesystem::create_directories(collider2DAssetPath.parent_path(), errorCode);
+        if (errorCode)
+        {
+            return std::nullopt;
+        }
+
+        Game::Assets::Collider2DAsset collider2DAsset{};
+        collider2DAsset.collider = collider;
+        std::ofstream output(collider2DAssetPath, std::ios::binary | std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return std::nullopt;
+        }
+
+        output << WriteCollider2DAssetText(collider2DAsset);
+        if (false == static_cast<bool>(output))
+        {
+            return std::nullopt;
+        }
+        output.close();
+
+        if (false == RegisterCollider2DAssetFile(collider2DAssetPath))
+        {
+            return std::nullopt;
+        }
+
+        return EditorAssetPathUtils::BuildCollider2DAssetId(collider2DAssetPath, rootDirectory);
+    }
+
     std::optional<std::filesystem::path> EditorSceneDocument::ResolveMaterialAssetPath(
         const Core::AssetId& materialAssetId) const
     {
@@ -574,6 +751,41 @@ namespace Xelqoria::Editor
         return materialAssetPath;
     }
 
+    std::optional<std::filesystem::path> EditorSceneDocument::ResolveCollider2DAssetPath(
+        const Core::AssetId& collider2DAssetId) const
+    {
+        if (false == m_project.GetInfo().has_value() || collider2DAssetId.IsEmpty())
+        {
+            return std::nullopt;
+        }
+
+        constexpr std::string_view collider2DAssetPrefix = "colliders2d/";
+        const std::string& assetValue = collider2DAssetId.GetValue();
+        if (false == std::string_view(assetValue).starts_with(collider2DAssetPrefix))
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path relativePath =
+            ToWideString(std::string_view(assetValue).substr(collider2DAssetPrefix.size()));
+        if (relativePath.empty()
+            || false == EditorPathSecurity::IsSafeRelativePath(relativePath)
+            || false == EditorAssetPathUtils::IsCollider2DAssetFile(relativePath))
+        {
+            return std::nullopt;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        const std::filesystem::path collider2DAssetPath = rootDirectory / relativePath;
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(collider2DAssetPath, rootDirectory)
+            || false == std::filesystem::exists(collider2DAssetPath))
+        {
+            return std::nullopt;
+        }
+
+        return collider2DAssetPath;
+    }
+
     bool EditorSceneDocument::SaveMaterialAsset(
         const Core::AssetId& materialAssetId,
         const Game::Assets::SpriteMaterialAsset& materialAsset)
@@ -598,6 +810,104 @@ namespace Xelqoria::Editor
         output.close();
 
         return RegisterMaterialAssetFile(*materialAssetPath);
+    }
+
+    bool EditorSceneDocument::EnsureMaterialAssetTexture(
+        const Core::AssetId& materialAssetId,
+        const Core::AssetId& textureAssetId)
+    {
+        if (materialAssetId.IsEmpty() || textureAssetId.IsEmpty())
+        {
+            return false;
+        }
+
+        const auto materialAsset = m_materialAssetRegistry.ResolveMaterialAsset(materialAssetId);
+        if (false == materialAsset.has_value())
+        {
+            return false;
+        }
+
+        if (false == materialAsset->textureAssetId.IsEmpty())
+        {
+            return true;
+        }
+
+        Game::Assets::SpriteMaterialAsset updatedMaterialAsset = *materialAsset;
+        updatedMaterialAsset.textureAssetId = textureAssetId;
+        return SaveMaterialAsset(materialAssetId, updatedMaterialAsset);
+    }
+
+    bool EditorSceneDocument::AssignCollider2DAssetToSpriteAsset(
+        const Core::AssetId& spriteAssetId,
+        const Core::AssetId& collider2DAssetId)
+    {
+        const auto spriteAssetPath = ResolveSpriteAssetPath(spriteAssetId);
+        if (false == spriteAssetPath.has_value())
+        {
+            return false;
+        }
+
+        if (false == collider2DAssetId.IsEmpty()
+            && false == ResolveCollider2DAssetPath(collider2DAssetId).has_value())
+        {
+            return false;
+        }
+
+        std::ifstream input(*spriteAssetPath, std::ios::binary);
+        if (false == input.is_open())
+        {
+            return false;
+        }
+
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+        const std::string source = buffer.str();
+        input.close();
+        const auto loadResult = Game::Assets::SpriteAssetLoader::LoadFromText(source);
+        if (false == loadResult.IsSuccess() || false == loadResult.asset.has_value())
+        {
+            return false;
+        }
+
+        std::ofstream output(*spriteAssetPath, std::ios::binary | std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return false;
+        }
+
+        output << ReplaceSpriteAssetField(source, "collider2DAssetId", collider2DAssetId);
+        if (false == static_cast<bool>(output))
+        {
+            return false;
+        }
+        output.close();
+
+        return RegisterSpriteAssetFile(*spriteAssetPath);
+    }
+
+    std::optional<Core::AssetId> EditorSceneDocument::CreateAndAssignCollider2DAssetToSpriteAsset(
+        const Core::AssetId& spriteAssetId,
+        const Game::Collider2DComponent& collider)
+    {
+        const auto spriteAssetPath = ResolveSpriteAssetPath(spriteAssetId);
+        if (false == spriteAssetPath.has_value())
+        {
+            return std::nullopt;
+        }
+
+        const std::optional<Core::AssetId> collider2DAssetId =
+            CreateCollider2DAssetFile(spriteAssetPath->parent_path(), collider);
+        if (false == collider2DAssetId.has_value())
+        {
+            return std::nullopt;
+        }
+
+        if (false == AssignCollider2DAssetToSpriteAsset(spriteAssetId, *collider2DAssetId))
+        {
+            return std::nullopt;
+        }
+
+        return collider2DAssetId;
     }
 
     bool EditorSceneDocument::MigrateSpriteComponentsToMaterialAssets()
@@ -766,6 +1076,8 @@ namespace Xelqoria::Editor
         Core::AssetId spriteAssetRef{};
         Core::AssetId textureAssetId{};
         Core::AssetId scriptAssetId{};
+        Core::AssetId materialAssetId{};
+        Core::AssetId collider2DAssetId{};
         std::uint32_t textureWidth = 0;
         std::uint32_t textureHeight = 0;
         Game::SpriteRenderSettings renderSettings{};
@@ -773,6 +1085,7 @@ namespace Xelqoria::Editor
         if (spriteComponent.has_value())
         {
             spriteAssetRef = spriteComponent->get().spriteAssetRef;
+            materialAssetId = spriteComponent->get().materialAssetRef;
             renderSettings = spriteComponent->get().renderSettings;
 
             const auto spriteAsset = m_spriteAssetRegistry.ResolveSpriteAsset(spriteAssetRef);
@@ -780,6 +1093,11 @@ namespace Xelqoria::Editor
             {
                 textureAssetId = spriteAsset->textureAssetId;
                 scriptAssetId = spriteAsset->scriptAssetId;
+                if (materialAssetId.IsEmpty())
+                {
+                    materialAssetId = spriteAsset->materialAssetId;
+                }
+                collider2DAssetId = spriteAsset->collider2DAssetId;
                 const auto texture = m_textureAssetRegistry.ResolveTexture(textureAssetId);
                 if (static_cast<bool>(texture))
                 {
@@ -800,6 +1118,11 @@ namespace Xelqoria::Editor
                 if (loadResult.IsSuccess() && loadResult.asset.has_value())
                 {
                     scriptAssetId = loadResult.asset->scriptAssetId;
+                    if (materialAssetId.IsEmpty())
+                    {
+                        materialAssetId = loadResult.asset->materialAssetId;
+                    }
+                    collider2DAssetId = loadResult.asset->collider2DAssetId;
                 }
             }
         }
@@ -828,6 +1151,8 @@ namespace Xelqoria::Editor
         text << "spriteAssetRef=" << spriteAssetRef.GetValue() << "\n";
         text << "textureAssetId=" << textureAssetId.GetValue() << "\n";
         text << "scriptAssetId=" << scriptAssetId.GetValue() << "\n";
+        text << "materialAssetId=" << materialAssetId.GetValue() << "\n";
+        text << "collider2DAssetId=" << collider2DAssetId.GetValue() << "\n";
         text << "texture.size=" << textureWidth << "," << textureHeight << "\n";
         text << "render.visible=" << (renderSettings.visible ? "true" : "false") << "\n";
         text << "render.sortOrder=" << renderSettings.sortOrder << "\n";
@@ -1063,6 +1388,16 @@ namespace Xelqoria::Editor
     const Game::Assets::SpriteMaterialAssetRegistry& EditorSceneDocument::GetMaterialAssetRegistry() const
     {
         return m_materialAssetRegistry;
+    }
+
+    Game::Assets::Collider2DAssetRegistry& EditorSceneDocument::GetCollider2DAssetRegistry()
+    {
+        return m_collider2DAssetRegistry;
+    }
+
+    const Game::Assets::Collider2DAssetRegistry& EditorSceneDocument::GetCollider2DAssetRegistry() const
+    {
+        return m_collider2DAssetRegistry;
     }
 
     Graphics::TextureAssetRegistry& EditorSceneDocument::GetTextureAssetRegistry()

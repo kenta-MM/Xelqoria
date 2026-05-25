@@ -220,6 +220,17 @@ namespace Xelqoria::Editor
         void ClearCreateMaterialRequest();
 
         /// <summary>
+        /// Assets 空白右クリックから Collider2D 作成が要求されたかを取得する。
+        /// </summary>
+        /// <returns>Collider2D 作成要求がある場合は true。</returns>
+        [[nodiscard]] bool HasCreateCollider2DRequest() const;
+
+        /// <summary>
+        /// Collider2D 作成要求を消費する。
+        /// </summary>
+        void ClearCreateCollider2DRequest();
+
+        /// <summary>
         /// Material Asset を Material タブで開く要求があるかを取得する。
         /// </summary>
         /// <returns>Material を開く要求がある場合は true。</returns>
@@ -264,6 +275,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>作成先フォルダ。未指定時は空。</returns>
         [[nodiscard]] const std::filesystem::path& GetCreateMaterialTargetDirectory() const;
+
+        /// <summary>
+        /// Collider2D Asset ファイルの作成先フォルダを取得する。
+        /// </summary>
+        /// <returns>作成先フォルダ。未指定時は空。</returns>
+        [[nodiscard]] const std::filesystem::path& GetCreateCollider2DTargetDirectory() const;
 
         /// <summary>
         /// Script を割り当てる Sprite Asset ファイルパスを取得する。
@@ -485,6 +502,8 @@ namespace Xelqoria::Editor
         std::filesystem::path m_createScriptTargetDirectory{};
         bool m_createMaterialRequested = false;
         std::filesystem::path m_createMaterialTargetDirectory{};
+        bool m_createCollider2DRequested = false;
+        std::filesystem::path m_createCollider2DTargetDirectory{};
         bool m_openMaterialRequested = false;
         Core::AssetId m_openMaterialAssetId{};
         bool m_assignScriptRequested = false;

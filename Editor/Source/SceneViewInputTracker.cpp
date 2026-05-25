@@ -173,18 +173,6 @@ namespace Xelqoria::Editor
             m_sceneViewPanActive = false;
         }
 
-        if (false == isCursorInside
-            && true == isLeftButtonDown
-            && false == m_sceneViewLeftButtonDown
-            && false == isAssetDragActive
-            && true == currentSelectedEntityId.has_value())
-        {
-            result.selectionChanged = true;
-            result.selectedEntityId = std::nullopt;
-            m_editMode = SceneViewEditMode::None;
-            ClearEntityDrag();
-        }
-
         if (isCursorInside && isLeftButtonDown && false == m_sceneViewLeftButtonDown)
         {
             POINT clientPoint = screenPoint;

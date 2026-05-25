@@ -18,5 +18,15 @@ namespace Xelqoria::Game::Assets
 		/// スプライトに関連付ける Script Asset 識別子を表す。
 		/// </summary>
 		Core::AssetId scriptAssetId{};
+
+		/// <summary>
+		/// スプライトに関連付ける Material Asset 識別子を表す。
+		/// </summary>
+		Core::AssetId materialAssetId{};
+
+		/// <summary>
+		/// スプライトに関連付ける Collider2D Asset 識別子を表す。
+		/// </summary>
+		Core::AssetId collider2DAssetId{};
 	};
 }

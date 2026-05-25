@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
+#include "Collider2DComponent.h"
 #include "EditorCamera2D.h"
 #include "SceneViewOverlay.h"
+#include "Transform.h"
 
 TEST(EditorCamera2DTests, StoresPanZoomAndViewportState)
 {
@@ -123,4 +125,32 @@ TEST(EditorCamera2DTests, ReturnsNoHitWhenPointIsOutsideTargets)
     const auto selectedEntityId = Xelqoria::Editor::PickTopmostEntityAtWorldPoint(targets, 40.0f, 80.0f);
 
     EXPECT_FALSE(selectedEntityId.has_value());
+}
+
+TEST(EditorCamera2DTests, BuildsCollider2DOverlayRectFromAabbAndCamera)
+{
+    Xelqoria::Editor::EditorCamera2D camera;
+    camera.SetCenter(10.0f, -20.0f);
+    camera.SetZoom(2.0f);
+
+    Xelqoria::Game::Transform transform{};
+    transform.position = { 30.0f, -10.0f, 0.0f };
+    transform.rotation = { 0.0f, 0.0f, 90.0f };
+    transform.scale = { -2.0f, 3.0f, 1.0f };
+
+    Xelqoria::Game::Collider2DComponent collider{};
+    collider.enabled = false;
+    collider.isTrigger = true;
+    collider.offset = { 4.0f, 5.0f };
+    collider.size = { 6.0f, 8.0f };
+
+    const Xelqoria::Editor::SceneViewCollider2DOverlayRect overlayRect =
+        Xelqoria::Editor::BuildCollider2DOverlayRect(transform, collider, camera);
+
+    EXPECT_FLOAT_EQ(overlayRect.centerX, 24.0f);
+    EXPECT_FLOAT_EQ(overlayRect.centerY, 50.0f);
+    EXPECT_FLOAT_EQ(overlayRect.width, 24.0f);
+    EXPECT_FLOAT_EQ(overlayRect.height, 48.0f);
+    EXPECT_TRUE(overlayRect.disabled);
+    EXPECT_TRUE(overlayRect.trigger);
 }

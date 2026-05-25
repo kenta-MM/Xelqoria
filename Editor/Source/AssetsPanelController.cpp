@@ -551,6 +551,11 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR CreateMaterialMenuCommandId = 5;
 
         /// <summary>
+        /// Assets の右クリックメニューから Collider2D Asset を作成するコマンド ID を表す。
+        /// </summary>
+        constexpr UINT_PTR CreateCollider2DMenuCommandId = 6;
+
+        /// <summary>
         /// Sprite Asset へ Script Asset を割り当てるコマンド ID を表す。
         /// </summary>
         constexpr UINT_PTR AssignScriptMenuCommandId = 4;
@@ -1008,6 +1013,17 @@ namespace Xelqoria::Editor
         m_createMaterialTargetDirectory.clear();
     }
 
+    bool AssetsPanelController::HasCreateCollider2DRequest() const
+    {
+        return m_createCollider2DRequested;
+    }
+
+    void AssetsPanelController::ClearCreateCollider2DRequest()
+    {
+        m_createCollider2DRequested = false;
+        m_createCollider2DTargetDirectory.clear();
+    }
+
     bool AssetsPanelController::HasOpenMaterialRequest() const
     {
         return m_openMaterialRequested;
@@ -1048,6 +1064,11 @@ namespace Xelqoria::Editor
     const std::filesystem::path& AssetsPanelController::GetCreateMaterialTargetDirectory() const
     {
         return m_createMaterialTargetDirectory;
+    }
+
+    const std::filesystem::path& AssetsPanelController::GetCreateCollider2DTargetDirectory() const
+    {
+        return m_createCollider2DTargetDirectory;
     }
 
     const std::filesystem::path& AssetsPanelController::GetAssignScriptSpriteAssetPath() const
@@ -1611,6 +1632,7 @@ namespace Xelqoria::Editor
 
         AppendMenuW(popupMenu, MF_STRING, CreateSpriteMenuCommandId, L"Spriteを作成");
         AppendMenuW(popupMenu, MF_STRING, CreateMaterialMenuCommandId, L"Materialを作成");
+        AppendMenuW(popupMenu, MF_STRING, CreateCollider2DMenuCommandId, L"Collider2Dを作成");
         AppendMenuW(popupMenu, MF_STRING, CreateScriptMenuCommandId, L"Scriptを作成");
 
         const UINT command = TrackPopupMenu(
@@ -1641,6 +1663,13 @@ namespace Xelqoria::Editor
         {
             m_createMaterialRequested = true;
             m_createMaterialTargetDirectory = targetDirectory;
+            return true;
+        }
+
+        if (CreateCollider2DMenuCommandId == command)
+        {
+            m_createCollider2DRequested = true;
+            m_createCollider2DTargetDirectory = targetDirectory;
             return true;
         }
 

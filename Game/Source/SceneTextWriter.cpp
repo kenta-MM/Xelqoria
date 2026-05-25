@@ -8,6 +8,7 @@
 #include <string>
 #include <ios>
 #include "Scene.h"
+#include <Vector2.h>
 #include <Vector3.h>
 
 namespace
@@ -20,6 +21,16 @@ namespace
 	void AppendVector3(std::ostringstream& stream, const Xelqoria::Math::Vector3& value)
 	{
 		stream << value.x << "," << value.y << "," << value.z;
+	}
+
+	/// <summary>
+	/// Vector2 をシーン保存形式の `x,y` 文字列として追記する。
+	/// </summary>
+	/// <param name="stream">出力先ストリーム。</param>
+	/// <param name="value">追記するベクトル値。</param>
+	void AppendVector2(std::ostringstream& stream, const Xelqoria::Math::Vector2& value)
+	{
+		stream << value.x << "," << value.y;
 	}
 
 	/// <summary>
@@ -72,6 +83,22 @@ namespace Xelqoria::Game
 				{
 					stream << prefix << ".materialRef=" << spriteComponent->get().materialAssetRef.GetValue() << "\n";
 				}
+			}
+
+			const auto collider2DComponent = entity.GetCollider2DComponent();
+			stream << prefix << ".hasCollider2DComponent=" << (collider2DComponent.has_value() ? "true" : "false") << "\n";
+			if (collider2DComponent.has_value())
+			{
+				const Collider2DComponent& collider = collider2DComponent->get();
+				stream << prefix << ".collider2D.enabled=" << (collider.enabled ? "true" : "false") << "\n";
+				stream << prefix << ".collider2D.isTrigger=" << (collider.isTrigger ? "true" : "false") << "\n";
+				stream << prefix << ".collider2D.shapeType=Box\n";
+				stream << prefix << ".collider2D.offset=";
+				AppendVector2(stream, collider.offset);
+				stream << "\n";
+				stream << prefix << ".collider2D.size=";
+				AppendVector2(stream, collider.size);
+				stream << "\n";
 			}
 		}
 

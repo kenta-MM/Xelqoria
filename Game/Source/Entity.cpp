@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 
+#include "Collider2DComponent.h"
 #include "SpriteComponent.h"
 
 namespace Xelqoria::Game
@@ -120,5 +121,43 @@ namespace Xelqoria::Game
 	void Entity::RemoveSpriteComponent()
 	{
 		m_spriteComponent.reset();
+	}
+
+	void Entity::SetCollider2DComponent(const Collider2DComponent& collider2DComponent)
+	{
+		m_collider2DComponent = collider2DComponent;
+	}
+
+	void Entity::SetCollider2DComponent(Collider2DComponent&& collider2DComponent)
+	{
+		m_collider2DComponent = std::move(collider2DComponent);
+	}
+
+	std::optional<std::reference_wrapper<Collider2DComponent>> Entity::GetCollider2DComponent()
+	{
+		if (false == m_collider2DComponent.has_value()) {
+			return std::nullopt;
+		}
+
+		return *m_collider2DComponent;
+	}
+
+	std::optional<std::reference_wrapper<const Collider2DComponent>> Entity::GetCollider2DComponent() const
+	{
+		if (false == m_collider2DComponent.has_value()) {
+			return std::nullopt;
+		}
+
+		return *m_collider2DComponent;
+	}
+
+	bool Entity::HasCollider2DComponent() const
+	{
+		return m_collider2DComponent.has_value();
+	}
+
+	void Entity::RemoveCollider2DComponent()
+	{
+		m_collider2DComponent.reset();
 	}
 }

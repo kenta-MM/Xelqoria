@@ -28,6 +28,13 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
     [[nodiscard]] bool IsMaterialAssetFile(const std::filesystem::path& path);
 
     /// <summary>
+    /// 指定パスが Collider2D Asset ファイルかを判定する。
+    /// </summary>
+    /// <param name="path">判定対象パス。</param>
+    /// <returns>Collider2D Asset ファイルの場合は true。</returns>
+    [[nodiscard]] bool IsCollider2DAssetFile(const std::filesystem::path& path);
+
+    /// <summary>
     /// プロジェクトルート基準の画像ファイルパスから TextureAssetId を生成する。
     /// </summary>
     /// <param name="path">画像ファイルパス。</param>
@@ -54,6 +61,16 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
     /// <param name="assetsRootDirectory">AssetId の基準になるプロジェクトルート。</param>
     /// <returns>MaterialAssetId。生成できない場合は空。</returns>
     [[nodiscard]] Core::AssetId BuildMaterialAssetId(
+        const std::filesystem::path& path,
+        const std::filesystem::path& assetsRootDirectory);
+
+    /// <summary>
+    /// プロジェクトルート基準の Collider2D Asset ファイルパスから Collider2DAssetId を生成する。
+    /// </summary>
+    /// <param name="path">Collider2D Asset ファイルパス。</param>
+    /// <param name="assetsRootDirectory">AssetId の基準になるプロジェクトルート。</param>
+    /// <returns>Collider2DAssetId。生成できない場合は空。</returns>
+    [[nodiscard]] Core::AssetId BuildCollider2DAssetId(
         const std::filesystem::path& path,
         const std::filesystem::path& assetsRootDirectory);
 }

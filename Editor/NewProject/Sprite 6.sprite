@@ -1,15 +1,20 @@
 magic=XelqoriaSpriteAsset
 version=1
 name="Sprite 6"
-transform.position=0.000000,0.000000,0.000000
+transform.position=96.000000,23.000000,0.000000
 transform.rotation=0.000000,0.000000,0.000000
 transform.scale=1.000000,1.000000,1.000000
 hasSpriteComponent=true
 spriteAssetRef=
 textureAssetId=
 scriptAssetId=
+materialAssetId=materials/NewMaterial.material
+collider2DAssetId=colliders2d/NewCollider2D2.collider2d
 texture.size=0,0
 render.visible=true
 render.sortOrder=0
 render.opacity=1.000000
 render.color=1.000000,1.000000,1.000000,1.000000
+
+
+

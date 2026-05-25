@@ -30,6 +30,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Assets\Collider2DAssetLoader.cpp" />
+    <ClCompile Include="Source\Assets\Collider2DAssetRegistry.cpp" />
+    <ClCompile Include="Source\Collider2DComponent.cpp" />
     <ClCompile Include="Source\Assets\SpriteAssetRegistry.cpp" />
     <ClCompile Include="Source\Assets\SpriteAssetLoader.cpp" />
     <ClCompile Include="Source\Assets\SpriteMaterialAssetLoader.cpp" />
@@ -43,6 +46,11 @@
     <ClCompile Include="Source\Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Assets\Collider2DAsset.h" />
+    <ClInclude Include="Source\Assets\Collider2DAssetLoader.h" />
+    <ClInclude Include="Source\Assets\Collider2DAssetRegistry.h" />
+    <ClInclude Include="Source\Assets\ICollider2DAssetResolver.h" />
+    <ClInclude Include="Source\Collider2DComponent.h" />
     <ClInclude Include="Source\Assets\ISpriteAssetResolver.h" />
     <ClInclude Include="Source\Assets\IMaterialAssetResolver.h" />
     <ClInclude Include="Source\Assets\SpriteAsset.h" />

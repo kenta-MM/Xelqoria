@@ -11,6 +11,7 @@
 #include "Assets/ISpriteAssetResolver.h"
 #include "Assets/IMaterialAssetResolver.h"
 #include "Assets/SpriteAsset.h"
+#include "Assets/SpriteMaterialAsset.h"
 #include "EditorStringUtils.h"
 #include "EditorShell.h"
 #include "ICursor.h"
@@ -73,6 +74,31 @@ namespace Xelqoria::Editor
         /// Material タブで開く MaterialAssetId を表す。
         /// </summary>
         Core::AssetId openMaterialAssetId{};
+
+        /// <summary>
+        /// Collider2D タブを開く要求があるかを表す。
+        /// </summary>
+        bool openCollider2DRequested = false;
+
+        /// <summary>
+        /// Collider2DComponent が追加されたかを表す。
+        /// </summary>
+        bool collider2DComponentAdded = false;
+
+        /// <summary>
+        /// Material Asset の保存が必要かを表す。
+        /// </summary>
+        bool materialAssetChanged = false;
+
+        /// <summary>
+        /// 保存対象の MaterialAssetId を表す。
+        /// </summary>
+        Core::AssetId materialTargetAssetId{};
+
+        /// <summary>
+        /// 保存する Material 内容を表す。
+        /// </summary>
+        Game::Assets::SpriteMaterialAsset materialAsset{};
     };
 
     /// <summary>
@@ -99,6 +125,27 @@ namespace Xelqoria::Editor
         /// SpriteComponent 操作ボタンを有効化するかを表す。
         /// </summary>
         bool enableActionButton = false;
+    };
+
+    /// <summary>
+    /// Collider2DComponent 操作 UI の表示状態を表す。
+    /// </summary>
+    struct InspectorCollider2DComponentActionState
+    {
+        /// <summary>
+        /// Collider2D 編集欄を表示するかを表す。
+        /// </summary>
+        bool showColliderControls = false;
+
+        /// <summary>
+        /// Collider2DComponent セクション見出しを表す。
+        /// </summary>
+        const wchar_t* sectionLabel = L"Collider2DComponent";
+
+        /// <summary>
+        /// Collider2DComponent 操作ボタン文言を表す。
+        /// </summary>
+        const wchar_t* buttonLabel = L"Add Collider2DComponent";
     };
 
     /// <summary>
@@ -203,6 +250,16 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <param name="assetsPanelController">Assets パネルのドラッグ状態。</param>
         void UpdateDropHighlight(const AssetsPanelController& assetsPanelController);
+
+        /// <summary>
+        /// Assets から Material Details の Texture 欄へドロップされた Texture を Material Asset へ反映する。
+        /// </summary>
+        [[nodiscard]] InspectorApplyResult ApplyMaterialTextureDrop(
+            const Game::Scene* scene,
+            std::optional<Game::EntityId> selectedEntityId,
+            const AssetsPanelController& assetsPanelController,
+            const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver) const;
 
         /// <summary>
         /// 現在のカーソル位置が Script ドロップ対象内かを取得する。
@@ -375,6 +432,45 @@ namespace Xelqoria::Editor
             return SceneEditingOperations::AddSpriteComponent(entity);
         }
 
+        /// <summary>
+        /// Collider2DComponent 操作 UI の表示状態を計算する。
+        /// </summary>
+        /// <param name="hasCollider2DComponent">Entity が Collider2DComponent を保持しているか。</param>
+        /// <returns>UI 表示状態。</returns>
+        [[nodiscard]] static InspectorCollider2DComponentActionState ComputeCollider2DComponentActionState(
+            bool hasCollider2DComponent)
+        {
+            if (hasCollider2DComponent)
+            {
+                return InspectorCollider2DComponentActionState{
+                    true,
+                    L"Collider2DComponent",
+                    L"Remove Collider2DComponent"
+                };
+            }
+
+            return InspectorCollider2DComponentActionState{
+                false,
+                L"Collider2DComponent (not attached)",
+                L"Add Collider2DComponent"
+            };
+        }
+
+        /// <summary>
+        /// Collider2DComponent 操作ボタン押下時の追加・削除処理を適用する。
+        /// </summary>
+        /// <param name="entity">更新対象 Entity。</param>
+        /// <returns>Entity が更新された場合は true。</returns>
+        [[nodiscard]] static bool ApplyCollider2DComponentAction(Game::Entity& entity)
+        {
+            if (entity.HasCollider2DComponent())
+            {
+                return SceneEditingOperations::RemoveCollider2DComponent(entity);
+            }
+
+            return SceneEditingOperations::AddCollider2DComponent(entity);
+        }
+
     private:
         /// <summary>
         /// ボタン押下の完了を検出してクリックとして消費する。
@@ -397,6 +493,12 @@ namespace Xelqoria::Editor
         /// <returns>ドロップ対象内の場合は true。</returns>
         [[nodiscard]] bool IsMaterialDropTargetHovered(const AssetsPanelController& assetsPanelController) const;
 
+        [[nodiscard]] bool IsMaterialTextureDropTargetHovered(const AssetsPanelController& assetsPanelController) const;
+
+        void SetMaterialDetailsVisible(bool visible) const;
+
+        void SetMaterialDetailsEnabled(bool enabled) const;
+
         HWND m_inspectorSummaryLabel = nullptr;
         HWND m_transformSectionLabel = nullptr;
         std::array<HWND, 9> m_transformEditControls{};
@@ -410,7 +512,30 @@ namespace Xelqoria::Editor
         HWND m_scriptAssignButton = nullptr;
         HWND m_scriptClearButton = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
+        HWND m_collider2DComponentSectionLabel = nullptr;
+        HWND m_collider2DSummaryLabel = nullptr;
+        HWND m_collider2DEnabledCheckBox = nullptr;
+        HWND m_collider2DTriggerCheckBox = nullptr;
+        HWND m_collider2DShapeTypeLabel = nullptr;
+        HWND m_collider2DShapeTypeEdit = nullptr;
+        HWND m_collider2DOffsetLabel = nullptr;
+        HWND m_collider2DSizeLabel = nullptr;
+        HWND m_collider2DRotationLabel = nullptr;
+        HWND m_collider2DRotationEdit = nullptr;
+        std::array<HWND, 4> m_collider2DEditControls{};
+        HWND m_collider2DEditButton = nullptr;
+        HWND m_collider2DComponentActionButton = nullptr;
+        HWND m_addComponentButton = nullptr;
         HWND m_materialOpenButton = nullptr;
+        HWND m_materialSharedNoticeLabel = nullptr;
+        HWND m_materialDetailsSectionLabel = nullptr;
+        std::array<HWND, 5> m_materialDetailLabels{};
+        std::array<HWND, 5> m_materialDetailEditControls{};
+        HWND m_materialTextureDropHighlight = nullptr;
+        HWND m_materialTextureBrowseButton = nullptr;
+        HWND m_materialTintColorButton = nullptr;
+        HWND m_materialOutlineEnabledCheckBox = nullptr;
+        HWND m_materialOutlineColorButton = nullptr;
         Platform::ICursor* m_cursor = nullptr;
         std::optional<Game::EntityId> m_lastInspectorEntityId{};
         Core::AssetId m_lastSpriteRefAssetId{};

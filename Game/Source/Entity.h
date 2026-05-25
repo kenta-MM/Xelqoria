@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 
+#include "Collider2DComponent.h"
 #include "SpriteComponent.h"
 #include "Transform.h"
 
@@ -152,10 +153,46 @@ namespace Xelqoria::Game
 		/// </summary>
 		void RemoveSpriteComponent();
 
+		/// <summary>
+		/// Collider2DComponent を Entity に設定する。
+		/// </summary>
+		/// <param name="collider2DComponent">設定する Collider2DComponent。</param>
+		void SetCollider2DComponent(const Collider2DComponent& collider2DComponent);
+
+		/// <summary>
+		/// Collider2DComponent を Entity に設定する。
+		/// </summary>
+		/// <param name="collider2DComponent">設定する Collider2DComponent。</param>
+		void SetCollider2DComponent(Collider2DComponent&& collider2DComponent);
+
+		/// <summary>
+		/// Entity に設定されている Collider2DComponent を取得する。
+		/// </summary>
+		/// <returns>Collider2DComponent。未設定の場合は空。</returns>
+		std::optional<std::reference_wrapper<Collider2DComponent>> GetCollider2DComponent();
+
+		/// <summary>
+		/// Entity に設定されている Collider2DComponent を取得する。
+		/// </summary>
+		/// <returns>読み取り専用の Collider2DComponent。未設定時は空。</returns>
+		std::optional<std::reference_wrapper<const Collider2DComponent>> GetCollider2DComponent() const;
+
+		/// <summary>
+		/// Entity に Collider2DComponent が設定されているかを取得する。
+		/// </summary>
+		/// <returns>設定済みの場合は true。</returns>
+		bool HasCollider2DComponent() const;
+
+		/// <summary>
+		/// Entity から Collider2DComponent を取り外す。
+		/// </summary>
+		void RemoveCollider2DComponent();
+
 	private:
 		EntityId m_id = 0;
 		std::string m_name{};
 		Transform m_transform{};
 		std::optional<SpriteComponent> m_spriteComponent{};
+		std::optional<Collider2DComponent> m_collider2DComponent{};
 	};
 }

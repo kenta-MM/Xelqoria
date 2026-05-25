@@ -43,6 +43,7 @@
     <ClCompile Include="Source\SceneViewStatusPresenter.cpp" />
     <ClCompile Include="Source\ScriptAssetService.cpp" />
     <ClCompile Include="Source\ScriptRuntimeSession.cpp" />
+    <ClCompile Include="Source\SpritePanelController.cpp" />
     <ClCompile Include="Source\StartupScreenController.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -75,6 +76,7 @@
     <ClInclude Include="Source\SceneViewStatusPresenter.h" />
     <ClInclude Include="Source\ScriptAssetService.h" />
     <ClInclude Include="Source\ScriptRuntimeSession.h" />
+    <ClInclude Include="Source\SpritePanelController.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">

@@ -236,6 +236,20 @@ namespace Xelqoria::Editor
         void OpenMaterialAsset(const Core::AssetId& materialAssetId);
 
         /// <summary>
+        /// 選択中 Sprite の Texture を、未設定の Material Texture へ補完する。
+        /// </summary>
+        /// <param name="materialAssetId">補完対象 MaterialAssetId。</param>
+        /// <returns>補完済み、または既に設定済みの場合は true。</returns>
+        [[nodiscard]] bool EnsureMaterialTextureFromSelectedSprite(const Core::AssetId& materialAssetId);
+
+        /// <summary>
+        /// 選択中 Entity の Collider2DComponent から Collider2D Asset を作成する。
+        /// </summary>
+        /// <param name="canAddSpriteComponent">SpriteComponent を追加可能な場合は true。</param>
+        /// <returns>Collider2D Asset を作成または割り当てできた場合は true。</returns>
+        [[nodiscard]] bool CreateCollider2DAssetForSelectedEntity(bool canAddSpriteComponent);
+
+        /// <summary>
         /// 選択 Entity を更新し、関連パネルを再同期する。
         /// </summary>
         /// <param name="selectedEntityId">更新後の選択 EntityId。</param>
@@ -267,6 +281,16 @@ namespace Xelqoria::Editor
         /// <param name="sceneChanged">SpriteComponent 参照を変更した場合は true。</param>
         /// <returns>Script 操作に使う SpriteAssetId。準備できない場合は空。</returns>
         [[nodiscard]] std::optional<Core::AssetId> EnsureSelectedSpriteAssetFileForScript(
+            const Core::AssetId& requestedSpriteAssetId,
+            bool& sceneChanged);
+
+        /// <summary>
+        /// 選択中 Sprite が Collider2D 保存可能な `.sprite` を参照するようにする。
+        /// </summary>
+        /// <param name="requestedSpriteAssetId">Inspector 操作時点の SpriteAssetId。</param>
+        /// <param name="sceneChanged">SpriteComponent 参照を変更した場合は true。</param>
+        /// <returns>Collider2D 操作に使う SpriteAssetId。準備できない場合は空。</returns>
+        [[nodiscard]] std::optional<Core::AssetId> EnsureSelectedSpriteAssetFileForCollider(
             const Core::AssetId& requestedSpriteAssetId,
             bool& sceneChanged);
 

@@ -5,10 +5,49 @@
 #include <optional>
 #include <span>
 
+#include "Collider2DComponent.h"
+#include "EditorCamera2D.h"
 #include "Entity.h"
+#include "Physics2D.h"
 
 namespace Xelqoria::Editor
 {
+    /// <summary>
+    /// SceneView に描画する Collider2D 枠のビュー座標矩形を表す。
+    /// </summary>
+    struct SceneViewCollider2DOverlayRect
+    {
+        /// <summary>
+        /// ビュー中心基準の X 座標。
+        /// </summary>
+        float centerX = 0.0f;
+
+        /// <summary>
+        /// ビュー中心基準の Y 座標。
+        /// </summary>
+        float centerY = 0.0f;
+
+        /// <summary>
+        /// ビュー上の矩形幅。
+        /// </summary>
+        float width = 0.0f;
+
+        /// <summary>
+        /// ビュー上の矩形高さ。
+        /// </summary>
+        float height = 0.0f;
+
+        /// <summary>
+        /// 無効な Collider かを表す。
+        /// </summary>
+        bool disabled = false;
+
+        /// <summary>
+        /// Trigger Collider かを表す。
+        /// </summary>
+        bool trigger = false;
+    };
+
     /// <summary>
     /// SceneView の選択ヒット判定に使用する矩形ターゲットを表す。
     /// </summary>
@@ -82,5 +121,28 @@ namespace Xelqoria::Editor
         }
 
         return std::nullopt;
+    }
+
+    /// <summary>
+    /// Collider2DComponent から SceneView 用の枠表示矩形を生成する。
+    /// </summary>
+    /// <param name="transform">Entity の Transform。</param>
+    /// <param name="collider">表示対象の Collider2DComponent。</param>
+    /// <param name="camera">SceneView 用カメラ。</param>
+    /// <returns>ビュー座標上の Collider 枠。</returns>
+    inline SceneViewCollider2DOverlayRect BuildCollider2DOverlayRect(
+        const Game::Transform& transform,
+        const Game::Collider2DComponent& collider,
+        const EditorCamera2D& camera)
+    {
+        const Game::AabbCollider2D aabb = Game::BuildAabbCollider2D(transform, collider);
+        return SceneViewCollider2DOverlayRect{
+            camera.TransformWorldToViewX(aabb.center.x),
+            camera.TransformWorldToViewY(aabb.center.y),
+            camera.TransformWorldScale(aabb.halfSize.x * 2.0f),
+            camera.TransformWorldScale(aabb.halfSize.y * 2.0f),
+            false == collider.enabled,
+            collider.isTrigger
+        };
     }
 }

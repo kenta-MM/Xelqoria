@@ -89,7 +89,7 @@ namespace Xelqoria::Game
 			}
 
 			const auto& spriteAssetRef = renderItem.spriteComponent->spriteAssetRef;
-			const auto& materialAssetRef = renderItem.spriteComponent->materialAssetRef;
+			Core::AssetId materialAssetRef = renderItem.spriteComponent->materialAssetRef;
 			std::optional<Assets::SpriteAsset> spriteAsset{};
 			if (false == spriteAssetRef.IsEmpty())
 			{
@@ -100,6 +100,11 @@ namespace Xelqoria::Game
 						<< spriteAssetRef.GetValue() << "' for entity " << renderItem.entityId << ".";
 					LogMessage(logger, message.str());
 					return std::nullopt;
+				}
+
+				if (materialAssetRef.IsEmpty())
+				{
+					materialAssetRef = spriteAsset->materialAssetId;
 				}
 			}
 
