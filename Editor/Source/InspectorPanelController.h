@@ -73,6 +73,11 @@ namespace Xelqoria::Editor
         /// Material タブで開く MaterialAssetId を表す。
         /// </summary>
         Core::AssetId openMaterialAssetId{};
+
+        /// <summary>
+        /// Collider2D タブを開く要求があるかを表す。
+        /// </summary>
+        bool openCollider2DRequested = false;
     };
 
     /// <summary>
@@ -471,6 +476,7 @@ namespace Xelqoria::Editor
         HWND m_scriptClearButton = nullptr;
         HWND m_spriteComponentActionButton = nullptr;
         HWND m_collider2DComponentSectionLabel = nullptr;
+        HWND m_collider2DSummaryLabel = nullptr;
         HWND m_collider2DEnabledCheckBox = nullptr;
         HWND m_collider2DTriggerCheckBox = nullptr;
         HWND m_collider2DShapeTypeLabel = nullptr;

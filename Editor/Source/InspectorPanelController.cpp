@@ -112,6 +112,7 @@ namespace Xelqoria::Editor
         m_scriptClearButton = shell.GetScriptClearButton();
         m_spriteComponentActionButton = shell.GetSpriteComponentActionButton();
         m_collider2DComponentSectionLabel = shell.GetCollider2DComponentSectionLabel();
+        m_collider2DSummaryLabel = shell.GetCollider2DSummaryLabel();
         m_collider2DEnabledCheckBox = shell.GetCollider2DEnabledCheckBox();
         m_collider2DTriggerCheckBox = shell.GetCollider2DTriggerCheckBox();
         m_collider2DShapeTypeLabel = shell.GetCollider2DShapeTypeLabel();
@@ -167,6 +168,7 @@ namespace Xelqoria::Editor
             ShowWindow(m_scriptClearButton, SW_HIDE);
             ShowWindow(m_materialOpenButton, SW_HIDE);
             SetWindowTextW(m_collider2DComponentSectionLabel, L"Collider2DComponent (not attached)");
+            SetWindowTextW(m_collider2DSummaryLabel, L"Collider2D: no entity selected");
             SetWindowTextW(m_collider2DComponentActionButton, L"Add Collider2DComponent");
             SetCollider2DControlsVisible(
                 m_collider2DEnabledCheckBox,
@@ -207,6 +209,7 @@ namespace Xelqoria::Editor
             ShowWindow(m_scriptClearButton, SW_HIDE);
             ShowWindow(m_materialOpenButton, SW_HIDE);
             SetWindowTextW(m_collider2DComponentSectionLabel, L"Collider2DComponent (not attached)");
+            SetWindowTextW(m_collider2DSummaryLabel, L"Collider2D: selected entity not found");
             SetWindowTextW(m_collider2DComponentActionButton, L"Add Collider2DComponent");
             SetCollider2DControlsVisible(
                 m_collider2DEnabledCheckBox,
@@ -310,6 +313,13 @@ namespace Xelqoria::Editor
         const InspectorCollider2DComponentActionState colliderActionState =
             ComputeCollider2DComponentActionState(collider2DComponent.has_value());
         SetWindowTextW(m_collider2DComponentSectionLabel, colliderActionState.sectionLabel);
+        wchar_t colliderSummaryText[128]{};
+        std::swprintf(
+            colliderSummaryText,
+            std::size(colliderSummaryText),
+            L"Collider2D: Entity %u",
+            static_cast<unsigned>(*selectedEntityId));
+        SetWindowTextW(m_collider2DSummaryLabel, colliderSummaryText);
         SetWindowTextW(m_collider2DComponentActionButton, colliderActionState.buttonLabel);
         SetCollider2DControlsVisible(
             m_collider2DEnabledCheckBox,
@@ -433,6 +443,7 @@ namespace Xelqoria::Editor
                 result.operationName = hadCollider2DComponent
                     ? "Remove Collider2DComponent"
                     : "Add Collider2DComponent";
+                result.openCollider2DRequested = false == hadCollider2DComponent;
             }
         }
 

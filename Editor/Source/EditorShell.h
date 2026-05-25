@@ -28,6 +28,7 @@ namespace Xelqoria::Editor
             Inspector,
             Sprite,
             Material,
+            Collider2D,
             LogOutput
         };
 
@@ -205,6 +206,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>Material Texture ドロップ先ハイライトの HWND。</returns>
         [[nodiscard]] HWND GetMaterialTextureDropHighlight() const;
+
+        /// <summary>
+        /// Collider2D パネルの要約ラベルを取得する。
+        /// </summary>
+        /// <returns>Collider2D 要約ラベルの HWND。</returns>
+        [[nodiscard]] HWND GetCollider2DSummaryLabel() const;
 
         /// <summary>
         /// Sprite パネルの要約ラベルを取得する。
@@ -534,6 +541,11 @@ namespace Xelqoria::Editor
         bool InitializeSpritePanel(HWND parentWindow, HINSTANCE hInstance);
 
         /// <summary>
+        /// Collider2D パネル用 child window 群を生成する。
+        /// </summary>
+        bool InitializeCollider2DPanel(HWND parentWindow, HINSTANCE hInstance);
+
+        /// <summary>
         /// SceneView パネル用 child window 群を生成する。
         /// </summary>
         bool InitializeSceneViewPanel(HWND parentWindow, HINSTANCE hInstance);
@@ -569,6 +581,11 @@ namespace Xelqoria::Editor
         void LayoutSpritePanel(const LayoutMetrics& metrics);
 
         /// <summary>
+        /// Collider2D パネルをレイアウトする。
+        /// </summary>
+        void LayoutCollider2DPanel(const LayoutMetrics& metrics);
+
+        /// <summary>
         /// SceneView パネルをレイアウトする。
         /// </summary>
         void LayoutSceneViewPanel(const LayoutMetrics& metrics);
@@ -597,6 +614,11 @@ namespace Xelqoria::Editor
         /// 指定矩形へ Sprite パネルをレイアウトする。
         /// </summary>
         void LayoutSpritePanelInRect(const RECT& panelRect);
+
+        /// <summary>
+        /// 指定矩形へ Collider2D パネルをレイアウトする。
+        /// </summary>
+        void LayoutCollider2DPanelInRect(const RECT& panelRect);
 
         /// <summary>
         /// 指定矩形へ SceneView パネルをレイアウトする。
@@ -1004,7 +1026,7 @@ namespace Xelqoria::Editor
         /// EditorShell が管理する child window 群を列挙する。
         /// </summary>
         /// <returns>管理対象 child window の一覧。</returns>
-        [[nodiscard]] std::array<HWND, 111> CollectControls() const;
+        [[nodiscard]] std::array<HWND, 113> CollectControls() const;
 
         /// <summary>
         /// 指定値を現在 DPI に合わせて拡大縮小する。
@@ -1175,6 +1197,7 @@ namespace Xelqoria::Editor
         HWND m_inspectorFloatingWindow = nullptr;
         HWND m_materialFloatingWindow = nullptr;
         HWND m_spriteFloatingWindow = nullptr;
+        HWND m_collider2DFloatingWindow = nullptr;
         HWND m_logOutputFloatingWindow = nullptr;
         std::vector<FloatingPanelGroup> m_floatingPanelGroups{};
         HWND m_workspaceBackground = nullptr;
@@ -1188,6 +1211,7 @@ namespace Xelqoria::Editor
         HWND m_inspectorPanel = nullptr;
         HWND m_materialPanel = nullptr;
         HWND m_spritePanel = nullptr;
+        HWND m_collider2DPanel = nullptr;
         HWND m_sceneViewPanel = nullptr;
         HWND m_sceneViewPlanLabel = nullptr;
         HWND m_projectSummaryLabel = nullptr;
@@ -1228,6 +1252,7 @@ namespace Xelqoria::Editor
         std::array<HWND, 5> m_materialDetailLabels{};
         std::array<HWND, 5> m_materialDetailEditControls{};
         HWND m_materialTextureDropHighlight = nullptr;
+        HWND m_collider2DSummaryLabel = nullptr;
         HWND m_spriteSummaryLabel = nullptr;
         HWND m_spriteDetailsSectionLabel = nullptr;
         std::array<HWND, 4> m_spriteDetailLabels{};

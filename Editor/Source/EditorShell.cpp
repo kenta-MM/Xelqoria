@@ -369,7 +369,7 @@ namespace Xelqoria::Editor
             return DefWindowProcW(window, message, wParam, lParam);
         }
 
-        [[nodiscard]] constexpr std::array<EditorShell::EditorPanelId, 6> GetAllEditorPanels()
+        [[nodiscard]] constexpr std::array<EditorShell::EditorPanelId, 7> GetAllEditorPanels()
         {
             return {
                 EditorShell::EditorPanelId::Hierarchy,
@@ -377,6 +377,7 @@ namespace Xelqoria::Editor
                 EditorShell::EditorPanelId::SceneView,
                 EditorShell::EditorPanelId::Inspector,
                 EditorShell::EditorPanelId::Material,
+                EditorShell::EditorPanelId::Collider2D,
                 EditorShell::EditorPanelId::LogOutput
             };
         }
@@ -397,6 +398,8 @@ namespace Xelqoria::Editor
                 return L"Sprite";
             case EditorShell::EditorPanelId::Material:
                 return L"Material";
+            case EditorShell::EditorPanelId::Collider2D:
+                return L"Collider2D";
             case EditorShell::EditorPanelId::LogOutput:
                 return L"LogOutput";
             default:
@@ -977,6 +980,7 @@ namespace Xelqoria::Editor
             && InitializeAssetsPanel(parentWindow, hInstance)
             && InitializeInspectorPanel(parentWindow, hInstance)
             && InitializeMaterialPanel(parentWindow, hInstance)
+            && InitializeCollider2DPanel(parentWindow, hInstance)
             && InitializeSceneViewPanel(parentWindow, hInstance)
             && InitializeLogOutputPanel(parentWindow, hInstance);
         if (initialized)
@@ -1000,6 +1004,7 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(EditorPanelId::Inspector);
         DestroyFloatingWindow(EditorPanelId::Sprite);
         DestroyFloatingWindow(EditorPanelId::Material);
+        DestroyFloatingWindow(EditorPanelId::Collider2D);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
 
         for (HWND tabControl : m_dynamicDockTabs)
@@ -1033,7 +1038,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 111> controls = CollectControls();
+            const std::array<HWND, 113> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -1453,6 +1458,35 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        m_collider2DComponentActionButton = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Button",
+            L"Add Collider2DComponent",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        return nullptr != m_collider2DComponentActionButton;
+    }
+
+    bool EditorShell::InitializeCollider2DPanel(HWND parentWindow, HINSTANCE hInstance)
+    {
+        constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE;
+        m_collider2DPanel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"COLLIDER2D", panelStyle);
+        if (nullptr == m_collider2DPanel)
+        {
+            return false;
+        }
+
+        m_collider2DSummaryLabel = CreateChildWindow(
+            parentWindow,
+            hInstance,
+            L"Static",
+            L"Collider2D: no entity selected",
+            WS_CHILD | WS_VISIBLE);
+        if (nullptr == m_collider2DSummaryLabel)
+        {
+            return false;
+        }
+
         m_collider2DComponentSectionLabel = CreateChildWindow(
             parentWindow,
             hInstance,
@@ -1494,13 +1528,7 @@ namespace Xelqoria::Editor
             }
         }
 
-        m_collider2DComponentActionButton = CreateChildWindow(
-            parentWindow,
-            hInstance,
-            L"Button",
-            L"Add Collider2DComponent",
-            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
-        return nullptr != m_collider2DComponentActionButton;
+        return true;
     }
 
     bool EditorShell::InitializeMaterialPanel(HWND parentWindow, HINSTANCE hInstance)
@@ -1882,6 +1910,9 @@ namespace Xelqoria::Editor
             case EditorPanelId::Material:
                 LayoutMaterialPanelInRect(panelRect);
                 break;
+            case EditorPanelId::Collider2D:
+                LayoutCollider2DPanelInRect(panelRect);
+                break;
             case EditorPanelId::LogOutput:
                 LayoutLogOutputPanelInRect(panelRect);
                 break;
@@ -1922,7 +1953,7 @@ namespace Xelqoria::Editor
 
         DockNode inspectorNode{};
         inspectorNode.kind = DockNodeKind::Leaf;
-        inspectorNode.panels = { EditorPanelId::Inspector, EditorPanelId::Material };
+        inspectorNode.panels = { EditorPanelId::Inspector, EditorPanelId::Material, EditorPanelId::Collider2D };
         inspectorNode.tabControl = m_rightDockTab;
         const DockNodeId inspectorNodeId = AddDockNode(std::move(inspectorNode));
 
@@ -2061,6 +2092,9 @@ namespace Xelqoria::Editor
             case EditorPanelId::Material:
                 LayoutMaterialPanelInRect(panelRect);
                 break;
+            case EditorPanelId::Collider2D:
+                LayoutCollider2DPanelInRect(panelRect);
+                break;
             case EditorPanelId::LogOutput:
                 LayoutLogOutputPanelInRect(panelRect);
                 break;
@@ -2153,6 +2187,8 @@ namespace Xelqoria::Editor
             return m_rightDockTab;
         case EditorPanelId::Material:
             return m_rightDockTab;
+        case EditorPanelId::Collider2D:
+            return m_rightDockTab;
         case EditorPanelId::LogOutput:
             return m_logOutputDockTab;
         default:
@@ -2239,12 +2275,7 @@ namespace Xelqoria::Editor
         const int scriptAssetTop = spriteRefTop + rowHeight + rowSpacing;
         const int scriptButtonTop = scriptAssetTop + rowHeight + rowSpacing;
         const int spriteActionTop = scriptButtonTop + rowHeight + ScaleMetric(4) + rowSpacing;
-        const int colliderSectionTop = spriteActionTop + rowHeight + ScaleMetric(4) + sectionSpacing;
-        const int colliderCheckTop = colliderSectionTop + labelHeight + ScaleMetric(4);
-        const int colliderShapeTop = colliderCheckTop + rowHeight + rowSpacing;
-        const int colliderOffsetTop = colliderShapeTop + rowHeight + rowSpacing;
-        const int colliderSizeTop = colliderOffsetTop + rowHeight + rowSpacing;
-        const int colliderActionTop = colliderSizeTop + rowHeight + rowSpacing;
+        const int colliderActionTop = spriteActionTop + rowHeight + ScaleMetric(4) + sectionSpacing;
         const int scriptButtonGap = ScaleMetric(6);
         const int scriptButtonWidth = (std::max)(0, (innerWidth - scriptButtonGap * 2) / 3);
         const int materialOpenButtonWidth = ScaleMetric(56);
@@ -2277,18 +2308,41 @@ namespace Xelqoria::Editor
         MoveChildWindowNoRedraw(m_scriptAssignButton, innerX + scriptButtonWidth + scriptButtonGap, scriptButtonTop, scriptButtonWidth, rowHeight + ScaleMetric(4));
         MoveChildWindowNoRedraw(m_scriptClearButton, innerX + (scriptButtonWidth + scriptButtonGap) * 2, scriptButtonTop, (std::max)(0, innerWidth - (scriptButtonWidth + scriptButtonGap) * 2), rowHeight + ScaleMetric(4));
         MoveChildWindowNoRedraw(m_spriteComponentActionButton, innerX, spriteActionTop, innerWidth, rowHeight + ScaleMetric(4));
-        MoveChildWindowNoRedraw(m_collider2DComponentSectionLabel, innerX, colliderSectionTop, innerWidth, labelHeight);
-        MoveChildWindowNoRedraw(m_collider2DEnabledCheckBox, innerX, colliderCheckTop, (std::max)(0, innerWidth / 2), rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DTriggerCheckBox, innerX + (std::max)(0, innerWidth / 2), colliderCheckTop, (std::max)(0, innerWidth / 2), rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DShapeTypeLabel, innerX, colliderShapeTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DShapeTypeEdit, innerX + labelWidth, colliderShapeTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DOffsetLabel, innerX, colliderOffsetTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[0], innerX + labelWidth, colliderOffsetTop, editWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[1], innerX + labelWidth + editWidth + ScaleMetric(8), colliderOffsetTop, editWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DSizeLabel, innerX, colliderSizeTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[2], innerX + labelWidth, colliderSizeTop, editWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[3], innerX + labelWidth + editWidth + ScaleMetric(8), colliderSizeTop, editWidth, rowHeight);
         MoveChildWindowNoRedraw(m_collider2DComponentActionButton, innerX, colliderActionTop, innerWidth, rowHeight + ScaleMetric(4));
+    }
+
+    void EditorShell::LayoutCollider2DPanelInRect(const RECT& panelRect)
+    {
+        const int outerPadding = ScaleMetric(12);
+        const int groupHeaderHeight = 0;
+        const int labelHeight = ScaleMetric(24);
+        const int rowHeight = ScaleMetric(26);
+        const int rowSpacing = ScaleMetric(8);
+        const int labelWidth = ScaleMetric(78);
+        const int width = panelRect.right - panelRect.left;
+        const int height = panelRect.bottom - panelRect.top;
+        const int innerX = panelRect.left + outerPadding;
+        const int innerWidth = (std::max)(0, width - outerPadding * 2);
+        const int editWidth = (std::max)(0, (innerWidth - labelWidth - ScaleMetric(16)) / 3);
+        const int sectionTop = panelRect.top + groupHeaderHeight + labelHeight + ScaleMetric(8);
+        const int checkTop = sectionTop + labelHeight + ScaleMetric(6);
+        const int shapeTop = checkTop + rowHeight + rowSpacing;
+        const int offsetTop = shapeTop + rowHeight + rowSpacing;
+        const int sizeTop = offsetTop + rowHeight + rowSpacing;
+
+        MoveChildWindowNoRedraw(m_collider2DPanel, panelRect.left, panelRect.top, width, height);
+        MoveChildWindowNoRedraw(m_collider2DSummaryLabel, innerX, panelRect.top + groupHeaderHeight, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_collider2DComponentSectionLabel, innerX, sectionTop, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_collider2DEnabledCheckBox, innerX, checkTop, (std::max)(0, innerWidth / 2), rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DTriggerCheckBox, innerX + (std::max)(0, innerWidth / 2), checkTop, (std::max)(0, innerWidth / 2), rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DShapeTypeLabel, innerX, shapeTop + ScaleMetric(4), labelWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DShapeTypeEdit, innerX + labelWidth, shapeTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DOffsetLabel, innerX, offsetTop + ScaleMetric(4), labelWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DEditControls[0], innerX + labelWidth, offsetTop, editWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DEditControls[1], innerX + labelWidth + editWidth + ScaleMetric(8), offsetTop, editWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DSizeLabel, innerX, sizeTop + ScaleMetric(4), labelWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DEditControls[2], innerX + labelWidth, sizeTop, editWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DEditControls[3], innerX + labelWidth + editWidth + ScaleMetric(8), sizeTop, editWidth, rowHeight);
     }
 
     void EditorShell::LayoutMaterialPanelInRect(const RECT& panelRect)
@@ -2636,24 +2690,8 @@ namespace Xelqoria::Editor
             metrics.inspectorInnerWidth,
             metrics.inspectorRowHeight + ScaleMetric(4));
 
-        const int colliderSectionTop =
+        const int colliderActionTop =
             scriptButtonTop + metrics.inspectorRowHeight + ScaleMetric(4) + metrics.inspectorRowSpacing + metrics.inspectorRowHeight + ScaleMetric(4) + ScaleMetric(12);
-        const int colliderCheckTop = colliderSectionTop + metrics.labelHeight + ScaleMetric(4);
-        const int colliderShapeTop = colliderCheckTop + metrics.inspectorRowHeight + metrics.inspectorRowSpacing;
-        const int colliderOffsetTop = colliderShapeTop + metrics.inspectorRowHeight + metrics.inspectorRowSpacing;
-        const int colliderSizeTop = colliderOffsetTop + metrics.inspectorRowHeight + metrics.inspectorRowSpacing;
-        const int colliderActionTop = colliderSizeTop + metrics.inspectorRowHeight + metrics.inspectorRowSpacing;
-        MoveChildWindowNoRedraw(m_collider2DComponentSectionLabel, metrics.inspectorInnerX, colliderSectionTop, metrics.inspectorInnerWidth, metrics.labelHeight);
-        MoveChildWindowNoRedraw(m_collider2DEnabledCheckBox, metrics.inspectorInnerX, colliderCheckTop, (std::max)(0, metrics.inspectorInnerWidth / 2), metrics.inspectorRowHeight);
-        MoveChildWindowNoRedraw(m_collider2DTriggerCheckBox, metrics.inspectorInnerX + (std::max)(0, metrics.inspectorInnerWidth / 2), colliderCheckTop, (std::max)(0, metrics.inspectorInnerWidth / 2), metrics.inspectorRowHeight);
-        MoveChildWindowNoRedraw(m_collider2DShapeTypeLabel, metrics.inspectorInnerX, colliderShapeTop + ScaleMetric(4), metrics.inspectorLabelWidth, metrics.inspectorRowHeight);
-        MoveChildWindowNoRedraw(m_collider2DShapeTypeEdit, metrics.inspectorInnerX + metrics.inspectorLabelWidth, colliderShapeTop, (std::max)(0, metrics.inspectorInnerWidth - metrics.inspectorLabelWidth), metrics.inspectorRowHeight);
-        MoveChildWindowNoRedraw(m_collider2DOffsetLabel, metrics.inspectorInnerX, colliderOffsetTop + ScaleMetric(4), metrics.inspectorLabelWidth, metrics.inspectorRowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[0], metrics.inspectorInnerX + metrics.inspectorLabelWidth, colliderOffsetTop, metrics.inspectorEditWidth, metrics.inspectorRowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[1], metrics.inspectorInnerX + metrics.inspectorLabelWidth + metrics.inspectorEditWidth + ScaleMetric(8), colliderOffsetTop, metrics.inspectorEditWidth, metrics.inspectorRowHeight);
-        MoveChildWindowNoRedraw(m_collider2DSizeLabel, metrics.inspectorInnerX, colliderSizeTop + ScaleMetric(4), metrics.inspectorLabelWidth, metrics.inspectorRowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[2], metrics.inspectorInnerX + metrics.inspectorLabelWidth, colliderSizeTop, metrics.inspectorEditWidth, metrics.inspectorRowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[3], metrics.inspectorInnerX + metrics.inspectorLabelWidth + metrics.inspectorEditWidth + ScaleMetric(8), colliderSizeTop, metrics.inspectorEditWidth, metrics.inspectorRowHeight);
         MoveChildWindowNoRedraw(m_collider2DComponentActionButton, metrics.inspectorInnerX, colliderActionTop, metrics.inspectorInnerWidth, metrics.inspectorRowHeight + ScaleMetric(4));
     }
 
@@ -2700,12 +2738,13 @@ namespace Xelqoria::Editor
 
     void EditorShell::SendGroupBoxesToBack()
     {
-        const std::array<HWND, 7> groupBoxes{
+        const std::array<HWND, 8> groupBoxes{
             m_hierarchyPanel,
             m_assetsPanel,
             m_inspectorPanel,
             m_spritePanel,
             m_materialPanel,
+            m_collider2DPanel,
             m_sceneViewPanel,
             m_logOutputPanel
         };
@@ -2909,7 +2948,7 @@ namespace Xelqoria::Editor
         m_leftTopDockPanels = { EditorPanelId::Hierarchy };
         m_leftBottomDockPanels = { EditorPanelId::Assets };
         m_centerDockPanels = { EditorPanelId::SceneView };
-        m_rightDockPanels = { EditorPanelId::Inspector, EditorPanelId::Material };
+        m_rightDockPanels = { EditorPanelId::Inspector, EditorPanelId::Material, EditorPanelId::Collider2D };
         m_leftTopActiveTabIndex = 0;
         m_leftBottomActiveTabIndex = 0;
         m_centerActiveTabIndex = 0;
@@ -2939,6 +2978,7 @@ namespace Xelqoria::Editor
         SetPanelParent(EditorPanelId::Inspector, m_parentWindow);
         SetPanelParent(EditorPanelId::Sprite, m_parentWindow);
         SetPanelParent(EditorPanelId::Material, m_parentWindow);
+        SetPanelParent(EditorPanelId::Collider2D, m_parentWindow);
         SetPanelParent(EditorPanelId::LogOutput, m_parentWindow);
         DestroyFloatingWindow(EditorPanelId::Hierarchy);
         DestroyFloatingWindow(EditorPanelId::Assets);
@@ -2946,6 +2986,7 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(EditorPanelId::Inspector);
         DestroyFloatingWindow(EditorPanelId::Sprite);
         DestroyFloatingWindow(EditorPanelId::Material);
+        DestroyFloatingWindow(EditorPanelId::Collider2D);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
         SyncDockTabs();
         m_layoutInitialized = false;
@@ -3338,7 +3379,7 @@ namespace Xelqoria::Editor
             ShowWindow(m_sceneViewSizeLabel, SW_HIDE);
             break;
         case EditorPanelId::Inspector:
-            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefEdit, m_materialOpenButton, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton, m_collider2DComponentSectionLabel, m_collider2DEnabledCheckBox, m_collider2DTriggerCheckBox, m_collider2DShapeTypeLabel, m_collider2DShapeTypeEdit, m_collider2DOffsetLabel, m_collider2DSizeLabel, m_collider2DEditControls[0], m_collider2DEditControls[1], m_collider2DEditControls[2], m_collider2DEditControls[3], m_collider2DComponentActionButton })
+            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefEdit, m_materialOpenButton, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton, m_collider2DComponentActionButton })
             {
                 ShowWindow(control, showCommand);
             }
@@ -3364,6 +3405,12 @@ namespace Xelqoria::Editor
                 ShowWindow(control, showCommand);
             }
             ShowWindow(m_spriteSummaryLabel, SW_HIDE);
+            break;
+        case EditorPanelId::Collider2D:
+            for (HWND control : { m_collider2DPanel, m_collider2DSummaryLabel, m_collider2DComponentSectionLabel, m_collider2DEnabledCheckBox, m_collider2DTriggerCheckBox, m_collider2DShapeTypeLabel, m_collider2DShapeTypeEdit, m_collider2DOffsetLabel, m_collider2DSizeLabel, m_collider2DEditControls[0], m_collider2DEditControls[1], m_collider2DEditControls[2], m_collider2DEditControls[3] })
+            {
+                ShowWindow(control, showCommand);
+            }
             break;
         case EditorPanelId::LogOutput:
             for (HWND control : { m_logOutputPanel, m_logOutputTabControl, m_logClearButton, m_logFilterEdit, m_logListBox })
@@ -3414,7 +3461,7 @@ namespace Xelqoria::Editor
             }
             break;
         case EditorPanelId::Inspector:
-            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefDropHighlight, m_spriteRefEdit, m_materialOpenButton, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton, m_collider2DComponentSectionLabel, m_collider2DEnabledCheckBox, m_collider2DTriggerCheckBox, m_collider2DShapeTypeLabel, m_collider2DShapeTypeEdit, m_collider2DOffsetLabel, m_collider2DSizeLabel, m_collider2DEditControls[0], m_collider2DEditControls[1], m_collider2DEditControls[2], m_collider2DEditControls[3], m_collider2DComponentActionButton })
+            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefDropHighlight, m_spriteRefEdit, m_materialOpenButton, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton, m_collider2DComponentActionButton })
             {
                 setParent(control);
             }
@@ -3427,6 +3474,12 @@ namespace Xelqoria::Editor
             break;
         case EditorPanelId::Sprite:
             for (HWND control : { m_spritePanel, m_spriteSummaryLabel, m_spriteDetailsSectionLabel, m_spriteDetailLabels[0], m_spriteDetailLabels[1], m_spriteDetailLabels[2], m_spriteDetailLabels[3], m_spriteDetailEditControls[0], m_spriteDetailEditControls[1], m_spriteDetailEditControls[2], m_spriteDetailEditControls[3] })
+            {
+                setParent(control);
+            }
+            break;
+        case EditorPanelId::Collider2D:
+            for (HWND control : { m_collider2DPanel, m_collider2DSummaryLabel, m_collider2DComponentSectionLabel, m_collider2DEnabledCheckBox, m_collider2DTriggerCheckBox, m_collider2DShapeTypeLabel, m_collider2DShapeTypeEdit, m_collider2DOffsetLabel, m_collider2DSizeLabel, m_collider2DEditControls[0], m_collider2DEditControls[1], m_collider2DEditControls[2], m_collider2DEditControls[3] })
             {
                 setParent(control);
             }
@@ -3464,6 +3517,9 @@ namespace Xelqoria::Editor
             break;
         case EditorPanelId::Material:
             panelWindow = m_materialPanel;
+            break;
+        case EditorPanelId::Collider2D:
+            panelWindow = m_collider2DPanel;
             break;
         case EditorPanelId::LogOutput:
             panelWindow = m_logOutputPanel;
@@ -4408,6 +4464,9 @@ namespace Xelqoria::Editor
         case EditorPanelId::Material:
             LayoutMaterialPanelInRect(panelRect);
             break;
+        case EditorPanelId::Collider2D:
+            LayoutCollider2DPanelInRect(panelRect);
+            break;
         case EditorPanelId::LogOutput:
             LayoutLogOutputPanelInRect(panelRect);
             break;
@@ -4547,6 +4606,8 @@ namespace Xelqoria::Editor
             return m_spriteFloatingWindow;
         case EditorPanelId::Material:
             return m_materialFloatingWindow;
+        case EditorPanelId::Collider2D:
+            return m_collider2DFloatingWindow;
         case EditorPanelId::LogOutput:
             return m_logOutputFloatingWindow;
         default:
@@ -5183,6 +5244,8 @@ namespace Xelqoria::Editor
             return L"Sprite";
         case EditorPanelId::Material:
             return L"Material";
+        case EditorPanelId::Collider2D:
+            return L"Collider2D";
         case EditorPanelId::LogOutput:
             return L"LogOutput";
         default:
@@ -5476,7 +5539,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 111> controls = CollectControls();
+        const std::array<HWND, 113> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -5499,7 +5562,7 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 111> EditorShell::CollectControls() const
+    std::array<HWND, 113> EditorShell::CollectControls() const
     {
         return {
             m_workspaceBackground,
@@ -5527,6 +5590,7 @@ namespace Xelqoria::Editor
             m_inspectorPanel,
             m_spritePanel,
             m_materialPanel,
+            m_collider2DPanel,
             m_sceneViewPanel,
             m_sceneViewPlanLabel,
             m_projectSummaryLabel,
@@ -5585,6 +5649,7 @@ namespace Xelqoria::Editor
             m_materialDetailEditControls[3],
             m_materialDetailEditControls[4],
             m_materialTextureDropHighlight,
+            m_collider2DSummaryLabel,
             m_spriteSummaryLabel,
             m_spriteDetailsSectionLabel,
             m_spriteDetailLabels[0],
@@ -5964,6 +6029,7 @@ namespace Xelqoria::Editor
         }
 
         return window == m_inspectorSummaryLabel
+            || window == m_collider2DSummaryLabel
             || window == m_spriteRefLabel
             || window == m_scriptAssetLabel
             || window == m_collider2DShapeTypeLabel
@@ -6107,6 +6173,11 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetMaterialTextureDropHighlight() const
     {
         return m_materialTextureDropHighlight;
+    }
+
+    HWND EditorShell::GetCollider2DSummaryLabel() const
+    {
+        return m_collider2DSummaryLabel;
     }
 
     HWND EditorShell::GetSpriteSummaryLabel() const

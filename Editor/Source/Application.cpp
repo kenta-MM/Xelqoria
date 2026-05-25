@@ -40,6 +40,7 @@ namespace Xelqoria::Editor
         constexpr unsigned ViewMenuInspectorCommandId = 5204;
         constexpr unsigned ViewMenuLogOutputCommandId = 5205;
         constexpr unsigned ViewMenuMaterialCommandId = 5206;
+        constexpr unsigned ViewMenuCollider2DCommandId = 5207;
 
         [[nodiscard]] std::filesystem::path GetEditorLayoutFilePath()
         {
@@ -422,6 +423,7 @@ namespace Xelqoria::Editor
         AppendMenuW(m_viewMenu, MF_STRING, ViewMenuSceneViewCommandId, L"SceneView");
         AppendMenuW(m_viewMenu, MF_STRING, ViewMenuInspectorCommandId, L"Inspector");
         AppendMenuW(m_viewMenu, MF_STRING, ViewMenuMaterialCommandId, L"Material");
+        AppendMenuW(m_viewMenu, MF_STRING, ViewMenuCollider2DCommandId, L"Collider2D");
         AppendMenuW(m_viewMenu, MF_STRING, ViewMenuLogOutputCommandId, L"LogOutput");
 
         m_menuBar = CreateMenu();
@@ -487,6 +489,12 @@ namespace Xelqoria::Editor
             if (m_editorInitialized)
             {
                 m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::Material);
+            }
+            break;
+        case ViewMenuCollider2DCommandId:
+            if (m_editorInitialized)
+            {
+                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::Collider2D);
             }
             break;
         case ViewMenuLogOutputCommandId:
@@ -1319,6 +1327,11 @@ namespace Xelqoria::Editor
         if (true == inspectorResult.openMaterialRequested)
         {
             OpenMaterialAsset(inspectorResult.openMaterialAssetId);
+        }
+
+        if (true == inspectorResult.openCollider2DRequested)
+        {
+            m_editorShell.ActivatePanel(EditorShell::EditorPanelId::Collider2D);
         }
 
         if (InspectorScriptAction::None != inspectorResult.scriptAction)
