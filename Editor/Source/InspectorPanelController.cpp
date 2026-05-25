@@ -444,11 +444,12 @@ namespace Xelqoria::Editor
                     ? "Remove Collider2DComponent"
                     : "Add Collider2DComponent";
                 result.openCollider2DRequested = false == hadCollider2DComponent;
+                result.collider2DComponentAdded = false == hadCollider2DComponent;
             }
         }
 
         auto collider2DComponent = entity->get().GetCollider2DComponent();
-        if (collider2DComponent.has_value())
+        if (collider2DComponent.has_value() && false == result.collider2DComponentAdded)
         {
             Game::Collider2DComponent& collider = collider2DComponent->get();
             const bool enabled = SendMessageW(m_collider2DEnabledCheckBox, BM_GETCHECK, 0, 0) == BST_CHECKED;

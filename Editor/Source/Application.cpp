@@ -1259,6 +1259,10 @@ namespace Xelqoria::Editor
                 L"Hierarchy の編集内容を Scene へ反映しました。",
                 hierarchyEditResult.operationName,
                 true);
+            if (hierarchyEditResult.operationName == "Add Collider2DComponent")
+            {
+                (void)CreateCollider2DAssetForSelectedEntity(canAddSpriteComponent);
+            }
         }
 
         const InspectorApplyResult inspectorResult = m_inspectorPanelController.ApplyEdits(
@@ -1274,51 +1278,9 @@ namespace Xelqoria::Editor
                 L"Inspector の編集内容を Scene へ反映しました。",
                 inspectorResult.operationName,
                 true);
-            if (inspectorResult.operationName == "Add Collider2DComponent")
+            if (true == inspectorResult.collider2DComponentAdded)
             {
-                Game::Scene* scene = m_sceneDocument.GetScene();
-                const std::optional<Game::EntityId> selectedEntityId = m_hierarchyPanelController.GetSelectedEntityId();
-                const auto selectedEntity = nullptr != scene && selectedEntityId.has_value()
-                    ? scene->FindEntity(*selectedEntityId)
-                    : std::optional<std::reference_wrapper<Game::Entity>>{};
-                const auto spriteComponent = selectedEntity.has_value()
-                    ? selectedEntity->get().GetSpriteComponent()
-                    : std::optional<std::reference_wrapper<Game::SpriteComponent>>{};
-                const auto collider2DComponent = selectedEntity.has_value()
-                    ? selectedEntity->get().GetCollider2DComponent()
-                    : std::optional<std::reference_wrapper<Game::Collider2DComponent>>{};
-                if (spriteComponent.has_value() && collider2DComponent.has_value())
-                {
-                    bool colliderSceneChanged = false;
-                    const std::optional<Core::AssetId> spriteAssetId =
-                        EnsureSelectedSpriteAssetFileForCollider(
-                            spriteComponent->get().spriteAssetRef,
-                            colliderSceneChanged);
-                    const std::optional<Core::AssetId> collider2DAssetId =
-                        spriteAssetId.has_value()
-                        ? m_sceneDocument.CreateAndAssignCollider2DAssetToSpriteAsset(
-                            *spriteAssetId,
-                            collider2DComponent->get())
-                        : std::nullopt;
-                    if (collider2DAssetId.has_value())
-                    {
-                        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
-                        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Collider2D Asset を作成し、Sprite Asset に割り当てました。");
-                        AppendEditorLog(L"Collider2D Asset を作成し、Sprite Asset に割り当てました。");
-                        if (colliderSceneChanged)
-                        {
-                            (void)PersistSceneChanges(
-                                L"Sprite の Collider2D 設定を Scene へ反映しました。",
-                                "Change Sprite Asset",
-                                true);
-                        }
-                    }
-                    else
-                    {
-                        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Collider2D Asset の作成または割り当てに失敗しました。");
-                        AppendEditorLog(L"Collider2D Asset の作成または割り当てに失敗しました。");
-                    }
-                }
+                (void)CreateCollider2DAssetForSelectedEntity(canAddSpriteComponent);
             }
             RefreshEditorPanels(canAddSpriteComponent, false);
             RefreshSceneViewSelectionStatus();
@@ -1736,6 +1698,81 @@ namespace Xelqoria::Editor
         return m_sceneDocument.EnsureMaterialAssetTexture(
             materialAssetId,
             spriteAsset->textureAssetId);
+    }
+
+    bool Application::CreateCollider2DAssetForSelectedEntity(bool canAddSpriteComponent)
+    {
+        Game::Scene* scene = m_sceneDocument.GetScene();
+        const std::optional<Game::EntityId> selectedEntityId = m_hierarchyPanelController.GetSelectedEntityId();
+        const auto selectedEntity = nullptr != scene && selectedEntityId.has_value()
+            ? scene->FindEntity(*selectedEntityId)
+            : std::optional<std::reference_wrapper<Game::Entity>>{};
+        if (false == selectedEntity.has_value())
+        {
+            return false;
+        }
+
+        const auto collider2DComponent = selectedEntity->get().GetCollider2DComponent();
+        if (false == collider2DComponent.has_value())
+        {
+            return false;
+        }
+
+        const auto spriteComponent = selectedEntity->get().GetSpriteComponent();
+        if (spriteComponent.has_value())
+        {
+            bool colliderSceneChanged = false;
+            std::optional<Core::AssetId> spriteAssetId{};
+            if (false == spriteComponent->get().spriteAssetRef.IsEmpty())
+            {
+                spriteAssetId = EnsureSelectedSpriteAssetFileForCollider(
+                    spriteComponent->get().spriteAssetRef,
+                    colliderSceneChanged);
+            }
+            else
+            {
+                spriteAssetId = m_sceneDocument.EnsureSpriteAssetFileForEntity(selectedEntity->get(), {});
+                colliderSceneChanged = spriteAssetId.has_value();
+            }
+
+            const std::optional<Core::AssetId> collider2DAssetId =
+                spriteAssetId.has_value()
+                ? m_sceneDocument.CreateAndAssignCollider2DAssetToSpriteAsset(
+                    *spriteAssetId,
+                    collider2DComponent->get())
+                : std::nullopt;
+            if (collider2DAssetId.has_value())
+            {
+                m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                RefreshEditorPanels(canAddSpriteComponent, false);
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Collider2D Asset を作成し、Sprite Asset に割り当てました。");
+                AppendEditorLog(L"Collider2D Asset を作成し、Sprite Asset に割り当てました。");
+                if (colliderSceneChanged)
+                {
+                    (void)PersistSceneChanges(
+                        L"Sprite の Collider2D 設定を Scene へ反映しました。",
+                        "Change Sprite Asset",
+                        true);
+                }
+
+                return true;
+            }
+        }
+
+        const std::optional<Core::AssetId> collider2DAssetId =
+            m_sceneDocument.CreateCollider2DAssetFile({}, collider2DComponent->get());
+        if (collider2DAssetId.has_value())
+        {
+            m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+            RefreshEditorPanels(canAddSpriteComponent, false);
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Collider2D Asset を作成しました。");
+            AppendEditorLog(L"Collider2D Asset を作成しました。");
+            return true;
+        }
+
+        SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Collider2D Asset の作成に失敗しました。");
+        AppendEditorLog(L"Collider2D Asset の作成に失敗しました。");
+        return false;
     }
 
     void Application::ApplySelectionChange(

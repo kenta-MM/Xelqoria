@@ -243,6 +243,13 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool EnsureMaterialTextureFromSelectedSprite(const Core::AssetId& materialAssetId);
 
         /// <summary>
+        /// 選択中 Entity の Collider2DComponent から Collider2D Asset を作成する。
+        /// </summary>
+        /// <param name="canAddSpriteComponent">SpriteComponent を追加可能な場合は true。</param>
+        /// <returns>Collider2D Asset を作成または割り当てできた場合は true。</returns>
+        [[nodiscard]] bool CreateCollider2DAssetForSelectedEntity(bool canAddSpriteComponent);
+
+        /// <summary>
         /// 選択 Entity を更新し、関連パネルを再同期する。
         /// </summary>
         /// <param name="selectedEntityId">更新後の選択 EntityId。</param>

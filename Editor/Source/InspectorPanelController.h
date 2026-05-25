@@ -78,6 +78,11 @@ namespace Xelqoria::Editor
         /// Collider2D タブを開く要求があるかを表す。
         /// </summary>
         bool openCollider2DRequested = false;
+
+        /// <summary>
+        /// Collider2DComponent が追加されたかを表す。
+        /// </summary>
+        bool collider2DComponentAdded = false;
     };
 
     /// <summary>
