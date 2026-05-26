@@ -5101,17 +5101,24 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        wchar_t sectionText[128]{};
+        GetWindowTextW(drawItem.hwndItem, sectionText, static_cast<int>(std::size(sectionText)));
+        const bool isHighlighted = 0 == wcsncmp(sectionText, L"> ", 2);
+
         RECT sectionRect = drawItem.rcItem;
-        FillRectWithThemeColor(drawItem.hDC, sectionRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
-        DrawRectBorder(drawItem.hDC, sectionRect, EditorThemes::XelqoriaDark.panelBorder);
+        FillRectWithThemeColor(
+            drawItem.hDC,
+            sectionRect,
+            isHighlighted ? EditorThemes::XelqoriaDark.selection : EditorThemes::XelqoriaDark.panelHeaderBackground);
+        DrawRectBorder(
+            drawItem.hDC,
+            sectionRect,
+            isHighlighted ? EditorThemes::XelqoriaDark.accent : EditorThemes::XelqoriaDark.panelBorder);
 
         RECT accentRect = sectionRect;
         const LONG accentWidth = static_cast<LONG>(ScaleMetric(4));
         accentRect.right = (std::min)(accentRect.right, accentRect.left + accentWidth);
         FillRectWithThemeColor(drawItem.hDC, accentRect, EditorThemes::XelqoriaDark.accent);
-
-        wchar_t sectionText[128]{};
-        GetWindowTextW(drawItem.hwndItem, sectionText, static_cast<int>(std::size(sectionText)));
 
         SetBkMode(drawItem.hDC, TRANSPARENT);
         SetTextColor(drawItem.hDC, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
