@@ -16,11 +16,21 @@
 #include <UxTheme.h>
 
 #include "EditorTheme.h"
+#include "Panels/AssetsPanelView.h"
+#include "Panels/Collider2DPanelView.h"
+#include "Panels/HierarchyPanelView.h"
+#include "Panels/InspectorPanelView.h"
+#include "Panels/LogOutputPanelView.h"
+#include "Panels/MaterialPanelView.h"
+#include "Panels/SceneViewPanelView.h"
+#include "Panels/SpritePanelView.h"
 
 #pragma comment(lib, "uxtheme.lib")
 
 namespace Xelqoria::Editor
 {
+    EditorShell::EditorShell() = default;
+
     namespace
     {
         constexpr UINT_PTR ParentWindowSubclassId = 1;
@@ -983,6 +993,14 @@ namespace Xelqoria::Editor
             && InitializeLogOutputPanel(parentWindow, hInstance);
         if (initialized)
         {
+            m_hierarchyPanelView = std::make_unique<HierarchyPanelView>(*this);
+            m_assetsPanelView = std::make_unique<AssetsPanelView>(*this);
+            m_inspectorPanelView = std::make_unique<InspectorPanelView>(*this);
+            m_materialPanelView = std::make_unique<MaterialPanelView>(*this);
+            m_spritePanelView = std::make_unique<SpritePanelView>(*this);
+            m_collider2DPanelView = std::make_unique<Collider2DPanelView>(*this);
+            m_sceneViewPanelView = std::make_unique<SceneViewPanelView>(*this);
+            m_logOutputPanelView = std::make_unique<LogOutputPanelView>(*this);
             SyncDockTabs();
         }
 
@@ -3460,152 +3478,39 @@ namespace Xelqoria::Editor
         return DrawHierarchyListBoxItem(*drawItem);
     }
 
-    void EditorShell::ShowPanelControls(EditorPanelId panelId, bool visible) const
+    IEditorPanelView& EditorShell::GetPanelView(EditorPanelId panelId) const
     {
-        const int showCommand = visible ? SW_SHOW : SW_HIDE;
         switch (panelId)
         {
         case EditorPanelId::Hierarchy:
-            for (HWND control : { m_hierarchyPanel, m_hierarchyListBox, m_hierarchyNameEdit, m_hierarchyCreateButton, m_hierarchyDuplicateButton, m_hierarchyDeleteButton })
-            {
-                ShowWindow(control, showCommand);
-            }
-            ShowWindow(m_hierarchySummaryLabel, SW_HIDE);
-            break;
+            return GetHierarchyPanelView();
         case EditorPanelId::Assets:
-            for (HWND control : { m_assetsPanel, m_assetsListView })
-            {
-                ShowWindow(control, showCommand);
-            }
-            ShowWindow(m_assetsSummaryLabel, SW_HIDE);
-            break;
+            return GetAssetsPanelView();
         case EditorPanelId::SceneView:
-            for (HWND control : { m_sceneViewPanel, m_sceneViewHost, m_buildAndPlayButton, m_pauseResumePlayButton, m_endPlayButton })
-            {
-                ShowWindow(control, showCommand);
-            }
-            ShowWindow(m_sceneViewPlanLabel, SW_HIDE);
-            ShowWindow(m_projectSummaryLabel, SW_HIDE);
-            ShowWindow(m_projectSceneListBox, SW_HIDE);
-            ShowWindow(m_projectSceneDetailLabel, SW_HIDE);
-            ShowWindow(m_sceneViewSizeLabel, SW_HIDE);
-            break;
+            return GetSceneViewPanelView();
         case EditorPanelId::Inspector:
-            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefEdit, m_materialOpenButton, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4], m_materialTextureBrowseButton, m_materialTintColorButton, m_materialOutlineEnabledCheckBox, m_materialOutlineColorButton, m_collider2DComponentSectionLabel, m_collider2DSummaryLabel, m_collider2DEnabledCheckBox, m_collider2DTriggerCheckBox, m_collider2DShapeTypeLabel, m_collider2DShapeTypeEdit, m_collider2DOffsetLabel, m_collider2DSizeLabel, m_collider2DRotationLabel, m_collider2DRotationEdit, m_collider2DEditControls[0], m_collider2DEditControls[1], m_collider2DEditControls[2], m_collider2DEditControls[3], m_collider2DEditButton, m_collider2DComponentActionButton, m_addComponentButton })
-            {
-                ShowWindow(control, showCommand);
-            }
-            if (false == visible)
-            {
-                ShowWindow(m_spriteRefDropHighlight, SW_HIDE);
-                ShowWindow(m_materialTextureDropHighlight, SW_HIDE);
-            }
-            break;
-        case EditorPanelId::Material:
-            for (HWND control : { m_materialPanel, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4] })
-            {
-                ShowWindow(control, showCommand);
-            }
-            ShowWindow(m_materialSummaryLabel, SW_HIDE);
-            if (false == visible)
-            {
-                ShowWindow(m_materialTextureDropHighlight, SW_HIDE);
-            }
-            break;
+            return GetInspectorPanelView();
         case EditorPanelId::Sprite:
-            for (HWND control : { m_spritePanel, m_spriteDetailsSectionLabel, m_spriteDetailLabels[0], m_spriteDetailLabels[1], m_spriteDetailLabels[2], m_spriteDetailLabels[3], m_spriteDetailEditControls[0], m_spriteDetailEditControls[1], m_spriteDetailEditControls[2], m_spriteDetailEditControls[3] })
-            {
-                ShowWindow(control, showCommand);
-            }
-            ShowWindow(m_spriteSummaryLabel, SW_HIDE);
-            break;
+            return GetSpritePanelView();
+        case EditorPanelId::Material:
+            return GetMaterialPanelView();
         case EditorPanelId::Collider2D:
-            for (HWND control : { m_collider2DPanel, m_collider2DSummaryLabel, m_collider2DComponentSectionLabel, m_collider2DEnabledCheckBox, m_collider2DTriggerCheckBox, m_collider2DShapeTypeLabel, m_collider2DShapeTypeEdit, m_collider2DOffsetLabel, m_collider2DSizeLabel, m_collider2DEditControls[0], m_collider2DEditControls[1], m_collider2DEditControls[2], m_collider2DEditControls[3] })
-            {
-                ShowWindow(control, showCommand);
-            }
-            break;
+            return GetCollider2DPanelView();
         case EditorPanelId::LogOutput:
-            for (HWND control : { m_logOutputPanel, m_logOutputTabControl, m_logClearButton, m_logFilterEdit, m_logListBox })
-            {
-                ShowWindow(control, showCommand);
-            }
-            ShowWindow(m_logCopyButton, SW_HIDE);
-            break;
+            return GetLogOutputPanelView();
         default:
-            break;
+            return GetSceneViewPanelView();
         }
+    }
+
+    void EditorShell::ShowPanelControls(EditorPanelId panelId, bool visible) const
+    {
+        GetPanelView(panelId).Show(visible);
     }
 
     void EditorShell::SetPanelParent(EditorPanelId panelId, HWND parentWindow) const
     {
-        if (nullptr == parentWindow)
-        {
-            return;
-        }
-
-        const auto setParent =
-            [parentWindow](HWND control)
-            {
-                if (nullptr != control && GetParent(control) != parentWindow)
-                {
-                    SetParent(control, parentWindow);
-                }
-            };
-
-        switch (panelId)
-        {
-        case EditorPanelId::Hierarchy:
-            for (HWND control : { m_hierarchyPanel, m_hierarchySummaryLabel, m_hierarchyListBox, m_hierarchyNameEdit, m_hierarchyCreateButton, m_hierarchyDuplicateButton, m_hierarchyDeleteButton })
-            {
-                setParent(control);
-            }
-            break;
-        case EditorPanelId::Assets:
-            for (HWND control : { m_assetsPanel, m_assetsSummaryLabel, m_assetsListView })
-            {
-                setParent(control);
-            }
-            break;
-        case EditorPanelId::SceneView:
-            for (HWND control : { m_sceneViewPanel, m_sceneViewPlanLabel, m_projectSummaryLabel, m_projectSceneListBox, m_projectSceneDetailLabel, m_sceneViewHost, m_sceneViewSizeLabel, m_buildAndPlayButton, m_pauseResumePlayButton, m_endPlayButton })
-            {
-                setParent(control);
-            }
-            break;
-        case EditorPanelId::Inspector:
-            for (HWND control : { m_inspectorPanel, m_inspectorSummaryLabel, m_transformSectionLabel, m_transformLabels[0], m_transformLabels[1], m_transformLabels[2], m_transformEditControls[0], m_transformEditControls[1], m_transformEditControls[2], m_transformEditControls[3], m_transformEditControls[4], m_transformEditControls[5], m_transformEditControls[6], m_transformEditControls[7], m_transformEditControls[8], m_spriteComponentSectionLabel, m_spriteRefLabel, m_spriteRefDropHighlight, m_spriteRefEdit, m_materialOpenButton, m_scriptAssetLabel, m_scriptAssetEdit, m_scriptCreateButton, m_scriptAssignButton, m_scriptClearButton, m_spriteComponentActionButton, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4], m_materialTextureDropHighlight, m_materialTextureBrowseButton, m_materialTintColorButton, m_materialOutlineEnabledCheckBox, m_materialOutlineColorButton, m_collider2DComponentSectionLabel, m_collider2DSummaryLabel, m_collider2DEnabledCheckBox, m_collider2DTriggerCheckBox, m_collider2DShapeTypeLabel, m_collider2DShapeTypeEdit, m_collider2DOffsetLabel, m_collider2DSizeLabel, m_collider2DRotationLabel, m_collider2DRotationEdit, m_collider2DEditControls[0], m_collider2DEditControls[1], m_collider2DEditControls[2], m_collider2DEditControls[3], m_collider2DEditButton, m_collider2DComponentActionButton, m_addComponentButton })
-            {
-                setParent(control);
-            }
-            break;
-        case EditorPanelId::Material:
-            for (HWND control : { m_materialPanel, m_materialSummaryLabel, m_materialSharedNoticeLabel, m_materialDetailsSectionLabel, m_materialDetailLabels[0], m_materialDetailLabels[1], m_materialDetailLabels[2], m_materialDetailLabels[3], m_materialDetailLabels[4], m_materialDetailEditControls[0], m_materialDetailEditControls[1], m_materialDetailEditControls[2], m_materialDetailEditControls[3], m_materialDetailEditControls[4], m_materialTextureDropHighlight })
-            {
-                setParent(control);
-            }
-            break;
-        case EditorPanelId::Sprite:
-            for (HWND control : { m_spritePanel, m_spriteSummaryLabel, m_spriteDetailsSectionLabel, m_spriteDetailLabels[0], m_spriteDetailLabels[1], m_spriteDetailLabels[2], m_spriteDetailLabels[3], m_spriteDetailEditControls[0], m_spriteDetailEditControls[1], m_spriteDetailEditControls[2], m_spriteDetailEditControls[3] })
-            {
-                setParent(control);
-            }
-            break;
-        case EditorPanelId::Collider2D:
-            for (HWND control : { m_collider2DPanel, m_collider2DSummaryLabel, m_collider2DComponentSectionLabel, m_collider2DEnabledCheckBox, m_collider2DTriggerCheckBox, m_collider2DShapeTypeLabel, m_collider2DShapeTypeEdit, m_collider2DOffsetLabel, m_collider2DSizeLabel, m_collider2DEditControls[0], m_collider2DEditControls[1], m_collider2DEditControls[2], m_collider2DEditControls[3] })
-            {
-                setParent(control);
-            }
-            break;
-        case EditorPanelId::LogOutput:
-            for (HWND control : { m_logOutputPanel, m_logOutputTabControl, m_logClearButton, m_logCopyButton, m_logFilterEdit, m_logListBox })
-            {
-                setParent(control);
-            }
-            break;
-        default:
-            break;
-        }
+        GetPanelView(panelId).SetParent(parentWindow);
     }
 
     RECT EditorShell::GetPanelCaptionRect(EditorPanelId panelId) const
@@ -6540,6 +6445,46 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetLogListBox() const
     {
         return m_logListBox;
+    }
+
+    HierarchyPanelView& EditorShell::GetHierarchyPanelView() const
+    {
+        return *m_hierarchyPanelView;
+    }
+
+    AssetsPanelView& EditorShell::GetAssetsPanelView() const
+    {
+        return *m_assetsPanelView;
+    }
+
+    InspectorPanelView& EditorShell::GetInspectorPanelView() const
+    {
+        return *m_inspectorPanelView;
+    }
+
+    MaterialPanelView& EditorShell::GetMaterialPanelView() const
+    {
+        return *m_materialPanelView;
+    }
+
+    SpritePanelView& EditorShell::GetSpritePanelView() const
+    {
+        return *m_spritePanelView;
+    }
+
+    Collider2DPanelView& EditorShell::GetCollider2DPanelView() const
+    {
+        return *m_collider2DPanelView;
+    }
+
+    SceneViewPanelView& EditorShell::GetSceneViewPanelView() const
+    {
+        return *m_sceneViewPanelView;
+    }
+
+    LogOutputPanelView& EditorShell::GetLogOutputPanelView() const
+    {
+        return *m_logOutputPanelView;
     }
 
     HWND EditorShell::CreateChildWindow(
