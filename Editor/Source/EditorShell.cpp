@@ -1848,7 +1848,7 @@ namespace Xelqoria::Editor
         }
         ConfigureEditorTabControl(m_logOutputTabControl);
 
-        const std::array<const wchar_t*, 4> tabNames{ L"すべて", L"ログ", L"警告", L"エラー" };
+        const std::array<const wchar_t*, 5> tabNames{ L"All", L"Info", L"Editor", L"Warn", L"Error" };
         for (std::size_t index = 0; index < tabNames.size(); ++index)
         {
             TCITEMW item{};
@@ -4995,22 +4995,30 @@ namespace Xelqoria::Editor
 
         const bool isPressed = 0 != (drawItem.itemState & ODS_SELECTED);
         const bool isDisabled = 0 != (drawItem.itemState & ODS_DISABLED);
+        const bool isDestructive =
+            nullptr != wcsstr(buttonText, L"Remove")
+            || nullptr != wcsstr(buttonText, L"Delete")
+            || nullptr != wcsstr(buttonText, L"Clear");
         const bool isDefaultAction =
             drawItem.hwndItem == m_topBarPlayButton
             || drawItem.hwndItem == m_buildAndPlayButton
-            || 0 == wcscmp(buttonText, L"すべて");
+            || 0 == wcscmp(buttonText, L"All")
+            || 0 == wcscmp(buttonText, L"Add Component")
+            || 0 == wcscmp(buttonText, L"New");
 
-        EditorColor backgroundColor = isDefaultAction
-            ? EditorThemes::XelqoriaDark.selection
-            : EditorThemes::XelqoriaDark.panelHeaderBackground;
+        EditorColor backgroundColor = isDestructive
+            ? EditorColor::FromRgb8(0x3A, 0x18, 0x24)
+            : (isDefaultAction ? EditorThemes::XelqoriaDark.selection : EditorThemes::XelqoriaDark.panelHeaderBackground);
         if (isPressed)
         {
             backgroundColor = EditorThemes::XelqoriaDark.accent;
         }
 
-        const EditorColor borderColor = isDefaultAction
+        const EditorColor borderColor = isDestructive
+            ? EditorThemes::XelqoriaDark.error
+            : (isDefaultAction
             ? EditorThemes::XelqoriaDark.accent
-            : EditorThemes::XelqoriaDark.panelBorder;
+            : EditorThemes::XelqoriaDark.panelBorder);
         const EditorColor textColor = isDisabled
             ? EditorThemes::XelqoriaDark.textSecondary
             : EditorThemes::XelqoriaDark.textPrimary;
@@ -5101,17 +5109,24 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        wchar_t sectionText[128]{};
+        GetWindowTextW(drawItem.hwndItem, sectionText, static_cast<int>(std::size(sectionText)));
+        const bool isHighlighted = 0 == wcsncmp(sectionText, L"> ", 2);
+
         RECT sectionRect = drawItem.rcItem;
-        FillRectWithThemeColor(drawItem.hDC, sectionRect, EditorThemes::XelqoriaDark.panelHeaderBackground);
-        DrawRectBorder(drawItem.hDC, sectionRect, EditorThemes::XelqoriaDark.panelBorder);
+        FillRectWithThemeColor(
+            drawItem.hDC,
+            sectionRect,
+            isHighlighted ? EditorThemes::XelqoriaDark.selection : EditorThemes::XelqoriaDark.panelHeaderBackground);
+        DrawRectBorder(
+            drawItem.hDC,
+            sectionRect,
+            isHighlighted ? EditorThemes::XelqoriaDark.accent : EditorThemes::XelqoriaDark.panelBorder);
 
         RECT accentRect = sectionRect;
         const LONG accentWidth = static_cast<LONG>(ScaleMetric(4));
         accentRect.right = (std::min)(accentRect.right, accentRect.left + accentWidth);
         FillRectWithThemeColor(drawItem.hDC, accentRect, EditorThemes::XelqoriaDark.accent);
-
-        wchar_t sectionText[128]{};
-        GetWindowTextW(drawItem.hwndItem, sectionText, static_cast<int>(std::size(sectionText)));
 
         SetBkMode(drawItem.hDC, TRANSPARENT);
         SetTextColor(drawItem.hDC, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));

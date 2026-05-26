@@ -1254,7 +1254,8 @@ namespace Xelqoria::Editor
             canAddSpriteComponent,
             inputSnapshot,
             m_sceneDocument.GetSpriteAssetRegistry(),
-            m_sceneDocument.GetMaterialAssetRegistry());
+            m_sceneDocument.GetMaterialAssetRegistry(),
+            m_hierarchyPanelController.GetSelectedItemKind());
         if (true == inspectorResult.changed)
         {
             PersistSceneChanges(
@@ -1594,6 +1595,7 @@ namespace Xelqoria::Editor
             canAddSpriteComponent,
             m_sceneDocument.GetSpriteAssetRegistry(),
             m_sceneDocument.GetMaterialAssetRegistry(),
+            m_hierarchyPanelController.GetSelectedItemKind(),
             m_assetsPanelController.GetSelectedFilePath());
     }
 
