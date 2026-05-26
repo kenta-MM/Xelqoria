@@ -3,7 +3,7 @@
 #include <string>
 
 #include "Collider2DComponent.h"
-#include "SceneEditingOperations.h"
+#include "Commands/SceneEditingOperations.h"
 #include "SceneSerializer.h"
 
 TEST(SceneEditingOperationsTests, DuplicateSelectedEntityCopiesTransformAndSpriteComponent)

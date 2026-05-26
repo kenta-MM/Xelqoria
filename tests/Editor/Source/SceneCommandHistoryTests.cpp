@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "SceneCommandHistory.h"
+#include "Commands/SceneCommandHistory.h"
 #include "SceneSerializer.h"
 
 namespace

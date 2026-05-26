@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "EditorStringUtils.h"
-#include "InspectorPanelController.h"
+#include "Utils/EditorStringUtils.h"
+#include "Panels/InspectorPanelController.h"
 
 TEST(EditorStringUtilsTests, Utf8ConversionRoundTripsJapaneseFileName)
 {
