@@ -1,4 +1,4 @@
-#include "RecentProjectsStore.h"
+#include "Project/RecentProjectsStore.h"
 
 #include <filesystem>
 #include <fstream>
