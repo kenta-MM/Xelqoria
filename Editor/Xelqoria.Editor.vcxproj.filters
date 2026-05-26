@@ -12,8 +12,17 @@
     <ClCompile Include="Source\Panels\AssetsPanelController.cpp">
       <Filter>Source\Panels</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Panels\AssetsPanelView.cpp">
+      <Filter>Source\Panels</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Panels\Collider2DPanelView.cpp">
+      <Filter>Source\Panels</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Commands\EditorCommandController.cpp">
       <Filter>Source\Commands</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Panels\EditorPanelViewBase.cpp">
+      <Filter>Source\Panels</Filter>
     </ClCompile>
     <ClCompile Include="Source\Assets\EditorAssetPathUtils.cpp">
       <Filter>Source\Assets</Filter>
@@ -33,13 +42,25 @@
     <ClCompile Include="Source\Panels\HierarchyPanelController.cpp">
       <Filter>Source\Panels</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Panels\HierarchyPanelView.cpp">
+      <Filter>Source\Panels</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Panels\InspectorPanelController.cpp">
+      <Filter>Source\Panels</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Panels\InspectorPanelView.cpp">
       <Filter>Source\Panels</Filter>
     </ClCompile>
     <ClCompile Include="Source\Panels\LogOutputPanelController.cpp">
       <Filter>Source\Panels</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Panels\LogOutputPanelView.cpp">
+      <Filter>Source\Panels</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Panels\MaterialPanelController.cpp">
+      <Filter>Source\Panels</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Panels\MaterialPanelView.cpp">
       <Filter>Source\Panels</Filter>
     </ClCompile>
     <ClCompile Include="Source\Project\ProjectPanelController.cpp">
@@ -66,6 +87,9 @@
     <ClCompile Include="Source\SceneView\SceneViewController.cpp">
       <Filter>Source\SceneView</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Panels\SceneViewPanelView.cpp">
+      <Filter>Source\Panels</Filter>
+    </ClCompile>
     <ClCompile Include="Source\SceneView\SceneViewInputTracker.cpp">
       <Filter>Source\SceneView</Filter>
     </ClCompile>
@@ -84,12 +108,21 @@
     <ClCompile Include="Source\Panels\SpritePanelController.cpp">
       <Filter>Source\Panels</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Panels\SpritePanelView.cpp">
+      <Filter>Source\Panels</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\Application.h">
       <Filter>Source\App</Filter>
     </ClInclude>
     <ClInclude Include="Source\Panels\AssetsPanelController.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Panels\AssetsPanelView.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Panels\Collider2DPanelView.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
     <ClInclude Include="Source\PlatformAdapters\ButtonClickWin32Adapter.h">
@@ -125,16 +158,31 @@
     <ClInclude Include="Source\Panels\HierarchyPanelController.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Panels\HierarchyPanelView.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Panels\InspectorPanelController.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Panels\InspectorPanelView.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
     <ClInclude Include="Source\Panels\IEditorPanelView.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Panels\EditorPanelViewBase.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Panels\LogOutputPanelController.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Panels\LogOutputPanelView.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Panels\MaterialPanelController.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Panels\MaterialPanelView.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
     <ClInclude Include="Source\Project\ProjectPanelController.h">
@@ -161,6 +209,9 @@
     <ClInclude Include="Source\SceneView\SceneViewController.h">
       <Filter>Source\SceneView</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Panels\SceneViewPanelView.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
     <ClInclude Include="Source\SceneView\SceneViewInputTracker.h">
       <Filter>Source\SceneView</Filter>
     </ClInclude>
@@ -183,6 +234,9 @@
       <Filter>Source\Script</Filter>
     </ClInclude>
     <ClInclude Include="Source\Panels\SpritePanelController.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Panels\SpritePanelView.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
   </ItemGroup>

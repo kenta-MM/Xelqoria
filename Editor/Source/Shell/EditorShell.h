@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -15,12 +16,27 @@
 
 namespace Xelqoria::Editor
 {
+    class AssetsPanelView;
+    class Collider2DPanelView;
+    class HierarchyPanelView;
+    class InspectorPanelView;
+    class IEditorPanelView;
+    class LogOutputPanelView;
+    class MaterialPanelView;
+    class SceneViewPanelView;
+    class SpritePanelView;
+
     /// <summary>
     /// Editor 固定 UI の Win32 child window 群とレイアウトを管理する。
     /// </summary>
     class EditorShell
     {
     public:
+        /// <summary>
+        /// EditorShell を生成する。
+        /// </summary>
+        EditorShell();
+
         /// <summary>
         /// EditorShell 用 child window 群を生成する。
         /// </summary>
@@ -447,6 +463,54 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>LogOutput ListBox の HWND。</returns>
         [[nodiscard]] HWND GetLogListBox() const;
+
+        /// <summary>
+        /// Hierarchy Panel View を取得する。
+        /// </summary>
+        /// <returns>Hierarchy Panel View。</returns>
+        [[nodiscard]] HierarchyPanelView& GetHierarchyPanelView() const;
+
+        /// <summary>
+        /// Assets Panel View を取得する。
+        /// </summary>
+        /// <returns>Assets Panel View。</returns>
+        [[nodiscard]] AssetsPanelView& GetAssetsPanelView() const;
+
+        /// <summary>
+        /// Inspector Panel View を取得する。
+        /// </summary>
+        /// <returns>Inspector Panel View。</returns>
+        [[nodiscard]] InspectorPanelView& GetInspectorPanelView() const;
+
+        /// <summary>
+        /// Material Panel View を取得する。
+        /// </summary>
+        /// <returns>Material Panel View。</returns>
+        [[nodiscard]] MaterialPanelView& GetMaterialPanelView() const;
+
+        /// <summary>
+        /// Sprite Panel View を取得する。
+        /// </summary>
+        /// <returns>Sprite Panel View。</returns>
+        [[nodiscard]] SpritePanelView& GetSpritePanelView() const;
+
+        /// <summary>
+        /// Collider2D Panel View を取得する。
+        /// </summary>
+        /// <returns>Collider2D Panel View。</returns>
+        [[nodiscard]] Collider2DPanelView& GetCollider2DPanelView() const;
+
+        /// <summary>
+        /// SceneView Panel View を取得する。
+        /// </summary>
+        /// <returns>SceneView Panel View。</returns>
+        [[nodiscard]] SceneViewPanelView& GetSceneViewPanelView() const;
+
+        /// <summary>
+        /// LogOutput Panel View を取得する。
+        /// </summary>
+        /// <returns>LogOutput Panel View。</returns>
+        [[nodiscard]] LogOutputPanelView& GetLogOutputPanelView() const;
 
         /// <summary>
         /// Dock UI のフレーム入力を処理する。
@@ -1006,6 +1070,11 @@ namespace Xelqoria::Editor
         [[nodiscard]] static const wchar_t* GetPanelTitle(EditorPanelId panelId);
 
         /// <summary>
+        /// 指定 Panel の View 境界を返す。
+        /// </summary>
+        [[nodiscard]] IEditorPanelView& GetPanelView(EditorPanelId panelId) const;
+
+        /// <summary>
         /// DockArea の有効なアクティブタブ index を返す。
         /// </summary>
         [[nodiscard]] int ClampActiveTabIndex(DockAreaId dockAreaId) const;
@@ -1213,6 +1282,15 @@ namespace Xelqoria::Editor
             int height = 0;
         };
 
+        friend class AssetsPanelView;
+        friend class Collider2DPanelView;
+        friend class HierarchyPanelView;
+        friend class InspectorPanelView;
+        friend class LogOutputPanelView;
+        friend class MaterialPanelView;
+        friend class SceneViewPanelView;
+        friend class SpritePanelView;
+
         HFONT m_defaultFont = nullptr;
         HBRUSH m_windowBackgroundBrush = nullptr;
         HBRUSH m_panelBackgroundBrush = nullptr;
@@ -1265,6 +1343,14 @@ namespace Xelqoria::Editor
         HWND m_logCopyButton = nullptr;
         HWND m_logFilterEdit = nullptr;
         HWND m_logListBox = nullptr;
+        std::unique_ptr<HierarchyPanelView> m_hierarchyPanelView{};
+        std::unique_ptr<AssetsPanelView> m_assetsPanelView{};
+        std::unique_ptr<InspectorPanelView> m_inspectorPanelView{};
+        std::unique_ptr<MaterialPanelView> m_materialPanelView{};
+        std::unique_ptr<SpritePanelView> m_spritePanelView{};
+        std::unique_ptr<Collider2DPanelView> m_collider2DPanelView{};
+        std::unique_ptr<SceneViewPanelView> m_sceneViewPanelView{};
+        std::unique_ptr<LogOutputPanelView> m_logOutputPanelView{};
         HWND m_assetsListView = nullptr;
         HWND m_assetsSummaryLabel = nullptr;
         HWND m_hierarchySummaryLabel = nullptr;

@@ -21,16 +21,23 @@
   <ItemGroup>
     <ClCompile Include="Source\App\Application.cpp" />
     <ClCompile Include="Source\Panels\AssetsPanelController.cpp" />
+    <ClCompile Include="Source\Panels\AssetsPanelView.cpp" />
+    <ClCompile Include="Source\Panels\Collider2DPanelView.cpp" />
     <ClCompile Include="Source\Commands\EditorCommandController.cpp" />
+    <ClCompile Include="Source\Panels\EditorPanelViewBase.cpp" />
     <ClCompile Include="Source\Assets\EditorAssetPathUtils.cpp" />
     <ClCompile Include="Source\Project\EditorProject.cpp" />
     <ClCompile Include="Source\Project\EditorSceneDocument.cpp" />
     <ClCompile Include="Source\Shell\EditorShell.cpp" />
     <ClCompile Include="Source\App\Entry.cpp" />
     <ClCompile Include="Source\Panels\HierarchyPanelController.cpp" />
+    <ClCompile Include="Source\Panels\HierarchyPanelView.cpp" />
     <ClCompile Include="Source\Panels\InspectorPanelController.cpp" />
+    <ClCompile Include="Source\Panels\InspectorPanelView.cpp" />
     <ClCompile Include="Source\Panels\LogOutputPanelController.cpp" />
+    <ClCompile Include="Source\Panels\LogOutputPanelView.cpp" />
     <ClCompile Include="Source\Panels\MaterialPanelController.cpp" />
+    <ClCompile Include="Source\Panels\MaterialPanelView.cpp" />
     <ClCompile Include="Source\Project\ProjectPanelController.cpp" />
     <ClCompile Include="Source\Project\RecentProjectsStore.cpp" />
     <ClCompile Include="Source\Rendering\RenderBackendBootstrap.cpp" />
@@ -38,17 +45,21 @@
     <ClCompile Include="Source\Commands\SceneCommandHistory.cpp" />
     <ClCompile Include="Source\Commands\SceneEditingOperations.cpp" />
     <ClCompile Include="Source\SceneView\SceneViewController.cpp" />
+    <ClCompile Include="Source\Panels\SceneViewPanelView.cpp" />
     <ClCompile Include="Source\SceneView\SceneViewInputTracker.cpp" />
     <ClCompile Include="Source\SceneView\SceneViewRenderer.cpp" />
     <ClCompile Include="Source\SceneView\SceneViewStatusPresenter.cpp" />
     <ClCompile Include="Source\Assets\ScriptAssetService.cpp" />
     <ClCompile Include="Source\Script\ScriptRuntimeSession.cpp" />
     <ClCompile Include="Source\Panels\SpritePanelController.cpp" />
+    <ClCompile Include="Source\Panels\SpritePanelView.cpp" />
     <ClCompile Include="Source\App\StartupScreenController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\Application.h" />
     <ClInclude Include="Source\Panels\AssetsPanelController.h" />
+    <ClInclude Include="Source\Panels\AssetsPanelView.h" />
+    <ClInclude Include="Source\Panels\Collider2DPanelView.h" />
     <ClInclude Include="Source\PlatformAdapters\ButtonClickWin32Adapter.h" />
     <ClInclude Include="Source\Commands\EditorCommandController.h" />
     <ClInclude Include="Source\Assets\EditorAssetPathUtils.h" />
@@ -60,10 +71,15 @@
     <ClInclude Include="Source\Utils\EditorStringUtils.h" />
     <ClInclude Include="Source\SceneView\EditorCamera2D.h" />
     <ClInclude Include="Source\Panels\HierarchyPanelController.h" />
+    <ClInclude Include="Source\Panels\HierarchyPanelView.h" />
     <ClInclude Include="Source\Panels\InspectorPanelController.h" />
+    <ClInclude Include="Source\Panels\InspectorPanelView.h" />
     <ClInclude Include="Source\Panels\IEditorPanelView.h" />
+    <ClInclude Include="Source\Panels\EditorPanelViewBase.h" />
     <ClInclude Include="Source\Panels\LogOutputPanelController.h" />
+    <ClInclude Include="Source\Panels\LogOutputPanelView.h" />
     <ClInclude Include="Source\Panels\MaterialPanelController.h" />
+    <ClInclude Include="Source\Panels\MaterialPanelView.h" />
     <ClInclude Include="Source\Project\ProjectPanelController.h" />
     <ClInclude Include="Source\Project\RecentProjectsStore.h" />
     <ClInclude Include="Source\Rendering\RenderBackendBootstrap.h" />
@@ -72,6 +88,7 @@
     <ClInclude Include="Source\Commands\SceneCommandHistory.h" />
     <ClInclude Include="Source\Commands\SceneEditingOperations.h" />
     <ClInclude Include="Source\SceneView\SceneViewController.h" />
+    <ClInclude Include="Source\Panels\SceneViewPanelView.h" />
     <ClInclude Include="Source\SceneView\SceneViewInputTracker.h" />
     <ClInclude Include="Source\SceneView\SceneViewInteractionTypes.h" />
     <ClInclude Include="Source\SceneView\SceneViewOverlay.h" />
@@ -80,6 +97,7 @@
     <ClInclude Include="Source\Assets\ScriptAssetService.h" />
     <ClInclude Include="Source\Script\ScriptRuntimeSession.h" />
     <ClInclude Include="Source\Panels\SpritePanelController.h" />
+    <ClInclude Include="Source\Panels\SpritePanelView.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">
