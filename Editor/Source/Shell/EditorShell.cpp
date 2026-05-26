@@ -46,14 +46,14 @@ namespace Xelqoria::Editor
             int secondChild = -1;
             int activeTabIndex = 0;
             std::wstring tabKey{};
-            std::vector<EditorShell::EditorPanelId> panels{};
+            std::vector<EditorPanelId> panels{};
         };
 
         struct SavedFloatingGroup
         {
             RECT rect{};
             int activeTabIndex = 0;
-            std::vector<EditorShell::EditorPanelId> panels{};
+            std::vector<EditorPanelId> panels{};
         };
 
         [[nodiscard]] BYTE ToColorByte(float value)
@@ -369,45 +369,45 @@ namespace Xelqoria::Editor
             return DefWindowProcW(window, message, wParam, lParam);
         }
 
-        [[nodiscard]] constexpr std::array<EditorShell::EditorPanelId, 5> GetAllEditorPanels()
+        [[nodiscard]] constexpr std::array<EditorPanelId, 5> GetAllEditorPanels()
         {
             return {
-                EditorShell::EditorPanelId::Hierarchy,
-                EditorShell::EditorPanelId::Assets,
-                EditorShell::EditorPanelId::SceneView,
-                EditorShell::EditorPanelId::Inspector,
-                EditorShell::EditorPanelId::LogOutput
+                EditorPanelId::Hierarchy,
+                EditorPanelId::Assets,
+                EditorPanelId::SceneView,
+                EditorPanelId::Inspector,
+                EditorPanelId::LogOutput
             };
         }
 
-        [[nodiscard]] const wchar_t* GetPanelLayoutName(EditorShell::EditorPanelId panelId)
+        [[nodiscard]] const wchar_t* GetPanelLayoutName(EditorPanelId panelId)
         {
             switch (panelId)
             {
-            case EditorShell::EditorPanelId::Hierarchy:
+            case EditorPanelId::Hierarchy:
                 return L"Hierarchy";
-            case EditorShell::EditorPanelId::Assets:
+            case EditorPanelId::Assets:
                 return L"Assets";
-            case EditorShell::EditorPanelId::SceneView:
+            case EditorPanelId::SceneView:
                 return L"SceneView";
-            case EditorShell::EditorPanelId::Inspector:
+            case EditorPanelId::Inspector:
                 return L"Inspector";
-            case EditorShell::EditorPanelId::Sprite:
+            case EditorPanelId::Sprite:
                 return L"Sprite";
-            case EditorShell::EditorPanelId::Material:
+            case EditorPanelId::Material:
                 return L"Material";
-            case EditorShell::EditorPanelId::Collider2D:
+            case EditorPanelId::Collider2D:
                 return L"Collider2D";
-            case EditorShell::EditorPanelId::LogOutput:
+            case EditorPanelId::LogOutput:
                 return L"LogOutput";
             default:
                 return L"SceneView";
             }
         }
 
-        [[nodiscard]] std::optional<EditorShell::EditorPanelId> TryParsePanelLayoutName(const std::wstring& name)
+        [[nodiscard]] std::optional<EditorPanelId> TryParsePanelLayoutName(const std::wstring& name)
         {
-            for (EditorShell::EditorPanelId panelId : GetAllEditorPanels())
+            for (EditorPanelId panelId : GetAllEditorPanels())
             {
                 if (name == GetPanelLayoutName(panelId))
                 {
@@ -3651,7 +3651,7 @@ namespace Xelqoria::Editor
         return captionRect;
     }
 
-    std::optional<EditorShell::EditorPanelId> EditorShell::HitTestPanelCaption(POINT cursorScreenPoint) const
+    std::optional<EditorPanelId> EditorShell::HitTestPanelCaption(POINT cursorScreenPoint) const
     {
         for (EditorPanelId panelId : GetAllEditorPanels())
         {
@@ -3696,7 +3696,7 @@ namespace Xelqoria::Editor
         return std::nullopt;
     }
 
-    std::optional<EditorShell::EditorPanelId> EditorShell::HitTestDockTab(POINT cursorScreenPoint) const
+    std::optional<EditorPanelId> EditorShell::HitTestDockTab(POINT cursorScreenPoint) const
     {
         std::vector<DockNodeId> dockLeafNodeIds{};
         CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
@@ -4781,7 +4781,7 @@ namespace Xelqoria::Editor
         return -1;
     }
 
-    EditorShell::EditorPanelId EditorShell::GetActiveFloatingPanel(HWND floatingWindow) const
+    EditorPanelId EditorShell::GetActiveFloatingPanel(HWND floatingWindow) const
     {
         const int groupIndex = FindFloatingPanelGroupIndex(floatingWindow);
         if (groupIndex < 0)
@@ -5324,7 +5324,7 @@ namespace Xelqoria::Editor
         return m_dockNodes[static_cast<std::size_t>(dockNodeId)].tabControl;
     }
 
-    std::vector<EditorShell::EditorPanelId>& EditorShell::GetDockAreaPanels(DockAreaId dockAreaId)
+    std::vector<EditorPanelId>& EditorShell::GetDockAreaPanels(DockAreaId dockAreaId)
     {
         switch (dockAreaId)
         {
@@ -5341,7 +5341,7 @@ namespace Xelqoria::Editor
         }
     }
 
-    const std::vector<EditorShell::EditorPanelId>& EditorShell::GetDockAreaPanels(DockAreaId dockAreaId) const
+    const std::vector<EditorPanelId>& EditorShell::GetDockAreaPanels(DockAreaId dockAreaId) const
     {
         switch (dockAreaId)
         {

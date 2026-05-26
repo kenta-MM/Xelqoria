@@ -10,6 +10,7 @@
 
 #include "ICursor.h"
 #include "InputSystem.h"
+#include "Shell/EditorPanelId.h"
 #include "SceneViewSurface.h"
 
 namespace Xelqoria::Editor
@@ -20,18 +21,6 @@ namespace Xelqoria::Editor
     class EditorShell
     {
     public:
-        enum class EditorPanelId
-        {
-            Hierarchy,
-            Assets,
-            SceneView,
-            Inspector,
-            Sprite,
-            Material,
-            Collider2D,
-            LogOutput
-        };
-
         /// <summary>
         /// EditorShell 用 child window 群を生成する。
         /// </summary>

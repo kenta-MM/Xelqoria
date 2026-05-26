@@ -467,31 +467,31 @@ namespace Xelqoria::Editor
         case ViewMenuHierarchyCommandId:
             if (m_editorInitialized)
             {
-                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::Hierarchy);
+                m_editorShell.ShowPanelAtDefaultDock(EditorPanelId::Hierarchy);
             }
             break;
         case ViewMenuAssetsCommandId:
             if (m_editorInitialized)
             {
-                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::Assets);
+                m_editorShell.ShowPanelAtDefaultDock(EditorPanelId::Assets);
             }
             break;
         case ViewMenuSceneViewCommandId:
             if (m_editorInitialized)
             {
-                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::SceneView);
+                m_editorShell.ShowPanelAtDefaultDock(EditorPanelId::SceneView);
             }
             break;
         case ViewMenuInspectorCommandId:
             if (m_editorInitialized)
             {
-                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::Inspector);
+                m_editorShell.ShowPanelAtDefaultDock(EditorPanelId::Inspector);
             }
             break;
         case ViewMenuLogOutputCommandId:
             if (m_editorInitialized)
             {
-                m_editorShell.ShowPanelAtDefaultDock(EditorShell::EditorPanelId::LogOutput);
+                m_editorShell.ShowPanelAtDefaultDock(EditorPanelId::LogOutput);
             }
             break;
         default:
@@ -1508,7 +1508,7 @@ namespace Xelqoria::Editor
         }
         if (true == interactionResult.spriteClicked)
         {
-            m_editorShell.ActivatePanel(EditorShell::EditorPanelId::Inspector);
+            m_editorShell.ActivatePanel(EditorPanelId::Inspector);
         }
 
         if (true == interactionResult.sceneChanged)

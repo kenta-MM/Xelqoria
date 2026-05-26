@@ -56,10 +56,12 @@
     <ClInclude Include="Source\Utils\EditorPathSecurity.h" />
     <ClInclude Include="Source\Project\EditorSceneDocument.h" />
     <ClInclude Include="Source\Shell\EditorShell.h" />
+    <ClInclude Include="Source\Shell\EditorPanelId.h" />
     <ClInclude Include="Source\Utils\EditorStringUtils.h" />
     <ClInclude Include="Source\SceneView\EditorCamera2D.h" />
     <ClInclude Include="Source\Panels\HierarchyPanelController.h" />
     <ClInclude Include="Source\Panels\InspectorPanelController.h" />
+    <ClInclude Include="Source\Panels\IEditorPanelView.h" />
     <ClInclude Include="Source\Panels\LogOutputPanelController.h" />
     <ClInclude Include="Source\Panels\MaterialPanelController.h" />
     <ClInclude Include="Source\Project\ProjectPanelController.h" />

@@ -113,6 +113,9 @@
     <ClInclude Include="Source\Shell\EditorShell.h">
       <Filter>Source\Shell</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Shell\EditorPanelId.h">
+      <Filter>Source\Shell</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Utils\EditorStringUtils.h">
       <Filter>Source\Utils</Filter>
     </ClInclude>
@@ -123,6 +126,9 @@
       <Filter>Source\Panels</Filter>
     </ClInclude>
     <ClInclude Include="Source\Panels\InspectorPanelController.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Panels\IEditorPanelView.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
     <ClInclude Include="Source\Panels\LogOutputPanelController.h">
