@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "Panels/EditorPanelViewBase.h"
 
 namespace Xelqoria::Editor
@@ -17,8 +19,15 @@ namespace Xelqoria::Editor
         /// </summary>
         explicit SpritePanelView(EditorShell& shell);
 
+        [[nodiscard]] HWND GetSummaryLabel() const;
+        [[nodiscard]] HWND GetDetailsSectionLabel() const;
+        [[nodiscard]] const std::array<HWND, 4>& GetDetailLabels() const;
+        [[nodiscard]] const std::array<HWND, 4>& GetDetailEditControls() const;
+
     private:
         [[nodiscard]] static std::vector<HWND> GetSpriteControls(EditorShell& shell);
         [[nodiscard]] static std::vector<HWND> GetSpriteVisibleControls(EditorShell& shell);
+
+        EditorShell& m_shell;
     };
 }

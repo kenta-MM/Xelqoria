@@ -5,7 +5,7 @@
 #include <cstdint>
 
 #include "SceneView/EditorCamera2D.h"
-#include "Shell/EditorShell.h"
+#include "SceneViewSurface.h"
 #include "InputSystem.h"
 #include "DragDrop/SceneDropPlacementService.h"
 #include "SceneView/SceneViewInputTracker.h"
@@ -21,6 +21,8 @@
 
 namespace Xelqoria::Editor
 {
+    class SceneViewPanelView;
+
     /// <summary>
     /// SceneView の Editor 入力状態とドロップ処理を管理する。
     /// </summary>
@@ -28,10 +30,10 @@ namespace Xelqoria::Editor
     {
     public:
         /// <summary>
-        /// EditorShell の HWND 群へ接続する。
+        /// SceneView Panel View の HWND 群へ接続する。
         /// </summary>
-        /// <param name="shell">接続先の EditorShell。</param>
-        void Bind(const EditorShell& shell);
+        /// <param name="view">接続先の Panel View。</param>
+        void Bind(const SceneViewPanelView& view);
 
         /// <summary>
         /// SceneView ビューポートサイズ変更を反映する。

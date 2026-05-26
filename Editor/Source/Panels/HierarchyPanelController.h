@@ -9,13 +9,14 @@
 
 #include "ButtonClickInput.h"
 #include "Commands/SceneEditingOperations.h"
-#include "Shell/EditorShell.h"
 #include "InputSystem.h"
 #include "Scene.h"
 #include <Entity.h>
 
 namespace Xelqoria::Editor
 {
+    class HierarchyPanelView;
+
     /// <summary>
     /// Hierarchy パネルの表示一覧と選択状態を管理する。
     /// </summary>
@@ -85,10 +86,10 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
-        /// EditorShell の HWND 群へ接続する。
+        /// Hierarchy Panel View の HWND 群へ接続する。
         /// </summary>
-        /// <param name="shell">接続先の EditorShell。</param>
-        void Bind(const EditorShell& shell);
+        /// <param name="view">接続先の Panel View。</param>
+        void Bind(const HierarchyPanelView& view);
 
         /// <summary>
         /// 現在の Scene に合わせて Hierarchy 表示を更新する。

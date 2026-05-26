@@ -17,6 +17,7 @@
 #include <wrl/client.h>
 
 #include "Assets/EditorAssetPathUtils.h"
+#include "Panels/AssetsPanelView.h"
 #include "Utils/EditorPathSecurity.h"
 #include "Assets/ScriptAssetService.h"
 
@@ -576,13 +577,13 @@ namespace Xelqoria::Editor
         }
     }
 
-    void AssetsPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
+    void AssetsPanelController::Bind(const AssetsPanelView& view, Platform::ICursor& cursor)
     {
-        m_assetsListView = shell.GetAssetsListView();
-        m_assetsSummaryLabel = shell.GetAssetsSummaryLabel();
+        m_assetsListView = view.GetListView();
+        m_assetsSummaryLabel = view.GetSummaryLabel();
         m_cursor = &cursor;
         InitializeListView();
-        shell.ConfigureAssetsListHeaderTheme();
+        view.ConfigureListHeaderTheme();
     }
 
     void AssetsPanelController::Refresh(const std::optional<EditorProjectInfo>& projectInfo)

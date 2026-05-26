@@ -13,7 +13,7 @@
 #include <utility>
 
 #include "Panels/AssetsPanelController.h"
-#include "Shell/EditorShell.h"
+#include "Panels/MaterialPanelView.h"
 #include "Utils/EditorStringUtils.h"
 
 namespace Xelqoria::Editor
@@ -78,14 +78,14 @@ namespace Xelqoria::Editor
         }
     }
 
-    void MaterialPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
+    void MaterialPanelController::Bind(const MaterialPanelView& view, Platform::ICursor& cursor)
     {
-        m_materialSummaryLabel = shell.GetMaterialSummaryLabel();
-        m_materialSharedNoticeLabel = shell.GetMaterialSharedNoticeLabel();
-        m_materialDetailsSectionLabel = shell.GetMaterialDetailsSectionLabel();
-        m_materialDetailLabels = shell.GetMaterialDetailLabels();
-        m_materialDetailEditControls = shell.GetMaterialDetailEditControls();
-        m_materialTextureDropHighlight = shell.GetMaterialTextureDropHighlight();
+        m_materialSummaryLabel = view.GetSummaryLabel();
+        m_materialSharedNoticeLabel = view.GetSharedNoticeLabel();
+        m_materialDetailsSectionLabel = view.GetDetailsSectionLabel();
+        m_materialDetailLabels = view.GetDetailLabels();
+        m_materialDetailEditControls = view.GetDetailEditControls();
+        m_materialTextureDropHighlight = view.GetTextureDropHighlight();
         m_cursor = &cursor;
     }
 

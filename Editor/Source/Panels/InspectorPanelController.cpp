@@ -15,7 +15,7 @@
 #include <AssetId.h>
 #include <Collider2DComponent.h>
 #include "Panels/AssetsPanelController.h"
-#include "Shell/EditorShell.h"
+#include "Panels/InspectorPanelView.h"
 #include <Entity.h>
 #include "Panels/MaterialPanelController.h"
 #include <Scene.h>
@@ -225,45 +225,45 @@ namespace Xelqoria::Editor
         }
     }
 
-    void InspectorPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
+    void InspectorPanelController::Bind(const InspectorPanelView& view, Platform::ICursor& cursor)
     {
-        m_inspectorSummaryLabel = shell.GetInspectorSummaryLabel();
-        m_transformSectionLabel = shell.GetTransformSectionLabel();
-        m_transformEditControls = shell.GetTransformEditControls();
-        m_spriteComponentSectionLabel = shell.GetSpriteComponentSectionLabel();
-        m_spriteRefLabel = shell.GetSpriteRefLabel();
-        m_spriteRefDropHighlight = shell.GetSpriteRefDropHighlight();
-        m_spriteRefEdit = shell.GetSpriteRefEdit();
-        m_scriptAssetLabel = shell.GetScriptAssetLabel();
-        m_scriptAssetEdit = shell.GetScriptAssetEdit();
-        m_scriptCreateButton = shell.GetScriptCreateButton();
-        m_scriptAssignButton = shell.GetScriptAssignButton();
-        m_scriptClearButton = shell.GetScriptClearButton();
-        m_spriteComponentActionButton = shell.GetSpriteComponentActionButton();
-        m_collider2DComponentSectionLabel = shell.GetCollider2DComponentSectionLabel();
-        m_collider2DSummaryLabel = shell.GetCollider2DSummaryLabel();
-        m_collider2DEnabledCheckBox = shell.GetCollider2DEnabledCheckBox();
-        m_collider2DTriggerCheckBox = shell.GetCollider2DTriggerCheckBox();
-        m_collider2DShapeTypeLabel = shell.GetCollider2DShapeTypeLabel();
-        m_collider2DShapeTypeEdit = shell.GetCollider2DShapeTypeEdit();
-        m_collider2DOffsetLabel = shell.GetCollider2DOffsetLabel();
-        m_collider2DSizeLabel = shell.GetCollider2DSizeLabel();
-        m_collider2DRotationLabel = shell.GetCollider2DRotationLabel();
-        m_collider2DRotationEdit = shell.GetCollider2DRotationEdit();
-        m_collider2DEditControls = shell.GetCollider2DEditControls();
-        m_collider2DEditButton = shell.GetCollider2DEditButton();
-        m_collider2DComponentActionButton = shell.GetCollider2DComponentActionButton();
-        m_addComponentButton = shell.GetAddComponentButton();
-        m_materialOpenButton = shell.GetMaterialOpenButton();
-        m_materialSharedNoticeLabel = shell.GetMaterialSharedNoticeLabel();
-        m_materialDetailsSectionLabel = shell.GetMaterialDetailsSectionLabel();
-        m_materialDetailLabels = shell.GetMaterialDetailLabels();
-        m_materialDetailEditControls = shell.GetMaterialDetailEditControls();
-        m_materialTextureDropHighlight = shell.GetMaterialTextureDropHighlight();
-        m_materialTextureBrowseButton = shell.GetMaterialTextureBrowseButton();
-        m_materialTintColorButton = shell.GetMaterialTintColorButton();
-        m_materialOutlineEnabledCheckBox = shell.GetMaterialOutlineEnabledCheckBox();
-        m_materialOutlineColorButton = shell.GetMaterialOutlineColorButton();
+        m_inspectorSummaryLabel = view.GetSummaryLabel();
+        m_transformSectionLabel = view.GetTransformSectionLabel();
+        m_transformEditControls = view.GetTransformEditControls();
+        m_spriteComponentSectionLabel = view.GetSpriteComponentSectionLabel();
+        m_spriteRefLabel = view.GetSpriteRefLabel();
+        m_spriteRefDropHighlight = view.GetSpriteRefDropHighlight();
+        m_spriteRefEdit = view.GetSpriteRefEdit();
+        m_scriptAssetLabel = view.GetScriptAssetLabel();
+        m_scriptAssetEdit = view.GetScriptAssetEdit();
+        m_scriptCreateButton = view.GetScriptCreateButton();
+        m_scriptAssignButton = view.GetScriptAssignButton();
+        m_scriptClearButton = view.GetScriptClearButton();
+        m_spriteComponentActionButton = view.GetSpriteComponentActionButton();
+        m_collider2DComponentSectionLabel = view.GetCollider2DComponentSectionLabel();
+        m_collider2DSummaryLabel = view.GetCollider2DSummaryLabel();
+        m_collider2DEnabledCheckBox = view.GetCollider2DEnabledCheckBox();
+        m_collider2DTriggerCheckBox = view.GetCollider2DTriggerCheckBox();
+        m_collider2DShapeTypeLabel = view.GetCollider2DShapeTypeLabel();
+        m_collider2DShapeTypeEdit = view.GetCollider2DShapeTypeEdit();
+        m_collider2DOffsetLabel = view.GetCollider2DOffsetLabel();
+        m_collider2DSizeLabel = view.GetCollider2DSizeLabel();
+        m_collider2DRotationLabel = view.GetCollider2DRotationLabel();
+        m_collider2DRotationEdit = view.GetCollider2DRotationEdit();
+        m_collider2DEditControls = view.GetCollider2DEditControls();
+        m_collider2DEditButton = view.GetCollider2DEditButton();
+        m_collider2DComponentActionButton = view.GetCollider2DComponentActionButton();
+        m_addComponentButton = view.GetAddComponentButton();
+        m_materialOpenButton = view.GetMaterialOpenButton();
+        m_materialSharedNoticeLabel = view.GetMaterialSharedNoticeLabel();
+        m_materialDetailsSectionLabel = view.GetMaterialDetailsSectionLabel();
+        m_materialDetailLabels = view.GetMaterialDetailLabels();
+        m_materialDetailEditControls = view.GetMaterialDetailEditControls();
+        m_materialTextureDropHighlight = view.GetMaterialTextureDropHighlight();
+        m_materialTextureBrowseButton = view.GetMaterialTextureBrowseButton();
+        m_materialTintColorButton = view.GetMaterialTintColorButton();
+        m_materialOutlineEnabledCheckBox = view.GetMaterialOutlineEnabledCheckBox();
+        m_materialOutlineColorButton = view.GetMaterialOutlineColorButton();
         m_cursor = &cursor;
         SetWindowTextIfChanged(m_spriteRefLabel, L"Material");
         SetWindowEnabled(m_materialTextureBrowseButton, FALSE);

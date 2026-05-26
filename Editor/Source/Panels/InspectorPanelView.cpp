@@ -107,7 +107,46 @@ namespace Xelqoria::Editor
             [&shell]() { return GetInspectorControls(shell); },
             [&shell]() { return GetInspectorVisibleControls(shell); },
             []() { return std::vector<HWND>{}; },
-            [&shell]() { return std::vector<HWND>{ shell.m_spriteRefDropHighlight, shell.m_materialTextureDropHighlight }; })
+            [&shell]() { return std::vector<HWND>{ shell.m_spriteRefDropHighlight, shell.m_materialTextureDropHighlight }; }),
+          m_shell(shell)
     {
     }
+
+    HWND InspectorPanelView::GetSummaryLabel() const { return m_shell.m_inspectorSummaryLabel; }
+    HWND InspectorPanelView::GetTransformSectionLabel() const { return m_shell.m_transformSectionLabel; }
+    const std::array<HWND, 9>& InspectorPanelView::GetTransformEditControls() const { return m_shell.m_transformEditControls; }
+    HWND InspectorPanelView::GetSpriteComponentSectionLabel() const { return m_shell.m_spriteComponentSectionLabel; }
+    HWND InspectorPanelView::GetSpriteRefLabel() const { return m_shell.m_spriteRefLabel; }
+    HWND InspectorPanelView::GetSpriteRefDropHighlight() const { return m_shell.m_spriteRefDropHighlight; }
+    HWND InspectorPanelView::GetSpriteRefEdit() const { return m_shell.m_spriteRefEdit; }
+    HWND InspectorPanelView::GetScriptAssetLabel() const { return m_shell.m_scriptAssetLabel; }
+    HWND InspectorPanelView::GetScriptAssetEdit() const { return m_shell.m_scriptAssetEdit; }
+    HWND InspectorPanelView::GetScriptCreateButton() const { return m_shell.m_scriptCreateButton; }
+    HWND InspectorPanelView::GetScriptAssignButton() const { return m_shell.m_scriptAssignButton; }
+    HWND InspectorPanelView::GetScriptClearButton() const { return m_shell.m_scriptClearButton; }
+    HWND InspectorPanelView::GetSpriteComponentActionButton() const { return m_shell.m_spriteComponentActionButton; }
+    HWND InspectorPanelView::GetCollider2DComponentSectionLabel() const { return m_shell.m_collider2DComponentSectionLabel; }
+    HWND InspectorPanelView::GetCollider2DSummaryLabel() const { return m_shell.m_collider2DSummaryLabel; }
+    HWND InspectorPanelView::GetCollider2DEnabledCheckBox() const { return m_shell.m_collider2DEnabledCheckBox; }
+    HWND InspectorPanelView::GetCollider2DTriggerCheckBox() const { return m_shell.m_collider2DTriggerCheckBox; }
+    HWND InspectorPanelView::GetCollider2DShapeTypeLabel() const { return m_shell.m_collider2DShapeTypeLabel; }
+    HWND InspectorPanelView::GetCollider2DShapeTypeEdit() const { return m_shell.m_collider2DShapeTypeEdit; }
+    HWND InspectorPanelView::GetCollider2DOffsetLabel() const { return m_shell.m_collider2DOffsetLabel; }
+    HWND InspectorPanelView::GetCollider2DSizeLabel() const { return m_shell.m_collider2DSizeLabel; }
+    HWND InspectorPanelView::GetCollider2DRotationLabel() const { return m_shell.m_collider2DRotationLabel; }
+    HWND InspectorPanelView::GetCollider2DRotationEdit() const { return m_shell.m_collider2DRotationEdit; }
+    const std::array<HWND, 4>& InspectorPanelView::GetCollider2DEditControls() const { return m_shell.m_collider2DEditControls; }
+    HWND InspectorPanelView::GetCollider2DEditButton() const { return m_shell.m_collider2DEditButton; }
+    HWND InspectorPanelView::GetCollider2DComponentActionButton() const { return m_shell.m_collider2DComponentActionButton; }
+    HWND InspectorPanelView::GetAddComponentButton() const { return m_shell.m_addComponentButton; }
+    HWND InspectorPanelView::GetMaterialOpenButton() const { return m_shell.m_materialOpenButton; }
+    HWND InspectorPanelView::GetMaterialSharedNoticeLabel() const { return m_shell.m_materialSharedNoticeLabel; }
+    HWND InspectorPanelView::GetMaterialDetailsSectionLabel() const { return m_shell.m_materialDetailsSectionLabel; }
+    const std::array<HWND, 5>& InspectorPanelView::GetMaterialDetailLabels() const { return m_shell.m_materialDetailLabels; }
+    const std::array<HWND, 5>& InspectorPanelView::GetMaterialDetailEditControls() const { return m_shell.m_materialDetailEditControls; }
+    HWND InspectorPanelView::GetMaterialTextureDropHighlight() const { return m_shell.m_materialTextureDropHighlight; }
+    HWND InspectorPanelView::GetMaterialTextureBrowseButton() const { return m_shell.m_materialTextureBrowseButton; }
+    HWND InspectorPanelView::GetMaterialTintColorButton() const { return m_shell.m_materialTintColorButton; }
+    HWND InspectorPanelView::GetMaterialOutlineEnabledCheckBox() const { return m_shell.m_materialOutlineEnabledCheckBox; }
+    HWND InspectorPanelView::GetMaterialOutlineColorButton() const { return m_shell.m_materialOutlineColorButton; }
 }

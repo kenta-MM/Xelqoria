@@ -1054,7 +1054,7 @@ namespace Xelqoria::Editor
         if (m_ownsDefaultFont && nullptr != m_defaultFont)
         {
             HFONT stockFont = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-            const std::array<HWND, 121> controls = CollectControls();
+            const std::vector<HWND> controls = CollectControls();
             for (HWND control : controls)
             {
                 if (nullptr != control)
@@ -5577,7 +5577,7 @@ namespace Xelqoria::Editor
             m_ownsDefaultFont = false;
         }
 
-        const std::array<HWND, 121> controls = CollectControls();
+        const std::vector<HWND> controls = CollectControls();
 
         for (HWND control : controls)
         {
@@ -5600,9 +5600,9 @@ namespace Xelqoria::Editor
         return true;
     }
 
-    std::array<HWND, 121> EditorShell::CollectControls() const
+    std::vector<HWND> EditorShell::CollectControls() const
     {
-        return {
+        std::vector<HWND> controls{
             m_workspaceBackground,
             m_topBar,
             m_topBarProjectButton,
@@ -5622,109 +5622,28 @@ namespace Xelqoria::Editor
             m_dockGuideWindows[5],
             m_dockGuideWindows[6],
             m_dockGuideWindows[7],
-            m_dockGuideWindows[8],
-            m_hierarchyPanel,
-            m_assetsPanel,
-            m_inspectorPanel,
-            m_spritePanel,
-            m_materialPanel,
-            m_collider2DPanel,
-            m_sceneViewPanel,
-            m_sceneViewPlanLabel,
-            m_projectSummaryLabel,
-            m_projectSceneListBox,
-            m_projectSceneDetailLabel,
-            m_sceneViewHost,
-            m_sceneViewSizeLabel,
-            m_buildAndPlayButton,
-            m_pauseResumePlayButton,
-            m_endPlayButton,
-            m_logOutputPanel,
-            m_logOutputTabControl,
-            m_logClearButton,
-            m_logCopyButton,
-            m_logFilterEdit,
-            m_logListBox,
-            m_assetsListView,
-            m_assetsSummaryLabel,
-            m_hierarchySummaryLabel,
-            m_hierarchySearchEdit,
-            m_hierarchyListBox,
-            m_hierarchyNameEdit,
-            m_hierarchyCreateButton,
-            m_hierarchyDuplicateButton,
-            m_hierarchyDeleteButton,
-            m_inspectorSummaryLabel,
-            m_transformSectionLabel,
-            m_transformLabels[0],
-            m_transformLabels[1],
-            m_transformLabels[2],
-            m_transformEditControls[0],
-            m_transformEditControls[1],
-            m_transformEditControls[2],
-            m_transformEditControls[3],
-            m_transformEditControls[4],
-            m_transformEditControls[5],
-            m_transformEditControls[6],
-            m_transformEditControls[7],
-            m_transformEditControls[8],
-            m_spriteComponentSectionLabel,
-            m_spriteRefLabel,
-            m_spriteRefDropHighlight,
-            m_spriteRefEdit,
-            m_materialOpenButton,
-            m_materialSummaryLabel,
-            m_materialSharedNoticeLabel,
-            m_materialDetailsSectionLabel,
-            m_materialDetailLabels[0],
-            m_materialDetailLabels[1],
-            m_materialDetailLabels[2],
-            m_materialDetailLabels[3],
-            m_materialDetailLabels[4],
-            m_materialDetailEditControls[0],
-            m_materialDetailEditControls[1],
-            m_materialDetailEditControls[2],
-            m_materialDetailEditControls[3],
-            m_materialDetailEditControls[4],
-            m_materialTextureDropHighlight,
-            m_materialTextureBrowseButton,
-            m_materialTintColorButton,
-            m_materialOutlineEnabledCheckBox,
-            m_materialOutlineColorButton,
-            m_collider2DSummaryLabel,
-            m_spriteSummaryLabel,
-            m_spriteDetailsSectionLabel,
-            m_spriteDetailLabels[0],
-            m_spriteDetailLabels[1],
-            m_spriteDetailLabels[2],
-            m_spriteDetailLabels[3],
-            m_spriteDetailEditControls[0],
-            m_spriteDetailEditControls[1],
-            m_spriteDetailEditControls[2],
-            m_spriteDetailEditControls[3],
-            m_scriptAssetLabel,
-            m_scriptAssetEdit,
-            m_scriptCreateButton,
-            m_scriptAssignButton,
-            m_scriptClearButton,
-            m_spriteComponentActionButton,
-            m_collider2DComponentSectionLabel,
-            m_collider2DEnabledCheckBox,
-            m_collider2DTriggerCheckBox,
-            m_collider2DShapeTypeLabel,
-            m_collider2DShapeTypeEdit,
-            m_collider2DOffsetLabel,
-            m_collider2DSizeLabel,
-            m_collider2DRotationLabel,
-            m_collider2DRotationEdit,
-            m_collider2DEditControls[0],
-            m_collider2DEditControls[1],
-            m_collider2DEditControls[2],
-            m_collider2DEditControls[3],
-            m_collider2DEditButton,
-            m_collider2DComponentActionButton,
-            m_addComponentButton
+            m_dockGuideWindows[8]
         };
+
+        const std::array<const IEditorPanelView*, 8> panelViews{
+            m_hierarchyPanelView.get(),
+            m_assetsPanelView.get(),
+            m_inspectorPanelView.get(),
+            m_spritePanelView.get(),
+            m_materialPanelView.get(),
+            m_collider2DPanelView.get(),
+            m_sceneViewPanelView.get(),
+            m_logOutputPanelView.get()
+        };
+        for (const IEditorPanelView* panelView : panelViews)
+        {
+            if (nullptr != panelView)
+            {
+                panelView->CollectControls(controls);
+            }
+        }
+
+        return controls;
     }
 
     int EditorShell::ScaleMetric(int value) const

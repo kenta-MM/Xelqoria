@@ -3,6 +3,7 @@
 #include <string>
 
 #include "PlatformAdapters/ButtonClickWin32Adapter.h"
+#include "Panels/HierarchyPanelView.h"
 #include "Utils/EditorStringUtils.h"
 #include <Windows.h>
 #include <array>
@@ -12,7 +13,6 @@
 #include <iterator>
 #include <optional>
 #include <utility>
-#include "Shell/EditorShell.h"
 #include <Entity.h>
 #include <Scene.h>
 
@@ -43,15 +43,15 @@ namespace Xelqoria::Editor
         }
     }
 
-    void HierarchyPanelController::Bind(const EditorShell& shell)
+    void HierarchyPanelController::Bind(const HierarchyPanelView& view)
     {
-        m_hierarchyListBox = shell.GetHierarchyListBox();
-        m_hierarchySummaryLabel = shell.GetHierarchySummaryLabel();
-        m_hierarchySearchEdit = shell.GetHierarchySearchEdit();
-        m_hierarchyNameEdit = shell.GetHierarchyNameEdit();
-        m_hierarchyCreateButton = shell.GetHierarchyCreateButton();
-        m_hierarchyDuplicateButton = shell.GetHierarchyDuplicateButton();
-        m_hierarchyDeleteButton = shell.GetHierarchyDeleteButton();
+        m_hierarchyListBox = view.GetListBox();
+        m_hierarchySummaryLabel = view.GetSummaryLabel();
+        m_hierarchySearchEdit = view.GetSearchEdit();
+        m_hierarchyNameEdit = view.GetNameEdit();
+        m_hierarchyCreateButton = view.GetCreateButton();
+        m_hierarchyDuplicateButton = view.GetDuplicateButton();
+        m_hierarchyDeleteButton = view.GetDeleteButton();
         LoadExpansionState();
     }
 

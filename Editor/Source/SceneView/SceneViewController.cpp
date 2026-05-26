@@ -6,8 +6,8 @@
 #include <cstdint>
 #include <iterator>
 #include <optional>
+#include "Panels/SceneViewPanelView.h"
 #include "SceneView/EditorCamera2D.h"
-#include "Shell/EditorShell.h"
 #include "SceneView/SceneViewInteractionTypes.h"
 #include <Assets/IMaterialAssetResolver.h>
 #include <Assets/SpriteAssetRegistry.h>
@@ -17,12 +17,12 @@
 
 namespace Xelqoria::Editor
 {
-    void SceneViewController::Bind(const EditorShell& shell)
+    void SceneViewController::Bind(const SceneViewPanelView& view)
     {
-        const SceneViewSurface sceneViewSurface = shell.GetSceneViewSurface();
+        const SceneViewSurface sceneViewSurface = view.GetSceneViewSurface();
         m_sceneViewHost = static_cast<HWND>(sceneViewSurface.nativeWindow);
-        m_sceneViewPlanLabel = shell.GetSceneViewPlanLabel();
-        m_sceneViewSizeLabel = shell.GetSceneViewSizeLabel();
+        m_sceneViewPlanLabel = view.GetSceneViewPlanLabel();
+        m_sceneViewSizeLabel = view.GetSceneViewSizeLabel();
         m_inputTracker.Bind(m_sceneViewHost);
     }
 

@@ -3,17 +3,17 @@
 #include <filesystem>
 #include <utility>
 
-#include "Shell/EditorShell.h"
+#include "Panels/SpritePanelView.h"
 #include "Utils/EditorStringUtils.h"
 
 namespace Xelqoria::Editor
 {
-    void SpritePanelController::Bind(const EditorShell& shell)
+    void SpritePanelController::Bind(const SpritePanelView& view)
     {
-        m_spriteSummaryLabel = shell.GetSpriteSummaryLabel();
-        m_spriteDetailsSectionLabel = shell.GetSpriteDetailsSectionLabel();
-        m_spriteDetailLabels = shell.GetSpriteDetailLabels();
-        m_spriteDetailEditControls = shell.GetSpriteDetailEditControls();
+        m_spriteSummaryLabel = view.GetSummaryLabel();
+        m_spriteDetailsSectionLabel = view.GetDetailsSectionLabel();
+        m_spriteDetailLabels = view.GetDetailLabels();
+        m_spriteDetailEditControls = view.GetDetailEditControls();
     }
 
     void SpritePanelController::OpenSprite(

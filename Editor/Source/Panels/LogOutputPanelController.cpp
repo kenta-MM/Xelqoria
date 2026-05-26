@@ -9,6 +9,7 @@
 
 #include "PlatformAdapters/ButtonClickWin32Adapter.h"
 #include "EditorTheme.h"
+#include "Panels/LogOutputPanelView.h"
 
 namespace Xelqoria::Editor
 {
@@ -117,13 +118,13 @@ namespace Xelqoria::Editor
         }
     }
 
-    void LogOutputPanelController::Bind(const EditorShell& shell, Platform::IClipboard& clipboard)
+    void LogOutputPanelController::Bind(const LogOutputPanelView& view, Platform::IClipboard& clipboard)
     {
-        m_tabControl = shell.GetLogOutputTabControl();
-        m_clearButton = shell.GetLogClearButton();
-        m_copyButton = shell.GetLogCopyButton();
-        m_filterEdit = shell.GetLogFilterEdit();
-        m_listBox = shell.GetLogListBox();
+        m_tabControl = view.GetTabControl();
+        m_clearButton = view.GetClearButton();
+        m_copyButton = view.GetCopyButton();
+        m_filterEdit = view.GetFilterEdit();
+        m_listBox = view.GetListBox();
         m_clipboard = &clipboard;
         EnsureDummyLogs();
         RefreshVisibleRows();
