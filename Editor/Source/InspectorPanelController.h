@@ -13,6 +13,7 @@
 #include "Assets/SpriteAsset.h"
 #include "Assets/SpriteMaterialAsset.h"
 #include "EditorStringUtils.h"
+#include "HierarchyPanelController.h"
 #include "EditorShell.h"
 #include "ICursor.h"
 #include "InputSystem.h"
@@ -199,6 +200,7 @@ namespace Xelqoria::Editor
             bool canAddSpriteComponent,
             const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
             const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
+            HierarchyPanelController::VisibleItemKind selectedItemKind,
             const std::filesystem::path& selectedAssetPath = {});
 
         /// <summary>
@@ -215,7 +217,8 @@ namespace Xelqoria::Editor
             bool canAddSpriteComponent,
             const Core::InputSnapshot& inputSnapshot,
             const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
-            const Game::Assets::IMaterialAssetResolver& materialAssetResolver);
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
+            HierarchyPanelController::VisibleItemKind selectedItemKind);
 
         /// <summary>
         /// Assets から Material 欄へドロップされた Material を SpriteComponent へ反映する。
@@ -508,6 +511,12 @@ namespace Xelqoria::Editor
         void SetMaterialDetailsVisible(bool visible) const;
 
         void SetMaterialDetailsEnabled(bool enabled) const;
+
+        void ApplyCardVisibility(bool hasSpriteComponent, bool hasMaterialDetails, bool hasCollider2DComponent) const;
+
+        void UpdateSectionLabels(HierarchyPanelController::VisibleItemKind selectedItemKind);
+
+        bool ToggleSectionCollapseFromInput(const Core::InputSnapshot& inputSnapshot);
 
         HWND m_inspectorSummaryLabel = nullptr;
         HWND m_transformSectionLabel = nullptr;

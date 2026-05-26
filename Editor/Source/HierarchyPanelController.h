@@ -28,6 +28,8 @@ namespace Xelqoria::Editor
         enum class VisibleItemKind
         {
             Entity,
+            SpriteComponent,
+            Material,
             Collider2DComponent
         };
 
@@ -57,6 +59,19 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// Component 子行を表示するかを判定する。
+        /// </summary>
+        /// <param name="hasComponent">Entity が対象 Component を保持しているか。</param>
+        /// <param name="isExpanded">Entity 行が展開中か。</param>
+        /// <returns>子行を表示する場合は true。</returns>
+        [[nodiscard]] static bool ShouldShowComponentChildRow(
+            bool hasComponent,
+            bool isExpanded)
+        {
+            return hasComponent && isExpanded;
+        }
+
+        /// <summary>
         /// Collider2DComponent 子行を表示するかを判定する。
         /// </summary>
         /// <param name="hasCollider2DComponent">Entity が Collider2DComponent を保持しているか。</param>
@@ -66,7 +81,7 @@ namespace Xelqoria::Editor
             bool hasCollider2DComponent,
             bool isExpanded)
         {
-            return hasCollider2DComponent && isExpanded;
+            return ShouldShowComponentChildRow(hasCollider2DComponent, isExpanded);
         }
 
         /// <summary>
@@ -106,6 +121,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>現在選択中の EntityId。</returns>
         [[nodiscard]] std::optional<Game::EntityId> GetSelectedEntityId() const;
+
+        /// <summary>
+        /// 現在選択中の Hierarchy 行種別を取得する。
+        /// </summary>
+        /// <returns>現在選択中の行種別。</returns>
+        [[nodiscard]] VisibleItemKind GetSelectedItemKind() const;
 
     private:
         HWND m_hierarchyListBox = nullptr;

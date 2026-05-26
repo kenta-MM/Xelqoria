@@ -144,6 +144,19 @@ namespace Xelqoria::Editor
             statePath /= L"XelqoriaEditorInspectorState.txt";
             return statePath;
         }
+
+        [[nodiscard]] bool HitTestWindow(HWND window, Platform::Point cursorPoint)
+        {
+            if (nullptr == window || FALSE == IsWindowVisible(window))
+            {
+                return false;
+            }
+
+            RECT rect{};
+            GetWindowRect(window, &rect);
+            const POINT point{ static_cast<LONG>(cursorPoint.x), static_cast<LONG>(cursorPoint.y) };
+            return PtInRect(&rect, point) != FALSE;
+        }
     }
 
     void InspectorPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
@@ -202,9 +215,11 @@ namespace Xelqoria::Editor
         bool canAddSpriteComponent,
         const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
         const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
+        HierarchyPanelController::VisibleItemKind selectedItemKind,
         const std::filesystem::path& selectedAssetPath)
     {
         (void)materialAssetResolver;
+        UpdateSectionLabels(selectedItemKind);
 
         if (false == selectedEntityId.has_value() || nullptr == scene)
         {
@@ -259,6 +274,7 @@ namespace Xelqoria::Editor
             m_lastSpriteRefDisplayText.clear();
             m_lastScriptAssetId = {};
             m_lastScriptDisplayText.clear();
+            ApplyCardVisibility(false, false, false);
             return;
         }
 
@@ -306,6 +322,7 @@ namespace Xelqoria::Editor
             m_lastSpriteRefDisplayText.clear();
             m_lastScriptAssetId = {};
             m_lastScriptDisplayText.clear();
+            ApplyCardVisibility(false, false, false);
             return;
         }
 
@@ -461,6 +478,8 @@ namespace Xelqoria::Editor
             SetEditFloat(m_collider2DEditControls[3], collider.size.y);
             SetWindowTextW(m_collider2DRotationEdit, L"0.000");
         }
+        ApplyCardVisibility(hasSpriteComponent, hasSpriteComponent, collider2DComponent.has_value());
+        UpdateSectionLabels(selectedItemKind);
 
         std::wstring summaryText = L"Inspector: ";
         summaryText += ToWideString(entity->get().GetName());
@@ -474,9 +493,14 @@ namespace Xelqoria::Editor
         bool canAddSpriteComponent,
         const Core::InputSnapshot& inputSnapshot,
         const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
-        const Game::Assets::IMaterialAssetResolver& materialAssetResolver)
+        const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
+        HierarchyPanelController::VisibleItemKind selectedItemKind)
     {
         InspectorApplyResult result{};
+        if (ToggleSectionCollapseFromInput(inputSnapshot))
+        {
+            Refresh(scene, selectedEntityId, canAddSpriteComponent, spriteAssetResolver, materialAssetResolver, selectedItemKind);
+        }
         if (false == selectedEntityId.has_value() || nullptr == scene)
         {
             return result;
@@ -484,7 +508,7 @@ namespace Xelqoria::Editor
 
         if (m_lastInspectorEntityId != selectedEntityId)
         {
-            Refresh(scene, selectedEntityId, canAddSpriteComponent, spriteAssetResolver, materialAssetResolver);
+            Refresh(scene, selectedEntityId, canAddSpriteComponent, spriteAssetResolver, materialAssetResolver, selectedItemKind);
         }
 
         const auto entity = scene->FindEntity(*selectedEntityId);
@@ -720,7 +744,7 @@ namespace Xelqoria::Editor
 
         if (result.changed)
         {
-            Refresh(scene, selectedEntityId, canAddSpriteComponent, spriteAssetResolver, materialAssetResolver);
+            Refresh(scene, selectedEntityId, canAddSpriteComponent, spriteAssetResolver, materialAssetResolver, selectedItemKind);
         }
 
         FinishButtonClickTracking(inputSnapshot);
@@ -765,7 +789,13 @@ namespace Xelqoria::Editor
         spriteComponent->get().materialAssetRef = droppedMaterialAssetId;
         result.changed = true;
         result.operationName = "Change Sprite Material";
-        Refresh(scene, selectedEntityId, true, spriteAssetResolver, materialAssetResolver);
+        Refresh(
+            scene,
+            selectedEntityId,
+            true,
+            spriteAssetResolver,
+            materialAssetResolver,
+            HierarchyPanelController::VisibleItemKind::SpriteComponent);
         return result;
     }
 
@@ -991,6 +1021,110 @@ namespace Xelqoria::Editor
         EnableWindow(m_materialTextureBrowseButton, FALSE);
         EnableWindow(m_materialTintColorButton, FALSE);
         EnableWindow(m_materialOutlineColorButton, FALSE);
+    }
+
+    void InspectorPanelController::ApplyCardVisibility(
+        bool hasSpriteComponent,
+        bool hasMaterialDetails,
+        bool hasCollider2DComponent) const
+    {
+        for (HWND transformEdit : m_transformEditControls)
+        {
+            ShowWindow(transformEdit, m_isTransformCollapsed ? SW_HIDE : SW_SHOW);
+        }
+
+        const bool showSprite = hasSpriteComponent && false == m_isSpriteComponentCollapsed;
+        ShowWindow(m_spriteRefLabel, showSprite ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_spriteRefEdit, showSprite ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_materialOpenButton, showSprite ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_scriptAssetLabel, showSprite ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_scriptAssetEdit, showSprite ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_scriptCreateButton, showSprite ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_scriptAssignButton, showSprite ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_scriptClearButton, showSprite ? SW_SHOW : SW_HIDE);
+        ShowWindow(m_spriteComponentActionButton, m_isSpriteComponentCollapsed ? SW_HIDE : SW_SHOW);
+
+        const bool showMaterialBody = hasMaterialDetails && false == m_isMaterialCollapsed;
+        SetMaterialDetailsVisible(showMaterialBody);
+        ShowWindow(m_materialDetailsSectionLabel, hasMaterialDetails ? SW_SHOW : SW_HIDE);
+
+        SetCollider2DControlsVisible(
+            m_collider2DEnabledCheckBox,
+            m_collider2DTriggerCheckBox,
+            m_collider2DShapeTypeLabel,
+            m_collider2DShapeTypeEdit,
+            m_collider2DOffsetLabel,
+            m_collider2DSizeLabel,
+            m_collider2DEditControls,
+            m_collider2DRotationLabel,
+            m_collider2DRotationEdit,
+            m_collider2DEditButton,
+            hasCollider2DComponent && false == m_isCollider2DCollapsed);
+        ShowWindow(m_collider2DComponentActionButton, m_isCollider2DCollapsed ? SW_HIDE : SW_SHOW);
+    }
+
+    void InspectorPanelController::UpdateSectionLabels(HierarchyPanelController::VisibleItemKind selectedItemKind)
+    {
+        const auto makeLabel =
+            [](bool collapsed, bool selected, const wchar_t* name)
+            {
+                std::wstring label = selected ? L"> " : L"";
+                label += collapsed ? L"+ " : L"- ";
+                label += name;
+                return label;
+            };
+
+        SetWindowTextW(
+            m_transformSectionLabel,
+            makeLabel(m_isTransformCollapsed, HierarchyPanelController::VisibleItemKind::Entity == selectedItemKind, L"Transform").c_str());
+        SetWindowTextW(
+            m_spriteComponentSectionLabel,
+            makeLabel(m_isSpriteComponentCollapsed, HierarchyPanelController::VisibleItemKind::SpriteComponent == selectedItemKind, L"SpriteComponent").c_str());
+        SetWindowTextW(
+            m_materialDetailsSectionLabel,
+            makeLabel(m_isMaterialCollapsed, HierarchyPanelController::VisibleItemKind::Material == selectedItemKind, L"Material").c_str());
+        SetWindowTextW(
+            m_collider2DComponentSectionLabel,
+            makeLabel(m_isCollider2DCollapsed, HierarchyPanelController::VisibleItemKind::Collider2DComponent == selectedItemKind, L"Collider2D").c_str());
+    }
+
+    bool InspectorPanelController::ToggleSectionCollapseFromInput(const Core::InputSnapshot& inputSnapshot)
+    {
+        const bool isLeftMouseButtonDown = inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left);
+        if (false == isLeftMouseButtonDown || true == m_wasLeftMouseButtonDown)
+        {
+            return false;
+        }
+
+        if (HitTestWindow(m_transformSectionLabel, inputSnapshot.GetCursorScreenPoint()))
+        {
+            m_isTransformCollapsed = false == m_isTransformCollapsed;
+            SaveCollapseState();
+            return true;
+        }
+
+        if (HitTestWindow(m_spriteComponentSectionLabel, inputSnapshot.GetCursorScreenPoint()))
+        {
+            m_isSpriteComponentCollapsed = false == m_isSpriteComponentCollapsed;
+            SaveCollapseState();
+            return true;
+        }
+
+        if (HitTestWindow(m_materialDetailsSectionLabel, inputSnapshot.GetCursorScreenPoint()))
+        {
+            m_isMaterialCollapsed = false == m_isMaterialCollapsed;
+            SaveCollapseState();
+            return true;
+        }
+
+        if (HitTestWindow(m_collider2DComponentSectionLabel, inputSnapshot.GetCursorScreenPoint()))
+        {
+            m_isCollider2DCollapsed = false == m_isCollider2DCollapsed;
+            SaveCollapseState();
+            return true;
+        }
+
+        return false;
     }
 
     bool InspectorPanelController::ConsumeButtonClick(
