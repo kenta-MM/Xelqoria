@@ -6,7 +6,8 @@
 #include "EditorStringUtils.h"
 #include <Windows.h>
 #include <cstdio>
-#include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <optional>
 #include "EditorShell.h"
@@ -15,6 +16,16 @@
 
 namespace Xelqoria::Editor
 {
+    namespace
+    {
+        [[nodiscard]] std::filesystem::path GetHierarchyStatePath()
+        {
+            std::filesystem::path statePath = std::filesystem::temp_directory_path();
+            statePath /= L"XelqoriaEditorHierarchyState.txt";
+            return statePath;
+        }
+    }
+
     void HierarchyPanelController::Bind(const EditorShell& shell)
     {
         m_hierarchyListBox = shell.GetHierarchyListBox();
@@ -24,6 +35,7 @@ namespace Xelqoria::Editor
         m_hierarchyCreateButton = shell.GetHierarchyCreateButton();
         m_hierarchyDuplicateButton = shell.GetHierarchyDuplicateButton();
         m_hierarchyDeleteButton = shell.GetHierarchyDeleteButton();
+        LoadExpansionState();
     }
 
     void HierarchyPanelController::Refresh(const Game::Scene* scene)
@@ -300,6 +312,41 @@ namespace Xelqoria::Editor
             m_collapsedEntityIds.erase(collapsedIt);
         }
 
+        SaveExpansionState();
         return true;
+    }
+
+    void HierarchyPanelController::LoadExpansionState()
+    {
+        m_collapsedEntityIds.clear();
+        std::ifstream input(GetHierarchyStatePath());
+        if (false == input.is_open())
+        {
+            return;
+        }
+
+        std::string token{};
+        Game::EntityId entityId = 0;
+        while (input >> token >> entityId)
+        {
+            if ("collapsed" == token)
+            {
+                m_collapsedEntityIds.insert(entityId);
+            }
+        }
+    }
+
+    void HierarchyPanelController::SaveExpansionState() const
+    {
+        std::ofstream output(GetHierarchyStatePath(), std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return;
+        }
+
+        for (Game::EntityId entityId : m_collapsedEntityIds)
+        {
+            output << "collapsed " << entityId << '\n';
+        }
     }
 }
