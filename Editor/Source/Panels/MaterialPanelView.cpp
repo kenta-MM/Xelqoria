@@ -37,7 +37,38 @@ namespace Xelqoria::Editor
             [&shell]() { return GetMaterialControls(shell); },
             [&shell]() { return GetMaterialVisibleControls(shell); },
             [&shell]() { return std::vector<HWND>{ shell.m_materialSummaryLabel }; },
-            [&shell]() { return std::vector<HWND>{ shell.m_materialTextureDropHighlight }; })
+            [&shell]() { return std::vector<HWND>{ shell.m_materialTextureDropHighlight }; }),
+          m_shell(shell)
     {
+    }
+
+    HWND MaterialPanelView::GetSummaryLabel() const
+    {
+        return m_shell.m_materialSummaryLabel;
+    }
+
+    HWND MaterialPanelView::GetSharedNoticeLabel() const
+    {
+        return m_shell.m_materialSharedNoticeLabel;
+    }
+
+    HWND MaterialPanelView::GetDetailsSectionLabel() const
+    {
+        return m_shell.m_materialDetailsSectionLabel;
+    }
+
+    const std::array<HWND, 5>& MaterialPanelView::GetDetailLabels() const
+    {
+        return m_shell.m_materialDetailLabels;
+    }
+
+    const std::array<HWND, 5>& MaterialPanelView::GetDetailEditControls() const
+    {
+        return m_shell.m_materialDetailEditControls;
+    }
+
+    HWND MaterialPanelView::GetTextureDropHighlight() const
+    {
+        return m_shell.m_materialTextureDropHighlight;
     }
 }

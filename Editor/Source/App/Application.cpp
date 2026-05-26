@@ -366,13 +366,13 @@ namespace Xelqoria::Editor
         }
         (void)m_editorShell.LoadLayout(GetEditorLayoutFilePath());
 
-        m_assetsPanelController.Bind(m_editorShell, m_cursor);
-        m_hierarchyPanelController.Bind(m_editorShell);
-        m_inspectorPanelController.Bind(m_editorShell, m_cursor);
-        m_materialPanelController.Bind(m_editorShell, m_cursor);
-        m_logOutputPanelController.Bind(m_editorShell, m_clipboard);
-        m_projectPanelController.Bind(m_editorShell);
-        m_sceneViewController.Bind(m_editorShell);
+        m_assetsPanelController.Bind(m_editorShell.GetAssetsPanelView(), m_cursor);
+        m_hierarchyPanelController.Bind(m_editorShell.GetHierarchyPanelView());
+        m_inspectorPanelController.Bind(m_editorShell.GetInspectorPanelView(), m_cursor);
+        m_materialPanelController.Bind(m_editorShell.GetMaterialPanelView(), m_cursor);
+        m_logOutputPanelController.Bind(m_editorShell.GetLogOutputPanelView(), m_clipboard);
+        m_projectPanelController.Bind(m_editorShell.GetSceneViewPanelView());
+        m_sceneViewController.Bind(m_editorShell.GetSceneViewPanelView());
         m_buildAndPlayButton = m_editorShell.GetBuildAndPlayButton();
         m_pauseResumePlayButton = m_editorShell.GetPauseResumePlayButton();
         m_endPlayButton = m_editorShell.GetEndPlayButton();

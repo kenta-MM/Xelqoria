@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "Panels/EditorPanelViewBase.h"
 
 namespace Xelqoria::Editor
@@ -17,8 +19,17 @@ namespace Xelqoria::Editor
         /// </summary>
         explicit MaterialPanelView(EditorShell& shell);
 
+        [[nodiscard]] HWND GetSummaryLabel() const;
+        [[nodiscard]] HWND GetSharedNoticeLabel() const;
+        [[nodiscard]] HWND GetDetailsSectionLabel() const;
+        [[nodiscard]] const std::array<HWND, 5>& GetDetailLabels() const;
+        [[nodiscard]] const std::array<HWND, 5>& GetDetailEditControls() const;
+        [[nodiscard]] HWND GetTextureDropHighlight() const;
+
     private:
         [[nodiscard]] static std::vector<HWND> GetMaterialControls(EditorShell& shell);
         [[nodiscard]] static std::vector<HWND> GetMaterialVisibleControls(EditorShell& shell);
+
+        EditorShell& m_shell;
     };
 }

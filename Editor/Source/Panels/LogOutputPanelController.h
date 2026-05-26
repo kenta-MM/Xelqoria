@@ -6,12 +6,13 @@
 #include <vector>
 
 #include "ButtonClickInput.h"
-#include "Shell/EditorShell.h"
 #include "IClipboard.h"
 #include "InputSystem.h"
 
 namespace Xelqoria::Editor
 {
+    class LogOutputPanelView;
+
     /// <summary>
     /// LogOutput パネルに表示するログ種別を表す。
     /// </summary>
@@ -39,10 +40,10 @@ namespace Xelqoria::Editor
     {
     public:
         /// <summary>
-        /// EditorShell の HWND 群へ接続する。
+        /// LogOutput Panel View の HWND 群へ接続する。
         /// </summary>
-        /// <param name="shell">接続先の EditorShell。</param>
-        void Bind(const EditorShell& shell, Platform::IClipboard& clipboard);
+        /// <param name="view">接続先の Panel View。</param>
+        void Bind(const LogOutputPanelView& view, Platform::IClipboard& clipboard);
 
         /// <summary>
         /// 指定カテゴリへログ行を追加する。

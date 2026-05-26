@@ -14,7 +14,6 @@
 #include "Assets/SpriteMaterialAsset.h"
 #include "Utils/EditorStringUtils.h"
 #include "Panels/HierarchyPanelController.h"
-#include "Shell/EditorShell.h"
 #include "ICursor.h"
 #include "InputSystem.h"
 #include "Commands/SceneEditingOperations.h"
@@ -23,6 +22,7 @@
 namespace Xelqoria::Editor
 {
     class AssetsPanelController;
+    class InspectorPanelView;
 
     /// <summary>
     /// Inspector から要求された Script 操作種別を表す。
@@ -182,11 +182,11 @@ namespace Xelqoria::Editor
     {
     public:
         /// <summary>
-        /// EditorShell の HWND 群へ接続する。
+        /// Inspector Panel View の HWND 群へ接続する。
         /// </summary>
-        /// <param name="shell">接続先の EditorShell。</param>
+        /// <param name="view">接続先の Panel View。</param>
         /// <param name="cursor">カーソル位置を取得する Platform 実装。</param>
-        void Bind(const EditorShell& shell, Platform::ICursor& cursor);
+        void Bind(const InspectorPanelView& view, Platform::ICursor& cursor);
 
         /// <summary>
         /// 現在選択中 Entity を Inspector 表示へ反映する。

@@ -10,12 +10,13 @@
 
 #include "AssetId.h"
 #include "Project/EditorProject.h"
-#include "Shell/EditorShell.h"
 #include "InputSystem.h"
 #include "ICursor.h"
 
 namespace Xelqoria::Editor
 {
+    class AssetsPanelView;
+
     /// <summary>
     /// Assets 詳細リストに表示するファイルシステム項目を表す。
     /// </summary>
@@ -74,11 +75,11 @@ namespace Xelqoria::Editor
         ~AssetsPanelController();
 
         /// <summary>
-        /// EditorShell の HWND 群へ接続する。
+        /// Assets Panel View の HWND 群へ接続する。
         /// </summary>
-        /// <param name="shell">接続先の EditorShell。</param>
+        /// <param name="view">接続先の Panel View。</param>
         /// <param name="cursor">カーソル位置を取得する Platform 実装。</param>
-        void Bind(const EditorShell& shell, Platform::ICursor& cursor);
+        void Bind(const AssetsPanelView& view, Platform::ICursor& cursor);
 
         /// <summary>
         /// Assets パネルのファイル詳細リスト表示を更新する。

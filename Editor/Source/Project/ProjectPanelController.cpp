@@ -5,13 +5,15 @@
 #include <iterator>
 #include <string>
 
+#include "Panels/SceneViewPanelView.h"
+
 namespace Xelqoria::Editor
 {
-    void ProjectPanelController::Bind(const EditorShell& shell)
+    void ProjectPanelController::Bind(const SceneViewPanelView& view)
     {
-        m_projectSummaryLabel = shell.GetProjectSummaryLabel();
-        m_projectSceneListBox = shell.GetProjectSceneListBox();
-        m_projectSceneDetailLabel = shell.GetProjectSceneDetailLabel();
+        m_projectSummaryLabel = view.GetProjectSummaryLabel();
+        m_projectSceneListBox = view.GetProjectSceneListBox();
+        m_projectSceneDetailLabel = view.GetProjectSceneDetailLabel();
     }
 
     void ProjectPanelController::Refresh(const EditorSceneDocument& document, bool sceneDirty)

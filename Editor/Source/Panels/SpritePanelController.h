@@ -9,7 +9,7 @@
 
 namespace Xelqoria::Editor
 {
-    class EditorShell;
+    class SpritePanelView;
 
     /// <summary>
     /// Sprite 専用パネルの表示同期を管理する。
@@ -18,10 +18,10 @@ namespace Xelqoria::Editor
     {
     public:
         /// <summary>
-        /// EditorShell の Sprite パネル HWND 群へ接続する。
+        /// Sprite Panel View の HWND 群へ接続する。
         /// </summary>
-        /// <param name="shell">接続先の EditorShell。</param>
-        void Bind(const EditorShell& shell);
+        /// <param name="view">接続先の Panel View。</param>
+        void Bind(const SpritePanelView& view);
 
         /// <summary>
         /// 指定 SpriteAssetId を Sprite パネルで開く。

@@ -16,5 +16,12 @@ namespace Xelqoria::Editor
         /// EditorShell が生成した Assets control 群へ接続する。
         /// </summary>
         explicit AssetsPanelView(EditorShell& shell);
+
+        [[nodiscard]] HWND GetListView() const;
+        [[nodiscard]] HWND GetSummaryLabel() const;
+        void ConfigureListHeaderTheme() const;
+
+    private:
+        EditorShell& m_shell;
     };
 }

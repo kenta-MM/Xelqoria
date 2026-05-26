@@ -5,10 +5,11 @@
 #include <vector>
 
 #include "Project/EditorSceneDocument.h"
-#include "Shell/EditorShell.h"
 
 namespace Xelqoria::Editor
 {
+    class SceneViewPanelView;
+
     /// <summary>
     /// 現在のプロジェクト内容と Scene 一覧の表示を管理する。
     /// </summary>
@@ -16,10 +17,10 @@ namespace Xelqoria::Editor
     {
     public:
         /// <summary>
-        /// EditorShell の HWND 群へ接続する。
+        /// SceneView Panel View 内の Project HWND 群へ接続する。
         /// </summary>
-        /// <param name="shell">接続先の EditorShell。</param>
-        void Bind(const EditorShell& shell);
+        /// <param name="view">接続先の Panel View。</param>
+        void Bind(const SceneViewPanelView& view);
 
         /// <summary>
         /// プロジェクト情報と Scene 一覧を再表示する。

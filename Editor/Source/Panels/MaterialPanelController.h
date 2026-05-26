@@ -14,7 +14,7 @@
 namespace Xelqoria::Editor
 {
     class AssetsPanelController;
-    class EditorShell;
+    class MaterialPanelView;
 
     /// <summary>
     /// Material パネルで行われた編集適用結果を表す。
@@ -49,11 +49,11 @@ namespace Xelqoria::Editor
     {
     public:
         /// <summary>
-        /// EditorShell の Material パネル HWND 群へ接続する。
+        /// Material Panel View の HWND 群へ接続する。
         /// </summary>
-        /// <param name="shell">接続先の EditorShell。</param>
+        /// <param name="view">接続先の Panel View。</param>
         /// <param name="cursor">カーソル位置を取得する Platform 実装。</param>
-        void Bind(const EditorShell& shell, Platform::ICursor& cursor);
+        void Bind(const MaterialPanelView& view, Platform::ICursor& cursor);
 
         /// <summary>
         /// 指定 MaterialAssetId を Material パネルで開く。

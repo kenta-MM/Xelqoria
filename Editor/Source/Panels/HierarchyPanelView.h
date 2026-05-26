@@ -16,5 +16,16 @@ namespace Xelqoria::Editor
         /// EditorShell が生成した Hierarchy control 群へ接続する。
         /// </summary>
         explicit HierarchyPanelView(EditorShell& shell);
+
+        [[nodiscard]] HWND GetListBox() const;
+        [[nodiscard]] HWND GetSummaryLabel() const;
+        [[nodiscard]] HWND GetSearchEdit() const;
+        [[nodiscard]] HWND GetNameEdit() const;
+        [[nodiscard]] HWND GetCreateButton() const;
+        [[nodiscard]] HWND GetDuplicateButton() const;
+        [[nodiscard]] HWND GetDeleteButton() const;
+
+    private:
+        EditorShell& m_shell;
     };
 }
