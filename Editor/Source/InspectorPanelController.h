@@ -13,7 +13,6 @@
 #include "Assets/SpriteAsset.h"
 #include "Assets/SpriteMaterialAsset.h"
 #include "EditorStringUtils.h"
-#include "HierarchyPanelController.h"
 #include "EditorShell.h"
 #include "ICursor.h"
 #include "InputSystem.h"
@@ -200,7 +199,6 @@ namespace Xelqoria::Editor
             bool canAddSpriteComponent,
             const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
             const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
-            HierarchyPanelController::VisibleItemKind selectedItemKind,
             const std::filesystem::path& selectedAssetPath = {});
 
         /// <summary>
@@ -217,8 +215,7 @@ namespace Xelqoria::Editor
             bool canAddSpriteComponent,
             const Core::InputSnapshot& inputSnapshot,
             const Game::Assets::ISpriteAssetResolver& spriteAssetResolver,
-            const Game::Assets::IMaterialAssetResolver& materialAssetResolver,
-            HierarchyPanelController::VisibleItemKind selectedItemKind);
+            const Game::Assets::IMaterialAssetResolver& materialAssetResolver);
 
         /// <summary>
         /// Assets から Material 欄へドロップされた Material を SpriteComponent へ反映する。
@@ -275,16 +272,6 @@ namespace Xelqoria::Editor
         /// 直前反映 Entity の追跡状態を破棄する。
         /// </summary>
         void ResetTrackedEntity();
-
-        /// <summary>
-        /// Inspector 折りたたみ状態をローカル UI 状態ファイルから復元する。
-        /// </summary>
-        void LoadCollapseState();
-
-        /// <summary>
-        /// Inspector 折りたたみ状態をローカル UI 状態ファイルへ保存する。
-        /// </summary>
-        void SaveCollapseState() const;
 
         /// <summary>
         /// TextureAssetId から Texture 欄に表示するファイル名を取得する。
@@ -512,12 +499,6 @@ namespace Xelqoria::Editor
 
         void SetMaterialDetailsEnabled(bool enabled) const;
 
-        void ApplyCardVisibility(bool hasSpriteComponent, bool hasMaterialDetails, bool hasCollider2DComponent) const;
-
-        void UpdateSectionLabels(HierarchyPanelController::VisibleItemKind selectedItemKind);
-
-        bool ToggleSectionCollapseFromInput(const Core::InputSnapshot& inputSnapshot);
-
         HWND m_inspectorSummaryLabel = nullptr;
         HWND m_transformSectionLabel = nullptr;
         std::array<HWND, 9> m_transformEditControls{};
@@ -565,9 +546,5 @@ namespace Xelqoria::Editor
         HWND m_pressedButtonHandle = nullptr;
         bool m_isDropHighlightVisible = false;
         HWND m_dropHighlightTargetEdit = nullptr;
-        bool m_isTransformCollapsed = false;
-        bool m_isSpriteComponentCollapsed = false;
-        bool m_isMaterialCollapsed = false;
-        bool m_isCollider2DCollapsed = false;
     };
 }

@@ -6,43 +6,15 @@
 #include "EditorStringUtils.h"
 #include <Windows.h>
 #include <cstdio>
-#include <array>
-#include <filesystem>
-#include <fstream>
+#include <cstdio>
 #include <iterator>
 #include <optional>
-#include <utility>
 #include "EditorShell.h"
 #include <Entity.h>
 #include <Scene.h>
 
 namespace Xelqoria::Editor
 {
-    namespace
-    {
-        [[nodiscard]] std::filesystem::path GetHierarchyStatePath()
-        {
-            std::filesystem::path statePath = std::filesystem::temp_directory_path();
-            statePath /= L"XelqoriaEditorHierarchyState.txt";
-            return statePath;
-        }
-
-        [[nodiscard]] const wchar_t* GetComponentRowLabel(HierarchyPanelController::VisibleItemKind kind)
-        {
-            switch (kind)
-            {
-            case HierarchyPanelController::VisibleItemKind::SpriteComponent:
-                return L"  |-- SpriteComponent";
-            case HierarchyPanelController::VisibleItemKind::Material:
-                return L"  |-- Material";
-            case HierarchyPanelController::VisibleItemKind::Collider2DComponent:
-                return L"  |-- Collider2D";
-            default:
-                return L"";
-            }
-        }
-    }
-
     void HierarchyPanelController::Bind(const EditorShell& shell)
     {
         m_hierarchyListBox = shell.GetHierarchyListBox();
@@ -52,7 +24,6 @@ namespace Xelqoria::Editor
         m_hierarchyCreateButton = shell.GetHierarchyCreateButton();
         m_hierarchyDuplicateButton = shell.GetHierarchyDuplicateButton();
         m_hierarchyDeleteButton = shell.GetHierarchyDeleteButton();
-        LoadExpansionState();
     }
 
     void HierarchyPanelController::Refresh(const Game::Scene* scene)
@@ -77,36 +48,19 @@ namespace Xelqoria::Editor
                     continue;
                 }
 
-                const bool hasSpriteComponent = entity.HasSpriteComponent();
-                const bool hasMaterialComponent = hasSpriteComponent;
                 const bool hasCollider2DComponent = entity.HasCollider2DComponent();
-                const bool hasChildComponent = hasSpriteComponent || hasMaterialComponent || hasCollider2DComponent;
                 const bool isExpanded = m_collapsedEntityIds.find(entity.GetId()) == m_collapsedEntityIds.end();
                 m_visibleEntityIds.push_back(entity.GetId());
                 m_visibleItemKinds.push_back(VisibleItemKind::Entity);
 
-                label = FormatEntityRowLabel(label, hasChildComponent, isExpanded);
+                label = FormatEntityRowLabel(label, hasCollider2DComponent, isExpanded);
                 SendMessageW(m_hierarchyListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label.c_str()));
 
-                const std::array<std::pair<bool, VisibleItemKind>, 3> componentRows{
-                    std::pair<bool, VisibleItemKind>{ hasSpriteComponent, VisibleItemKind::SpriteComponent },
-                    std::pair<bool, VisibleItemKind>{ hasMaterialComponent, VisibleItemKind::Material },
-                    std::pair<bool, VisibleItemKind>{ hasCollider2DComponent, VisibleItemKind::Collider2DComponent }
-                };
-                for (const auto& componentRow : componentRows)
+                if (ShouldShowCollider2DChildRow(hasCollider2DComponent, isExpanded))
                 {
-                    if (false == ShouldShowComponentChildRow(componentRow.first, isExpanded))
-                    {
-                        continue;
-                    }
-
                     m_visibleEntityIds.push_back(entity.GetId());
-                    m_visibleItemKinds.push_back(componentRow.second);
-                    SendMessageW(
-                        m_hierarchyListBox,
-                        LB_ADDSTRING,
-                        0,
-                        reinterpret_cast<LPARAM>(GetComponentRowLabel(componentRow.second)));
+                    m_visibleItemKinds.push_back(VisibleItemKind::Collider2DComponent);
+                    SendMessageW(m_hierarchyListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"  Collider2DComponent"));
                 }
             }
         }
@@ -320,11 +274,6 @@ namespace Xelqoria::Editor
         return m_selectedEntityId;
     }
 
-    HierarchyPanelController::VisibleItemKind HierarchyPanelController::GetSelectedItemKind() const
-    {
-        return m_selectedItemKind;
-    }
-
     bool HierarchyPanelController::ToggleSelectedEntityExpansion(const Game::Scene& scene)
     {
         if (false == m_selectedEntityId.has_value()
@@ -335,8 +284,7 @@ namespace Xelqoria::Editor
 
         const auto selectedEntity = scene.FindEntity(*m_selectedEntityId);
         if (false == selectedEntity.has_value()
-            || (false == selectedEntity->get().HasSpriteComponent()
-                && false == selectedEntity->get().HasCollider2DComponent()))
+            || false == selectedEntity->get().HasCollider2DComponent())
         {
             return false;
         }
@@ -352,41 +300,6 @@ namespace Xelqoria::Editor
             m_collapsedEntityIds.erase(collapsedIt);
         }
 
-        SaveExpansionState();
         return true;
-    }
-
-    void HierarchyPanelController::LoadExpansionState()
-    {
-        m_collapsedEntityIds.clear();
-        std::ifstream input(GetHierarchyStatePath());
-        if (false == input.is_open())
-        {
-            return;
-        }
-
-        std::string token{};
-        Game::EntityId entityId = 0;
-        while (input >> token >> entityId)
-        {
-            if ("collapsed" == token)
-            {
-                m_collapsedEntityIds.insert(entityId);
-            }
-        }
-    }
-
-    void HierarchyPanelController::SaveExpansionState() const
-    {
-        std::ofstream output(GetHierarchyStatePath(), std::ios::trunc);
-        if (false == output.is_open())
-        {
-            return;
-        }
-
-        for (Game::EntityId entityId : m_collapsedEntityIds)
-        {
-            output << "collapsed " << entityId << '\n';
-        }
     }
 }

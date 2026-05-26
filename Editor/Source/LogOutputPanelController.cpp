@@ -88,27 +88,10 @@ namespace Xelqoria::Editor
             return text;
         }
 
-        [[nodiscard]] std::wstring FormatLogLine(LogOutputCategory category, LogOutputSeverity severity, const std::wstring& message)
+        [[nodiscard]] std::wstring FormatLogLine(LogOutputCategory category, const std::wstring& message)
         {
             std::wstring line = L"[";
             line += BuildTimestampText();
-            line += L"] [";
-            if (LogOutputSeverity::Warning == severity)
-            {
-                line += L"Warn";
-            }
-            else if (LogOutputSeverity::Error == severity)
-            {
-                line += L"Error";
-            }
-            else if (LogOutputCategory::Editor == category)
-            {
-                line += L"Editor";
-            }
-            else
-            {
-                line += L"Info";
-            }
             line += L"] [";
             line += ToCategoryText(category);
             line += L"] ";
@@ -132,7 +115,7 @@ namespace Xelqoria::Editor
     void LogOutputPanelController::Append(LogOutputCategory category, std::wstring message, bool isError)
     {
         const LogOutputSeverity severity = InferSeverity(message, isError);
-        m_logs.push_back(LogOutputEntry{ FormatLogLine(category, severity, message), category, severity });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(category, message), severity });
         RefreshVisibleRows();
     }
 
@@ -167,7 +150,7 @@ namespace Xelqoria::Editor
         };
         if (TryConsumeButtonClick(BuildButtonClickTarget(m_clearButton), frameInput, m_buttonInputState))
         {
-            m_visibleLogStartIndex = m_logs.size();
+            m_logs.clear();
             RefreshVisibleRows();
             m_buttonInputState.pressedButtonId = 0;
         }
@@ -199,11 +182,10 @@ namespace Xelqoria::Editor
         }
 
         const bool isSelected = 0 != (drawItem->itemState & ODS_SELECTED);
-        const auto severity = static_cast<LogOutputSeverity>(drawItem->itemData % 10);
-        const auto category = static_cast<LogOutputCategory>(drawItem->itemData / 10);
+        const auto severity = static_cast<LogOutputSeverity>(drawItem->itemData);
         const EditorColor backgroundColor =
             isSelected ? EditorThemes::XelqoriaDark.selection : EditorThemes::XelqoriaDark.panelBackground;
-        EditorColor textColor = EditorColor::FromRgb8(0x78, 0xB7, 0xFF);
+        EditorColor textColor = EditorThemes::XelqoriaDark.textPrimary;
         if (LogOutputSeverity::Warning == severity)
         {
             textColor = EditorThemes::XelqoriaDark.warning;
@@ -211,10 +193,6 @@ namespace Xelqoria::Editor
         else if (LogOutputSeverity::Error == severity)
         {
             textColor = EditorThemes::XelqoriaDark.error;
-        }
-        else if (LogOutputCategory::Editor == category)
-        {
-            textColor = EditorThemes::XelqoriaDark.accent;
         }
 
         FillRectWithThemeColor(drawItem->hDC, drawItem->rcItem, backgroundColor);
@@ -272,11 +250,11 @@ namespace Xelqoria::Editor
             return;
         }
 
-        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Editor, LogOutputSeverity::Normal, L"Xelqoria Editor started"), LogOutputCategory::Editor, LogOutputSeverity::Normal });
-        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Editor, LogOutputSeverity::Normal, L"Project loaded"), LogOutputCategory::Editor, LogOutputSeverity::Normal });
-        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Editor, LogOutputSeverity::Normal, L"Assets scan completed"), LogOutputCategory::Editor, LogOutputSeverity::Normal });
-        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Game, LogOutputSeverity::Warning, L"Scene initialized"), LogOutputCategory::Game, LogOutputSeverity::Warning });
-        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Build, LogOutputSeverity::Error, L"Renderer ready"), LogOutputCategory::Build, LogOutputSeverity::Error });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Editor, L"Xelqoria Editor started"), LogOutputSeverity::Normal });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Editor, L"Project loaded"), LogOutputSeverity::Normal });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Editor, L"Assets scan completed"), LogOutputSeverity::Normal });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Game, L"Scene initialized"), LogOutputSeverity::Warning });
+        m_logs.push_back(LogOutputEntry{ FormatLogLine(LogOutputCategory::Build, L"Renderer ready"), LogOutputSeverity::Error });
     }
 
     void LogOutputPanelController::RefreshVisibleRows()
@@ -289,18 +267,10 @@ namespace Xelqoria::Editor
         SendMessageW(m_listBox, LB_RESETCONTENT, 0, 0);
         const std::wstring filterText = GetFilterText();
         const std::optional<LogOutputSeverity> severityFilter = GetActiveSeverityFilter();
-        const int activeTab = nullptr != m_tabControl ? TabCtrl_GetCurSel(m_tabControl) : 0;
-        for (std::size_t index = m_visibleLogStartIndex; index < m_logs.size(); ++index)
+        for (const LogOutputEntry& log : m_logs)
         {
-            const LogOutputEntry& log = m_logs[index];
             const bool severityMatched = false == severityFilter.has_value() || log.severity == *severityFilter;
-            const bool categoryMatched =
-                0 == activeTab
-                || (1 == activeTab && LogOutputSeverity::Normal == log.severity && LogOutputCategory::Editor != log.category)
-                || (2 == activeTab && LogOutputCategory::Editor == log.category)
-                || (3 == activeTab && LogOutputSeverity::Warning == log.severity)
-                || (4 == activeTab && LogOutputSeverity::Error == log.severity);
-            if (severityMatched && categoryMatched && ContainsFilter(log.message, filterText))
+            if (severityMatched && ContainsFilter(log.message, filterText))
             {
                 const LRESULT itemIndex =
                     SendMessageW(m_listBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(log.message.c_str()));
@@ -310,7 +280,7 @@ namespace Xelqoria::Editor
                         m_listBox,
                         LB_SETITEMDATA,
                         static_cast<WPARAM>(itemIndex),
-                        static_cast<LPARAM>(static_cast<int>(log.category) * 10 + static_cast<int>(log.severity)));
+                        static_cast<LPARAM>(log.severity));
                 }
             }
         }
@@ -359,13 +329,9 @@ namespace Xelqoria::Editor
         }
         if (2 == activeTab)
         {
-            return std::nullopt;
-        }
-        if (3 == activeTab)
-        {
             return LogOutputSeverity::Warning;
         }
-        if (4 == activeTab)
+        if (3 == activeTab)
         {
             return LogOutputSeverity::Error;
         }

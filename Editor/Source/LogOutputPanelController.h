@@ -78,7 +78,6 @@ namespace Xelqoria::Editor
         struct LogOutputEntry
         {
             std::wstring message{};
-            LogOutputCategory category = LogOutputCategory::Game;
             LogOutputSeverity severity = LogOutputSeverity::Normal;
         };
 
@@ -117,7 +116,6 @@ namespace Xelqoria::Editor
         HWND m_listBox = nullptr;
         Platform::IClipboard* m_clipboard = nullptr;
         std::vector<LogOutputEntry> m_logs{};
-        std::size_t m_visibleLogStartIndex = 0;
         ButtonClickInputState m_buttonInputState{};
         int m_lastActiveTab = 0;
         std::wstring m_lastFilterText{};
