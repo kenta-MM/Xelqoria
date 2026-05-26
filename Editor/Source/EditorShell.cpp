@@ -4995,22 +4995,30 @@ namespace Xelqoria::Editor
 
         const bool isPressed = 0 != (drawItem.itemState & ODS_SELECTED);
         const bool isDisabled = 0 != (drawItem.itemState & ODS_DISABLED);
+        const bool isDestructive =
+            nullptr != wcsstr(buttonText, L"Remove")
+            || nullptr != wcsstr(buttonText, L"Delete")
+            || nullptr != wcsstr(buttonText, L"Clear");
         const bool isDefaultAction =
             drawItem.hwndItem == m_topBarPlayButton
             || drawItem.hwndItem == m_buildAndPlayButton
-            || 0 == wcscmp(buttonText, L"すべて");
+            || 0 == wcscmp(buttonText, L"All")
+            || 0 == wcscmp(buttonText, L"Add Component")
+            || 0 == wcscmp(buttonText, L"New");
 
-        EditorColor backgroundColor = isDefaultAction
-            ? EditorThemes::XelqoriaDark.selection
-            : EditorThemes::XelqoriaDark.panelHeaderBackground;
+        EditorColor backgroundColor = isDestructive
+            ? EditorColor::FromRgb8(0x3A, 0x18, 0x24)
+            : (isDefaultAction ? EditorThemes::XelqoriaDark.selection : EditorThemes::XelqoriaDark.panelHeaderBackground);
         if (isPressed)
         {
             backgroundColor = EditorThemes::XelqoriaDark.accent;
         }
 
-        const EditorColor borderColor = isDefaultAction
+        const EditorColor borderColor = isDestructive
+            ? EditorThemes::XelqoriaDark.error
+            : (isDefaultAction
             ? EditorThemes::XelqoriaDark.accent
-            : EditorThemes::XelqoriaDark.panelBorder;
+            : EditorThemes::XelqoriaDark.panelBorder);
         const EditorColor textColor = isDisabled
             ? EditorThemes::XelqoriaDark.textSecondary
             : EditorThemes::XelqoriaDark.textPrimary;
