@@ -1281,7 +1281,6 @@ namespace Xelqoria::Editor
             ListView_SetTextBkColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.panelBackground));
             ListView_SetTextColor(m_assetsListView, ToColorRef(EditorThemes::XelqoriaDark.textPrimary));
             ApplyDarkExplorerTheme(m_assetsListView);
-            SetWindowSubclass(m_assetsListView, EditorRowControlSubclassProc, EditorRowControlSubclassId, 0);
             ConfigureAssetsListHeaderTheme();
         }
 
@@ -5612,7 +5611,7 @@ namespace Xelqoria::Editor
             parentWindow,
             nullptr,
             nullptr,
-            RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_FRAME);
+            RDW_INVALIDATE | RDW_FRAME);
     }
 
     bool EditorShell::UpdateSceneViewHostSize()
