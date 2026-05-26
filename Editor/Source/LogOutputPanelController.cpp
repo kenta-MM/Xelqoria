@@ -286,6 +286,7 @@ namespace Xelqoria::Editor
             return;
         }
 
+        SendMessageW(m_listBox, WM_SETREDRAW, FALSE, 0);
         SendMessageW(m_listBox, LB_RESETCONTENT, 0, 0);
         const std::wstring filterText = GetFilterText();
         const std::optional<LogOutputSeverity> severityFilter = GetActiveSeverityFilter();
@@ -320,6 +321,8 @@ namespace Xelqoria::Editor
         {
             SendMessageW(m_listBox, LB_SETTOPINDEX, static_cast<WPARAM>(rowCount - 1), 0);
         }
+        SendMessageW(m_listBox, WM_SETREDRAW, TRUE, 0);
+        InvalidateRect(m_listBox, nullptr, FALSE);
     }
 
     void LogOutputPanelController::CopySelectedRow() const

@@ -353,7 +353,14 @@ namespace Xelqoria::Editor
 
         constexpr RHI::GraphicsAPI api = RHI::GraphicsAPI::D3D11;
 
-        if (false == m_editorShell.Initialize(GetMainWindowHandle(), m_hInstance, m_cursor))
+        const HWND mainWindow = GetMainWindowHandle();
+        const LONG_PTR mainWindowStyle = GetWindowLongPtrW(mainWindow, GWL_STYLE);
+        if (0 == (mainWindowStyle & WS_CLIPCHILDREN))
+        {
+            SetWindowLongPtrW(mainWindow, GWL_STYLE, mainWindowStyle | WS_CLIPCHILDREN);
+        }
+
+        if (false == m_editorShell.Initialize(mainWindow, m_hInstance, m_cursor))
         {
             return false;
         }
@@ -400,7 +407,7 @@ namespace Xelqoria::Editor
         AppendEditorLog(L"Editor ワークスペースを初期化しました。");
         m_editorCommandController.Reset(m_sceneDocument, m_hierarchyPanelController.GetSelectedEntityId());
         m_editorInitialized = true;
-        RedrawWindow(GetMainWindowHandle(), nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+        RedrawWindow(GetMainWindowHandle(), nullptr, nullptr, RDW_INVALIDATE | RDW_FRAME);
         return true;
     }
 
