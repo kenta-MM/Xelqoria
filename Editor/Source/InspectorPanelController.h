@@ -274,6 +274,16 @@ namespace Xelqoria::Editor
         void ResetTrackedEntity();
 
         /// <summary>
+        /// Inspector 折りたたみ状態をローカル UI 状態ファイルから復元する。
+        /// </summary>
+        void LoadCollapseState();
+
+        /// <summary>
+        /// Inspector 折りたたみ状態をローカル UI 状態ファイルへ保存する。
+        /// </summary>
+        void SaveCollapseState() const;
+
+        /// <summary>
         /// TextureAssetId から Texture 欄に表示するファイル名を取得する。
         /// </summary>
         /// <param name="textureAssetId">表示対象の TextureAssetId。</param>
@@ -546,5 +556,9 @@ namespace Xelqoria::Editor
         HWND m_pressedButtonHandle = nullptr;
         bool m_isDropHighlightVisible = false;
         HWND m_dropHighlightTargetEdit = nullptr;
+        bool m_isTransformCollapsed = false;
+        bool m_isSpriteComponentCollapsed = false;
+        bool m_isMaterialCollapsed = false;
+        bool m_isCollider2DCollapsed = false;
     };
 }

@@ -8,6 +8,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cwctype>
+#include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <optional>
 #include <AssetId.h>
@@ -135,6 +137,13 @@ namespace Xelqoria::Editor
             SetWindowVisible(scriptAssignButton, visible);
             SetWindowVisible(scriptClearButton, visible);
         }
+
+        [[nodiscard]] std::filesystem::path GetInspectorStatePath()
+        {
+            std::filesystem::path statePath = std::filesystem::temp_directory_path();
+            statePath /= L"XelqoriaEditorInspectorState.txt";
+            return statePath;
+        }
     }
 
     void InspectorPanelController::Bind(const EditorShell& shell, Platform::ICursor& cursor)
@@ -184,6 +193,7 @@ namespace Xelqoria::Editor
         SetWindowTextW(m_materialTintColorButton, L"");
         SetWindowTextW(m_materialOutlineColorButton, L"");
         SetWindowTextW(m_addComponentButton, L"Add Component");
+        LoadCollapseState();
     }
 
     void InspectorPanelController::Refresh(
@@ -899,6 +909,52 @@ namespace Xelqoria::Editor
     void InspectorPanelController::ResetTrackedEntity()
     {
         m_lastInspectorEntityId.reset();
+    }
+
+    void InspectorPanelController::LoadCollapseState()
+    {
+        std::ifstream input(GetInspectorStatePath());
+        if (false == input.is_open())
+        {
+            return;
+        }
+
+        std::string key{};
+        int value = 0;
+        while (input >> key >> value)
+        {
+            const bool collapsed = 0 != value;
+            if ("transform" == key)
+            {
+                m_isTransformCollapsed = collapsed;
+            }
+            else if ("sprite" == key)
+            {
+                m_isSpriteComponentCollapsed = collapsed;
+            }
+            else if ("material" == key)
+            {
+                m_isMaterialCollapsed = collapsed;
+            }
+            else if ("collider2d" == key)
+            {
+                m_isCollider2DCollapsed = collapsed;
+            }
+        }
+    }
+
+    void InspectorPanelController::SaveCollapseState() const
+    {
+        std::ofstream output(GetInspectorStatePath(), std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return;
+        }
+
+        output << "transform " << (m_isTransformCollapsed ? 1 : 0) << '\n';
+        output << "sprite " << (m_isSpriteComponentCollapsed ? 1 : 0) << '\n';
+        output << "material " << (m_isMaterialCollapsed ? 1 : 0) << '\n';
+        output << "collider2d " << (m_isCollider2DCollapsed ? 1 : 0) << '\n';
     }
 
     void InspectorPanelController::SetMaterialDetailsVisible(bool visible) const

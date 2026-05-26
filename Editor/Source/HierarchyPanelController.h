@@ -131,5 +131,15 @@ namespace Xelqoria::Editor
         /// <param name="scene">表示対象の Scene。</param>
         /// <returns>展開状態を変更した場合は true。</returns>
         bool ToggleSelectedEntityExpansion(const Game::Scene& scene);
+
+        /// <summary>
+        /// Hierarchy 展開状態をローカル UI 状態ファイルから復元する。
+        /// </summary>
+        void LoadExpansionState();
+
+        /// <summary>
+        /// Hierarchy 展開状態をローカル UI 状態ファイルへ保存する。
+        /// </summary>
+        void SaveExpansionState() const;
     };
 }
