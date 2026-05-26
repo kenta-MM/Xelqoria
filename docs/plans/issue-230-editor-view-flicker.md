@@ -34,6 +34,11 @@ Dock レイアウトは全 child を erase する再描画を避け、Editor 親
 4. EditorShell / Application の全 child erase 経路を弱める
 5. ビルドとテストを実行する
 
+## 実施メモ
+
+- Dock splitter ドラッグ中の child window 再配置で `SWP_NOREDRAW` / `SWP_NOCOPYBITS` を使い、中間の背景消去と旧ビットコピーを抑制する
+- 配置反映後は親 window から `RDW_ALLCHILDREN` / `RDW_UPDATENOW` / `RDW_NOERASE` で child を含めて同期再描画する
+
 ## 検証方法
 
 - 実行するビルド: `tools/wsl/build.sh Editor/Xelqoria.Editor.vcxproj`

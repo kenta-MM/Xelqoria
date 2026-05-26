@@ -5536,11 +5536,14 @@ namespace Xelqoria::Editor
 
     void EditorShell::FlushLayoutMoves(HWND parentWindow) const
     {
+        (void)parentWindow;
+
         if (m_pendingLayoutMoves.empty())
         {
             return;
         }
 
+        constexpr UINT LayoutMoveFlags = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW | SWP_NOCOPYBITS;
         HDWP deferredPosition = BeginDeferWindowPos(static_cast<int>(m_pendingLayoutMoves.size()));
         if (nullptr == deferredPosition)
         {
@@ -5553,7 +5556,7 @@ namespace Xelqoria::Editor
                     move.y,
                     move.width,
                     move.height,
-                    SWP_NOZORDER | SWP_NOACTIVATE);
+                    LayoutMoveFlags);
             }
             m_pendingLayoutMoves.clear();
             return;
@@ -5570,7 +5573,7 @@ namespace Xelqoria::Editor
                 move.y,
                 move.width,
                 move.height,
-                SWP_NOZORDER | SWP_NOACTIVATE);
+                LayoutMoveFlags);
             if (nullptr == deferredPosition)
             {
                 deferFailed = true;
@@ -5589,7 +5592,7 @@ namespace Xelqoria::Editor
                     move.y,
                     move.width,
                     move.height,
-                    SWP_NOZORDER | SWP_NOACTIVATE);
+                    LayoutMoveFlags);
             }
         }
         else
@@ -5611,7 +5614,7 @@ namespace Xelqoria::Editor
             parentWindow,
             nullptr,
             nullptr,
-            RDW_INVALIDATE | RDW_FRAME);
+            RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_UPDATENOW | RDW_NOERASE);
     }
 
     bool EditorShell::UpdateSceneViewHostSize()
