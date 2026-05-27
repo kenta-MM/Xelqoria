@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 
+#include "Panels/EditorPanelHostContext.h"
 #include "Panels/IEditorPanelView.h"
 
 namespace Xelqoria::Editor
@@ -13,35 +14,48 @@ namespace Xelqoria::Editor
     class EditorPanelViewBase : public IEditorPanelView
     {
     public:
-        using ControlProvider = std::function<std::vector<HWND>()>;
-
         /// <summary>
-        /// Panel 識別子、表示名、対象 control 群を指定して View 境界を作成する。
+        /// Panel 識別子、表示名、共通 host を指定して View 境界を作成する。
         /// </summary>
         EditorPanelViewBase(
+            EditorPanelHostContext& hostContext,
             EditorPanelId panelId,
-            const wchar_t* title,
-            ControlProvider controls,
-            ControlProvider visibleControls,
-            ControlProvider alwaysHiddenControls,
-            ControlProvider hideWhenInvisibleControls);
+            const wchar_t* title);
 
         [[nodiscard]] EditorPanelId GetPanelId() const override;
         [[nodiscard]] const wchar_t* GetTitle() const override;
+        [[nodiscard]] HWND GetRootWindow() const override;
         bool Initialize(HWND parentWindow, HINSTANCE hInstance) override;
         void Layout(const RECT& bounds) override;
         void Show(bool visible) override;
         void SetParent(HWND parentWindow) override;
         void CollectControls(std::vector<HWND>& controls) const override;
 
-    private:
-        [[nodiscard]] std::vector<HWND> GetControls(const ControlProvider& provider) const;
+    protected:
+        [[nodiscard]] HWND CreateChildWindow(
+            HWND parentWindow,
+            HINSTANCE hInstance,
+            const wchar_t* className,
+            const wchar_t* text,
+            DWORD style,
+            DWORD exStyle = 0) const;
+        void MoveChildWindowNoRedraw(HWND window, int x, int y, int width, int height) const;
+        [[nodiscard]] int ScaleMetric(int value) const;
 
+        void SetRootWindow(HWND rootWindow);
+        void SetControls(std::vector<HWND> controls);
+        void SetVisibleControls(std::vector<HWND> visibleControls);
+        void SetAlwaysHiddenControls(std::vector<HWND> alwaysHiddenControls);
+        void SetHideWhenInvisibleControls(std::vector<HWND> hideWhenInvisibleControls);
+
+    private:
+        EditorPanelHostContext& m_hostContext;
         EditorPanelId m_panelId;
         const wchar_t* m_title = L"";
-        ControlProvider m_controls;
-        ControlProvider m_visibleControls;
-        ControlProvider m_alwaysHiddenControls;
-        ControlProvider m_hideWhenInvisibleControls;
+        HWND m_rootWindow = nullptr;
+        std::vector<HWND> m_controls{};
+        std::vector<HWND> m_visibleControls{};
+        std::vector<HWND> m_alwaysHiddenControls{};
+        std::vector<HWND> m_hideWhenInvisibleControls{};
     };
 }

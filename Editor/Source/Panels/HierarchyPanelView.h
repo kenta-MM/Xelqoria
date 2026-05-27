@@ -4,8 +4,6 @@
 
 namespace Xelqoria::Editor
 {
-    class EditorShell;
-
     /// <summary>
     /// Hierarchy Panel の HWND 群を管理する View。
     /// </summary>
@@ -13,9 +11,12 @@ namespace Xelqoria::Editor
     {
     public:
         /// <summary>
-        /// EditorShell が生成した Hierarchy control 群へ接続する。
+        /// Hierarchy control 群を生成・管理する View を作成する。
         /// </summary>
-        explicit HierarchyPanelView(EditorShell& shell);
+        explicit HierarchyPanelView(EditorPanelHostContext& hostContext);
+
+        bool Initialize(HWND parentWindow, HINSTANCE hInstance) override;
+        void Layout(const RECT& bounds) override;
 
         [[nodiscard]] HWND GetListBox() const;
         [[nodiscard]] HWND GetSummaryLabel() const;
@@ -26,6 +27,13 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetDeleteButton() const;
 
     private:
-        EditorShell& m_shell;
+        HWND m_panel = nullptr;
+        HWND m_summaryLabel = nullptr;
+        HWND m_listBox = nullptr;
+        HWND m_searchEdit = nullptr;
+        HWND m_nameEdit = nullptr;
+        HWND m_createButton = nullptr;
+        HWND m_duplicateButton = nullptr;
+        HWND m_deleteButton = nullptr;
     };
 }

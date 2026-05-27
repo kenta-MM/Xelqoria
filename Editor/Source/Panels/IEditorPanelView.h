@@ -31,6 +31,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] virtual const wchar_t* GetTitle() const = 0;
 
         /// <summary>
+        /// View の外枠 child window を取得する。
+        /// </summary>
+        /// <returns>外枠 window の HWND。</returns>
+        [[nodiscard]] virtual HWND GetRootWindow() const = 0;
+
+        /// <summary>
         /// View が所有する child window 群を生成する。
         /// </summary>
         /// <param name="parentWindow">親ウィンドウ。</param>

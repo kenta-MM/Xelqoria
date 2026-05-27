@@ -25,6 +25,7 @@
     <ClCompile Include="Source\Panels\Collider2DPanelView.cpp" />
     <ClCompile Include="Source\Commands\EditorCommandController.cpp" />
     <ClCompile Include="Source\Panels\EditorPanelViewBase.cpp" />
+    <ClCompile Include="Source\Panels\EditorPanelHostContext.cpp" />
     <ClCompile Include="Source\Assets\EditorAssetPathUtils.cpp" />
     <ClCompile Include="Source\Project\EditorProject.cpp" />
     <ClCompile Include="Source\Project\EditorSceneDocument.cpp" />
@@ -76,6 +77,7 @@
     <ClInclude Include="Source\Panels\InspectorPanelView.h" />
     <ClInclude Include="Source\Panels\IEditorPanelView.h" />
     <ClInclude Include="Source\Panels\EditorPanelViewBase.h" />
+    <ClInclude Include="Source\Panels\EditorPanelHostContext.h" />
     <ClInclude Include="Source\Panels\LogOutputPanelController.h" />
     <ClInclude Include="Source\Panels\LogOutputPanelView.h" />
     <ClInclude Include="Source\Panels\MaterialPanelController.h" />

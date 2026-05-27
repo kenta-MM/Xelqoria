@@ -24,6 +24,9 @@
     <ClCompile Include="Source\Panels\EditorPanelViewBase.cpp">
       <Filter>Source\Panels</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Panels\EditorPanelHostContext.cpp">
+      <Filter>Source\Panels</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Assets\EditorAssetPathUtils.cpp">
       <Filter>Source\Assets</Filter>
     </ClCompile>
@@ -171,6 +174,9 @@
       <Filter>Source\Panels</Filter>
     </ClInclude>
     <ClInclude Include="Source\Panels\EditorPanelViewBase.h">
+      <Filter>Source\Panels</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Panels\EditorPanelHostContext.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
     <ClInclude Include="Source\Panels\LogOutputPanelController.h">

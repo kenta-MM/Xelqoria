@@ -6,8 +6,6 @@
 
 namespace Xelqoria::Editor
 {
-    class EditorShell;
-
     /// <summary>
     /// Sprite Panel の HWND 群を管理する View。
     /// </summary>
@@ -17,7 +15,10 @@ namespace Xelqoria::Editor
         /// <summary>
         /// EditorShell が生成した Sprite control 群へ接続する。
         /// </summary>
-        explicit SpritePanelView(EditorShell& shell);
+        explicit SpritePanelView(EditorPanelHostContext& hostContext);
+
+        bool Initialize(HWND parentWindow, HINSTANCE hInstance) override;
+        void Layout(const RECT& bounds) override;
 
         [[nodiscard]] HWND GetSummaryLabel() const;
         [[nodiscard]] HWND GetDetailsSectionLabel() const;
@@ -25,9 +26,13 @@ namespace Xelqoria::Editor
         [[nodiscard]] const std::array<HWND, 4>& GetDetailEditControls() const;
 
     private:
-        [[nodiscard]] static std::vector<HWND> GetSpriteControls(EditorShell& shell);
-        [[nodiscard]] static std::vector<HWND> GetSpriteVisibleControls(EditorShell& shell);
+        [[nodiscard]] std::vector<HWND> BuildControls() const;
+        [[nodiscard]] std::vector<HWND> BuildVisibleControls() const;
 
-        EditorShell& m_shell;
+        HWND m_panel = nullptr;
+        HWND m_summaryLabel = nullptr;
+        HWND m_detailsSectionLabel = nullptr;
+        std::array<HWND, 4> m_detailLabels{};
+        std::array<HWND, 4> m_detailEditControls{};
     };
 }

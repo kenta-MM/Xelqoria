@@ -11,6 +11,7 @@
 
 #include "ICursor.h"
 #include "InputSystem.h"
+#include "Panels/EditorPanelHostContext.h"
 #include "Shell/EditorPanelId.h"
 #include "SceneViewSurface.h"
 
@@ -617,121 +618,6 @@ namespace Xelqoria::Editor
         struct LayoutMetrics;
 
         /// <summary>
-        /// Hierarchy パネル用 child window 群を生成する。
-        /// </summary>
-        bool InitializeHierarchyPanel(HWND parentWindow, HINSTANCE hInstance);
-
-        /// <summary>
-        /// Assets パネル用 child window 群を生成する。
-        /// </summary>
-        bool InitializeAssetsPanel(HWND parentWindow, HINSTANCE hInstance);
-
-        /// <summary>
-        /// Inspector パネル用 child window 群を生成する。
-        /// </summary>
-        bool InitializeInspectorPanel(HWND parentWindow, HINSTANCE hInstance);
-
-        /// <summary>
-        /// Material パネル用 child window 群を生成する。
-        /// </summary>
-        bool InitializeMaterialPanel(HWND parentWindow, HINSTANCE hInstance);
-
-        /// <summary>
-        /// Sprite パネル用 child window 群を生成する。
-        /// </summary>
-        bool InitializeSpritePanel(HWND parentWindow, HINSTANCE hInstance);
-
-        /// <summary>
-        /// Collider2D パネル用 child window 群を生成する。
-        /// </summary>
-        bool InitializeCollider2DPanel(HWND parentWindow, HINSTANCE hInstance);
-
-        /// <summary>
-        /// SceneView パネル用 child window 群を生成する。
-        /// </summary>
-        bool InitializeSceneViewPanel(HWND parentWindow, HINSTANCE hInstance);
-
-        /// <summary>
-        /// LogOutput パネル用 child window 群を生成する。
-        /// </summary>
-        bool InitializeLogOutputPanel(HWND parentWindow, HINSTANCE hInstance);
-
-        /// <summary>
-        /// Hierarchy パネルをレイアウトする。
-        /// </summary>
-        void LayoutHierarchyPanel(const LayoutMetrics& metrics);
-
-        /// <summary>
-        /// Assets パネルをレイアウトする。
-        /// </summary>
-        void LayoutAssetsPanel(const LayoutMetrics& metrics);
-
-        /// <summary>
-        /// Inspector パネルをレイアウトする。
-        /// </summary>
-        void LayoutInspectorPanel(const LayoutMetrics& metrics);
-
-        /// <summary>
-        /// Material パネルをレイアウトする。
-        /// </summary>
-        void LayoutMaterialPanel(const LayoutMetrics& metrics);
-
-        /// <summary>
-        /// Sprite パネルをレイアウトする。
-        /// </summary>
-        void LayoutSpritePanel(const LayoutMetrics& metrics);
-
-        /// <summary>
-        /// Collider2D パネルをレイアウトする。
-        /// </summary>
-        void LayoutCollider2DPanel(const LayoutMetrics& metrics);
-
-        /// <summary>
-        /// SceneView パネルをレイアウトする。
-        /// </summary>
-        void LayoutSceneViewPanel(const LayoutMetrics& metrics);
-
-        /// <summary>
-        /// 指定矩形へ Hierarchy パネルをレイアウトする。
-        /// </summary>
-        void LayoutHierarchyPanelInRect(const RECT& panelRect);
-
-        /// <summary>
-        /// 指定矩形へ Assets パネルをレイアウトする。
-        /// </summary>
-        void LayoutAssetsPanelInRect(const RECT& panelRect);
-
-        /// <summary>
-        /// 指定矩形へ Inspector パネルをレイアウトする。
-        /// </summary>
-        void LayoutInspectorPanelInRect(const RECT& panelRect);
-
-        /// <summary>
-        /// 指定矩形へ Material パネルをレイアウトする。
-        /// </summary>
-        void LayoutMaterialPanelInRect(const RECT& panelRect);
-
-        /// <summary>
-        /// 指定矩形へ Sprite パネルをレイアウトする。
-        /// </summary>
-        void LayoutSpritePanelInRect(const RECT& panelRect);
-
-        /// <summary>
-        /// 指定矩形へ Collider2D パネルをレイアウトする。
-        /// </summary>
-        void LayoutCollider2DPanelInRect(const RECT& panelRect);
-
-        /// <summary>
-        /// 指定矩形へ SceneView パネルをレイアウトする。
-        /// </summary>
-        void LayoutSceneViewPanelInRect(const RECT& panelRect);
-
-        /// <summary>
-        /// 指定矩形へ LogOutput パネルをレイアウトする。
-        /// </summary>
-        void LayoutLogOutputPanelInRect(const RECT& panelRect);
-
-        /// <summary>
         /// DockArea に割り当てられたパネルをタブ付き領域として配置する。
         /// </summary>
         void LayoutDockArea(DockAreaId dockAreaId, const RECT& areaRect);
@@ -1158,28 +1044,6 @@ namespace Xelqoria::Editor
             DWORD_PTR referenceData);
 
         /// <summary>
-        /// 行表示コントロールの hover 再描画を処理する。
-        /// </summary>
-        static LRESULT CALLBACK EditorRowControlSubclassProc(
-            HWND window,
-            UINT message,
-            WPARAM wParam,
-            LPARAM lParam,
-            UINT_PTR subclassId,
-            DWORD_PTR referenceData);
-
-        /// <summary>
-        /// Assets ListView ヘッダーのテーマ描画を処理する。
-        /// </summary>
-        static LRESULT CALLBACK EditorHeaderControlSubclassProc(
-            HWND window,
-            UINT message,
-            WPARAM wParam,
-            LPARAM lParam,
-            UINT_PTR subclassId,
-            DWORD_PTR referenceData);
-
-        /// <summary>
         /// Editor 親ウィンドウのテーマ背景と標準コントロール色を処理する。
         /// </summary>
         static LRESULT CALLBACK ParentWindowSubclassProc(
@@ -1273,24 +1137,6 @@ namespace Xelqoria::Editor
             int activeTabIndex = 0;
         };
 
-        struct PendingLayoutMove
-        {
-            HWND window = nullptr;
-            int x = 0;
-            int y = 0;
-            int width = 0;
-            int height = 0;
-        };
-
-        friend class AssetsPanelView;
-        friend class Collider2DPanelView;
-        friend class HierarchyPanelView;
-        friend class InspectorPanelView;
-        friend class LogOutputPanelView;
-        friend class MaterialPanelView;
-        friend class SceneViewPanelView;
-        friend class SpritePanelView;
-
         HFONT m_defaultFont = nullptr;
         HBRUSH m_windowBackgroundBrush = nullptr;
         HBRUSH m_panelBackgroundBrush = nullptr;
@@ -1321,28 +1167,7 @@ namespace Xelqoria::Editor
         HWND m_topBarPlayButton = nullptr;
         HWND m_topBarLayoutButton = nullptr;
         HWND m_statusBar = nullptr;
-        HWND m_hierarchyPanel = nullptr;
-        HWND m_assetsPanel = nullptr;
-        HWND m_inspectorPanel = nullptr;
-        HWND m_materialPanel = nullptr;
-        HWND m_spritePanel = nullptr;
-        HWND m_collider2DPanel = nullptr;
-        HWND m_sceneViewPanel = nullptr;
-        HWND m_sceneViewPlanLabel = nullptr;
-        HWND m_projectSummaryLabel = nullptr;
-        HWND m_projectSceneListBox = nullptr;
-        HWND m_projectSceneDetailLabel = nullptr;
-        HWND m_sceneViewHost = nullptr;
-        HWND m_sceneViewSizeLabel = nullptr;
-        HWND m_buildAndPlayButton = nullptr;
-        HWND m_pauseResumePlayButton = nullptr;
-        HWND m_endPlayButton = nullptr;
-        HWND m_logOutputPanel = nullptr;
-        HWND m_logOutputTabControl = nullptr;
-        HWND m_logClearButton = nullptr;
-        HWND m_logCopyButton = nullptr;
-        HWND m_logFilterEdit = nullptr;
-        HWND m_logListBox = nullptr;
+        EditorPanelHostContext m_panelHostContext{};
         std::unique_ptr<HierarchyPanelView> m_hierarchyPanelView{};
         std::unique_ptr<AssetsPanelView> m_assetsPanelView{};
         std::unique_ptr<InspectorPanelView> m_inspectorPanelView{};
@@ -1351,60 +1176,7 @@ namespace Xelqoria::Editor
         std::unique_ptr<Collider2DPanelView> m_collider2DPanelView{};
         std::unique_ptr<SceneViewPanelView> m_sceneViewPanelView{};
         std::unique_ptr<LogOutputPanelView> m_logOutputPanelView{};
-        HWND m_assetsListView = nullptr;
-        HWND m_assetsSummaryLabel = nullptr;
-        HWND m_hierarchySummaryLabel = nullptr;
-        HWND m_hierarchyListBox = nullptr;
-        HWND m_hierarchySearchEdit = nullptr;
-        HWND m_hierarchyNameEdit = nullptr;
-        HWND m_hierarchyCreateButton = nullptr;
-        HWND m_hierarchyDuplicateButton = nullptr;
-        HWND m_hierarchyDeleteButton = nullptr;
-        HWND m_inspectorSummaryLabel = nullptr;
-        HWND m_transformSectionLabel = nullptr;
-        std::array<HWND, 3> m_transformLabels{};
-        std::array<HWND, 9> m_transformEditControls{};
-        HWND m_spriteComponentSectionLabel = nullptr;
-        HWND m_spriteRefLabel = nullptr;
-        HWND m_spriteRefDropHighlight = nullptr;
-        HWND m_spriteRefEdit = nullptr;
-        HWND m_materialOpenButton = nullptr;
-        HWND m_materialSummaryLabel = nullptr;
-        HWND m_materialSharedNoticeLabel = nullptr;
-        HWND m_materialDetailsSectionLabel = nullptr;
-        std::array<HWND, 5> m_materialDetailLabels{};
-        std::array<HWND, 5> m_materialDetailEditControls{};
-        HWND m_materialTextureDropHighlight = nullptr;
-        HWND m_materialTextureBrowseButton = nullptr;
-        HWND m_materialTintColorButton = nullptr;
-        HWND m_materialOutlineEnabledCheckBox = nullptr;
-        HWND m_materialOutlineColorButton = nullptr;
-        HWND m_collider2DSummaryLabel = nullptr;
-        HWND m_spriteSummaryLabel = nullptr;
-        HWND m_spriteDetailsSectionLabel = nullptr;
-        std::array<HWND, 4> m_spriteDetailLabels{};
-        std::array<HWND, 4> m_spriteDetailEditControls{};
-        HWND m_scriptAssetLabel = nullptr;
-        HWND m_scriptAssetEdit = nullptr;
-        HWND m_scriptCreateButton = nullptr;
-        HWND m_scriptAssignButton = nullptr;
-        HWND m_scriptClearButton = nullptr;
-        HWND m_spriteComponentActionButton = nullptr;
-        HWND m_collider2DComponentSectionLabel = nullptr;
-        HWND m_collider2DEnabledCheckBox = nullptr;
-        HWND m_collider2DTriggerCheckBox = nullptr;
-        HWND m_collider2DShapeTypeLabel = nullptr;
-        HWND m_collider2DShapeTypeEdit = nullptr;
-        HWND m_collider2DOffsetLabel = nullptr;
-        HWND m_collider2DSizeLabel = nullptr;
-        HWND m_collider2DRotationLabel = nullptr;
-        HWND m_collider2DRotationEdit = nullptr;
-        std::array<HWND, 4> m_collider2DEditControls{};
-        HWND m_collider2DEditButton = nullptr;
-        HWND m_collider2DComponentActionButton = nullptr;
-        HWND m_addComponentButton = nullptr;
-        std::uint32_t m_sceneViewWidth = 0;
-        std::uint32_t m_sceneViewHeight = 0;
+        bool m_panelViewsInitialized = false;
         std::vector<EditorPanelId> m_leftTopDockPanels{};
         std::vector<EditorPanelId> m_leftBottomDockPanels{};
         std::vector<EditorPanelId> m_centerDockPanels{};
@@ -1436,7 +1208,7 @@ namespace Xelqoria::Editor
         int m_lastLayoutClientWidth = 0;
         int m_lastLayoutClientHeight = 0;
         UINT m_lastLayoutDpi = 0;
-        mutable std::vector<PendingLayoutMove> m_pendingLayoutMoves{};
+        mutable std::vector<EditorPanelLayoutMove> m_pendingLayoutMoves{};
         Platform::ICursor* m_cursor = nullptr;
     };
 }

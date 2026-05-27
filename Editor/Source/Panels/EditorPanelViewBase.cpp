@@ -5,18 +5,12 @@
 namespace Xelqoria::Editor
 {
     EditorPanelViewBase::EditorPanelViewBase(
+        EditorPanelHostContext& hostContext,
         EditorPanelId panelId,
-        const wchar_t* title,
-        ControlProvider controls,
-        ControlProvider visibleControls,
-        ControlProvider alwaysHiddenControls,
-        ControlProvider hideWhenInvisibleControls)
-        : m_panelId(panelId)
+        const wchar_t* title)
+        : m_hostContext(hostContext)
+        , m_panelId(panelId)
         , m_title(title)
-        , m_controls(std::move(controls))
-        , m_visibleControls(std::move(visibleControls))
-        , m_alwaysHiddenControls(std::move(alwaysHiddenControls))
-        , m_hideWhenInvisibleControls(std::move(hideWhenInvisibleControls))
     {
     }
 
@@ -28,6 +22,11 @@ namespace Xelqoria::Editor
     const wchar_t* EditorPanelViewBase::GetTitle() const
     {
         return m_title;
+    }
+
+    HWND EditorPanelViewBase::GetRootWindow() const
+    {
+        return m_rootWindow;
     }
 
     bool EditorPanelViewBase::Initialize(HWND parentWindow, HINSTANCE hInstance)
@@ -45,19 +44,19 @@ namespace Xelqoria::Editor
     void EditorPanelViewBase::Show(bool visible)
     {
         const int showCommand = visible ? SW_SHOW : SW_HIDE;
-        for (HWND control : GetControls(m_visibleControls))
+        for (HWND control : m_visibleControls)
         {
             ShowWindow(control, showCommand);
         }
 
-        for (HWND control : GetControls(m_alwaysHiddenControls))
+        for (HWND control : m_alwaysHiddenControls)
         {
             ShowWindow(control, SW_HIDE);
         }
 
         if (false == visible)
         {
-            for (HWND control : GetControls(m_hideWhenInvisibleControls))
+            for (HWND control : m_hideWhenInvisibleControls)
             {
                 ShowWindow(control, SW_HIDE);
             }
@@ -71,7 +70,7 @@ namespace Xelqoria::Editor
             return;
         }
 
-        for (HWND control : GetControls(m_controls))
+        for (HWND control : m_controls)
         {
             if (nullptr != control && GetParent(control) != parentWindow)
             {
@@ -82,19 +81,55 @@ namespace Xelqoria::Editor
 
     void EditorPanelViewBase::CollectControls(std::vector<HWND>& controls) const
     {
-        for (HWND control : GetControls(m_controls))
+        for (HWND control : m_controls)
         {
             controls.push_back(control);
         }
     }
 
-    std::vector<HWND> EditorPanelViewBase::GetControls(const ControlProvider& provider) const
+    HWND EditorPanelViewBase::CreateChildWindow(
+        HWND parentWindow,
+        HINSTANCE hInstance,
+        const wchar_t* className,
+        const wchar_t* text,
+        DWORD style,
+        DWORD exStyle) const
     {
-        if (false == static_cast<bool>(provider))
-        {
-            return {};
-        }
+        return m_hostContext.CreateChildWindow(parentWindow, hInstance, className, text, style, exStyle);
+    }
 
-        return provider();
+    void EditorPanelViewBase::MoveChildWindowNoRedraw(HWND window, int x, int y, int width, int height) const
+    {
+        m_hostContext.MoveChildWindowNoRedraw(window, x, y, width, height);
+    }
+
+    int EditorPanelViewBase::ScaleMetric(int value) const
+    {
+        return m_hostContext.ScaleMetric(value);
+    }
+
+    void EditorPanelViewBase::SetRootWindow(HWND rootWindow)
+    {
+        m_rootWindow = rootWindow;
+    }
+
+    void EditorPanelViewBase::SetControls(std::vector<HWND> controls)
+    {
+        m_controls = std::move(controls);
+    }
+
+    void EditorPanelViewBase::SetVisibleControls(std::vector<HWND> visibleControls)
+    {
+        m_visibleControls = std::move(visibleControls);
+    }
+
+    void EditorPanelViewBase::SetAlwaysHiddenControls(std::vector<HWND> alwaysHiddenControls)
+    {
+        m_alwaysHiddenControls = std::move(alwaysHiddenControls);
+    }
+
+    void EditorPanelViewBase::SetHideWhenInvisibleControls(std::vector<HWND> hideWhenInvisibleControls)
+    {
+        m_hideWhenInvisibleControls = std::move(hideWhenInvisibleControls);
     }
 }
