@@ -15,9 +15,6 @@
     <ClCompile Include="Source\Panels\AssetsPanelView.cpp">
       <Filter>Source\Panels</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Panels\Collider2DPanelView.cpp">
-      <Filter>Source\Panels</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Commands\EditorCommandController.cpp">
       <Filter>Source\Commands</Filter>
     </ClCompile>
@@ -63,9 +60,6 @@
     <ClCompile Include="Source\Panels\MaterialPanelController.cpp">
       <Filter>Source\Panels</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Panels\MaterialPanelView.cpp">
-      <Filter>Source\Panels</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Project\ProjectPanelController.cpp">
       <Filter>Source\Project</Filter>
     </ClCompile>
@@ -108,12 +102,6 @@
     <ClCompile Include="Source\Script\ScriptRuntimeSession.cpp">
       <Filter>Source\Script</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Panels\SpritePanelController.cpp">
-      <Filter>Source\Panels</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Panels\SpritePanelView.cpp">
-      <Filter>Source\Panels</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\Application.h">
@@ -123,9 +111,6 @@
       <Filter>Source\Panels</Filter>
     </ClInclude>
     <ClInclude Include="Source\Panels\AssetsPanelView.h">
-      <Filter>Source\Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Panels\Collider2DPanelView.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
     <ClInclude Include="Source\PlatformAdapters\ButtonClickWin32Adapter.h">
@@ -188,9 +173,6 @@
     <ClInclude Include="Source\Panels\MaterialPanelController.h">
       <Filter>Source\Panels</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Panels\MaterialPanelView.h">
-      <Filter>Source\Panels</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Project\ProjectPanelController.h">
       <Filter>Source\Project</Filter>
     </ClInclude>
@@ -238,12 +220,6 @@
     </ClInclude>
     <ClInclude Include="Source\Script\ScriptRuntimeSession.h">
       <Filter>Source\Script</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Panels\SpritePanelController.h">
-      <Filter>Source\Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Panels\SpritePanelView.h">
-      <Filter>Source\Panels</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

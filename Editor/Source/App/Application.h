@@ -16,7 +16,6 @@
 #include "Panels/HierarchyPanelController.h"
 #include "Panels/InspectorPanelController.h"
 #include "Panels/LogOutputPanelController.h"
-#include "Panels/MaterialPanelController.h"
 #include "Project/ProjectPanelController.h"
 #include "SceneView/SceneViewController.h"
 #include "SceneView/SceneViewRenderer.h"
@@ -338,7 +337,6 @@ namespace Xelqoria::Editor
         AssetsPanelController m_assetsPanelController{};
         HierarchyPanelController m_hierarchyPanelController{};
         InspectorPanelController m_inspectorPanelController{};
-        MaterialPanelController m_materialPanelController{};
         LogOutputPanelController m_logOutputPanelController{};
         ProjectPanelController m_projectPanelController{};
         SceneViewController m_sceneViewController{};

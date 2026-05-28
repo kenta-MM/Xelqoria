@@ -369,7 +369,6 @@ namespace Xelqoria::Editor
         m_assetsPanelController.Bind(m_editorShell.GetAssetsPanelView(), m_cursor);
         m_hierarchyPanelController.Bind(m_editorShell.GetHierarchyPanelView());
         m_inspectorPanelController.Bind(m_editorShell.GetInspectorPanelView(), m_cursor);
-        m_materialPanelController.Bind(m_editorShell.GetMaterialPanelView(), m_cursor);
         m_logOutputPanelController.Bind(m_editorShell.GetLogOutputPanelView(), m_clipboard);
         m_projectPanelController.Bind(m_editorShell.GetSceneViewPanelView());
         m_sceneViewController.Bind(m_editorShell.GetSceneViewPanelView());
@@ -555,7 +554,6 @@ namespace Xelqoria::Editor
         RecordCurrentProject();
         m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_sceneDocument.RefreshProjectAssetRegistries();
-        m_materialPanelController.ResetOpenMaterial();
         if (m_sceneDocument.MigrateSpriteComponentsToMaterialAssets())
         {
             (void)m_sceneDocument.Save();
@@ -587,7 +585,6 @@ namespace Xelqoria::Editor
         RecordCurrentProject();
         m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_sceneDocument.RefreshProjectAssetRegistries();
-        m_materialPanelController.ResetOpenMaterial();
         if (m_sceneDocument.MigrateSpriteComponentsToMaterialAssets())
         {
             (void)m_sceneDocument.Save();
@@ -633,7 +630,6 @@ namespace Xelqoria::Editor
         RecordCurrentProject();
         m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_sceneDocument.RefreshProjectAssetRegistries();
-        m_materialPanelController.ResetOpenMaterial();
         if (m_sceneDocument.MigrateSpriteComponentsToMaterialAssets())
         {
             (void)m_sceneDocument.Save();
@@ -676,7 +672,6 @@ namespace Xelqoria::Editor
         RecordCurrentProject();
         m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_sceneDocument.RefreshProjectAssetRegistries();
-        m_materialPanelController.ResetOpenMaterial();
         if (m_sceneDocument.MigrateSpriteComponentsToMaterialAssets())
         {
             (void)m_sceneDocument.Save();

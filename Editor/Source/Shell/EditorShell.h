@@ -18,14 +18,11 @@
 namespace Xelqoria::Editor
 {
     class AssetsPanelView;
-    class Collider2DPanelView;
     class HierarchyPanelView;
     class InspectorPanelView;
     class IEditorPanelView;
     class LogOutputPanelView;
-    class MaterialPanelView;
     class SceneViewPanelView;
-    class SpritePanelView;
 
     /// <summary>
     /// Editor 固定 UI の Win32 child window 群とレイアウトを管理する。
@@ -178,12 +175,6 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSpriteRefDropHighlight() const;
 
         /// <summary>
-        /// Material パネルの要約ラベルを取得する。
-        /// </summary>
-        /// <returns>Material 要約ラベルの HWND。</returns>
-        [[nodiscard]] HWND GetMaterialSummaryLabel() const;
-
-        /// <summary>
         /// Material パネルの共有編集注意ラベルを取得する。
         /// </summary>
         /// <returns>共有編集注意ラベルの HWND。</returns>
@@ -242,30 +233,6 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>Collider2D 要約ラベルの HWND。</returns>
         [[nodiscard]] HWND GetCollider2DSummaryLabel() const;
-
-        /// <summary>
-        /// Sprite パネルの要約ラベルを取得する。
-        /// </summary>
-        /// <returns>Sprite 要約ラベルの HWND。</returns>
-        [[nodiscard]] HWND GetSpriteSummaryLabel() const;
-
-        /// <summary>
-        /// Sprite 詳細セクション見出しラベルを取得する。
-        /// </summary>
-        /// <returns>Sprite 詳細セクション見出しの HWND。</returns>
-        [[nodiscard]] HWND GetSpriteDetailsSectionLabel() const;
-
-        /// <summary>
-        /// Sprite 詳細項目ラベル群を取得する。
-        /// </summary>
-        /// <returns>Sprite 詳細ラベル配列。</returns>
-        [[nodiscard]] const std::array<HWND, 4>& GetSpriteDetailLabels() const;
-
-        /// <summary>
-        /// Sprite 詳細入力欄群を取得する。
-        /// </summary>
-        /// <returns>Sprite 詳細入力欄配列。</returns>
-        [[nodiscard]] const std::array<HWND, 4>& GetSpriteDetailEditControls() const;
 
         /// <summary>
         /// Script Asset ラベルを取得する。
@@ -482,24 +449,6 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>Inspector Panel View。</returns>
         [[nodiscard]] InspectorPanelView& GetInspectorPanelView() const;
-
-        /// <summary>
-        /// Material Panel View を取得する。
-        /// </summary>
-        /// <returns>Material Panel View。</returns>
-        [[nodiscard]] MaterialPanelView& GetMaterialPanelView() const;
-
-        /// <summary>
-        /// Sprite Panel View を取得する。
-        /// </summary>
-        /// <returns>Sprite Panel View。</returns>
-        [[nodiscard]] SpritePanelView& GetSpritePanelView() const;
-
-        /// <summary>
-        /// Collider2D Panel View を取得する。
-        /// </summary>
-        /// <returns>Collider2D Panel View。</returns>
-        [[nodiscard]] Collider2DPanelView& GetCollider2DPanelView() const;
 
         /// <summary>
         /// SceneView Panel View を取得する。
@@ -1171,9 +1120,6 @@ namespace Xelqoria::Editor
         std::unique_ptr<HierarchyPanelView> m_hierarchyPanelView{};
         std::unique_ptr<AssetsPanelView> m_assetsPanelView{};
         std::unique_ptr<InspectorPanelView> m_inspectorPanelView{};
-        std::unique_ptr<MaterialPanelView> m_materialPanelView{};
-        std::unique_ptr<SpritePanelView> m_spritePanelView{};
-        std::unique_ptr<Collider2DPanelView> m_collider2DPanelView{};
         std::unique_ptr<SceneViewPanelView> m_sceneViewPanelView{};
         std::unique_ptr<LogOutputPanelView> m_logOutputPanelView{};
         bool m_panelViewsInitialized = false;

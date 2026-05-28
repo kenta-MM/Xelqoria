@@ -16,13 +16,10 @@
 
 #include "EditorTheme.h"
 #include "Panels/AssetsPanelView.h"
-#include "Panels/Collider2DPanelView.h"
 #include "Panels/HierarchyPanelView.h"
 #include "Panels/InspectorPanelView.h"
 #include "Panels/LogOutputPanelView.h"
-#include "Panels/MaterialPanelView.h"
 #include "Panels/SceneViewPanelView.h"
-#include "Panels/SpritePanelView.h"
 
 #pragma comment(lib, "uxtheme.lib")
 
@@ -932,26 +929,17 @@ namespace Xelqoria::Editor
         m_hierarchyPanelView = std::make_unique<HierarchyPanelView>(m_panelHostContext);
         m_assetsPanelView = std::make_unique<AssetsPanelView>(m_panelHostContext);
         m_inspectorPanelView = std::make_unique<InspectorPanelView>(m_panelHostContext);
-        m_materialPanelView = std::make_unique<MaterialPanelView>(m_panelHostContext);
-        m_spritePanelView = std::make_unique<SpritePanelView>(m_panelHostContext);
-        m_collider2DPanelView = std::make_unique<Collider2DPanelView>(m_panelHostContext);
         m_sceneViewPanelView = std::make_unique<SceneViewPanelView>(m_panelHostContext);
         m_logOutputPanelView = std::make_unique<LogOutputPanelView>(m_panelHostContext);
 
         const bool initialized = m_hierarchyPanelView->Initialize(parentWindow, hInstance)
             && m_assetsPanelView->Initialize(parentWindow, hInstance)
             && m_inspectorPanelView->Initialize(parentWindow, hInstance)
-            && m_materialPanelView->Initialize(parentWindow, hInstance)
-            && m_spritePanelView->Initialize(parentWindow, hInstance)
-            && m_collider2DPanelView->Initialize(parentWindow, hInstance)
             && m_sceneViewPanelView->Initialize(parentWindow, hInstance)
             && m_logOutputPanelView->Initialize(parentWindow, hInstance);
         if (initialized)
         {
             m_panelViewsInitialized = true;
-            ShowPanelControls(EditorPanelId::Sprite, false);
-            ShowPanelControls(EditorPanelId::Material, false);
-            ShowPanelControls(EditorPanelId::Collider2D, false);
             SyncDockTabs();
         }
 
@@ -1419,13 +1407,10 @@ namespace Xelqoria::Editor
 
     void EditorShell::SendGroupBoxesToBack()
     {
-        const std::array<const IEditorPanelView*, 8> panelViews{
+        const std::array<const IEditorPanelView*, 5> panelViews{
             m_hierarchyPanelView.get(),
             m_assetsPanelView.get(),
             m_inspectorPanelView.get(),
-            m_spritePanelView.get(),
-            m_materialPanelView.get(),
-            m_collider2DPanelView.get(),
             m_sceneViewPanelView.get(),
             m_logOutputPanelView.get()
         };
@@ -1663,9 +1648,6 @@ namespace Xelqoria::Editor
         SetPanelParent(EditorPanelId::Assets, m_parentWindow);
         SetPanelParent(EditorPanelId::SceneView, m_parentWindow);
         SetPanelParent(EditorPanelId::Inspector, m_parentWindow);
-        SetPanelParent(EditorPanelId::Sprite, m_parentWindow);
-        SetPanelParent(EditorPanelId::Material, m_parentWindow);
-        SetPanelParent(EditorPanelId::Collider2D, m_parentWindow);
         SetPanelParent(EditorPanelId::LogOutput, m_parentWindow);
         DestroyFloatingWindow(EditorPanelId::Hierarchy);
         DestroyFloatingWindow(EditorPanelId::Assets);
@@ -1675,9 +1657,6 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(EditorPanelId::Material);
         DestroyFloatingWindow(EditorPanelId::Collider2D);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
-        ShowPanelControls(EditorPanelId::Sprite, false);
-        ShowPanelControls(EditorPanelId::Material, false);
-        ShowPanelControls(EditorPanelId::Collider2D, false);
         SyncDockTabs();
         m_layoutInitialized = false;
     }
@@ -1693,8 +1672,6 @@ namespace Xelqoria::Editor
         {
             RemovePanelFromDockTree(panelId);
             DestroyFloatingWindow(panelId);
-            SetPanelParent(panelId, m_parentWindow);
-            ShowPanelControls(panelId, false);
             return;
         }
 
@@ -2064,12 +2041,6 @@ namespace Xelqoria::Editor
             return GetSceneViewPanelView();
         case EditorPanelId::Inspector:
             return GetInspectorPanelView();
-        case EditorPanelId::Sprite:
-            return GetSpritePanelView();
-        case EditorPanelId::Material:
-            return GetMaterialPanelView();
-        case EditorPanelId::Collider2D:
-            return GetCollider2DPanelView();
         case EditorPanelId::LogOutput:
             return GetLogOutputPanelView();
         default:
@@ -4141,13 +4112,10 @@ namespace Xelqoria::Editor
             m_dockGuideWindows[8]
         };
 
-        const std::array<const IEditorPanelView*, 8> panelViews{
+        const std::array<const IEditorPanelView*, 5> panelViews{
             m_hierarchyPanelView.get(),
             m_assetsPanelView.get(),
             m_inspectorPanelView.get(),
-            m_spritePanelView.get(),
-            m_materialPanelView.get(),
-            m_collider2DPanelView.get(),
             m_sceneViewPanelView.get(),
             m_logOutputPanelView.get()
         };
@@ -4430,7 +4398,6 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetSpriteRefEdit() const { return GetInspectorPanelView().GetSpriteRefEdit(); }
     HWND EditorShell::GetMaterialOpenButton() const { return GetInspectorPanelView().GetMaterialOpenButton(); }
     HWND EditorShell::GetSpriteRefDropHighlight() const { return GetInspectorPanelView().GetSpriteRefDropHighlight(); }
-    HWND EditorShell::GetMaterialSummaryLabel() const { return GetMaterialPanelView().GetSummaryLabel(); }
     HWND EditorShell::GetMaterialSharedNoticeLabel() const { return GetInspectorPanelView().GetMaterialSharedNoticeLabel(); }
     HWND EditorShell::GetMaterialDetailsSectionLabel() const { return GetInspectorPanelView().GetMaterialDetailsSectionLabel(); }
     const std::array<HWND, 5>& EditorShell::GetMaterialDetailLabels() const { return GetInspectorPanelView().GetMaterialDetailLabels(); }
@@ -4441,10 +4408,6 @@ namespace Xelqoria::Editor
     HWND EditorShell::GetMaterialOutlineEnabledCheckBox() const { return GetInspectorPanelView().GetMaterialOutlineEnabledCheckBox(); }
     HWND EditorShell::GetMaterialOutlineColorButton() const { return GetInspectorPanelView().GetMaterialOutlineColorButton(); }
     HWND EditorShell::GetCollider2DSummaryLabel() const { return GetInspectorPanelView().GetCollider2DSummaryLabel(); }
-    HWND EditorShell::GetSpriteSummaryLabel() const { return GetSpritePanelView().GetSummaryLabel(); }
-    HWND EditorShell::GetSpriteDetailsSectionLabel() const { return GetSpritePanelView().GetDetailsSectionLabel(); }
-    const std::array<HWND, 4>& EditorShell::GetSpriteDetailLabels() const { return GetSpritePanelView().GetDetailLabels(); }
-    const std::array<HWND, 4>& EditorShell::GetSpriteDetailEditControls() const { return GetSpritePanelView().GetDetailEditControls(); }
     HWND EditorShell::GetScriptAssetLabel() const { return GetInspectorPanelView().GetScriptAssetLabel(); }
     HWND EditorShell::GetScriptAssetEdit() const { return GetInspectorPanelView().GetScriptAssetEdit(); }
     HWND EditorShell::GetScriptCreateButton() const { return GetInspectorPanelView().GetScriptCreateButton(); }
@@ -4491,21 +4454,6 @@ namespace Xelqoria::Editor
     InspectorPanelView& EditorShell::GetInspectorPanelView() const
     {
         return *m_inspectorPanelView;
-    }
-
-    MaterialPanelView& EditorShell::GetMaterialPanelView() const
-    {
-        return *m_materialPanelView;
-    }
-
-    SpritePanelView& EditorShell::GetSpritePanelView() const
-    {
-        return *m_spritePanelView;
-    }
-
-    Collider2DPanelView& EditorShell::GetCollider2DPanelView() const
-    {
-        return *m_collider2DPanelView;
     }
 
     SceneViewPanelView& EditorShell::GetSceneViewPanelView() const

@@ -13,7 +13,6 @@
 #include <utility>
 
 #include "Panels/AssetsPanelController.h"
-#include "Panels/MaterialPanelView.h"
 #include "Utils/EditorStringUtils.h"
 
 namespace Xelqoria::Editor
@@ -76,17 +75,6 @@ namespace Xelqoria::Editor
             value = parsed;
             return true;
         }
-    }
-
-    void MaterialPanelController::Bind(const MaterialPanelView& view, Platform::ICursor& cursor)
-    {
-        m_materialSummaryLabel = view.GetSummaryLabel();
-        m_materialSharedNoticeLabel = view.GetSharedNoticeLabel();
-        m_materialDetailsSectionLabel = view.GetDetailsSectionLabel();
-        m_materialDetailLabels = view.GetDetailLabels();
-        m_materialDetailEditControls = view.GetDetailEditControls();
-        m_materialTextureDropHighlight = view.GetTextureDropHighlight();
-        m_cursor = &cursor;
     }
 
     void MaterialPanelController::OpenMaterial(

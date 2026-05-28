@@ -22,7 +22,6 @@
     <ClCompile Include="Source\App\Application.cpp" />
     <ClCompile Include="Source\Panels\AssetsPanelController.cpp" />
     <ClCompile Include="Source\Panels\AssetsPanelView.cpp" />
-    <ClCompile Include="Source\Panels\Collider2DPanelView.cpp" />
     <ClCompile Include="Source\Commands\EditorCommandController.cpp" />
     <ClCompile Include="Source\Panels\EditorPanelViewBase.cpp" />
     <ClCompile Include="Source\Panels\EditorPanelHostContext.cpp" />
@@ -38,7 +37,6 @@
     <ClCompile Include="Source\Panels\LogOutputPanelController.cpp" />
     <ClCompile Include="Source\Panels\LogOutputPanelView.cpp" />
     <ClCompile Include="Source\Panels\MaterialPanelController.cpp" />
-    <ClCompile Include="Source\Panels\MaterialPanelView.cpp" />
     <ClCompile Include="Source\Project\ProjectPanelController.cpp" />
     <ClCompile Include="Source\Project\RecentProjectsStore.cpp" />
     <ClCompile Include="Source\Rendering\RenderBackendBootstrap.cpp" />
@@ -52,15 +50,12 @@
     <ClCompile Include="Source\SceneView\SceneViewStatusPresenter.cpp" />
     <ClCompile Include="Source\Assets\ScriptAssetService.cpp" />
     <ClCompile Include="Source\Script\ScriptRuntimeSession.cpp" />
-    <ClCompile Include="Source\Panels\SpritePanelController.cpp" />
-    <ClCompile Include="Source\Panels\SpritePanelView.cpp" />
     <ClCompile Include="Source\App\StartupScreenController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\Application.h" />
     <ClInclude Include="Source\Panels\AssetsPanelController.h" />
     <ClInclude Include="Source\Panels\AssetsPanelView.h" />
-    <ClInclude Include="Source\Panels\Collider2DPanelView.h" />
     <ClInclude Include="Source\PlatformAdapters\ButtonClickWin32Adapter.h" />
     <ClInclude Include="Source\Commands\EditorCommandController.h" />
     <ClInclude Include="Source\Assets\EditorAssetPathUtils.h" />
@@ -81,7 +76,6 @@
     <ClInclude Include="Source\Panels\LogOutputPanelController.h" />
     <ClInclude Include="Source\Panels\LogOutputPanelView.h" />
     <ClInclude Include="Source\Panels\MaterialPanelController.h" />
-    <ClInclude Include="Source\Panels\MaterialPanelView.h" />
     <ClInclude Include="Source\Project\ProjectPanelController.h" />
     <ClInclude Include="Source\Project\RecentProjectsStore.h" />
     <ClInclude Include="Source\Rendering\RenderBackendBootstrap.h" />
@@ -98,8 +92,6 @@
     <ClInclude Include="Source\SceneView\SceneViewStatusPresenter.h" />
     <ClInclude Include="Source\Assets\ScriptAssetService.h" />
     <ClInclude Include="Source\Script\ScriptRuntimeSession.h" />
-    <ClInclude Include="Source\Panels\SpritePanelController.h" />
-    <ClInclude Include="Source\Panels\SpritePanelView.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Xelqoria.Core.vcxproj">
