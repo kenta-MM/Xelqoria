@@ -1,4 +1,4 @@
-#include "ScriptAssetService.h"
+#include "Assets/ScriptAssetService.h"
 
 #include <filesystem>
 #include <fstream>

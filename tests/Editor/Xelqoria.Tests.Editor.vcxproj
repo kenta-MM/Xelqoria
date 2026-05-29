@@ -20,14 +20,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\EditorCamera2DTests.cpp" />
-    <ClCompile Include="..\..\Editor\Source\EditorAssetPathUtils.cpp" />
-    <ClCompile Include="..\..\Editor\Source\EditorSceneDocument.cpp" />
-    <ClCompile Include="..\..\Editor\Source\EditorProject.cpp" />
-    <ClCompile Include="..\..\Editor\Source\RecentProjectsStore.cpp" />
-    <ClCompile Include="..\..\Editor\Source\SceneCommandHistory.cpp" />
-    <ClCompile Include="..\..\Editor\Source\SceneEditingOperations.cpp" />
-    <ClCompile Include="..\..\Editor\Source\ScriptAssetService.cpp" />
-    <ClCompile Include="..\..\Editor\Source\ScriptRuntimeSession.cpp" />
+    <ClCompile Include="..\..\Editor\Source\Assets\EditorAssetPathUtils.cpp" />
+    <ClCompile Include="..\..\Editor\Source\Project\EditorSceneDocument.cpp" />
+    <ClCompile Include="..\..\Editor\Source\Project\EditorProject.cpp" />
+    <ClCompile Include="..\..\Editor\Source\Project\RecentProjectsStore.cpp" />
+    <ClCompile Include="..\..\Editor\Source\Commands\SceneCommandHistory.cpp" />
+    <ClCompile Include="..\..\Editor\Source\Commands\SceneEditingOperations.cpp" />
+    <ClCompile Include="..\..\Editor\Source\Assets\ScriptAssetService.cpp" />
+    <ClCompile Include="..\..\Editor\Source\Script\ScriptRuntimeSession.cpp" />
     <ClCompile Include="Source\EditorProjectTests.cpp" />
     <ClCompile Include="Source\EditorSceneDocumentTests.cpp" />
     <ClCompile Include="Source\HierarchyPanelControllerTests.cpp" />

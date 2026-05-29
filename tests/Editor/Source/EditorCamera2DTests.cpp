@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "Collider2DComponent.h"
-#include "EditorCamera2D.h"
-#include "SceneViewOverlay.h"
+#include "SceneView/EditorCamera2D.h"
+#include "SceneView/SceneViewOverlay.h"
 #include "Transform.h"
 
 TEST(EditorCamera2DTests, StoresPanZoomAndViewportState)
