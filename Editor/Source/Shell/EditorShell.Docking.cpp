@@ -47,37 +47,37 @@
 
     void EditorShell::BuildInitialDockTree()
     {
-        m_dockNodes.clear();
+        m_docking.dockNodes.clear();
 
         DockNode assetsNode{};
         assetsNode.kind = DockNodeKind::Leaf;
         assetsNode.panels = { EditorPanelId::Assets };
-        assetsNode.tabControl = m_leftTopDockTab;
+        assetsNode.tabControl = m_docking.leftTopDockTab;
         const DockNodeId assetsNodeId = AddDockNode(std::move(assetsNode));
 
         DockNode hierarchyNode{};
         hierarchyNode.kind = DockNodeKind::Leaf;
         hierarchyNode.panels = { EditorPanelId::Hierarchy };
-        hierarchyNode.tabControl = m_leftBottomDockTab;
+        hierarchyNode.tabControl = m_docking.leftBottomDockTab;
         const DockNodeId hierarchyNodeId = AddDockNode(std::move(hierarchyNode));
 
         DockNode sceneViewNode{};
         sceneViewNode.kind = DockNodeKind::Leaf;
         sceneViewNode.panels = { EditorPanelId::SceneView };
-        sceneViewNode.tabControl = m_centerDockTab;
+        sceneViewNode.tabControl = m_docking.centerDockTab;
         const DockNodeId sceneViewNodeId = AddDockNode(std::move(sceneViewNode));
 
         DockNode logOutputNode{};
         logOutputNode.kind = DockNodeKind::Leaf;
         logOutputNode.panels = { EditorPanelId::LogOutput };
         logOutputNode.tabControl = CreateAdditionalDockTabControl(m_parentWindow);
-        m_logOutputDockTab = logOutputNode.tabControl;
+        m_docking.logOutputDockTab = logOutputNode.tabControl;
         const DockNodeId logOutputNodeId = AddDockNode(std::move(logOutputNode));
 
         DockNode inspectorNode{};
         inspectorNode.kind = DockNodeKind::Leaf;
         inspectorNode.panels = { EditorPanelId::Inspector };
-        inspectorNode.tabControl = m_rightDockTab;
+        inspectorNode.tabControl = m_docking.rightDockTab;
         const DockNodeId inspectorNodeId = AddDockNode(std::move(inspectorNode));
 
         DockNode leftColumnNode{};
@@ -110,17 +110,17 @@
         rootNode.splitRatio = 0.245f;
         rootNode.firstChild = leftColumnNodeId;
         rootNode.secondChild = centerRightNodeId;
-        m_rootDockNodeId = AddDockNode(rootNode);
+        m_docking.rootDockNodeId = AddDockNode(rootNode);
     }
 
     void EditorShell::LayoutDockNode(DockNodeId dockNodeId, const RECT& nodeRect)
     {
-        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_docking.dockNodes.size())
         {
             return;
         }
 
-        DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
         dockNode.rect = nodeRect;
         if (DockNodeKind::Leaf == dockNode.kind)
         {
@@ -151,12 +151,12 @@
 
     void EditorShell::LayoutDockLeaf(DockNodeId dockNodeId, const RECT& areaRect)
     {
-        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_docking.dockNodes.size())
         {
             return;
         }
 
-        DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
         HWND tabControl = dockNode.tabControl;
         if (nullptr == tabControl)
         {
@@ -201,8 +201,8 @@
 
     EditorShell::DockNodeId EditorShell::AddDockNode(DockNode node)
     {
-        const DockNodeId dockNodeId = static_cast<DockNodeId>(m_dockNodes.size());
-        m_dockNodes.push_back(std::move(node));
+        const DockNodeId dockNodeId = static_cast<DockNodeId>(m_docking.dockNodes.size());
+        m_docking.dockNodes.push_back(std::move(node));
         return dockNodeId;
     }
 
@@ -210,10 +210,10 @@
     {
         HWND targetTabControl = GetDefaultDockTabControl(panelId);
         std::vector<DockNodeId> dockLeafNodeIds{};
-        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        CollectReachableDockLeaves(m_docking.rootDockNodeId, dockLeafNodeIds);
         for (DockNodeId dockNodeId : dockLeafNodeIds)
         {
-            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            const DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             if (DockNodeKind::Leaf == dockNode.kind && dockNode.tabControl == targetTabControl)
             {
                 return dockNodeId;
@@ -225,7 +225,7 @@
             targetTabControl = CreateAdditionalDockTabControl(m_parentWindow);
             if (EditorPanelId::LogOutput == panelId)
             {
-                m_logOutputDockTab = targetTabControl;
+                m_docking.logOutputDockTab = targetTabControl;
             }
         }
 
@@ -233,13 +233,13 @@
         newLeaf.kind = DockNodeKind::Leaf;
         newLeaf.tabControl = targetTabControl;
         const DockNodeId newLeafNodeId = AddDockNode(std::move(newLeaf));
-        if (m_rootDockNodeId < 0 || static_cast<std::size_t>(m_rootDockNodeId) >= m_dockNodes.size())
+        if (m_docking.rootDockNodeId < 0 || static_cast<std::size_t>(m_docking.rootDockNodeId) >= m_docking.dockNodes.size())
         {
-            m_rootDockNodeId = newLeafNodeId;
+            m_docking.rootDockNodeId = newLeafNodeId;
             return newLeafNodeId;
         }
 
-        const DockNode oldRootNode = m_dockNodes[static_cast<std::size_t>(m_rootDockNodeId)];
+        const DockNode oldRootNode = m_docking.dockNodes[static_cast<std::size_t>(m_docking.rootDockNodeId)];
         const DockNodeId oldRootNodeId = AddDockNode(oldRootNode);
         DockNode splitNode{};
         splitNode.kind = DockNodeKind::Split;
@@ -262,7 +262,7 @@
             splitNode.splitRatio = EditorPanelId::LogOutput == panelId ? 0.75f : 0.84f;
         }
 
-        m_dockNodes[static_cast<std::size_t>(m_rootDockNodeId)] = splitNode;
+        m_docking.dockNodes[static_cast<std::size_t>(m_docking.rootDockNodeId)] = splitNode;
         return newLeafNodeId;
     }
 
@@ -271,23 +271,23 @@
         switch (panelId)
         {
         case EditorPanelId::Hierarchy:
-            return m_leftTopDockTab;
+            return m_docking.leftTopDockTab;
         case EditorPanelId::Assets:
-            return m_leftBottomDockTab;
+            return m_docking.leftBottomDockTab;
         case EditorPanelId::SceneView:
-            return m_centerDockTab;
+            return m_docking.centerDockTab;
         case EditorPanelId::Inspector:
-            return m_rightDockTab;
+            return m_docking.rightDockTab;
         case EditorPanelId::Sprite:
-            return m_rightDockTab;
+            return m_docking.rightDockTab;
         case EditorPanelId::Material:
-            return m_rightDockTab;
+            return m_docking.rightDockTab;
         case EditorPanelId::Collider2D:
-            return m_rightDockTab;
+            return m_docking.rightDockTab;
         case EditorPanelId::LogOutput:
-            return m_logOutputDockTab;
+            return m_docking.logOutputDockTab;
         default:
-            return m_centerDockTab;
+            return m_docking.centerDockTab;
         }
     }
 
@@ -317,15 +317,15 @@
         if (inputSnapshot.WasMouseButtonPressed(Core::MouseButton::Left))
         {
             const DockNodeId hitSplitterNodeId = HitTestDockSplitter(cursorScreenPoint);
-            if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_dockNodes.size())
+            if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_docking.dockNodes.size())
             {
-                const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
-                m_dragKind = DockSplitOrientation::Horizontal == splitNode.splitOrientation
+                const DockNode& splitNode = m_docking.dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
+                m_docking.dragKind = DockSplitOrientation::Horizontal == splitNode.splitOrientation
                     ? DockDragKind::HorizontalSplitter
                     : DockDragKind::VerticalSplitter;
-                m_dragSplitNodeId = hitSplitterNodeId;
-                m_dragStartScreenPoint = cursorScreenPoint;
-                m_dragStartSplitRatio = splitNode.splitRatio;
+                m_docking.dragSplitNodeId = hitSplitterNodeId;
+                m_docking.dragStartScreenPoint = cursorScreenPoint;
+                m_docking.dragStartSplitRatio = splitNode.splitRatio;
                 SetCapture(parentWindow);
             }
             else
@@ -333,9 +333,9 @@
                 const std::optional<EditorPanelId> hitPanel = HitTestDockTab(cursorScreenPoint);
                 if (hitPanel.has_value())
                 {
-                    m_pendingDockDragPanelId = hitPanel;
-                    m_dragStartScreenPoint = cursorScreenPoint;
-                    m_pendingDockDragStartTick = GetTickCount64();
+                    m_docking.pendingDockDragPanelId = hitPanel;
+                    m_docking.dragStartScreenPoint = cursorScreenPoint;
+                    m_docking.pendingDockDragStartTick = GetTickCount64();
                     SetCapture(parentWindow);
                 }
             }
@@ -343,55 +343,55 @@
 
         if (inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left))
         {
-            if (DockDragKind::None == m_dragKind && m_pendingDockDragPanelId.has_value())
+            if (DockDragKind::None == m_docking.dragKind && m_docking.pendingDockDragPanelId.has_value())
             {
                 const int dragThresholdX = (std::max)(ScaleMetric(4), GetSystemMetrics(SM_CXDRAG));
                 const int dragThresholdY = (std::max)(ScaleMetric(4), GetSystemMetrics(SM_CYDRAG));
                 const bool movedEnough =
-                    dragThresholdX <= std::abs(cursorScreenPoint.x - m_dragStartScreenPoint.x)
-                    || dragThresholdY <= std::abs(cursorScreenPoint.y - m_dragStartScreenPoint.y);
+                    dragThresholdX <= std::abs(cursorScreenPoint.x - m_docking.dragStartScreenPoint.x)
+                    || dragThresholdY <= std::abs(cursorScreenPoint.y - m_docking.dragStartScreenPoint.y);
                 const bool heldLongEnough =
-                    DockPanelDragDelayMilliseconds <= GetTickCount64() - m_pendingDockDragStartTick;
+                    DockPanelDragDelayMilliseconds <= GetTickCount64() - m_docking.pendingDockDragStartTick;
                 if (movedEnough && heldLongEnough)
                 {
-                    m_dragKind = DockDragKind::Panel;
-                    m_dragPanelId = m_pendingDockDragPanelId;
-                    m_pendingDockDragPanelId.reset();
-                    m_currentGuideTarget = DockGuideTarget{};
-                    m_hasDockPreview = false;
-                    BeginDockPanelDrag(*m_dragPanelId, parentWindow, cursorScreenPoint);
+                    m_docking.dragKind = DockDragKind::Panel;
+                    m_docking.dragPanelId = m_docking.pendingDockDragPanelId;
+                    m_docking.pendingDockDragPanelId.reset();
+                    m_docking.currentGuideTarget = DockGuideTarget{};
+                    m_docking.hasDockPreview = false;
+                    BeginDockPanelDrag(*m_docking.dragPanelId, parentWindow, cursorScreenPoint);
                     changed = true;
                 }
             }
 
-            if (DockDragKind::Panel == m_dragKind && m_dragPanelId.has_value())
+            if (DockDragKind::Panel == m_docking.dragKind && m_docking.dragPanelId.has_value())
             {
-                UpdateDockPanelDragWindow(*m_dragPanelId, cursorScreenPoint);
+                UpdateDockPanelDragWindow(*m_docking.dragPanelId, cursorScreenPoint);
                 UpdateDockGuideWindows(parentWindow, cursorScreenPoint);
-                m_currentGuideTarget = HitTestDockGuideTarget(parentWindow, cursorScreenPoint);
-                m_hasDockPreview = DockGuideTargetKind::None != m_currentGuideTarget.kind
-                    && DockGuideTargetKind::Float != m_currentGuideTarget.kind;
-                m_dockPreviewRect = m_currentGuideTarget.previewRect;
+                m_docking.currentGuideTarget = HitTestDockGuideTarget(parentWindow, cursorScreenPoint);
+                m_docking.hasDockPreview = DockGuideTargetKind::None != m_docking.currentGuideTarget.kind
+                    && DockGuideTargetKind::Float != m_docking.currentGuideTarget.kind;
+                m_docking.dockPreviewRect = m_docking.currentGuideTarget.previewRect;
                 UpdateDockPreviewWindow(parentWindow);
             }
-            else if (DockDragKind::HorizontalSplitter == m_dragKind || DockDragKind::VerticalSplitter == m_dragKind)
+            else if (DockDragKind::HorizontalSplitter == m_docking.dragKind || DockDragKind::VerticalSplitter == m_docking.dragKind)
             {
                 changed = UpdateDockSplitterDrag(parentWindow, cursorScreenPoint) || changed;
                 if (nullptr != m_cursor)
                 {
                     m_cursor->SetShape(
-                        DockDragKind::HorizontalSplitter == m_dragKind
+                        DockDragKind::HorizontalSplitter == m_docking.dragKind
                             ? Platform::CursorShape::HorizontalResize
                             : Platform::CursorShape::VerticalResize);
                 }
             }
         }
-        else if (DockDragKind::None == m_dragKind)
+        else if (DockDragKind::None == m_docking.dragKind)
         {
             const DockNodeId hitSplitterNodeId = HitTestDockSplitter(cursorScreenPoint);
-            if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_dockNodes.size())
+            if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_docking.dockNodes.size())
             {
-                const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
+                const DockNode& splitNode = m_docking.dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
                 if (nullptr != m_cursor)
                 {
                     m_cursor->SetShape(
@@ -404,24 +404,24 @@
 
         if (inputSnapshot.WasMouseButtonReleased(Core::MouseButton::Left))
         {
-            if (DockDragKind::Panel == m_dragKind && m_dragPanelId.has_value())
+            if (DockDragKind::Panel == m_docking.dragKind && m_docking.dragPanelId.has_value())
             {
-                const DockGuideTarget guideTarget = m_currentGuideTarget;
-                m_currentGuideTarget = DockGuideTarget{};
-                m_hasDockPreview = false;
+                const DockGuideTarget guideTarget = m_docking.currentGuideTarget;
+                m_docking.currentGuideTarget = DockGuideTarget{};
+                m_docking.hasDockPreview = false;
                 HideDockGuideWindows();
                 UpdateDockPreviewWindow(parentWindow);
-                ApplyDockGuideTarget(*m_dragPanelId, guideTarget, parentWindow);
+                ApplyDockGuideTarget(*m_docking.dragPanelId, guideTarget, parentWindow);
                 changed = true;
             }
 
-            m_dragKind = DockDragKind::None;
-            m_dragPanelId.reset();
-            m_pendingDockDragPanelId.reset();
-            m_pendingDockDragStartTick = 0;
-            m_dragSplitNodeId = -1;
-            m_hasDockPreview = false;
-            m_dragPanelWindowOffset = POINT{};
+            m_docking.dragKind = DockDragKind::None;
+            m_docking.dragPanelId.reset();
+            m_docking.pendingDockDragPanelId.reset();
+            m_docking.pendingDockDragStartTick = 0;
+            m_docking.dragSplitNodeId = -1;
+            m_docking.hasDockPreview = false;
+            m_docking.dragPanelWindowOffset = POINT{};
             ReleaseCapture();
             HideDockGuideWindows();
             UpdateDockPreviewWindow(parentWindow);
@@ -448,7 +448,7 @@
             return false;
         }
 
-        for (DockNode& dockNode : m_dockNodes)
+        for (DockNode& dockNode : m_docking.dockNodes)
         {
             if (DockNodeKind::Leaf != dockNode.kind || notifyHeader->hwndFrom != dockNode.tabControl)
             {
@@ -465,33 +465,33 @@
 
     void EditorShell::ResetDockLayout()
     {
-        m_leftTopDockPanels = { EditorPanelId::Hierarchy };
-        m_leftBottomDockPanels = { EditorPanelId::Assets };
-        m_centerDockPanels = { EditorPanelId::SceneView };
-        m_rightDockPanels = { EditorPanelId::Inspector };
-        m_leftTopActiveTabIndex = 0;
-        m_leftBottomActiveTabIndex = 0;
-        m_centerActiveTabIndex = 0;
-        m_rightActiveTabIndex = 0;
-        for (HWND tabControl : m_dynamicDockTabs)
+        m_docking.leftTopDockPanels = { EditorPanelId::Hierarchy };
+        m_docking.leftBottomDockPanels = { EditorPanelId::Assets };
+        m_docking.centerDockPanels = { EditorPanelId::SceneView };
+        m_docking.rightDockPanels = { EditorPanelId::Inspector };
+        m_docking.leftTopActiveTabIndex = 0;
+        m_docking.leftBottomActiveTabIndex = 0;
+        m_docking.centerActiveTabIndex = 0;
+        m_docking.rightActiveTabIndex = 0;
+        for (HWND tabControl : m_docking.dynamicDockTabs)
         {
             if (nullptr != tabControl)
             {
                 DestroyWindow(tabControl);
             }
         }
-        m_dynamicDockTabs.clear();
-        m_logOutputDockTab = nullptr;
-        m_hasDockPreview = false;
-        m_currentGuideTarget = DockGuideTarget{};
-        m_pendingDockDragPanelId.reset();
-        m_pendingDockDragStartTick = 0;
+        m_docking.dynamicDockTabs.clear();
+        m_docking.logOutputDockTab = nullptr;
+        m_docking.hasDockPreview = false;
+        m_docking.currentGuideTarget = DockGuideTarget{};
+        m_docking.pendingDockDragPanelId.reset();
+        m_docking.pendingDockDragStartTick = 0;
         BuildInitialDockTree();
         HideDockGuideWindows();
         UpdateDockPreviewWindow(m_parentWindow);
-        m_leftPaneWidth = ScaleMetric(260);
-        m_rightPaneWidth = ScaleMetric(300);
-        m_leftTopHeight = ScaleMetric(280);
+        m_docking.leftPaneWidth = ScaleMetric(260);
+        m_docking.rightPaneWidth = ScaleMetric(300);
+        m_docking.leftTopHeight = ScaleMetric(280);
         SetPanelParent(EditorPanelId::Hierarchy, m_parentWindow);
         SetPanelParent(EditorPanelId::Assets, m_parentWindow);
         SetPanelParent(EditorPanelId::SceneView, m_parentWindow);
@@ -527,12 +527,12 @@
         DestroyFloatingWindow(panelId);
         SetPanelParent(panelId, m_parentWindow);
         const DockNodeId targetDockNodeId = EnsureDefaultDockLeaf(panelId);
-        if (targetDockNodeId < 0 || static_cast<std::size_t>(targetDockNodeId) >= m_dockNodes.size())
+        if (targetDockNodeId < 0 || static_cast<std::size_t>(targetDockNodeId) >= m_docking.dockNodes.size())
         {
             return;
         }
 
-        DockNode& targetDockNode = m_dockNodes[static_cast<std::size_t>(targetDockNodeId)];
+        DockNode& targetDockNode = m_docking.dockNodes[static_cast<std::size_t>(targetDockNodeId)];
         if (targetDockNode.panels.end() == std::find(targetDockNode.panels.begin(), targetDockNode.panels.end(), panelId))
         {
             targetDockNode.panels.push_back(panelId);
@@ -553,7 +553,7 @@
         const int floatingGroupIndex = FindFloatingPanelGroupIndex(panelId);
         if (floatingGroupIndex >= 0)
         {
-            FloatingPanelGroup& group = m_floatingPanelGroups[static_cast<std::size_t>(floatingGroupIndex)];
+            FloatingPanelGroup& group = m_docking.floatingPanelGroups[static_cast<std::size_t>(floatingGroupIndex)];
             const auto panelIt = std::find(group.panels.begin(), group.panels.end(), panelId);
             if (panelIt != group.panels.end())
             {
@@ -570,9 +570,9 @@
         }
 
         const DockNodeId dockNodeId = FindPanelDockLeaf(panelId);
-        if (0 <= dockNodeId && static_cast<std::size_t>(dockNodeId) < m_dockNodes.size())
+        if (0 <= dockNodeId && static_cast<std::size_t>(dockNodeId) < m_docking.dockNodes.size())
         {
-            DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             const auto panelIt = std::find(dockNode.panels.begin(), dockNode.panels.end(), panelId);
             if (panelIt != dockNode.panels.end())
             {
@@ -602,11 +602,11 @@
         }
 
         output << L"XelqoriaEditorLayout 1\n";
-        output << L"Root " << m_rootDockNodeId << L'\n';
-        output << L"Nodes " << m_dockNodes.size() << L'\n';
-        for (std::size_t index = 0; index < m_dockNodes.size(); ++index)
+        output << L"Root " << m_docking.rootDockNodeId << L'\n';
+        output << L"Nodes " << m_docking.dockNodes.size() << L'\n';
+        for (std::size_t index = 0; index < m_docking.dockNodes.size(); ++index)
         {
-            const DockNode& dockNode = m_dockNodes[index];
+            const DockNode& dockNode = m_docking.dockNodes[index];
             output << L"Node "
                 << index << L' '
                 << (DockNodeKind::Leaf == dockNode.kind ? L"Leaf" : L"Split") << L' '
@@ -624,8 +624,8 @@
             output << L'\n';
         }
 
-        output << L"Floating " << m_floatingPanelGroups.size() << L'\n';
-        for (const FloatingPanelGroup& group : m_floatingPanelGroups)
+        output << L"Floating " << m_docking.floatingPanelGroups.size() << L'\n';
+        for (const FloatingPanelGroup& group : m_docking.floatingPanelGroups)
         {
             RECT windowRect{};
             if (nullptr != group.window)
@@ -766,17 +766,17 @@
         }
 
         ResetDockLayout();
-        for (HWND tabControl : m_dynamicDockTabs)
+        for (HWND tabControl : m_docking.dynamicDockTabs)
         {
             if (nullptr != tabControl)
             {
                 DestroyWindow(tabControl);
             }
         }
-        m_dynamicDockTabs.clear();
-        m_logOutputDockTab = nullptr;
-        m_dockNodes.clear();
-        m_dockNodes.reserve(savedNodes.size());
+        m_docking.dynamicDockTabs.clear();
+        m_docking.logOutputDockTab = nullptr;
+        m_docking.dockNodes.clear();
+        m_docking.dockNodes.reserve(savedNodes.size());
 
         for (const SavedDockNode& savedNode : savedNodes)
         {
@@ -794,9 +794,9 @@
             {
                 dockNode.tabControl = CreateDockTabControlForLayoutKey(savedNode.tabKey);
             }
-            m_dockNodes.push_back(std::move(dockNode));
+            m_docking.dockNodes.push_back(std::move(dockNode));
         }
-        m_rootDockNodeId = rootDockNodeId;
+        m_docking.rootDockNodeId = rootDockNodeId;
 
         for (const SavedFloatingGroup& group : savedFloatingGroups)
         {
@@ -832,7 +832,7 @@
             const int groupIndex = FindFloatingPanelGroupIndex(floatingWindow);
             if (groupIndex >= 0)
             {
-                FloatingPanelGroup& floatingGroup = m_floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
+                FloatingPanelGroup& floatingGroup = m_docking.floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
                 floatingGroup.activeTabIndex =
                     (std::max)(0, (std::min)(group.activeTabIndex, static_cast<int>(floatingGroup.panels.size()) - 1));
                 SyncFloatingPanelTabs(floatingWindow);
@@ -872,10 +872,10 @@
         }
 
         std::vector<DockNodeId> dockLeafNodeIds{};
-        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        CollectReachableDockLeaves(m_docking.rootDockNodeId, dockLeafNodeIds);
         for (DockNodeId dockNodeId : dockLeafNodeIds)
         {
-            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            const DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             if (DockNodeKind::Leaf != dockNode.kind)
             {
                 continue;
@@ -908,10 +908,10 @@
     std::optional<EditorPanelId> EditorShell::HitTestDockTab(POINT cursorScreenPoint) const
     {
         std::vector<DockNodeId> dockLeafNodeIds{};
-        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        CollectReachableDockLeaves(m_docking.rootDockNodeId, dockLeafNodeIds);
         for (DockNodeId dockNodeId : dockLeafNodeIds)
         {
-            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            const DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             if (DockNodeKind::Leaf != dockNode.kind || dockNode.panels.empty())
             {
                 continue;
@@ -943,10 +943,10 @@
     EditorShell::DockNodeId EditorShell::HitTestDockLeaf(POINT cursorClientPoint) const
     {
         std::vector<DockNodeId> dockLeafNodeIds{};
-        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        CollectReachableDockLeaves(m_docking.rootDockNodeId, dockLeafNodeIds);
         for (DockNodeId dockNodeId : dockLeafNodeIds)
         {
-            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            const DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             if (DockNodeKind::Leaf != dockNode.kind || dockNode.panels.empty())
             {
                 continue;
@@ -972,21 +972,21 @@
         ScreenToClient(m_parentWindow, &cursorClientPoint);
 
         std::vector<DockNodeId> dockSplitNodeIds{};
-        CollectReachableDockSplits(m_rootDockNodeId, dockSplitNodeIds);
+        CollectReachableDockSplits(m_docking.rootDockNodeId, dockSplitNodeIds);
         for (DockNodeId dockNodeId : dockSplitNodeIds)
         {
-            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            const DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             if (DockNodeKind::Split != dockNode.kind
                 || dockNode.firstChild < 0
                 || dockNode.secondChild < 0
-                || static_cast<std::size_t>(dockNode.firstChild) >= m_dockNodes.size()
-                || static_cast<std::size_t>(dockNode.secondChild) >= m_dockNodes.size())
+                || static_cast<std::size_t>(dockNode.firstChild) >= m_docking.dockNodes.size()
+                || static_cast<std::size_t>(dockNode.secondChild) >= m_docking.dockNodes.size())
             {
                 continue;
             }
 
-            const RECT firstRect = m_dockNodes[static_cast<std::size_t>(dockNode.firstChild)].rect;
-            const RECT secondRect = m_dockNodes[static_cast<std::size_t>(dockNode.secondChild)].rect;
+            const RECT firstRect = m_docking.dockNodes[static_cast<std::size_t>(dockNode.firstChild)].rect;
+            const RECT secondRect = m_docking.dockNodes[static_cast<std::size_t>(dockNode.secondChild)].rect;
             RECT splitterRect{};
             if (DockSplitOrientation::Horizontal == dockNode.splitOrientation)
             {
@@ -1022,12 +1022,12 @@
 
     void EditorShell::CollectReachableDockLeaves(DockNodeId dockNodeId, std::vector<DockNodeId>& dockLeafNodeIds) const
     {
-        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_docking.dockNodes.size())
         {
             return;
         }
 
-        const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        const DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
         if (DockNodeKind::Leaf == dockNode.kind)
         {
             dockLeafNodeIds.push_back(dockNodeId);
@@ -1040,12 +1040,12 @@
 
     void EditorShell::CollectReachableDockSplits(DockNodeId dockNodeId, std::vector<DockNodeId>& dockSplitNodeIds) const
     {
-        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_docking.dockNodes.size())
         {
             return;
         }
 
-        const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        const DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
         if (DockNodeKind::Leaf == dockNode.kind)
         {
             return;
@@ -1059,13 +1059,13 @@
     bool EditorShell::UpdateDockSplitterDrag(HWND parentWindow, POINT cursorScreenPoint)
     {
         if (nullptr == parentWindow
-            || m_dragSplitNodeId < 0
-            || static_cast<std::size_t>(m_dragSplitNodeId) >= m_dockNodes.size())
+            || m_docking.dragSplitNodeId < 0
+            || static_cast<std::size_t>(m_docking.dragSplitNodeId) >= m_docking.dockNodes.size())
         {
             return false;
         }
 
-        DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(m_dragSplitNodeId)];
+        DockNode& splitNode = m_docking.dockNodes[static_cast<std::size_t>(m_docking.dragSplitNodeId)];
         if (DockNodeKind::Split != splitNode.kind)
         {
             return false;
@@ -1083,11 +1083,11 @@
         }
 
         const int cursorDelta = DockSplitOrientation::Horizontal == splitNode.splitOrientation
-            ? cursorScreenPoint.x - m_dragStartScreenPoint.x
-            : cursorScreenPoint.y - m_dragStartScreenPoint.y;
+            ? cursorScreenPoint.x - m_docking.dragStartScreenPoint.x
+            : cursorScreenPoint.y - m_docking.dragStartScreenPoint.y;
         const float nextRatio = ClampDockSplitRatio(
-            m_dragSplitNodeId,
-            m_dragStartSplitRatio + static_cast<float>(cursorDelta) / static_cast<float>(availableLength));
+            m_docking.dragSplitNodeId,
+            m_docking.dragStartSplitRatio + static_cast<float>(cursorDelta) / static_cast<float>(availableLength));
         if (splitNode.splitRatio == nextRatio)
         {
             return false;
@@ -1100,12 +1100,12 @@
 
     float EditorShell::ClampDockSplitRatio(DockNodeId dockNodeId, float ratio) const
     {
-        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_docking.dockNodes.size())
         {
             return ratio;
         }
 
-        const DockNode& splitNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        const DockNode& splitNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
         const int panelSpacing = ScaleMetric(12);
         const int totalLength = DockSplitOrientation::Horizontal == splitNode.splitOrientation
             ? splitNode.rect.right - splitNode.rect.left
@@ -1123,10 +1123,10 @@
     EditorShell::DockNodeId EditorShell::FindPanelDockLeaf(EditorPanelId panelId) const
     {
         std::vector<DockNodeId> dockLeafNodeIds{};
-        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        CollectReachableDockLeaves(m_docking.rootDockNodeId, dockLeafNodeIds);
         for (DockNodeId dockNodeId : dockLeafNodeIds)
         {
-            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            const DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             if (DockNodeKind::Leaf != dockNode.kind)
             {
                 continue;
@@ -1149,10 +1149,10 @@
     void EditorShell::RemovePanelFromDockTree(EditorPanelId panelId, bool collapseEmptyLeaves)
     {
         std::vector<DockNodeId> dockLeafNodeIds{};
-        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        CollectReachableDockLeaves(m_docking.rootDockNodeId, dockLeafNodeIds);
         for (DockNodeId dockNodeId : dockLeafNodeIds)
         {
-            DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             if (DockNodeKind::Leaf != dockNode.kind)
             {
                 continue;
@@ -1161,9 +1161,9 @@
             RemovePanelFromDockNode(dockNode, panelId);
         }
 
-        if (collapseEmptyLeaves && m_rootDockNodeId >= 0)
+        if (collapseEmptyLeaves && m_docking.rootDockNodeId >= 0)
         {
-            (void)CollapseEmptyDockLeaves(m_rootDockNodeId);
+            (void)CollapseEmptyDockLeaves(m_docking.rootDockNodeId);
         }
     }
 
@@ -1178,12 +1178,12 @@
 
     bool EditorShell::CollapseEmptyDockLeaves(DockNodeId dockNodeId)
     {
-        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_docking.dockNodes.size())
         {
             return false;
         }
 
-        DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+        DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
         if (DockNodeKind::Leaf == dockNode.kind)
         {
             return dockNode.panels.empty();
@@ -1193,13 +1193,13 @@
         const bool secondEmpty = CollapseEmptyDockLeaves(dockNode.secondChild);
         if (firstEmpty && false == secondEmpty)
         {
-            dockNode = m_dockNodes[static_cast<std::size_t>(dockNode.secondChild)];
+            dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNode.secondChild)];
             return false;
         }
 
         if (secondEmpty && false == firstEmpty)
         {
-            dockNode = m_dockNodes[static_cast<std::size_t>(dockNode.firstChild)];
+            dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNode.firstChild)];
             return false;
         }
 
@@ -1235,23 +1235,23 @@
             DockGuideTargetKind::SplitRight
         };
 
-        for (std::size_t index = 0; index < m_dockGuideWindows.size(); ++index)
+        for (std::size_t index = 0; index < m_docking.dockGuideWindows.size(); ++index)
         {
-            if (false == hitVisibleGuide(m_dockGuideWindows[index]))
+            if (false == hitVisibleGuide(m_docking.dockGuideWindows[index]))
             {
                 continue;
             }
 
             const DockGuideTargetKind kind = guideKinds[index];
-            const DockNodeId dockNodeId = index < 5 ? m_currentGuideTarget.dockNodeId : m_rootDockNodeId;
-            if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+            const DockNodeId dockNodeId = index < 5 ? m_docking.currentGuideTarget.dockNodeId : m_docking.rootDockNodeId;
+            if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_docking.dockNodes.size())
             {
                 return DockGuideTarget{};
             }
 
             const RECT sourceRect = index < 5
-                ? m_dockNodes[static_cast<std::size_t>(dockNodeId)].rect
-                : m_dockNodes[static_cast<std::size_t>(m_rootDockNodeId)].rect;
+                ? m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)].rect
+                : m_docking.dockNodes[static_cast<std::size_t>(m_docking.rootDockNodeId)].rect;
             RECT previewRect = sourceRect;
             const int width = sourceRect.right - sourceRect.left;
             const int height = sourceRect.bottom - sourceRect.top;
@@ -1304,7 +1304,7 @@
             return;
         }
 
-        if (guideTarget.dockNodeId < 0 || static_cast<std::size_t>(guideTarget.dockNodeId) >= m_dockNodes.size())
+        if (guideTarget.dockNodeId < 0 || static_cast<std::size_t>(guideTarget.dockNodeId) >= m_docking.dockNodes.size())
         {
             return;
         }
@@ -1313,25 +1313,25 @@
         HWND sourceTabControl = GetDockLeafTabControl(sourceLeafNodeId);
         if (nullptr == sourceTabControl)
         {
-            sourceTabControl = m_centerDockTab;
+            sourceTabControl = m_docking.centerDockTab;
         }
 
         RemovePanelFromDockTree(panelId, false);
-        if (guideTarget.dockNodeId < 0 || static_cast<std::size_t>(guideTarget.dockNodeId) >= m_dockNodes.size())
+        if (guideTarget.dockNodeId < 0 || static_cast<std::size_t>(guideTarget.dockNodeId) >= m_docking.dockNodes.size())
         {
             return;
         }
 
-        DockNode& targetNode = m_dockNodes[static_cast<std::size_t>(guideTarget.dockNodeId)];
+        DockNode& targetNode = m_docking.dockNodes[static_cast<std::size_t>(guideTarget.dockNodeId)];
         if (DockGuideTargetKind::Tab == guideTarget.kind && DockNodeKind::Leaf == targetNode.kind)
         {
             DestroyFloatingWindow(panelId);
             SetPanelParent(panelId, parentWindow);
             targetNode.panels.push_back(panelId);
             targetNode.activeTabIndex = static_cast<int>(targetNode.panels.size()) - 1;
-            if (m_rootDockNodeId >= 0)
+            if (m_docking.rootDockNodeId >= 0)
             {
-                (void)CollapseEmptyDockLeaves(m_rootDockNodeId);
+                (void)CollapseEmptyDockLeaves(m_docking.rootDockNodeId);
             }
             SyncDockTabs();
             m_layoutInitialized = false;
@@ -1387,10 +1387,10 @@
             splitNode.splitRatio = 0.65f;
         }
 
-        m_dockNodes[targetNodeIndex] = splitNode;
-        if (m_rootDockNodeId >= 0)
+        m_docking.dockNodes[targetNodeIndex] = splitNode;
+        if (m_docking.rootDockNodeId >= 0)
         {
-            (void)CollapseEmptyDockLeaves(m_rootDockNodeId);
+            (void)CollapseEmptyDockLeaves(m_docking.rootDockNodeId);
         }
         SyncDockTabs();
         m_layoutInitialized = false;
@@ -1398,7 +1398,7 @@
 
     void EditorShell::UpdateDockGuideWindows(HWND parentWindow, POINT cursorScreenPoint)
     {
-        if (nullptr == parentWindow || DockDragKind::Panel != m_dragKind)
+        if (nullptr == parentWindow || DockDragKind::Panel != m_docking.dragKind)
         {
             HideDockGuideWindows();
             return;
@@ -1407,43 +1407,43 @@
         POINT cursorClientPoint = cursorScreenPoint;
         ScreenToClient(parentWindow, &cursorClientPoint);
         const DockNodeId hitLeafNodeId = HitTestDockLeaf(cursorClientPoint);
-        m_currentGuideTarget.dockNodeId = hitLeafNodeId;
+        m_docking.currentGuideTarget.dockNodeId = hitLeafNodeId;
 
         const int guideSize = ScaleMetric(40);
         const int guideGap = ScaleMetric(3);
-        if (0 <= hitLeafNodeId && static_cast<std::size_t>(hitLeafNodeId) < m_dockNodes.size())
+        if (0 <= hitLeafNodeId && static_cast<std::size_t>(hitLeafNodeId) < m_docking.dockNodes.size())
         {
-            const RECT leafRect = m_dockNodes[static_cast<std::size_t>(hitLeafNodeId)].rect;
+            const RECT leafRect = m_docking.dockNodes[static_cast<std::size_t>(hitLeafNodeId)].rect;
             const int centerX = (leafRect.left + leafRect.right) / 2;
             const int centerY = (leafRect.top + leafRect.bottom) / 2;
-            ShowDockGuideWindow(m_dockGuideWindows[4], RECT{ centerX - guideSize / 2, centerY - guideSize / 2, centerX + guideSize / 2, centerY + guideSize / 2 });
-            ShowDockGuideWindow(m_dockGuideWindows[0], RECT{ centerX - guideSize / 2, centerY - guideSize - guideGap - guideSize / 2, centerX + guideSize / 2, centerY - guideGap - guideSize / 2 });
-            ShowDockGuideWindow(m_dockGuideWindows[1], RECT{ centerX - guideSize / 2, centerY + guideGap + guideSize / 2, centerX + guideSize / 2, centerY + guideSize + guideGap + guideSize / 2 });
-            ShowDockGuideWindow(m_dockGuideWindows[2], RECT{ centerX - guideSize - guideGap - guideSize / 2, centerY - guideSize / 2, centerX - guideGap - guideSize / 2, centerY + guideSize / 2 });
-            ShowDockGuideWindow(m_dockGuideWindows[3], RECT{ centerX + guideGap + guideSize / 2, centerY - guideSize / 2, centerX + guideSize + guideGap + guideSize / 2, centerY + guideSize / 2 });
+            ShowDockGuideWindow(m_docking.dockGuideWindows[4], RECT{ centerX - guideSize / 2, centerY - guideSize / 2, centerX + guideSize / 2, centerY + guideSize / 2 });
+            ShowDockGuideWindow(m_docking.dockGuideWindows[0], RECT{ centerX - guideSize / 2, centerY - guideSize - guideGap - guideSize / 2, centerX + guideSize / 2, centerY - guideGap - guideSize / 2 });
+            ShowDockGuideWindow(m_docking.dockGuideWindows[1], RECT{ centerX - guideSize / 2, centerY + guideGap + guideSize / 2, centerX + guideSize / 2, centerY + guideSize + guideGap + guideSize / 2 });
+            ShowDockGuideWindow(m_docking.dockGuideWindows[2], RECT{ centerX - guideSize - guideGap - guideSize / 2, centerY - guideSize / 2, centerX - guideGap - guideSize / 2, centerY + guideSize / 2 });
+            ShowDockGuideWindow(m_docking.dockGuideWindows[3], RECT{ centerX + guideGap + guideSize / 2, centerY - guideSize / 2, centerX + guideSize + guideGap + guideSize / 2, centerY + guideSize / 2 });
         }
         else
         {
             for (std::size_t index = 0; index < 5; ++index)
             {
-                ShowWindow(m_dockGuideWindows[index], SW_HIDE);
+                ShowWindow(m_docking.dockGuideWindows[index], SW_HIDE);
             }
         }
 
-        const RECT rootRect = 0 <= m_rootDockNodeId && static_cast<std::size_t>(m_rootDockNodeId) < m_dockNodes.size()
-            ? m_dockNodes[static_cast<std::size_t>(m_rootDockNodeId)].rect
+        const RECT rootRect = 0 <= m_docking.rootDockNodeId && static_cast<std::size_t>(m_docking.rootDockNodeId) < m_docking.dockNodes.size()
+            ? m_docking.dockNodes[static_cast<std::size_t>(m_docking.rootDockNodeId)].rect
             : RECT{};
         const int rootCenterX = (rootRect.left + rootRect.right) / 2;
         const int rootCenterY = (rootRect.top + rootRect.bottom) / 2;
-        ShowDockGuideWindow(m_dockGuideWindows[5], RECT{ rootCenterX - guideSize / 2, rootRect.top + guideGap, rootCenterX + guideSize / 2, rootRect.top + guideGap + guideSize });
-        ShowDockGuideWindow(m_dockGuideWindows[6], RECT{ rootCenterX - guideSize / 2, rootRect.bottom - guideGap - guideSize, rootCenterX + guideSize / 2, rootRect.bottom - guideGap });
-        ShowDockGuideWindow(m_dockGuideWindows[7], RECT{ rootRect.left + guideGap, rootCenterY - guideSize / 2, rootRect.left + guideGap + guideSize, rootCenterY + guideSize / 2 });
-        ShowDockGuideWindow(m_dockGuideWindows[8], RECT{ rootRect.right - guideGap - guideSize, rootCenterY - guideSize / 2, rootRect.right - guideGap, rootCenterY + guideSize / 2 });
+        ShowDockGuideWindow(m_docking.dockGuideWindows[5], RECT{ rootCenterX - guideSize / 2, rootRect.top + guideGap, rootCenterX + guideSize / 2, rootRect.top + guideGap + guideSize });
+        ShowDockGuideWindow(m_docking.dockGuideWindows[6], RECT{ rootCenterX - guideSize / 2, rootRect.bottom - guideGap - guideSize, rootCenterX + guideSize / 2, rootRect.bottom - guideGap });
+        ShowDockGuideWindow(m_docking.dockGuideWindows[7], RECT{ rootRect.left + guideGap, rootCenterY - guideSize / 2, rootRect.left + guideGap + guideSize, rootCenterY + guideSize / 2 });
+        ShowDockGuideWindow(m_docking.dockGuideWindows[8], RECT{ rootRect.right - guideGap - guideSize, rootCenterY - guideSize / 2, rootRect.right - guideGap, rootCenterY + guideSize / 2 });
     }
 
     void EditorShell::HideDockGuideWindows()
     {
-        for (HWND guideWindow : m_dockGuideWindows)
+        for (HWND guideWindow : m_docking.dockGuideWindows)
         {
             ShowWindow(guideWindow, SW_HIDE);
         }
@@ -1479,14 +1479,14 @@
 
         const int outerPadding = ScaleMetric(12);
         const int panelSpacing = ScaleMetric(12);
-        if (cursorClientPoint.x < outerPadding + m_leftPaneWidth)
+        if (cursorClientPoint.x < outerPadding + m_docking.leftPaneWidth)
         {
-            return cursorClientPoint.y < outerPadding + m_leftTopHeight + panelSpacing / 2
+            return cursorClientPoint.y < outerPadding + m_docking.leftTopHeight + panelSpacing / 2
                 ? DockAreaId::LeftTop
                 : DockAreaId::LeftBottom;
         }
 
-        if (cursorClientPoint.x > clientRect.right - outerPadding - m_rightPaneWidth)
+        if (cursorClientPoint.x > clientRect.right - outerPadding - m_docking.rightPaneWidth)
         {
             return DockAreaId::Right;
         }
@@ -1502,10 +1502,10 @@
                 panels.erase(std::remove(panels.begin(), panels.end(), panelId), panels.end());
             };
 
-        removePanel(m_leftTopDockPanels);
-        removePanel(m_leftBottomDockPanels);
-        removePanel(m_centerDockPanels);
-        removePanel(m_rightDockPanels);
+        removePanel(m_docking.leftTopDockPanels);
+        removePanel(m_docking.leftBottomDockPanels);
+        removePanel(m_docking.centerDockPanels);
+        removePanel(m_docking.rightDockPanels);
 
         if (DockAreaId::Floating == dockAreaId)
         {
@@ -1523,16 +1523,16 @@
         switch (dockAreaId)
         {
         case DockAreaId::LeftTop:
-            m_leftTopActiveTabIndex = static_cast<int>(panels.size()) - 1;
+            m_docking.leftTopActiveTabIndex = static_cast<int>(panels.size()) - 1;
             break;
         case DockAreaId::LeftBottom:
-            m_leftBottomActiveTabIndex = static_cast<int>(panels.size()) - 1;
+            m_docking.leftBottomActiveTabIndex = static_cast<int>(panels.size()) - 1;
             break;
         case DockAreaId::Center:
-            m_centerActiveTabIndex = static_cast<int>(panels.size()) - 1;
+            m_docking.centerActiveTabIndex = static_cast<int>(panels.size()) - 1;
             break;
         case DockAreaId::Right:
-            m_rightActiveTabIndex = static_cast<int>(panels.size()) - 1;
+            m_docking.rightActiveTabIndex = static_cast<int>(panels.size()) - 1;
             break;
         default:
             break;
@@ -1560,15 +1560,15 @@
             };
         }
 
-        m_dragPanelWindowOffset = POINT{
+        m_docking.dragPanelWindowOffset = POINT{
             static_cast<LONG>((std::max)(ScaleMetric(8), static_cast<int>(cursorScreenPoint.x - captionRect.left))),
             static_cast<LONG>((std::max)(ScaleMetric(8), static_cast<int>(cursorScreenPoint.y - captionRect.top)))
         };
 
         RemovePanelFromDockTree(panelId);
         const POINT floatingOrigin{
-            cursorScreenPoint.x - m_dragPanelWindowOffset.x,
-            cursorScreenPoint.y - m_dragPanelWindowOffset.y
+            cursorScreenPoint.x - m_docking.dragPanelWindowOffset.x,
+            cursorScreenPoint.y - m_docking.dragPanelWindowOffset.y
         };
         FloatPanel(panelId, floatingOrigin, parentWindow);
         SyncDockTabs();
@@ -1586,8 +1586,8 @@
         SetWindowPos(
             floatingWindow,
             HWND_TOP,
-            cursorScreenPoint.x - m_dragPanelWindowOffset.x,
-            cursorScreenPoint.y - m_dragPanelWindowOffset.y,
+            cursorScreenPoint.x - m_docking.dragPanelWindowOffset.x,
+            cursorScreenPoint.y - m_docking.dragPanelWindowOffset.y,
             0,
             0,
             SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -1630,7 +1630,7 @@
             SendMessageW(tabControl, WM_SETFONT, reinterpret_cast<WPARAM>(m_defaultFont), TRUE);
             ConfigureEditorTabControl(tabControl);
         }
-        m_floatingPanelGroups.push_back(FloatingPanelGroup{
+        m_docking.floatingPanelGroups.push_back(FloatingPanelGroup{
             floatingWindow,
             tabControl,
             { panelId },
@@ -1650,31 +1650,31 @@
             return;
         }
 
-        if (DockDragKind::Panel == m_dragKind && m_dragPanelId.has_value() && *m_dragPanelId == panelId)
+        if (DockDragKind::Panel == m_docking.dragKind && m_docking.dragPanelId.has_value() && *m_docking.dragPanelId == panelId)
         {
             return;
         }
 
-        m_dragKind = DockDragKind::Panel;
-        m_dragPanelId = panelId;
-        m_dragStartScreenPoint = GetCursorScreenPoint(m_cursor);
-        m_currentGuideTarget = DockGuideTarget{};
-        m_hasDockPreview = false;
+        m_docking.dragKind = DockDragKind::Panel;
+        m_docking.dragPanelId = panelId;
+        m_docking.dragStartScreenPoint = GetCursorScreenPoint(m_cursor);
+        m_docking.currentGuideTarget = DockGuideTarget{};
+        m_docking.hasDockPreview = false;
     }
 
     void EditorShell::UpdateFloatingWindowDockDrag()
     {
-        if (nullptr == m_parentWindow || DockDragKind::Panel != m_dragKind || false == m_dragPanelId.has_value())
+        if (nullptr == m_parentWindow || DockDragKind::Panel != m_docking.dragKind || false == m_docking.dragPanelId.has_value())
         {
             return;
         }
 
         const POINT cursorScreenPoint = GetCursorScreenPoint(m_cursor);
         UpdateDockGuideWindows(m_parentWindow, cursorScreenPoint);
-        m_currentGuideTarget = HitTestDockGuideTarget(m_parentWindow, cursorScreenPoint);
-        m_hasDockPreview = DockGuideTargetKind::None != m_currentGuideTarget.kind
-            && DockGuideTargetKind::Float != m_currentGuideTarget.kind;
-        m_dockPreviewRect = m_currentGuideTarget.previewRect;
+        m_docking.currentGuideTarget = HitTestDockGuideTarget(m_parentWindow, cursorScreenPoint);
+        m_docking.hasDockPreview = DockGuideTargetKind::None != m_docking.currentGuideTarget.kind
+            && DockGuideTargetKind::Float != m_docking.currentGuideTarget.kind;
+        m_docking.dockPreviewRect = m_docking.currentGuideTarget.previewRect;
         UpdateDockPreviewWindow(m_parentWindow);
     }
 
@@ -1686,13 +1686,13 @@
         }
 
         UpdateFloatingWindowDockDrag();
-        const DockGuideTarget guideTarget = m_currentGuideTarget;
-        m_currentGuideTarget = DockGuideTarget{};
-        m_hasDockPreview = false;
+        const DockGuideTarget guideTarget = m_docking.currentGuideTarget;
+        m_docking.currentGuideTarget = DockGuideTarget{};
+        m_docking.hasDockPreview = false;
         HideDockGuideWindows();
         UpdateDockPreviewWindow(m_parentWindow);
-        m_dragKind = DockDragKind::None;
-        m_dragPanelId.reset();
+        m_docking.dragKind = DockDragKind::None;
+        m_docking.dragPanelId.reset();
 
         if (DockGuideTargetKind::None == guideTarget.kind || DockGuideTargetKind::Float == guideTarget.kind)
         {
@@ -1728,7 +1728,7 @@
             return;
         }
 
-        FloatingPanelGroup& group = m_floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
+        FloatingPanelGroup& group = m_docking.floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
         RECT clientRect{};
         GetClientRect(floatingWindow, &clientRect);
         const int padding = ScaleMetric(8);
@@ -1786,7 +1786,7 @@
             return;
         }
 
-        FloatingPanelGroup& targetGroup = m_floatingPanelGroups[static_cast<std::size_t>(targetGroupIndex)];
+        FloatingPanelGroup& targetGroup = m_docking.floatingPanelGroups[static_cast<std::size_t>(targetGroupIndex)];
         if (targetGroup.panels.end() == std::find(targetGroup.panels.begin(), targetGroup.panels.end(), panelId))
         {
             targetGroup.panels.push_back(panelId);
@@ -1801,7 +1801,7 @@
 
     HWND EditorShell::HitTestFloatingWindow(POINT cursorScreenPoint, HWND excludedWindow) const
     {
-        for (const FloatingPanelGroup& group : m_floatingPanelGroups)
+        for (const FloatingPanelGroup& group : m_docking.floatingPanelGroups)
         {
             if (nullptr == group.window || group.window == excludedWindow || false == IsWindowVisible(group.window))
             {
@@ -1828,7 +1828,7 @@
             return;
         }
 
-        const FloatingPanelGroup group = m_floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
+        const FloatingPanelGroup group = m_docking.floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
         for (EditorPanelId floatingPanelId : group.panels)
         {
             HWND& floatingWindowRef = GetFloatingWindowRef(floatingPanelId);
@@ -1841,7 +1841,7 @@
             ShowPanelControls(floatingPanelId, false);
         }
 
-        m_floatingPanelGroups.erase(m_floatingPanelGroups.begin() + groupIndex);
+        m_docking.floatingPanelGroups.erase(m_docking.floatingPanelGroups.begin() + groupIndex);
         SyncDockTabs();
         m_layoutInitialized = false;
         DestroyWindow(floatingWindow);
@@ -1866,7 +1866,7 @@
             return;
         }
 
-        FloatingPanelGroup& group = m_floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
+        FloatingPanelGroup& group = m_docking.floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
         group.panels.erase(std::remove(group.panels.begin(), group.panels.end(), panelId), group.panels.end());
         if (group.activeTabIndex >= static_cast<int>(group.panels.size()))
         {
@@ -1875,7 +1875,7 @@
 
         if (group.panels.empty())
         {
-            m_floatingPanelGroups.erase(m_floatingPanelGroups.begin() + groupIndex);
+            m_docking.floatingPanelGroups.erase(m_docking.floatingPanelGroups.begin() + groupIndex);
             DestroyWindow(windowToUpdate);
             return;
         }
@@ -1889,23 +1889,23 @@
         switch (panelId)
         {
         case EditorPanelId::Hierarchy:
-            return m_hierarchyFloatingWindow;
+            return m_docking.hierarchyFloatingWindow;
         case EditorPanelId::Assets:
-            return m_assetsFloatingWindow;
+            return m_docking.assetsFloatingWindow;
         case EditorPanelId::SceneView:
-            return m_sceneViewFloatingWindow;
+            return m_docking.sceneViewFloatingWindow;
         case EditorPanelId::Inspector:
-            return m_inspectorFloatingWindow;
+            return m_docking.inspectorFloatingWindow;
         case EditorPanelId::Sprite:
-            return m_spriteFloatingWindow;
+            return m_docking.spriteFloatingWindow;
         case EditorPanelId::Material:
-            return m_materialFloatingWindow;
+            return m_docking.materialFloatingWindow;
         case EditorPanelId::Collider2D:
-            return m_collider2DFloatingWindow;
+            return m_docking.collider2DFloatingWindow;
         case EditorPanelId::LogOutput:
-            return m_logOutputFloatingWindow;
+            return m_docking.logOutputFloatingWindow;
         default:
-            return m_sceneViewFloatingWindow;
+            return m_docking.sceneViewFloatingWindow;
         }
     }
 
@@ -1917,7 +1917,7 @@
             return;
         }
 
-        FloatingPanelGroup& group = m_floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
+        FloatingPanelGroup& group = m_docking.floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
         if (nullptr == group.tabControl)
         {
             return;
@@ -1937,9 +1937,9 @@
 
     int EditorShell::FindFloatingPanelGroupIndex(HWND floatingWindow) const
     {
-        for (std::size_t index = 0; index < m_floatingPanelGroups.size(); ++index)
+        for (std::size_t index = 0; index < m_docking.floatingPanelGroups.size(); ++index)
         {
-            if (m_floatingPanelGroups[index].window == floatingWindow)
+            if (m_docking.floatingPanelGroups[index].window == floatingWindow)
             {
                 return static_cast<int>(index);
             }
@@ -1950,9 +1950,9 @@
 
     int EditorShell::FindFloatingPanelGroupIndex(EditorPanelId panelId) const
     {
-        for (std::size_t index = 0; index < m_floatingPanelGroups.size(); ++index)
+        for (std::size_t index = 0; index < m_docking.floatingPanelGroups.size(); ++index)
         {
-            const std::vector<EditorPanelId>& panels = m_floatingPanelGroups[index].panels;
+            const std::vector<EditorPanelId>& panels = m_docking.floatingPanelGroups[index].panels;
             if (panels.end() != std::find(panels.begin(), panels.end(), panelId))
             {
                 return static_cast<int>(index);
@@ -1970,7 +1970,7 @@
             return EditorPanelId::SceneView;
         }
 
-        const FloatingPanelGroup& group = m_floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
+        const FloatingPanelGroup& group = m_docking.floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
         if (group.panels.empty())
         {
             return EditorPanelId::SceneView;
@@ -1982,7 +1982,7 @@
 
     void EditorShell::SyncDockTabs()
     {
-        for (HWND tabControl : { m_leftTopDockTab, m_leftBottomDockTab, m_centerDockTab, m_rightDockTab })
+        for (HWND tabControl : { m_docking.leftTopDockTab, m_docking.leftBottomDockTab, m_docking.centerDockTab, m_docking.rightDockTab })
         {
             if (nullptr != tabControl)
             {
@@ -1990,7 +1990,7 @@
                 ShowWindow(tabControl, SW_HIDE);
             }
         }
-        for (HWND tabControl : m_dynamicDockTabs)
+        for (HWND tabControl : m_docking.dynamicDockTabs)
         {
             if (nullptr != tabControl)
             {
@@ -2000,10 +2000,10 @@
         }
 
         std::vector<DockNodeId> dockLeafNodeIds{};
-        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        CollectReachableDockLeaves(m_docking.rootDockNodeId, dockLeafNodeIds);
         for (DockNodeId dockNodeId : dockLeafNodeIds)
         {
-            DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             if (DockNodeKind::Leaf != dockNode.kind || nullptr == dockNode.tabControl)
             {
                 continue;
@@ -2052,7 +2052,7 @@
         SendMessageW(tabControl, WM_SETFONT, reinterpret_cast<WPARAM>(m_defaultFont), TRUE);
         ConfigureEditorTabControl(tabControl);
         ShowWindow(tabControl, SW_HIDE);
-        m_dynamicDockTabs.push_back(tabControl);
+        m_docking.dynamicDockTabs.push_back(tabControl);
         return tabControl;
     }
 
@@ -2060,25 +2060,25 @@
     {
         if (L"LeftTop" == layoutKey)
         {
-            return m_leftTopDockTab;
+            return m_docking.leftTopDockTab;
         }
         if (L"LeftBottom" == layoutKey)
         {
-            return m_leftBottomDockTab;
+            return m_docking.leftBottomDockTab;
         }
         if (L"Center" == layoutKey)
         {
-            return m_centerDockTab;
+            return m_docking.centerDockTab;
         }
         if (L"Right" == layoutKey)
         {
-            return m_rightDockTab;
+            return m_docking.rightDockTab;
         }
 
         HWND tabControl = CreateAdditionalDockTabControl(m_parentWindow);
         if (L"LogOutput" == layoutKey)
         {
-            m_logOutputDockTab = tabControl;
+            m_docking.logOutputDockTab = tabControl;
         }
         return tabControl;
     }
@@ -2166,23 +2166,23 @@
 
     std::wstring EditorShell::GetDockTabLayoutKey(HWND tabControl) const
     {
-        if (tabControl == m_leftTopDockTab)
+        if (tabControl == m_docking.leftTopDockTab)
         {
             return L"LeftTop";
         }
-        if (tabControl == m_leftBottomDockTab)
+        if (tabControl == m_docking.leftBottomDockTab)
         {
             return L"LeftBottom";
         }
-        if (tabControl == m_centerDockTab)
+        if (tabControl == m_docking.centerDockTab)
         {
             return L"Center";
         }
-        if (tabControl == m_rightDockTab)
+        if (tabControl == m_docking.rightDockTab)
         {
             return L"Right";
         }
-        if (tabControl == m_logOutputDockTab)
+        if (tabControl == m_docking.logOutputDockTab)
         {
             return L"LogOutput";
         }
@@ -2229,13 +2229,13 @@
         switch (dockAreaId)
         {
         case DockAreaId::LeftTop:
-            return m_leftTopDockTab;
+            return m_docking.leftTopDockTab;
         case DockAreaId::LeftBottom:
-            return m_leftBottomDockTab;
+            return m_docking.leftBottomDockTab;
         case DockAreaId::Center:
-            return m_centerDockTab;
+            return m_docking.centerDockTab;
         case DockAreaId::Right:
-            return m_rightDockTab;
+            return m_docking.rightDockTab;
         default:
             return nullptr;
         }
@@ -2243,12 +2243,12 @@
 
     HWND EditorShell::GetDockLeafTabControl(DockNodeId dockNodeId) const
     {
-        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+        if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_docking.dockNodes.size())
         {
             return nullptr;
         }
 
-        return m_dockNodes[static_cast<std::size_t>(dockNodeId)].tabControl;
+        return m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)].tabControl;
     }
 
     std::vector<EditorPanelId>& EditorShell::GetDockAreaPanels(DockAreaId dockAreaId)
@@ -2256,15 +2256,15 @@
         switch (dockAreaId)
         {
         case DockAreaId::LeftTop:
-            return m_leftTopDockPanels;
+            return m_docking.leftTopDockPanels;
         case DockAreaId::LeftBottom:
-            return m_leftBottomDockPanels;
+            return m_docking.leftBottomDockPanels;
         case DockAreaId::Center:
-            return m_centerDockPanels;
+            return m_docking.centerDockPanels;
         case DockAreaId::Right:
-            return m_rightDockPanels;
+            return m_docking.rightDockPanels;
         default:
-            return m_centerDockPanels;
+            return m_docking.centerDockPanels;
         }
     }
 
@@ -2273,15 +2273,15 @@
         switch (dockAreaId)
         {
         case DockAreaId::LeftTop:
-            return m_leftTopDockPanels;
+            return m_docking.leftTopDockPanels;
         case DockAreaId::LeftBottom:
-            return m_leftBottomDockPanels;
+            return m_docking.leftBottomDockPanels;
         case DockAreaId::Center:
-            return m_centerDockPanels;
+            return m_docking.centerDockPanels;
         case DockAreaId::Right:
-            return m_rightDockPanels;
+            return m_docking.rightDockPanels;
         default:
-            return m_centerDockPanels;
+            return m_docking.centerDockPanels;
         }
     }
 
@@ -2322,16 +2322,16 @@
         switch (dockAreaId)
         {
         case DockAreaId::LeftTop:
-            activeIndex = m_leftTopActiveTabIndex;
+            activeIndex = m_docking.leftTopActiveTabIndex;
             break;
         case DockAreaId::LeftBottom:
-            activeIndex = m_leftBottomActiveTabIndex;
+            activeIndex = m_docking.leftBottomActiveTabIndex;
             break;
         case DockAreaId::Center:
-            activeIndex = m_centerActiveTabIndex;
+            activeIndex = m_docking.centerActiveTabIndex;
             break;
         case DockAreaId::Right:
-            activeIndex = m_rightActiveTabIndex;
+            activeIndex = m_docking.rightActiveTabIndex;
             break;
         default:
             activeIndex = 0;
@@ -2351,8 +2351,8 @@
         const int clientWidth = static_cast<int>(clientRect.right - clientRect.left);
         const int clientHeight = static_cast<int>(clientRect.bottom - clientRect.top);
         const int availableColumnWidth = (std::max)(0, clientWidth - (outerPadding * 2) - (panelSpacing * 2));
-        const int centerWidth = (std::max)(ScaleMetric(120), availableColumnWidth - m_leftPaneWidth - m_rightPaneWidth);
-        const int centerX = outerPadding + m_leftPaneWidth + panelSpacing;
+        const int centerWidth = (std::max)(ScaleMetric(120), availableColumnWidth - m_docking.leftPaneWidth - m_docking.rightPaneWidth);
+        const int centerX = outerPadding + m_docking.leftPaneWidth + panelSpacing;
         const int rightX = centerX + centerWidth + panelSpacing;
         const int dockHeight = (std::max)(0, clientHeight - outerPadding * 2);
 
@@ -2362,14 +2362,14 @@
             return RECT{
                 outerPadding,
                 outerPadding,
-                outerPadding + m_leftPaneWidth,
-                outerPadding + m_leftTopHeight
+                outerPadding + m_docking.leftPaneWidth,
+                outerPadding + m_docking.leftTopHeight
             };
         case DockAreaId::LeftBottom:
             return RECT{
                 outerPadding,
-                outerPadding + m_leftTopHeight + panelSpacing,
-                outerPadding + m_leftPaneWidth,
+                outerPadding + m_docking.leftTopHeight + panelSpacing,
+                outerPadding + m_docking.leftPaneWidth,
                 outerPadding + dockHeight
             };
         case DockAreaId::Center:
@@ -2383,7 +2383,7 @@
             return RECT{
                 rightX,
                 outerPadding,
-                rightX + m_rightPaneWidth,
+                rightX + m_docking.rightPaneWidth,
                 outerPadding + dockHeight
             };
         default:
@@ -2393,29 +2393,29 @@
 
     void EditorShell::UpdateDockPreviewWindow(HWND parentWindow)
     {
-        if (nullptr == m_dockPreviewWindow || nullptr == parentWindow)
+        if (nullptr == m_docking.dockPreviewWindow || nullptr == parentWindow)
         {
             return;
         }
 
-        if (false == m_hasDockPreview)
+        if (false == m_docking.hasDockPreview)
         {
-            ShowWindow(m_dockPreviewWindow, SW_HIDE);
+            ShowWindow(m_docking.dockPreviewWindow, SW_HIDE);
             return;
         }
 
         SetWindowPos(
-            m_dockPreviewWindow,
+            m_docking.dockPreviewWindow,
             HWND_TOP,
-            m_dockPreviewRect.left,
-            m_dockPreviewRect.top,
-            (std::max)(0, static_cast<int>(m_dockPreviewRect.right - m_dockPreviewRect.left)),
-            (std::max)(0, static_cast<int>(m_dockPreviewRect.bottom - m_dockPreviewRect.top)),
+            m_docking.dockPreviewRect.left,
+            m_docking.dockPreviewRect.top,
+            (std::max)(0, static_cast<int>(m_docking.dockPreviewRect.right - m_docking.dockPreviewRect.left)),
+            (std::max)(0, static_cast<int>(m_docking.dockPreviewRect.bottom - m_docking.dockPreviewRect.top)),
             SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        InvalidateRect(m_dockPreviewWindow, nullptr, TRUE);
-        UpdateWindow(m_dockPreviewWindow);
+        InvalidateRect(m_docking.dockPreviewWindow, nullptr, TRUE);
+        UpdateWindow(m_docking.dockPreviewWindow);
 
-        for (HWND guideWindow : m_dockGuideWindows)
+        for (HWND guideWindow : m_docking.dockGuideWindows)
         {
             if (nullptr != guideWindow && IsWindowVisible(guideWindow))
             {
@@ -2475,10 +2475,10 @@
                 if (nullptr != notifyHeader
                     && groupIndex >= 0
                     && TCN_SELCHANGE == notifyHeader->code
-                    && notifyHeader->hwndFrom == windowData->shell->m_floatingPanelGroups[static_cast<std::size_t>(groupIndex)].tabControl)
+                    && notifyHeader->hwndFrom == windowData->shell->m_docking.floatingPanelGroups[static_cast<std::size_t>(groupIndex)].tabControl)
                 {
                     FloatingPanelGroup& group =
-                        windowData->shell->m_floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
+                        windowData->shell->m_docking.floatingPanelGroups[static_cast<std::size_t>(groupIndex)];
                     group.activeTabIndex = TabCtrl_GetCurSel(group.tabControl);
                     windowData->shell->LayoutFloatingWindow(window);
                     return 0;
@@ -2569,5 +2569,3 @@
 
         return DefSubclassProc(window, message, wParam, lParam);
     }
-
-
