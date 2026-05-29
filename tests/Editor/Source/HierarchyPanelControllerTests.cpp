@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "Panels/HierarchyPanelController.h"
+#include "Panels/Hierarchy/HierarchyPanelController.h"
 
 namespace
 {

@@ -1,4 +1,4 @@
-#include "Panels/MaterialPanelController.h"
+#include "Panels/Inspector/MaterialPanelController.h"
 
 #include <Windows.h>
 #include <algorithm>
@@ -12,7 +12,7 @@
 #include <string>
 #include <utility>
 
-#include "Panels/AssetsPanelController.h"
+#include "Panels/Assets/AssetsPanelController.h"
 #include "Utils/EditorStringUtils.h"
 
 namespace Xelqoria::Editor

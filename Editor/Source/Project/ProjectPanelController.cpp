@@ -5,7 +5,7 @@
 #include <iterator>
 #include <string>
 
-#include "Panels/SceneViewPanelView.h"
+#include "Panels/SceneView/SceneViewPanelView.h"
 
 namespace Xelqoria::Editor
 {

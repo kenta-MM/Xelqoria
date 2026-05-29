@@ -3,7 +3,7 @@
 #include <string>
 
 #include "Utils/EditorStringUtils.h"
-#include "Panels/InspectorPanelController.h"
+#include "Panels/Inspector/InspectorPanelController.h"
 
 TEST(EditorStringUtilsTests, Utf8ConversionRoundTripsJapaneseFileName)
 {

@@ -15,11 +15,11 @@
 #include <utility>
 
 #include "EditorTheme.h"
-#include "Panels/AssetsPanelView.h"
-#include "Panels/HierarchyPanelView.h"
-#include "Panels/InspectorPanelView.h"
-#include "Panels/LogOutputPanelView.h"
-#include "Panels/SceneViewPanelView.h"
+#include "Panels/Assets/AssetsPanelView.h"
+#include "Panels/Hierarchy/HierarchyPanelView.h"
+#include "Panels/Inspector/InspectorPanelView.h"
+#include "Panels/LogOutput/LogOutputPanelView.h"
+#include "Panels/SceneView/SceneViewPanelView.h"
 
 #pragma comment(lib, "uxtheme.lib")
 

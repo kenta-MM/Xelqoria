@@ -1,4 +1,4 @@
-#include "Panels/InspectorPanelView.h"
+#include "Panels/Inspector/InspectorPanelView.h"
 
 #include <algorithm>
 

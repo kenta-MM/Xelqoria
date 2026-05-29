@@ -16,7 +16,7 @@
 #include <InputSystem.h>
 #include "Commands/EditorCommandController.h"
 #include "Utils/EditorStringUtils.h"
-#include "Panels/InspectorPanelController.h"
+#include "Panels/Inspector/InspectorPanelController.h"
 #include "Commands/SceneEditingOperations.h"
 #include "SceneView/SceneViewInteractionTypes.h"
 #include "Assets/ScriptAssetService.h"

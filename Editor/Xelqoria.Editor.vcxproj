@@ -20,8 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\App\Application.cpp" />
-    <ClCompile Include="Source\Panels\AssetsPanelController.cpp" />
-    <ClCompile Include="Source\Panels\AssetsPanelView.cpp" />
+    <ClCompile Include="Source\Panels\Assets\AssetsPanelController.cpp" />
+    <ClCompile Include="Source\Panels\Assets\AssetsPanelView.cpp" />
     <ClCompile Include="Source\Commands\EditorCommandController.cpp" />
     <ClCompile Include="Source\Panels\EditorPanelViewBase.cpp" />
     <ClCompile Include="Source\Panels\EditorPanelHostContext.cpp" />
@@ -30,21 +30,21 @@
     <ClCompile Include="Source\Project\EditorSceneDocument.cpp" />
     <ClCompile Include="Source\Shell\EditorShell.cpp" />
     <ClCompile Include="Source\App\Entry.cpp" />
-    <ClCompile Include="Source\Panels\HierarchyPanelController.cpp" />
-    <ClCompile Include="Source\Panels\HierarchyPanelView.cpp" />
-    <ClCompile Include="Source\Panels\InspectorPanelController.cpp" />
-    <ClCompile Include="Source\Panels\InspectorPanelView.cpp" />
-    <ClCompile Include="Source\Panels\LogOutputPanelController.cpp" />
-    <ClCompile Include="Source\Panels\LogOutputPanelView.cpp" />
-    <ClCompile Include="Source\Panels\MaterialPanelController.cpp" />
+    <ClCompile Include="Source\Panels\Hierarchy\HierarchyPanelController.cpp" />
+    <ClCompile Include="Source\Panels\Hierarchy\HierarchyPanelView.cpp" />
+    <ClCompile Include="Source\Panels\Inspector\InspectorPanelController.cpp" />
+    <ClCompile Include="Source\Panels\Inspector\InspectorPanelView.cpp" />
+    <ClCompile Include="Source\Panels\LogOutput\LogOutputPanelController.cpp" />
+    <ClCompile Include="Source\Panels\LogOutput\LogOutputPanelView.cpp" />
+    <ClCompile Include="Source\Panels\Inspector\MaterialPanelController.cpp" />
     <ClCompile Include="Source\Project\ProjectPanelController.cpp" />
     <ClCompile Include="Source\Project\RecentProjectsStore.cpp" />
     <ClCompile Include="Source\Rendering\RenderBackendBootstrap.cpp" />
     <ClCompile Include="Source\DragDrop\SceneDropPlacementService.cpp" />
     <ClCompile Include="Source\Commands\SceneCommandHistory.cpp" />
     <ClCompile Include="Source\Commands\SceneEditingOperations.cpp" />
-    <ClCompile Include="Source\SceneView\SceneViewController.cpp" />
-    <ClCompile Include="Source\Panels\SceneViewPanelView.cpp" />
+    <ClCompile Include="Source\Panels\SceneView\SceneViewController.cpp" />
+    <ClCompile Include="Source\Panels\SceneView\SceneViewPanelView.cpp" />
     <ClCompile Include="Source\SceneView\SceneViewInputTracker.cpp" />
     <ClCompile Include="Source\SceneView\SceneViewRenderer.cpp" />
     <ClCompile Include="Source\SceneView\SceneViewStatusPresenter.cpp" />
@@ -54,8 +54,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\App\Application.h" />
-    <ClInclude Include="Source\Panels\AssetsPanelController.h" />
-    <ClInclude Include="Source\Panels\AssetsPanelView.h" />
+    <ClInclude Include="Source\Panels\Assets\AssetsPanelController.h" />
+    <ClInclude Include="Source\Panels\Assets\AssetsPanelView.h" />
     <ClInclude Include="Source\PlatformAdapters\ButtonClickWin32Adapter.h" />
     <ClInclude Include="Source\Commands\EditorCommandController.h" />
     <ClInclude Include="Source\Assets\EditorAssetPathUtils.h" />
@@ -66,16 +66,16 @@
     <ClInclude Include="Source\Shell\EditorPanelId.h" />
     <ClInclude Include="Source\Utils\EditorStringUtils.h" />
     <ClInclude Include="Source\SceneView\EditorCamera2D.h" />
-    <ClInclude Include="Source\Panels\HierarchyPanelController.h" />
-    <ClInclude Include="Source\Panels\HierarchyPanelView.h" />
-    <ClInclude Include="Source\Panels\InspectorPanelController.h" />
-    <ClInclude Include="Source\Panels\InspectorPanelView.h" />
+    <ClInclude Include="Source\Panels\Hierarchy\HierarchyPanelController.h" />
+    <ClInclude Include="Source\Panels\Hierarchy\HierarchyPanelView.h" />
+    <ClInclude Include="Source\Panels\Inspector\InspectorPanelController.h" />
+    <ClInclude Include="Source\Panels\Inspector\InspectorPanelView.h" />
     <ClInclude Include="Source\Panels\IEditorPanelView.h" />
     <ClInclude Include="Source\Panels\EditorPanelViewBase.h" />
     <ClInclude Include="Source\Panels\EditorPanelHostContext.h" />
-    <ClInclude Include="Source\Panels\LogOutputPanelController.h" />
-    <ClInclude Include="Source\Panels\LogOutputPanelView.h" />
-    <ClInclude Include="Source\Panels\MaterialPanelController.h" />
+    <ClInclude Include="Source\Panels\LogOutput\LogOutputPanelController.h" />
+    <ClInclude Include="Source\Panels\LogOutput\LogOutputPanelView.h" />
+    <ClInclude Include="Source\Panels\Inspector\MaterialPanelController.h" />
     <ClInclude Include="Source\Project\ProjectPanelController.h" />
     <ClInclude Include="Source\Project\RecentProjectsStore.h" />
     <ClInclude Include="Source\Rendering\RenderBackendBootstrap.h" />
@@ -83,8 +83,8 @@
     <ClInclude Include="Source\DragDrop\SceneDropPlacementService.h" />
     <ClInclude Include="Source\Commands\SceneCommandHistory.h" />
     <ClInclude Include="Source\Commands\SceneEditingOperations.h" />
-    <ClInclude Include="Source\SceneView\SceneViewController.h" />
-    <ClInclude Include="Source\Panels\SceneViewPanelView.h" />
+    <ClInclude Include="Source\Panels\SceneView\SceneViewController.h" />
+    <ClInclude Include="Source\Panels\SceneView\SceneViewPanelView.h" />
     <ClInclude Include="Source\SceneView\SceneViewInputTracker.h" />
     <ClInclude Include="Source\SceneView\SceneViewInteractionTypes.h" />
     <ClInclude Include="Source\SceneView\SceneViewOverlay.h" />

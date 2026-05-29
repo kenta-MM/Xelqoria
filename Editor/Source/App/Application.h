@@ -7,17 +7,17 @@
 #include <optional>
 #include <string>
 
-#include "Panels/AssetsPanelController.h"
+#include "Panels/Assets/AssetsPanelController.h"
 #include "InputSystem.h"
 #include "Window.h"
 #include "Commands/EditorCommandController.h"
 #include "Project/EditorSceneDocument.h"
 #include "Shell/EditorShell.h"
-#include "Panels/HierarchyPanelController.h"
-#include "Panels/InspectorPanelController.h"
-#include "Panels/LogOutputPanelController.h"
+#include "Panels/Hierarchy/HierarchyPanelController.h"
+#include "Panels/Inspector/InspectorPanelController.h"
+#include "Panels/LogOutput/LogOutputPanelController.h"
 #include "Project/ProjectPanelController.h"
-#include "SceneView/SceneViewController.h"
+#include "Panels/SceneView/SceneViewController.h"
 #include "SceneView/SceneViewRenderer.h"
 #include "Script/ScriptRuntimeSession.h"
 #include "App/StartupScreenController.h"

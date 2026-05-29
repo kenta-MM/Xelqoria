@@ -18,7 +18,7 @@
 #include <cstdlib>
 #include <optional>
 #include "SceneView/EditorCamera2D.h"
-#include "SceneView/SceneViewController.h"
+#include "Panels/SceneView/SceneViewController.h"
 #include <Assets/SpriteAssetRegistry.h>
 #include <Entity.h>
 #include <Scene.h>

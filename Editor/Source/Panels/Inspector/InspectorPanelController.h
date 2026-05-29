@@ -13,7 +13,7 @@
 #include "Assets/SpriteAsset.h"
 #include "Assets/SpriteMaterialAsset.h"
 #include "Utils/EditorStringUtils.h"
-#include "Panels/HierarchyPanelController.h"
+#include "Panels/Hierarchy/HierarchyPanelController.h"
 #include "ICursor.h"
 #include "InputSystem.h"
 #include "Commands/SceneEditingOperations.h"

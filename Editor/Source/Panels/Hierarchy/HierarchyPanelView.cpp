@@ -1,4 +1,4 @@
-#include "Panels/HierarchyPanelView.h"
+#include "Panels/Hierarchy/HierarchyPanelView.h"
 
 #include <algorithm>
 #include <CommCtrl.h>

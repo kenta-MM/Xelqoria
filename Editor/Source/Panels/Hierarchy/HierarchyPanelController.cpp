@@ -1,9 +1,9 @@
-#include "Panels/HierarchyPanelController.h"
+#include "Panels/Hierarchy/HierarchyPanelController.h"
 
 #include <string>
 
 #include "PlatformAdapters/ButtonClickWin32Adapter.h"
-#include "Panels/HierarchyPanelView.h"
+#include "Panels/Hierarchy/HierarchyPanelView.h"
 #include "Utils/EditorStringUtils.h"
 #include <Windows.h>
 #include <array>

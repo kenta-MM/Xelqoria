@@ -8,7 +8,7 @@
 
 #include "Assets/IMaterialAssetResolver.h"
 #include "Assets/SpriteAssetRegistry.h"
-#include "Panels/AssetsPanelController.h"
+#include "Panels/Assets/AssetsPanelController.h"
 #include "SceneView/EditorCamera2D.h"
 #include "InputSystem.h"
 #include "Scene.h"
