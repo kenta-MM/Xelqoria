@@ -1,4 +1,4 @@
-#include "Panels/InspectorPanelController.h"
+#include "Panels/Inspector/InspectorPanelController.h"
 
 #include <string>
 
@@ -14,10 +14,10 @@
 #include <optional>
 #include <AssetId.h>
 #include <Collider2DComponent.h>
-#include "Panels/AssetsPanelController.h"
-#include "Panels/InspectorPanelView.h"
+#include "Panels/Assets/AssetsPanelController.h"
+#include "Panels/Inspector/InspectorPanelView.h"
 #include <Entity.h>
-#include "Panels/MaterialPanelController.h"
+#include "Panels/Inspector/MaterialPanelController.h"
 #include <Scene.h>
 
 namespace Xelqoria::Editor

@@ -1,4 +1,4 @@
-#include "Panels/LogOutputPanelView.h"
+#include "Panels/LogOutput/LogOutputPanelView.h"
 
 #include <algorithm>
 #include <array>

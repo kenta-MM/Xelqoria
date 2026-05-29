@@ -1,4 +1,4 @@
-#include "Panels/SceneViewPanelView.h"
+#include "Panels/SceneView/SceneViewPanelView.h"
 
 #include <algorithm>
 

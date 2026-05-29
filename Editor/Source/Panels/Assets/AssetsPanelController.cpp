@@ -1,4 +1,4 @@
-#include "Panels/AssetsPanelController.h"
+#include "Panels/Assets/AssetsPanelController.h"
 
 #include <algorithm>
 #include <array>
@@ -17,7 +17,7 @@
 #include <wrl/client.h>
 
 #include "Assets/EditorAssetPathUtils.h"
-#include "Panels/AssetsPanelView.h"
+#include "Panels/Assets/AssetsPanelView.h"
 #include "Utils/EditorPathSecurity.h"
 #include "Assets/ScriptAssetService.h"
 

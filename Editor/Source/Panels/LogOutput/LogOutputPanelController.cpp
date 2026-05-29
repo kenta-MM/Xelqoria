@@ -1,4 +1,4 @@
-#include "Panels/LogOutputPanelController.h"
+#include "Panels/LogOutput/LogOutputPanelController.h"
 
 #include <algorithm>
 #include <CommCtrl.h>
@@ -9,7 +9,7 @@
 
 #include "PlatformAdapters/ButtonClickWin32Adapter.h"
 #include "EditorTheme.h"
-#include "Panels/LogOutputPanelView.h"
+#include "Panels/LogOutput/LogOutputPanelView.h"
 
 namespace Xelqoria::Editor
 {

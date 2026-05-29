@@ -1,4 +1,4 @@
-#include "Panels/AssetsPanelView.h"
+#include "Panels/Assets/AssetsPanelView.h"
 
 #include <algorithm>
 #include <CommCtrl.h>

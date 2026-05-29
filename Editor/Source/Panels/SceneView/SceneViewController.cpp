@@ -1,12 +1,12 @@
-#include "SceneView/SceneViewController.h"
+#include "Panels/SceneView/SceneViewController.h"
 
-#include "Panels/AssetsPanelController.h"
+#include "Panels/Assets/AssetsPanelController.h"
 #include "Project/EditorSceneDocument.h"
 #include <cwchar>
 #include <cstdint>
 #include <iterator>
 #include <optional>
-#include "Panels/SceneViewPanelView.h"
+#include "Panels/SceneView/SceneViewPanelView.h"
 #include "SceneView/EditorCamera2D.h"
 #include "SceneView/SceneViewInteractionTypes.h"
 #include <Assets/IMaterialAssetResolver.h>

@@ -11,7 +11,7 @@
 #include "SceneView/SceneViewInputTracker.h"
 #include "SceneView/SceneViewInteractionTypes.h"
 #include "SceneView/SceneViewStatusPresenter.h"
-#include "Panels/AssetsPanelController.h"
+#include "Panels/Assets/AssetsPanelController.h"
 #include "Project/EditorSceneDocument.h"
 #include <Assets/IMaterialAssetResolver.h>
 #include <Assets/SpriteAssetRegistry.h>

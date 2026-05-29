@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <optional>
 #include <AssetId.h>
-#include "Panels/AssetsPanelController.h"
+#include "Panels/Assets/AssetsPanelController.h"
 #include "SceneView/EditorCamera2D.h"
 #include "SceneView/SceneViewInteractionTypes.h"
 #include <Assets/SpriteAssetRegistry.h>
