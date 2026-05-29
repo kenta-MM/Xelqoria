@@ -23,12 +23,15 @@ namespace Xelqoria::Editor
     class IEditorPanelView;
     class LogOutputPanelView;
     class SceneViewPanelView;
+    class EditorDockingController;
 
     /// <summary>
     /// Editor 固定 UI の Win32 child window 群とレイアウトを管理する。
     /// </summary>
     class EditorShell
     {
+        friend class EditorDockingController;
+
     public:
         /// <summary>
         /// EditorShell を生成する。
@@ -516,6 +519,14 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool LoadLayout(const std::filesystem::path& layoutPath);
 
     private:
+        [[nodiscard]] bool UpdateDockingCore(HWND parentWindow, const Core::InputSnapshot& inputSnapshot);
+        [[nodiscard]] bool HandleDockNotifyCore(LPARAM notifyParameter);
+        void ResetDockLayoutCore();
+        void ShowPanelAtDefaultDockCore(EditorPanelId panelId);
+        void ActivatePanelCore(EditorPanelId panelId);
+        [[nodiscard]] bool SaveLayoutCore(const std::filesystem::path& layoutPath) const;
+        [[nodiscard]] bool LoadLayoutCore(const std::filesystem::path& layoutPath);
+
         enum class DockAreaId
         {
             LeftTop,
@@ -1144,6 +1155,7 @@ namespace Xelqoria::Editor
         UINT m_currentDpi = 96;
         bool m_ownsDefaultFont = false;
         HWND m_parentWindow = nullptr;
+        std::unique_ptr<EditorDockingController> m_dockingController{};
         DockingState m_docking{};
         HWND m_workspaceBackground = nullptr;
         HWND m_topBar = nullptr;

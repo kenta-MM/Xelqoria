@@ -292,7 +292,7 @@
     }
 
 
-    bool EditorShell::UpdateDocking(HWND parentWindow, const Core::InputSnapshot& inputSnapshot)
+    bool EditorShell::UpdateDockingCore(HWND parentWindow, const Core::InputSnapshot& inputSnapshot)
     {
         if (nullptr == parentWindow)
         {
@@ -435,7 +435,7 @@
         return changed;
     }
 
-    bool EditorShell::HandleNotify(LPARAM notifyParameter)
+    bool EditorShell::HandleDockNotifyCore(LPARAM notifyParameter)
     {
         if (false == m_panelViewsInitialized)
         {
@@ -463,7 +463,7 @@
         return false;
     }
 
-    void EditorShell::ResetDockLayout()
+    void EditorShell::ResetDockLayoutCore()
     {
         m_docking.leftTopDockPanels = { EditorPanelId::Hierarchy };
         m_docking.leftBottomDockPanels = { EditorPanelId::Assets };
@@ -509,7 +509,7 @@
         m_layoutInitialized = false;
     }
 
-    void EditorShell::ShowPanelAtDefaultDock(EditorPanelId panelId)
+    void EditorShell::ShowPanelAtDefaultDockCore(EditorPanelId panelId)
     {
         if (nullptr == m_parentWindow)
         {
@@ -543,7 +543,7 @@
         m_layoutInitialized = false;
     }
 
-    void EditorShell::ActivatePanel(EditorPanelId panelId)
+    void EditorShell::ActivatePanelCore(EditorPanelId panelId)
     {
         if (nullptr == m_parentWindow)
         {
@@ -586,7 +586,7 @@
         ShowPanelAtDefaultDock(panelId);
     }
 
-    bool EditorShell::SaveLayout(const std::filesystem::path& layoutPath) const
+    bool EditorShell::SaveLayoutCore(const std::filesystem::path& layoutPath) const
     {
         std::error_code errorCode;
         std::filesystem::create_directories(layoutPath.parent_path(), errorCode);
@@ -650,7 +650,7 @@
         return output.good();
     }
 
-    bool EditorShell::LoadLayout(const std::filesystem::path& layoutPath)
+    bool EditorShell::LoadLayoutCore(const std::filesystem::path& layoutPath)
     {
         if (nullptr == m_parentWindow)
         {

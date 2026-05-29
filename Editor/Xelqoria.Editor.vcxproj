@@ -28,6 +28,7 @@
     <ClCompile Include="Source\Assets\EditorAssetPathUtils.cpp" />
     <ClCompile Include="Source\Project\EditorProject.cpp" />
     <ClCompile Include="Source\Project\EditorSceneDocument.cpp" />
+    <ClCompile Include="Source\Shell\EditorDockingController.cpp" />
     <ClCompile Include="Source\Shell\EditorShell.cpp" />
     <ClCompile Include="Source\App\Entry.cpp" />
     <ClCompile Include="Source\Panels\Hierarchy\HierarchyPanelController.cpp" />
@@ -62,6 +63,7 @@
     <ClInclude Include="Source\Project\EditorProject.h" />
     <ClInclude Include="Source\Utils\EditorPathSecurity.h" />
     <ClInclude Include="Source\Project\EditorSceneDocument.h" />
+    <ClInclude Include="Source\Shell\EditorDockingController.h" />
     <ClInclude Include="Source\Shell\EditorShell.h" />
     <ClInclude Include="Source\Shell\EditorPanelId.h" />
     <ClInclude Include="Source\Utils\EditorStringUtils.h" />
