@@ -24,6 +24,7 @@ namespace Xelqoria::Editor
     class LogOutputPanelView;
     class SceneViewPanelView;
     class EditorDockingController;
+    class EditorDockingLayoutSerializer;
 
     /// <summary>
     /// Editor 固定 UI の Win32 child window 群とレイアウトを管理する。
@@ -31,6 +32,7 @@ namespace Xelqoria::Editor
     class EditorShell
     {
         friend class EditorDockingController;
+        friend class EditorDockingLayoutSerializer;
 
     public:
         /// <summary>

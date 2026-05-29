@@ -2,8 +2,10 @@
 
 #include <Windows.h>
 #include <filesystem>
+#include <memory>
 
 #include "InputSystem.h"
+#include "Shell/EditorDockingLayoutSerializer.h"
 #include "Shell/EditorPanelId.h"
 
 namespace Xelqoria::Editor
@@ -59,5 +61,6 @@ namespace Xelqoria::Editor
 
     private:
         EditorShell& m_shell;
+        std::unique_ptr<EditorDockingLayoutSerializer> m_layoutSerializer{};
     };
 }
