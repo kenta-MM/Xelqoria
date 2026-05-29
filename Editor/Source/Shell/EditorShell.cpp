@@ -20,12 +20,16 @@
 #include "Panels/Inspector/InspectorPanelView.h"
 #include "Panels/LogOutput/LogOutputPanelView.h"
 #include "Panels/SceneView/SceneViewPanelView.h"
+#include "Shell/EditorDockingController.h"
 
 #pragma comment(lib, "uxtheme.lib")
 
 namespace Xelqoria::Editor
 {
-    EditorShell::EditorShell() = default;
+    EditorShell::EditorShell()
+        : m_dockingController(std::make_unique<EditorDockingController>(*this))
+    {
+    }
 
     namespace
     {
@@ -1116,6 +1120,41 @@ namespace Xelqoria::Editor
     }
 
     #include "EditorShell.Docking.cpp"
+
+    bool EditorShell::UpdateDocking(HWND parentWindow, const Core::InputSnapshot& inputSnapshot)
+    {
+        return m_dockingController->Update(parentWindow, inputSnapshot);
+    }
+
+    bool EditorShell::HandleNotify(LPARAM notifyParameter)
+    {
+        return m_dockingController->HandleNotify(notifyParameter);
+    }
+
+    void EditorShell::ResetDockLayout()
+    {
+        m_dockingController->ResetLayout();
+    }
+
+    void EditorShell::ShowPanelAtDefaultDock(EditorPanelId panelId)
+    {
+        m_dockingController->ShowPanelAtDefaultDock(panelId);
+    }
+
+    void EditorShell::ActivatePanel(EditorPanelId panelId)
+    {
+        m_dockingController->ActivatePanel(panelId);
+    }
+
+    bool EditorShell::SaveLayout(const std::filesystem::path& layoutPath) const
+    {
+        return m_dockingController->SaveLayout(layoutPath);
+    }
+
+    bool EditorShell::LoadLayout(const std::filesystem::path& layoutPath)
+    {
+        return m_dockingController->LoadLayout(layoutPath);
+    }
 
     void EditorShell::SendGroupBoxesToBack()
     {
