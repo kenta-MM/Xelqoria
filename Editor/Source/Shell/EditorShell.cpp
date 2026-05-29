@@ -876,15 +876,15 @@ namespace Xelqoria::Editor
         }
 
         constexpr DWORD tabStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS | TCS_OWNERDRAWFIXED;
-        m_leftTopDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
-        m_leftBottomDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
-        m_centerDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
-        m_rightDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
-        ConfigureEditorTabControl(m_leftTopDockTab);
-        ConfigureEditorTabControl(m_leftBottomDockTab);
-        ConfigureEditorTabControl(m_centerDockTab);
-        ConfigureEditorTabControl(m_rightDockTab);
-        m_dockPreviewWindow = CreateChildWindow(
+        m_docking.leftTopDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
+        m_docking.leftBottomDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
+        m_docking.centerDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
+        m_docking.rightDockTab = CreateChildWindow(parentWindow, hInstance, WC_TABCONTROLW, L"", tabStyle);
+        ConfigureEditorTabControl(m_docking.leftTopDockTab);
+        ConfigureEditorTabControl(m_docking.leftBottomDockTab);
+        ConfigureEditorTabControl(m_docking.centerDockTab);
+        ConfigureEditorTabControl(m_docking.rightDockTab);
+        m_docking.dockPreviewWindow = CreateChildWindow(
             parentWindow,
             hInstance,
             DockPreviewWindowClassName,
@@ -901,29 +901,29 @@ namespace Xelqoria::Editor
             L"left",
             L"right"
         };
-        for (std::size_t index = 0; index < m_dockGuideWindows.size(); ++index)
+        for (std::size_t index = 0; index < m_docking.dockGuideWindows.size(); ++index)
         {
-            m_dockGuideWindows[index] = CreateChildWindow(
+            m_docking.dockGuideWindows[index] = CreateChildWindow(
                 parentWindow,
                 hInstance,
                 DockGuideWindowClassName,
                 guideTexts[index],
                 WS_CHILD | WS_CLIPSIBLINGS);
-            if (nullptr == m_dockGuideWindows[index])
+            if (nullptr == m_docking.dockGuideWindows[index])
             {
                 return false;
             }
-            ShowWindow(m_dockGuideWindows[index], SW_HIDE);
+            ShowWindow(m_docking.dockGuideWindows[index], SW_HIDE);
         }
-        if (nullptr == m_leftTopDockTab
-            || nullptr == m_leftBottomDockTab
-            || nullptr == m_centerDockTab
-            || nullptr == m_rightDockTab
-            || nullptr == m_dockPreviewWindow)
+        if (nullptr == m_docking.leftTopDockTab
+            || nullptr == m_docking.leftBottomDockTab
+            || nullptr == m_docking.centerDockTab
+            || nullptr == m_docking.rightDockTab
+            || nullptr == m_docking.dockPreviewWindow)
         {
             return false;
         }
-        ShowWindow(m_dockPreviewWindow, SW_HIDE);
+        ShowWindow(m_docking.dockPreviewWindow, SW_HIDE);
         BuildInitialDockTree();
 
         m_hierarchyPanelView = std::make_unique<HierarchyPanelView>(m_panelHostContext);
@@ -962,14 +962,14 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(EditorPanelId::Collider2D);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
 
-        for (HWND tabControl : m_dynamicDockTabs)
+        for (HWND tabControl : m_docking.dynamicDockTabs)
         {
             if (nullptr != tabControl)
             {
                 DestroyWindow(tabControl);
             }
         }
-        m_dynamicDockTabs.clear();
+        m_docking.dynamicDockTabs.clear();
         m_pendingLayoutMoves.clear();
 
         if (nullptr != m_windowBackgroundBrush)
@@ -1049,7 +1049,7 @@ namespace Xelqoria::Editor
             clientWidth - outerPadding,
             clientHeight - statusBarHeight - outerPadding
         };
-        LayoutDockNode(m_rootDockNodeId, rootRect);
+        LayoutDockNode(m_docking.rootDockNodeId, rootRect);
         HideDockGuideWindows();
         SendGroupBoxesToBack();
         RedrawLayout(parentWindow);
@@ -1074,15 +1074,15 @@ namespace Xelqoria::Editor
             };
 
         std::vector<DockNodeId> dockLeafNodeIds{};
-        CollectReachableDockLeaves(m_rootDockNodeId, dockLeafNodeIds);
+        CollectReachableDockLeaves(m_docking.rootDockNodeId, dockLeafNodeIds);
         for (DockNodeId dockNodeId : dockLeafNodeIds)
         {
-            if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_dockNodes.size())
+            if (dockNodeId < 0 || static_cast<std::size_t>(dockNodeId) >= m_docking.dockNodes.size())
             {
                 continue;
             }
 
-            const DockNode& dockNode = m_dockNodes[static_cast<std::size_t>(dockNodeId)];
+            const DockNode& dockNode = m_docking.dockNodes[static_cast<std::size_t>(dockNodeId)];
             if (DockNodeKind::Leaf != dockNode.kind || dockNode.panels.empty())
             {
                 continue;
@@ -1093,7 +1093,7 @@ namespace Xelqoria::Editor
             markActivePanel(dockNode.panels[static_cast<std::size_t>(activeIndex)]);
         }
 
-        for (const FloatingPanelGroup& group : m_floatingPanelGroups)
+        for (const FloatingPanelGroup& group : m_docking.floatingPanelGroups)
         {
             if (nullptr == group.window || false == IsWindowVisible(group.window) || group.panels.empty())
             {
@@ -1671,20 +1671,20 @@ namespace Xelqoria::Editor
             m_topBarPlayButton,
             m_topBarLayoutButton,
             m_statusBar,
-            m_leftTopDockTab,
-            m_leftBottomDockTab,
-            m_centerDockTab,
-            m_rightDockTab,
-            m_dockPreviewWindow,
-            m_dockGuideWindows[0],
-            m_dockGuideWindows[1],
-            m_dockGuideWindows[2],
-            m_dockGuideWindows[3],
-            m_dockGuideWindows[4],
-            m_dockGuideWindows[5],
-            m_dockGuideWindows[6],
-            m_dockGuideWindows[7],
-            m_dockGuideWindows[8]
+            m_docking.leftTopDockTab,
+            m_docking.leftBottomDockTab,
+            m_docking.centerDockTab,
+            m_docking.rightDockTab,
+            m_docking.dockPreviewWindow,
+            m_docking.dockGuideWindows[0],
+            m_docking.dockGuideWindows[1],
+            m_docking.dockGuideWindows[2],
+            m_docking.dockGuideWindows[3],
+            m_docking.dockGuideWindows[4],
+            m_docking.dockGuideWindows[5],
+            m_docking.dockGuideWindows[6],
+            m_docking.dockGuideWindows[7],
+            m_docking.dockGuideWindows[8]
         };
 
         const std::array<const IEditorPanelView*, 5> panelViews{
