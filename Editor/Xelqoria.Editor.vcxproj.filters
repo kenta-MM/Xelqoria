@@ -87,6 +87,9 @@
     <ClCompile Include="Source\Shell\EditorDockingController.cpp">
       <Filter>Source\Shell</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Shell\EditorDockingLayoutSerializer.cpp">
+      <Filter>Source\Shell</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Shell\EditorShell.cpp">
       <Filter>Source\Shell</Filter>
     </ClCompile>
@@ -186,6 +189,9 @@
       <Filter>Source\Project</Filter>
     </ClInclude>
     <ClInclude Include="Source\Shell\EditorDockingController.h">
+      <Filter>Source\Shell</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Shell\EditorDockingLayoutSerializer.h">
       <Filter>Source\Shell</Filter>
     </ClInclude>
     <ClInclude Include="Source\Shell\EditorShell.h">

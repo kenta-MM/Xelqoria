@@ -1,11 +1,13 @@
 #include "Shell/EditorDockingController.h"
 
+#include "Shell/EditorDockingLayoutSerializer.h"
 #include "Shell/EditorShell.h"
 
 namespace Xelqoria::Editor
 {
     EditorDockingController::EditorDockingController(EditorShell& shell)
         : m_shell(shell)
+        , m_layoutSerializer(std::make_unique<EditorDockingLayoutSerializer>(shell))
     {
     }
 
@@ -36,11 +38,11 @@ namespace Xelqoria::Editor
 
     bool EditorDockingController::SaveLayout(const std::filesystem::path& layoutPath) const
     {
-        return m_shell.SaveLayoutCore(layoutPath);
+        return m_layoutSerializer->Save(layoutPath);
     }
 
     bool EditorDockingController::LoadLayout(const std::filesystem::path& layoutPath)
     {
-        return m_shell.LoadLayoutCore(layoutPath);
+        return m_layoutSerializer->Load(layoutPath);
     }
 }
