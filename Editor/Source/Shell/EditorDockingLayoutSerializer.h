@@ -4,7 +4,7 @@
 
 namespace Xelqoria::Editor
 {
-    class EditorShell;
+    class EditorDockingController;
 
     /// <summary>
     /// Dock/Floating レイアウトの保存復元を担当する。
@@ -15,8 +15,8 @@ namespace Xelqoria::Editor
         /// <summary>
         /// DockingLayoutSerializer を生成する。
         /// </summary>
-        /// <param name="shell">保存復元対象の EditorShell。</param>
-        explicit EditorDockingLayoutSerializer(EditorShell& shell);
+        /// <param name="controller">保存復元対象の DockingController。</param>
+        explicit EditorDockingLayoutSerializer(EditorDockingController& controller);
 
         /// <summary>
         /// 現在の Dock/Floating レイアウトを保存する。
@@ -29,6 +29,6 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool Load(const std::filesystem::path& layoutPath);
 
     private:
-        EditorShell& m_shell;
+        EditorDockingController& m_controller;
     };
 }
