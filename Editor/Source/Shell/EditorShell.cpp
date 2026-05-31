@@ -1541,6 +1541,31 @@ namespace Xelqoria::Editor
         return MulDiv(value, static_cast<int>(m_currentDpi), 96);
     }
 
+    HWND EditorShell::GetParentWindow() const
+    {
+        return m_parentWindow;
+    }
+
+    HFONT EditorShell::GetDefaultFont() const
+    {
+        return m_defaultFont;
+    }
+
+    Platform::ICursor* EditorShell::GetCursor() const
+    {
+        return m_cursor;
+    }
+
+    bool EditorShell::ArePanelViewsInitialized() const
+    {
+        return m_panelViewsInitialized;
+    }
+
+    void EditorShell::InvalidateLayout()
+    {
+        m_layoutInitialized = false;
+    }
+
     LRESULT CALLBACK EditorShell::ParentWindowSubclassProc(
         HWND window,
         UINT message,

@@ -18,20 +18,17 @@
 namespace Xelqoria::Editor
 {
     class AssetsPanelView;
+    class EditorDockingController;
     class HierarchyPanelView;
     class InspectorPanelView;
     class IEditorPanelView;
     class LogOutputPanelView;
     class SceneViewPanelView;
-    class EditorDockingController;
-
     /// <summary>
     /// Editor 固定 UI の Win32 child window 群とレイアウトを管理する。
     /// </summary>
     class EditorShell
     {
-        friend class EditorDockingController;
-
     public:
         /// <summary>
         /// EditorShell を生成する。
@@ -518,26 +515,37 @@ namespace Xelqoria::Editor
         /// <returns>復元に成功した場合は true。</returns>
         [[nodiscard]] bool LoadLayout(const std::filesystem::path& layoutPath);
 
-    private:
         /// <summary>
-        /// レイアウト計算結果を保持する。
+        /// 共通設定を適用した child window を生成する。
         /// </summary>
-        struct LayoutMetrics;
+        /// <param name="parentWindow">親ウィンドウ。</param>
+        /// <param name="hInstance">Windows アプリケーションインスタンス。</param>
+        /// <param name="className">生成する Win32 クラス名。</param>
+        /// <param name="text">初期表示文字列。</param>
+        /// <param name="style">適用するウィンドウスタイル。</param>
+        /// <param name="exStyle">適用する拡張ウィンドウスタイル。</param>
+        /// <returns>生成した child window の HWND。失敗時は nullptr。</returns>
+        HWND CreateChildWindow(
+            HWND parentWindow,
+            HINSTANCE hInstance,
+            const wchar_t* className,
+            const wchar_t* text,
+            DWORD style,
+            DWORD exStyle = 0) const;
 
         /// <summary>
         /// 指定パネルの HWND 群を表示または非表示にする。
         /// </summary>
+        /// <param name="panelId">対象 Panel。</param>
+        /// <param name="visible">表示する場合は true。</param>
         void ShowPanelControls(EditorPanelId panelId, bool visible) const;
 
         /// <summary>
         /// 指定パネルの HWND 群を指定親へ付け替える。
         /// </summary>
+        /// <param name="panelId">対象 Panel。</param>
+        /// <param name="parentWindow">付け替え先親ウィンドウ。</param>
         void SetPanelParent(EditorPanelId panelId, HWND parentWindow) const;
-
-        /// <summary>
-        /// 指定 Panel の View 境界を返す。
-        /// </summary>
-        [[nodiscard]] IEditorPanelView& GetPanelView(EditorPanelId panelId) const;
 
         /// <summary>
         /// GroupBox を背面へ配置し、同じ親を持つ中身コントロールを前面に保つ。
@@ -550,11 +558,6 @@ namespace Xelqoria::Editor
         void MoveChildWindowNoRedraw(HWND window, int x, int y, int width, int height) const;
 
         /// <summary>
-        /// レイアウト中に蓄積した child window 配置をまとめて反映する。
-        /// </summary>
-        void FlushLayoutMoves(HWND parentWindow) const;
-
-        /// <summary>
         /// 配置更新後に親と child window 群を同期再描画する。
         /// </summary>
         void RedrawLayout(HWND parentWindow) const;
@@ -562,7 +565,80 @@ namespace Xelqoria::Editor
         /// <summary>
         /// SceneView host の現在サイズを反映する。
         /// </summary>
+        /// <returns>サイズが変わった場合は true。</returns>
         [[nodiscard]] bool UpdateSceneViewHostSize();
+
+        /// <summary>
+        /// 指定値を現在 DPI に合わせて拡大縮小する。
+        /// </summary>
+        /// <param name="value">96 DPI 基準の値。</param>
+        /// <returns>DPI 適用後の値。</returns>
+        [[nodiscard]] int ScaleMetric(int value) const;
+
+        /// <summary>
+        /// 親ウィンドウへ届くテーマ関連メッセージを処理する。
+        /// </summary>
+        /// <param name="message">Win32 メッセージ。</param>
+        /// <param name="wParam">メッセージ WPARAM。</param>
+        /// <param name="lParam">メッセージ LPARAM。</param>
+        /// <returns>処理結果。未処理の場合は空。</returns>
+        [[nodiscard]] std::optional<LRESULT> HandleThemeMessage(UINT message, WPARAM wParam, LPARAM lParam) const;
+
+        /// <summary>
+        /// EditorShell の親ウィンドウを取得する。
+        /// </summary>
+        /// <returns>親ウィンドウ HWND。</returns>
+        [[nodiscard]] HWND GetParentWindow() const;
+
+        /// <summary>
+        /// EditorShell の標準フォントを取得する。
+        /// </summary>
+        /// <returns>標準フォント。</returns>
+        [[nodiscard]] HFONT GetDefaultFont() const;
+
+        /// <summary>
+        /// EditorShell が利用する cursor 実装を取得する。
+        /// </summary>
+        /// <returns>cursor 実装。未設定の場合は nullptr。</returns>
+        [[nodiscard]] Platform::ICursor* GetCursor() const;
+
+        /// <summary>
+        /// PanelView が初期化済みか取得する。
+        /// </summary>
+        /// <returns>初期化済みの場合は true。</returns>
+        [[nodiscard]] bool ArePanelViewsInitialized() const;
+
+        /// <summary>
+        /// 次回 UpdateLayout でレイアウトを再計算するようにする。
+        /// </summary>
+        void InvalidateLayout();
+
+        /// <summary>
+        /// 指定 Panel の View 境界を返す。
+        /// </summary>
+        [[nodiscard]] IEditorPanelView& GetPanelView(EditorPanelId panelId) const;
+
+        /// <summary>
+        /// Editor 用 TabControl の hover 再描画を処理する。
+        /// </summary>
+        static LRESULT CALLBACK EditorTabControlSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
+    private:
+        /// <summary>
+        /// レイアウト計算結果を保持する。
+        /// </summary>
+        struct LayoutMetrics;
+
+        /// <summary>
+        /// レイアウト中に蓄積した child window 配置をまとめて反映する。
+        /// </summary>
+        void FlushLayoutMoves(HWND parentWindow) const;
 
         /// <summary>
         /// Editor 標準ボタンの owner draw 描画を行う。
@@ -613,24 +689,6 @@ namespace Xelqoria::Editor
         [[nodiscard]] std::vector<HWND> CollectControls() const;
 
         /// <summary>
-        /// 指定値を現在 DPI に合わせて拡大縮小する。
-        /// </summary>
-        /// <param name="value">96 DPI 基準の値。</param>
-        /// <returns>DPI 適用後の値。</returns>
-        [[nodiscard]] int ScaleMetric(int value) const;
-
-        /// <summary>
-        /// Editor 用 TabControl の hover 再描画を処理する。
-        /// </summary>
-        static LRESULT CALLBACK EditorTabControlSubclassProc(
-            HWND window,
-            UINT message,
-            WPARAM wParam,
-            LPARAM lParam,
-            UINT_PTR subclassId,
-            DWORD_PTR referenceData);
-
-        /// <summary>
         /// Editor 親ウィンドウのテーマ背景と標準コントロール色を処理する。
         /// </summary>
         static LRESULT CALLBACK ParentWindowSubclassProc(
@@ -640,15 +698,6 @@ namespace Xelqoria::Editor
             LPARAM lParam,
             UINT_PTR subclassId,
             DWORD_PTR referenceData);
-
-        /// <summary>
-        /// 親ウィンドウへ届くテーマ関連メッセージを処理する。
-        /// </summary>
-        /// <param name="message">Win32 メッセージ。</param>
-        /// <param name="wParam">メッセージ WPARAM。</param>
-        /// <param name="lParam">メッセージ LPARAM。</param>
-        /// <returns>処理結果。未処理の場合は空。</returns>
-        [[nodiscard]] std::optional<LRESULT> HandleThemeMessage(UINT message, WPARAM wParam, LPARAM lParam) const;
 
         /// <summary>
         /// Inspector 入力欄かを判定する。
@@ -663,25 +712,6 @@ namespace Xelqoria::Editor
         /// <param name="window">判定対象 HWND。</param>
         /// <returns>Inspector 補助ラベルの場合は true。</returns>
         [[nodiscard]] bool IsInspectorSecondaryLabel(HWND window) const;
-
-    private:
-        /// <summary>
-        /// 共通設定を適用した子ウィンドウを生成する。
-        /// </summary>
-        /// <param name="parentWindow">親ウィンドウ。</param>
-        /// <param name="hInstance">Windows アプリケーションインスタンス。</param>
-        /// <param name="className">生成する Win32 クラス名。</param>
-        /// <param name="text">初期表示文字列。</param>
-        /// <param name="style">適用するウィンドウスタイル。</param>
-        /// <param name="exStyle">適用する拡張ウィンドウスタイル。</param>
-        /// <returns>生成した child window の HWND。失敗時は nullptr。</returns>
-        HWND CreateChildWindow(
-            HWND parentWindow,
-            HINSTANCE hInstance,
-            const wchar_t* className,
-            const wchar_t* text,
-            DWORD style,
-            DWORD exStyle = 0) const;
 
         HFONT m_defaultFont = nullptr;
         HBRUSH m_windowBackgroundBrush = nullptr;

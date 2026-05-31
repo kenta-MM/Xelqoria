@@ -289,7 +289,7 @@ namespace Xelqoria::Editor
 
     bool EditorDockingController::ApplyLayoutSnapshot(const EditorDockingLayoutSnapshot& snapshot)
     {
-        if (nullptr == m_shell.m_parentWindow || snapshot.dockNodes.empty())
+        if (nullptr == m_shell.GetParentWindow() || snapshot.dockNodes.empty())
         {
             return false;
         }
@@ -343,7 +343,7 @@ namespace Xelqoria::Editor
                 (std::max)(m_shell.ScaleMetric(240), static_cast<int>(group.rect.right - group.rect.left));
             const int height =
                 (std::max)(m_shell.ScaleMetric(180), static_cast<int>(group.rect.bottom - group.rect.top));
-            FloatPanel(group.panels.front(), POINT{ group.rect.left, group.rect.top }, m_shell.m_parentWindow);
+            FloatPanel(group.panels.front(), POINT{ group.rect.left, group.rect.top }, m_shell.GetParentWindow());
             HWND floatingWindow = GetFloatingWindowRef(group.panels.front());
             if (nullptr == floatingWindow)
             {
@@ -376,7 +376,7 @@ namespace Xelqoria::Editor
 
         RestoreMissingPanelsToDefaultDock();
         SyncDockTabs();
-        m_shell.m_layoutInitialized = false;
+        m_shell.InvalidateLayout();
         return true;
     }
 
@@ -474,7 +474,7 @@ namespace Xelqoria::Editor
                 continue;
             }
 
-            m_shell.SetPanelParent(panels[index], m_shell.m_parentWindow);
+            m_shell.SetPanelParent(panels[index], m_shell.GetParentWindow());
             m_shell.GetPanelView(panels[index]).Layout(panelRect);
         }
     }
@@ -504,7 +504,7 @@ namespace Xelqoria::Editor
         DockNode logOutputNode{};
         logOutputNode.kind = DockNodeKind::Leaf;
         logOutputNode.panels = { EditorPanelId::LogOutput };
-        logOutputNode.tabControl = CreateAdditionalDockTabControl(m_shell.m_parentWindow);
+        logOutputNode.tabControl = CreateAdditionalDockTabControl(m_shell.GetParentWindow());
         m_state.logOutputDockTab = logOutputNode.tabControl;
         const DockNodeId logOutputNodeId = AddDockNode(std::move(logOutputNode));
 
@@ -628,7 +628,7 @@ namespace Xelqoria::Editor
                 continue;
             }
 
-            m_shell.SetPanelParent(panelId, m_shell.m_parentWindow);
+            m_shell.SetPanelParent(panelId, m_shell.GetParentWindow());
             m_shell.GetPanelView(panelId).Layout(panelRect);
         }
     }
@@ -656,7 +656,7 @@ namespace Xelqoria::Editor
 
         if (EditorPanelId::LogOutput == panelId || nullptr == targetTabControl)
         {
-            targetTabControl = CreateAdditionalDockTabControl(m_shell.m_parentWindow);
+            targetTabControl = CreateAdditionalDockTabControl(m_shell.GetParentWindow());
             if (EditorPanelId::LogOutput == panelId)
             {
                 m_state.logOutputDockTab = targetTabControl;
@@ -805,9 +805,9 @@ namespace Xelqoria::Editor
             else if (DockDragKind::HorizontalSplitter == m_state.dragKind || DockDragKind::VerticalSplitter == m_state.dragKind)
             {
                 changed = UpdateDockSplitterDrag(parentWindow, cursorScreenPoint) || changed;
-                if (nullptr != m_shell.m_cursor)
+                if (nullptr != m_shell.GetCursor())
                 {
-                    m_shell.m_cursor->SetShape(
+                    m_shell.GetCursor()->SetShape(
                         DockDragKind::HorizontalSplitter == m_state.dragKind
                             ? Platform::CursorShape::HorizontalResize
                             : Platform::CursorShape::VerticalResize);
@@ -820,9 +820,9 @@ namespace Xelqoria::Editor
             if (0 <= hitSplitterNodeId && static_cast<std::size_t>(hitSplitterNodeId) < m_state.dockNodes.size())
             {
                 const DockNode& splitNode = m_state.dockNodes[static_cast<std::size_t>(hitSplitterNodeId)];
-                if (nullptr != m_shell.m_cursor)
+                if (nullptr != m_shell.GetCursor())
                 {
-                    m_shell.m_cursor->SetShape(
+                    m_shell.GetCursor()->SetShape(
                         DockSplitOrientation::Horizontal == splitNode.splitOrientation
                             ? Platform::CursorShape::HorizontalResize
                             : Platform::CursorShape::VerticalResize);
@@ -857,7 +857,7 @@ namespace Xelqoria::Editor
 
         if (changed)
         {
-            m_shell.m_layoutInitialized = false;
+            m_shell.InvalidateLayout();
         }
 
         return changed;
@@ -865,7 +865,7 @@ namespace Xelqoria::Editor
 
     bool EditorDockingController::HandleNotify(LPARAM notifyParameter)
     {
-        if (false == m_shell.m_panelViewsInitialized)
+        if (false == m_shell.ArePanelViewsInitialized())
         {
             return false;
         }
@@ -884,7 +884,7 @@ namespace Xelqoria::Editor
             }
 
             dockNode.activeTabIndex = TabCtrl_GetCurSel(dockNode.tabControl);
-            m_shell.m_layoutInitialized = false;
+            m_shell.InvalidateLayout();
             return true;
         }
 
@@ -916,27 +916,27 @@ namespace Xelqoria::Editor
         m_state.pendingDockDragStartTick = 0;
         BuildInitialDockTree();
         HideDockGuideWindows();
-        UpdateDockPreviewWindow(m_shell.m_parentWindow);
+        UpdateDockPreviewWindow(m_shell.GetParentWindow());
         m_state.leftPaneWidth = m_shell.ScaleMetric(260);
         m_state.rightPaneWidth = m_shell.ScaleMetric(300);
         m_state.leftTopHeight = m_shell.ScaleMetric(280);
-        m_shell.SetPanelParent(EditorPanelId::Hierarchy, m_shell.m_parentWindow);
-        m_shell.SetPanelParent(EditorPanelId::Assets, m_shell.m_parentWindow);
-        m_shell.SetPanelParent(EditorPanelId::SceneView, m_shell.m_parentWindow);
-        m_shell.SetPanelParent(EditorPanelId::Inspector, m_shell.m_parentWindow);
-        m_shell.SetPanelParent(EditorPanelId::LogOutput, m_shell.m_parentWindow);
+        m_shell.SetPanelParent(EditorPanelId::Hierarchy, m_shell.GetParentWindow());
+        m_shell.SetPanelParent(EditorPanelId::Assets, m_shell.GetParentWindow());
+        m_shell.SetPanelParent(EditorPanelId::SceneView, m_shell.GetParentWindow());
+        m_shell.SetPanelParent(EditorPanelId::Inspector, m_shell.GetParentWindow());
+        m_shell.SetPanelParent(EditorPanelId::LogOutput, m_shell.GetParentWindow());
         DestroyFloatingWindow(EditorPanelId::Hierarchy);
         DestroyFloatingWindow(EditorPanelId::Assets);
         DestroyFloatingWindow(EditorPanelId::SceneView);
         DestroyFloatingWindow(EditorPanelId::Inspector);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
         SyncDockTabs();
-        m_shell.m_layoutInitialized = false;
+        m_shell.InvalidateLayout();
     }
 
     void EditorDockingController::ShowPanelAtDefaultDock(EditorPanelId panelId)
     {
-        if (nullptr == m_shell.m_parentWindow)
+        if (nullptr == m_shell.GetParentWindow())
         {
             return;
         }
@@ -950,7 +950,7 @@ namespace Xelqoria::Editor
 
         RemovePanelFromDockTree(panelId);
         DestroyFloatingWindow(panelId);
-        m_shell.SetPanelParent(panelId, m_shell.m_parentWindow);
+        m_shell.SetPanelParent(panelId, m_shell.GetParentWindow());
         const DockNodeId targetDockNodeId = EnsureDefaultDockLeaf(panelId);
         if (targetDockNodeId < 0 || static_cast<std::size_t>(targetDockNodeId) >= m_state.dockNodes.size())
         {
@@ -965,12 +965,12 @@ namespace Xelqoria::Editor
         targetDockNode.activeTabIndex = static_cast<int>(targetDockNode.panels.size()) - 1;
         m_shell.ShowPanelControls(panelId, true);
         SyncDockTabs();
-        m_shell.m_layoutInitialized = false;
+        m_shell.InvalidateLayout();
     }
 
     void EditorDockingController::ActivatePanel(EditorPanelId panelId)
     {
-        if (nullptr == m_shell.m_parentWindow)
+        if (nullptr == m_shell.GetParentWindow())
         {
             return;
         }
@@ -1003,7 +1003,7 @@ namespace Xelqoria::Editor
             {
                 dockNode.activeTabIndex = static_cast<int>(std::distance(dockNode.panels.begin(), panelIt));
                 SyncDockTabs();
-                m_shell.m_layoutInitialized = false;
+                m_shell.InvalidateLayout();
                 return;
             }
         }
@@ -1128,13 +1128,13 @@ namespace Xelqoria::Editor
 
     EditorDockingController::DockNodeId EditorDockingController::HitTestDockSplitter(POINT cursorScreenPoint) const
     {
-        if (nullptr == m_shell.m_parentWindow)
+        if (nullptr == m_shell.GetParentWindow())
         {
             return -1;
         }
 
         POINT cursorClientPoint = cursorScreenPoint;
-        ScreenToClient(m_shell.m_parentWindow, &cursorClientPoint);
+        ScreenToClient(m_shell.GetParentWindow(), &cursorClientPoint);
 
         std::vector<DockNodeId> dockSplitNodeIds{};
         CollectReachableDockSplits(m_state.rootDockNodeId, dockSplitNodeIds);
@@ -1259,7 +1259,7 @@ namespace Xelqoria::Editor
         }
 
         splitNode.splitRatio = nextRatio;
-        m_shell.m_layoutInitialized = false;
+        m_shell.InvalidateLayout();
         return true;
     }
 
@@ -1452,20 +1452,20 @@ namespace Xelqoria::Editor
     {
         if (DockGuideTargetKind::None == guideTarget.kind || DockGuideTargetKind::Float == guideTarget.kind)
         {
-            const POINT cursorScreenPoint = GetCursorScreenPoint(m_shell.m_cursor);
+            const POINT cursorScreenPoint = GetCursorScreenPoint(m_shell.GetCursor());
             const HWND targetFloatingWindow = HitTestFloatingWindow(cursorScreenPoint, GetFloatingWindowRef(panelId));
             if (nullptr != targetFloatingWindow)
             {
                 AttachPanelToFloatingWindow(panelId, targetFloatingWindow);
                 SyncDockTabs();
-                m_shell.m_layoutInitialized = false;
+                m_shell.InvalidateLayout();
                 return;
             }
 
             RemovePanelFromDockTree(panelId);
             FloatPanel(panelId, cursorScreenPoint, parentWindow);
             SyncDockTabs();
-            m_shell.m_layoutInitialized = false;
+            m_shell.InvalidateLayout();
             return;
         }
 
@@ -1499,7 +1499,7 @@ namespace Xelqoria::Editor
                 (void)CollapseEmptyDockLeaves(m_state.rootDockNodeId);
             }
             SyncDockTabs();
-            m_shell.m_layoutInitialized = false;
+            m_shell.InvalidateLayout();
             return;
         }
 
@@ -1515,7 +1515,7 @@ namespace Xelqoria::Editor
                 targetNode.panels.push_back(panelId);
                 targetNode.activeTabIndex = 0;
                 SyncDockTabs();
-                m_shell.m_layoutInitialized = false;
+                m_shell.InvalidateLayout();
                 return;
             }
         }
@@ -1558,7 +1558,7 @@ namespace Xelqoria::Editor
             (void)CollapseEmptyDockLeaves(m_state.rootDockNodeId);
         }
         SyncDockTabs();
-        m_shell.m_layoutInitialized = false;
+        m_shell.InvalidateLayout();
     }
 
     void EditorDockingController::UpdateDockGuideWindows(HWND parentWindow, POINT cursorScreenPoint)
@@ -1697,10 +1697,10 @@ namespace Xelqoria::Editor
 
         if (DockAreaId::Floating == dockAreaId)
         {
-            const POINT cursorScreenPoint = GetCursorScreenPoint(m_shell.m_cursor);
+            const POINT cursorScreenPoint = GetCursorScreenPoint(m_shell.GetCursor());
             FloatPanel(panelId, cursorScreenPoint, parentWindow);
             SyncDockTabs();
-            m_shell.m_layoutInitialized = false;
+            m_shell.InvalidateLayout();
             return;
         }
 
@@ -1727,7 +1727,7 @@ namespace Xelqoria::Editor
         }
 
         SyncDockTabs();
-        m_shell.m_layoutInitialized = false;
+        m_shell.InvalidateLayout();
     }
 
     void EditorDockingController::BeginDockPanelDrag(EditorPanelId panelId, HWND parentWindow, POINT cursorScreenPoint)
@@ -1760,7 +1760,7 @@ namespace Xelqoria::Editor
         };
         FloatPanel(panelId, floatingOrigin, parentWindow);
         SyncDockTabs();
-        m_shell.m_layoutInitialized = false;
+        m_shell.InvalidateLayout();
     }
 
     void EditorDockingController::UpdateDockPanelDragWindow(EditorPanelId panelId, POINT cursorScreenPoint)
@@ -1815,7 +1815,7 @@ namespace Xelqoria::Editor
             WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_TABS | TCS_OWNERDRAWFIXED);
         if (nullptr != tabControl)
         {
-            SendMessageW(tabControl, WM_SETFONT, reinterpret_cast<WPARAM>(m_shell.m_defaultFont), TRUE);
+            SendMessageW(tabControl, WM_SETFONT, reinterpret_cast<WPARAM>(m_shell.GetDefaultFont()), TRUE);
             ConfigureEditorTabControl(tabControl);
         }
         m_state.floatingPanelGroups.push_back(FloatingPanelGroup{
@@ -1833,7 +1833,7 @@ namespace Xelqoria::Editor
 
     void EditorDockingController::BeginFloatingWindowDockDrag(EditorPanelId panelId)
     {
-        if (nullptr == m_shell.m_parentWindow)
+        if (nullptr == m_shell.GetParentWindow())
         {
             return;
         }
@@ -1845,30 +1845,30 @@ namespace Xelqoria::Editor
 
         m_state.dragKind = DockDragKind::Panel;
         m_state.dragPanelId = panelId;
-        m_state.dragStartScreenPoint = GetCursorScreenPoint(m_shell.m_cursor);
+        m_state.dragStartScreenPoint = GetCursorScreenPoint(m_shell.GetCursor());
         m_state.currentGuideTarget = DockGuideTarget{};
         m_state.hasDockPreview = false;
     }
 
     void EditorDockingController::UpdateFloatingWindowDockDrag()
     {
-        if (nullptr == m_shell.m_parentWindow || DockDragKind::Panel != m_state.dragKind || false == m_state.dragPanelId.has_value())
+        if (nullptr == m_shell.GetParentWindow() || DockDragKind::Panel != m_state.dragKind || false == m_state.dragPanelId.has_value())
         {
             return;
         }
 
-        const POINT cursorScreenPoint = GetCursorScreenPoint(m_shell.m_cursor);
-        UpdateDockGuideWindows(m_shell.m_parentWindow, cursorScreenPoint);
-        m_state.currentGuideTarget = HitTestDockGuideTarget(m_shell.m_parentWindow, cursorScreenPoint);
+        const POINT cursorScreenPoint = GetCursorScreenPoint(m_shell.GetCursor());
+        UpdateDockGuideWindows(m_shell.GetParentWindow(), cursorScreenPoint);
+        m_state.currentGuideTarget = HitTestDockGuideTarget(m_shell.GetParentWindow(), cursorScreenPoint);
         m_state.hasDockPreview = DockGuideTargetKind::None != m_state.currentGuideTarget.kind
             && DockGuideTargetKind::Float != m_state.currentGuideTarget.kind;
         m_state.dockPreviewRect = m_state.currentGuideTarget.previewRect;
-        UpdateDockPreviewWindow(m_shell.m_parentWindow);
+        UpdateDockPreviewWindow(m_shell.GetParentWindow());
     }
 
     void EditorDockingController::CompleteFloatingWindowDockDrag(EditorPanelId panelId)
     {
-        if (nullptr == m_shell.m_parentWindow)
+        if (nullptr == m_shell.GetParentWindow())
         {
             return;
         }
@@ -1878,14 +1878,14 @@ namespace Xelqoria::Editor
         m_state.currentGuideTarget = DockGuideTarget{};
         m_state.hasDockPreview = false;
         HideDockGuideWindows();
-        UpdateDockPreviewWindow(m_shell.m_parentWindow);
+        UpdateDockPreviewWindow(m_shell.GetParentWindow());
         m_state.dragKind = DockDragKind::None;
         m_state.dragPanelId.reset();
 
         if (DockGuideTargetKind::None == guideTarget.kind || DockGuideTargetKind::Float == guideTarget.kind)
         {
             const HWND targetFloatingWindow =
-                HitTestFloatingWindow(GetCursorScreenPoint(m_shell.m_cursor), GetFloatingWindowRef(panelId));
+                HitTestFloatingWindow(GetCursorScreenPoint(m_shell.GetCursor()), GetFloatingWindowRef(panelId));
             if (nullptr != targetFloatingWindow)
             {
                 AttachPanelToFloatingWindow(panelId, targetFloatingWindow);
@@ -1893,8 +1893,8 @@ namespace Xelqoria::Editor
             return;
         }
 
-        ApplyDockGuideTarget(panelId, guideTarget, m_shell.m_parentWindow);
-        m_shell.m_layoutInitialized = false;
+        ApplyDockGuideTarget(panelId, guideTarget, m_shell.GetParentWindow());
+        m_shell.InvalidateLayout();
     }
 
     void EditorDockingController::LayoutFloatingPanel(EditorPanelId panelId, HWND floatingWindow)
@@ -2024,14 +2024,14 @@ namespace Xelqoria::Editor
             {
                 floatingWindowRef = nullptr;
             }
-            m_shell.SetPanelParent(floatingPanelId, m_shell.m_parentWindow);
+            m_shell.SetPanelParent(floatingPanelId, m_shell.GetParentWindow());
             RemovePanelFromDockTree(floatingPanelId, false);
             m_shell.ShowPanelControls(floatingPanelId, false);
         }
 
         m_state.floatingPanelGroups.erase(m_state.floatingPanelGroups.begin() + groupIndex);
         SyncDockTabs();
-        m_shell.m_layoutInitialized = false;
+        m_shell.InvalidateLayout();
         DestroyWindow(floatingWindow);
     }
 
@@ -2044,7 +2044,7 @@ namespace Xelqoria::Editor
         }
 
         const HWND windowToUpdate = floatingWindow;
-        m_shell.SetPanelParent(panelId, m_shell.m_parentWindow);
+        m_shell.SetPanelParent(panelId, m_shell.GetParentWindow());
         floatingWindow = nullptr;
 
         const int groupIndex = FindFloatingPanelGroupIndex(windowToUpdate);
@@ -2231,7 +2231,7 @@ namespace Xelqoria::Editor
             return nullptr;
         }
 
-        SendMessageW(tabControl, WM_SETFONT, reinterpret_cast<WPARAM>(m_shell.m_defaultFont), TRUE);
+        SendMessageW(tabControl, WM_SETFONT, reinterpret_cast<WPARAM>(m_shell.GetDefaultFont()), TRUE);
         ConfigureEditorTabControl(tabControl);
         ShowWindow(tabControl, SW_HIDE);
         m_state.dynamicDockTabs.push_back(tabControl);
@@ -2257,7 +2257,7 @@ namespace Xelqoria::Editor
             return m_state.rightDockTab;
         }
 
-        HWND tabControl = CreateAdditionalDockTabControl(m_shell.m_parentWindow);
+        HWND tabControl = CreateAdditionalDockTabControl(m_shell.GetParentWindow());
         if (L"LogOutput" == layoutKey)
         {
             m_state.logOutputDockTab = tabControl;
