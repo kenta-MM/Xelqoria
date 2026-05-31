@@ -119,9 +119,6 @@ namespace Xelqoria::Editor
             case EditorPanelId::Inspector:
             case EditorPanelId::LogOutput:
                 return true;
-            case EditorPanelId::Sprite:
-            case EditorPanelId::Material:
-            case EditorPanelId::Collider2D:
             default:
                 return false;
             }
@@ -228,9 +225,6 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(EditorPanelId::Assets);
         DestroyFloatingWindow(EditorPanelId::SceneView);
         DestroyFloatingWindow(EditorPanelId::Inspector);
-        DestroyFloatingWindow(EditorPanelId::Sprite);
-        DestroyFloatingWindow(EditorPanelId::Material);
-        DestroyFloatingWindow(EditorPanelId::Collider2D);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
 
         for (HWND tabControl : m_state.dynamicDockTabs)
@@ -718,12 +712,6 @@ namespace Xelqoria::Editor
             return m_state.centerDockTab;
         case EditorPanelId::Inspector:
             return m_state.rightDockTab;
-        case EditorPanelId::Sprite:
-            return m_state.rightDockTab;
-        case EditorPanelId::Material:
-            return m_state.rightDockTab;
-        case EditorPanelId::Collider2D:
-            return m_state.rightDockTab;
         case EditorPanelId::LogOutput:
             return m_state.logOutputDockTab;
         default:
@@ -941,9 +929,6 @@ namespace Xelqoria::Editor
         DestroyFloatingWindow(EditorPanelId::Assets);
         DestroyFloatingWindow(EditorPanelId::SceneView);
         DestroyFloatingWindow(EditorPanelId::Inspector);
-        DestroyFloatingWindow(EditorPanelId::Sprite);
-        DestroyFloatingWindow(EditorPanelId::Material);
-        DestroyFloatingWindow(EditorPanelId::Collider2D);
         DestroyFloatingWindow(EditorPanelId::LogOutput);
         SyncDockTabs();
         m_shell.m_layoutInitialized = false;
@@ -2099,12 +2084,6 @@ namespace Xelqoria::Editor
             return m_state.sceneViewFloatingWindow;
         case EditorPanelId::Inspector:
             return m_state.inspectorFloatingWindow;
-        case EditorPanelId::Sprite:
-            return m_state.spriteFloatingWindow;
-        case EditorPanelId::Material:
-            return m_state.materialFloatingWindow;
-        case EditorPanelId::Collider2D:
-            return m_state.collider2DFloatingWindow;
         case EditorPanelId::LogOutput:
             return m_state.logOutputFloatingWindow;
         default:
@@ -2500,12 +2479,6 @@ namespace Xelqoria::Editor
             return L"Scene";
         case EditorPanelId::Inspector:
             return L"Inspector";
-        case EditorPanelId::Sprite:
-            return L"Sprite";
-        case EditorPanelId::Material:
-            return L"Material";
-        case EditorPanelId::Collider2D:
-            return L"Collider2D";
         case EditorPanelId::LogOutput:
             return L"LogOutput";
         default:

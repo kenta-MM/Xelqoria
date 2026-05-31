@@ -157,9 +157,6 @@ namespace Xelqoria::Editor
             HWND assetsFloatingWindow = nullptr;
             HWND sceneViewFloatingWindow = nullptr;
             HWND inspectorFloatingWindow = nullptr;
-            HWND materialFloatingWindow = nullptr;
-            HWND spriteFloatingWindow = nullptr;
-            HWND collider2DFloatingWindow = nullptr;
             HWND logOutputFloatingWindow = nullptr;
             std::vector<FloatingPanelGroup> floatingPanelGroups{};
             std::vector<EditorPanelId> leftTopDockPanels{};

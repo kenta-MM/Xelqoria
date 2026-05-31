@@ -11,9 +11,6 @@ namespace Xelqoria::Editor
         Assets,
         SceneView,
         Inspector,
-        Sprite,
-        Material,
-        Collider2D,
         LogOutput
     };
 }

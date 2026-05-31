@@ -39,12 +39,6 @@ namespace Xelqoria::Editor
                 return L"SceneView";
             case EditorPanelId::Inspector:
                 return L"Inspector";
-            case EditorPanelId::Sprite:
-                return L"Sprite";
-            case EditorPanelId::Material:
-                return L"Material";
-            case EditorPanelId::Collider2D:
-                return L"Collider2D";
             case EditorPanelId::LogOutput:
                 return L"LogOutput";
             default:
