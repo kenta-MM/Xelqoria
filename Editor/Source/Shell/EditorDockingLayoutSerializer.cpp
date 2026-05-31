@@ -69,10 +69,10 @@ namespace Xelqoria::Editor
     {
         const EditorDockingLayoutSnapshot snapshot = m_controller.CreateLayoutSnapshot();
 
-        std::error_code errorCode;
         const std::filesystem::path parentPath = layoutPath.parent_path();
         if (false == parentPath.empty())
         {
+            std::error_code errorCode;
             std::filesystem::create_directories(parentPath, errorCode);
             if (errorCode)
             {
