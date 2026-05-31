@@ -13,6 +13,7 @@
 
 namespace Xelqoria::Editor
 {
+    struct EditorDockingLayoutSnapshot;
     class EditorDockingLayoutSerializer;
     class EditorShell;
 
@@ -21,8 +22,6 @@ namespace Xelqoria::Editor
     /// </summary>
     class EditorDockingController
     {
-        friend class EditorDockingLayoutSerializer;
-
     public:
         explicit EditorDockingController(EditorShell& shell);
         ~EditorDockingController();
@@ -43,6 +42,19 @@ namespace Xelqoria::Editor
 
         [[nodiscard]] bool SaveLayout(const std::filesystem::path& layoutPath) const;
         [[nodiscard]] bool LoadLayout(const std::filesystem::path& layoutPath);
+
+        /// <summary>
+        /// 現在の Dock/Floating 状態を保存用 Snapshot として作成する。
+        /// </summary>
+        /// <returns>保存形式に依存しない Dock/Floating レイアウト Snapshot。</returns>
+        [[nodiscard]] EditorDockingLayoutSnapshot CreateLayoutSnapshot() const;
+
+        /// <summary>
+        /// 保存用 Snapshot を現在の Dock/Floating UI 状態へ反映する。
+        /// </summary>
+        /// <param name="snapshot">復元する Dock/Floating レイアウト Snapshot。</param>
+        /// <returns>復元できた場合は true。</returns>
+        [[nodiscard]] bool ApplyLayoutSnapshot(const EditorDockingLayoutSnapshot& snapshot);
 
         [[nodiscard]] bool DrawEditorTabControl(const DRAWITEMSTRUCT& drawItem) const;
 
@@ -238,8 +250,6 @@ namespace Xelqoria::Editor
         [[nodiscard]] int ClampActiveTabIndex(DockAreaId dockAreaId) const;
         [[nodiscard]] RECT GetDockAreaPreviewRect(HWND parentWindow, DockAreaId dockAreaId) const;
         void UpdateDockPreviewWindow(HWND parentWindow);
-        [[nodiscard]] bool SaveLayoutCore(const std::filesystem::path& layoutPath) const;
-        [[nodiscard]] bool LoadLayoutCore(const std::filesystem::path& layoutPath);
 
         EditorShell& m_shell;
         DockingState m_state{};

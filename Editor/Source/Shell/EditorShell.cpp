@@ -8,10 +8,8 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cwchar>
-#include <fstream>
 #include <iterator>
 #include <string>
-#include <system_error>
 #include <utility>
 
 #include "EditorTheme.h"
@@ -44,25 +42,6 @@ namespace Xelqoria::Editor
         constexpr const wchar_t* DockGuideWindowClassName = L"XelqoriaDockGuideWindow";
         constexpr const wchar_t* FloatingPanelWindowClassName = L"XelqoriaFloatingPanelWindow";
         constexpr ULONGLONG DockPanelDragDelayMilliseconds = 200;
-
-        struct SavedDockNode
-        {
-            bool isLeaf = true;
-            bool isHorizontalSplit = true;
-            float splitRatio = 0.5f;
-            int firstChild = -1;
-            int secondChild = -1;
-            int activeTabIndex = 0;
-            std::wstring tabKey{};
-            std::vector<EditorPanelId> panels{};
-        };
-
-        struct SavedFloatingGroup
-        {
-            RECT rect{};
-            int activeTabIndex = 0;
-            std::vector<EditorPanelId> panels{};
-        };
 
         [[nodiscard]] BYTE ToColorByte(float value)
         {
@@ -356,73 +335,6 @@ namespace Xelqoria::Editor
             }
 
             return DefWindowProcW(window, message, wParam, lParam);
-        }
-
-        [[nodiscard]] constexpr std::array<EditorPanelId, 5> GetAllEditorPanels()
-        {
-            return {
-                EditorPanelId::Hierarchy,
-                EditorPanelId::Assets,
-                EditorPanelId::SceneView,
-                EditorPanelId::Inspector,
-                EditorPanelId::LogOutput
-            };
-        }
-
-        [[nodiscard]] constexpr bool IsDockableEditorPanel(EditorPanelId panelId)
-        {
-            switch (panelId)
-            {
-            case EditorPanelId::Hierarchy:
-            case EditorPanelId::Assets:
-            case EditorPanelId::SceneView:
-            case EditorPanelId::Inspector:
-            case EditorPanelId::LogOutput:
-                return true;
-            case EditorPanelId::Sprite:
-            case EditorPanelId::Material:
-            case EditorPanelId::Collider2D:
-            default:
-                return false;
-            }
-        }
-
-        [[nodiscard]] const wchar_t* GetPanelLayoutName(EditorPanelId panelId)
-        {
-            switch (panelId)
-            {
-            case EditorPanelId::Hierarchy:
-                return L"Hierarchy";
-            case EditorPanelId::Assets:
-                return L"Assets";
-            case EditorPanelId::SceneView:
-                return L"SceneView";
-            case EditorPanelId::Inspector:
-                return L"Inspector";
-            case EditorPanelId::Sprite:
-                return L"Sprite";
-            case EditorPanelId::Material:
-                return L"Material";
-            case EditorPanelId::Collider2D:
-                return L"Collider2D";
-            case EditorPanelId::LogOutput:
-                return L"LogOutput";
-            default:
-                return L"SceneView";
-            }
-        }
-
-        [[nodiscard]] std::optional<EditorPanelId> TryParsePanelLayoutName(const std::wstring& name)
-        {
-            for (EditorPanelId panelId : GetAllEditorPanels())
-            {
-                if (name == GetPanelLayoutName(panelId))
-                {
-                    return panelId;
-                }
-            }
-
-            return std::nullopt;
         }
 
         [[nodiscard]] POINT ToWin32Point(Platform::Point point)

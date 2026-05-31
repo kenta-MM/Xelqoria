@@ -191,6 +191,9 @@
     <ClInclude Include="Source\Shell\EditorDockingController.h">
       <Filter>Source\Shell</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Shell\EditorDockingLayoutSnapshot.h">
+      <Filter>Source\Shell</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Shell\EditorDockingLayoutSerializer.h">
       <Filter>Source\Shell</Filter>
     </ClInclude>

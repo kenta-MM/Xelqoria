@@ -65,6 +65,7 @@
     <ClInclude Include="Source\Utils\EditorPathSecurity.h" />
     <ClInclude Include="Source\Project\EditorSceneDocument.h" />
     <ClInclude Include="Source\Shell\EditorDockingController.h" />
+    <ClInclude Include="Source\Shell\EditorDockingLayoutSnapshot.h" />
     <ClInclude Include="Source\Shell\EditorDockingLayoutSerializer.h" />
     <ClInclude Include="Source\Shell\EditorShell.h" />
     <ClInclude Include="Source\Shell\EditorPanelId.h" />
