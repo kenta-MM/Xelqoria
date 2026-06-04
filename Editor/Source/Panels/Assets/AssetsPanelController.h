@@ -106,7 +106,7 @@ namespace Xelqoria::Editor
         void UpdateDragState(const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
-        /// プロジェクトルート全体のファイル変更を監視し、必要に応じて表示を更新する。
+        /// Assets ルート配下のファイル変更を監視し、必要に応じて表示を更新する。
         /// </summary>
         void UpdateFileSystemWatch();
 
