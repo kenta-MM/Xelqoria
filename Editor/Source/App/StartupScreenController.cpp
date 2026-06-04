@@ -509,7 +509,8 @@ namespace Xelqoria::Editor
                         GetParent(m_openButton),
                         {},
                         {
-                            Platform::FileDialogFilter{ L"Xelqoria Project (*.proj)", L"*.proj" },
+                            Platform::FileDialogFilter{ L"Xelqoria Project (*.xelqoria)", L"*.xelqoria" },
+                            Platform::FileDialogFilter{ L"Legacy Xelqoria Project (*.proj)", L"*.proj" },
                             Platform::FileDialogFilter{ L"All Files (*.*)", L"*.*" }
                         },
                         {}

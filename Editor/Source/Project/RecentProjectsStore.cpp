@@ -12,6 +12,21 @@ namespace Xelqoria::Editor
     namespace
     {
         constexpr std::size_t MaxRecentProjectCount = 5;
+
+        /// <summary>
+        /// プロジェクトファイル種別に応じた Scene 保存フォルダを取得する。
+        /// </summary>
+        /// <param name="projectFilePath">対象プロジェクトファイル。</param>
+        /// <returns>Scene 保存フォルダ。</returns>
+        [[nodiscard]] std::filesystem::path GetScenesDirectory(const std::filesystem::path& projectFilePath)
+        {
+            if (projectFilePath.extension() == L".xelqoria")
+            {
+                return projectFilePath.parent_path() / L"Assets" / L"Scenes";
+            }
+
+            return projectFilePath.parent_path() / L"Scenes";
+        }
     }
 
     std::vector<EditorProjectInfo> RecentProjectsStore::Load() const
@@ -43,7 +58,13 @@ namespace Xelqoria::Editor
             info.name = name;
             info.projectFilePath = projectFilePath;
             info.rootDirectory = projectFilePath.parent_path();
-            info.scenesDirectory = info.rootDirectory / L"Scenes";
+            info.assetRootDirectory = projectFilePath.extension() == L".xelqoria"
+                ? info.rootDirectory / L"Assets"
+                : info.rootDirectory;
+            info.scenesDirectory = GetScenesDirectory(projectFilePath);
+            info.projectSettingsFilePath = info.rootDirectory / L"ProjectSettings" / L"project_settings.json";
+            info.internalDirectory = info.rootDirectory / L".xelqoria";
+            info.cacheDirectory = info.internalDirectory / L"cache";
             projects.emplace_back(info);
         }
 

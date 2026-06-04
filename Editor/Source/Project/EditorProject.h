@@ -25,7 +25,7 @@ namespace Xelqoria::Editor
         std::filesystem::path rootDirectory{};
 
         /// <summary>
-        /// `.proj` ファイルのパスを表す。
+        /// プロジェクトファイルのパスを表す。
         /// </summary>
         std::filesystem::path projectFilePath{};
 
@@ -33,6 +33,26 @@ namespace Xelqoria::Editor
         /// Scene 保存フォルダを表す。
         /// </summary>
         std::filesystem::path scenesDirectory{};
+
+        /// <summary>
+        /// Assets ルートフォルダを表す。
+        /// </summary>
+        std::filesystem::path assetRootDirectory{};
+
+        /// <summary>
+        /// Project Settings ファイルのパスを表す。
+        /// </summary>
+        std::filesystem::path projectSettingsFilePath{};
+
+        /// <summary>
+        /// Editor 内部管理フォルダを表す。
+        /// </summary>
+        std::filesystem::path internalDirectory{};
+
+        /// <summary>
+        /// Editor 内部キャッシュフォルダを表す。
+        /// </summary>
+        std::filesystem::path cacheDirectory{};
 
         /// <summary>
         /// 現在編集中の Scene ファイルパスを表す。
@@ -59,9 +79,9 @@ namespace Xelqoria::Editor
             const Game::Scene& initialScene);
 
         /// <summary>
-        /// 既存の `.proj` ファイルを開く。
+        /// 既存のプロジェクトファイルを開く。
         /// </summary>
-        /// <param name="projectFilePath">開く `.proj` ファイル。</param>
+        /// <param name="projectFilePath">開くプロジェクトファイル。</param>
         /// <returns>読込に成功した場合は true。</returns>
         [[nodiscard]] bool Open(const std::filesystem::path& projectFilePath);
 
@@ -111,7 +131,7 @@ namespace Xelqoria::Editor
 
     private:
         /// <summary>
-        /// `.proj` ファイルを書き出す。
+        /// プロジェクトファイルを書き出す。
         /// </summary>
         /// <param name="info">書き出すプロジェクト情報。</param>
         /// <returns>書き出しに成功した場合は true。</returns>
