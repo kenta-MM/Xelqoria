@@ -127,6 +127,11 @@ namespace Xelqoria::Editor
         void SaveProjectAsFromMenu();
 
         /// <summary>
+        /// Project Settings 編集画面を開く。
+        /// </summary>
+        void OpenProjectSettingsFromMenu();
+
+        /// <summary>
         /// 未保存変更があれば保存確認を表示する。
         /// </summary>
         /// <returns>後続操作を継続してよい場合は true。</returns>
