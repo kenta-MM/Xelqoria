@@ -129,6 +129,12 @@ namespace Xelqoria::Editor
         /// <returns>プロジェクト情報。未オープン時は空。</returns>
         [[nodiscard]] const std::optional<EditorProjectInfo>& GetInfo() const;
 
+        /// <summary>
+        /// 直近のプロジェクト構成移行ログを取得する。
+        /// </summary>
+        /// <returns>移行結果ログ一覧。</returns>
+        [[nodiscard]] const std::vector<std::wstring>& GetLastMigrationMessages() const;
+
     private:
         /// <summary>
         /// プロジェクトファイルを書き出す。
@@ -149,5 +155,6 @@ namespace Xelqoria::Editor
 
     private:
         std::optional<EditorProjectInfo> m_info{};
+        std::vector<std::wstring> m_lastMigrationMessages{};
     };
 }

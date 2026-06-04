@@ -26,6 +26,28 @@ namespace
         scene.CreateEntity();
         return scene;
     }
+
+    void WriteSceneFile(const std::filesystem::path& path)
+    {
+        std::filesystem::create_directories(path.parent_path());
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << Xelqoria::Game::SceneSerializer::SaveToText(MakeScene());
+    }
+
+    void WriteTextFile(const std::filesystem::path& path, const char* text)
+    {
+        std::filesystem::create_directories(path.parent_path());
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << text;
+    }
+
+    [[nodiscard]] std::string ReadTextFile(const std::filesystem::path& path)
+    {
+        std::ifstream input(path, std::ios::binary);
+        return std::string(
+            std::istreambuf_iterator<char>(input),
+            std::istreambuf_iterator<char>());
+    }
 }
 
 TEST(EditorProjectTests, CreateBuildsStandardProjectStructureAndInitialScene)
@@ -121,7 +143,7 @@ TEST(EditorProjectTests, OpenPreservesUtf8ProjectName)
     std::filesystem::remove_all(parentDirectory);
 }
 
-TEST(EditorProjectTests, OpenSupportsLegacyProjFile)
+TEST(EditorProjectTests, OpenSupportsLegacyProjFileByMigratingIt)
 {
     const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_LegacyOpen");
     const std::filesystem::path projectRoot = parentDirectory / L"LegacyProject";
@@ -145,8 +167,79 @@ TEST(EditorProjectTests, OpenSupportsLegacyProjFile)
     Xelqoria::Editor::EditorProject project{};
     ASSERT_TRUE(project.Open(projectFilePath));
     ASSERT_TRUE(project.GetInfo().has_value());
-    EXPECT_EQ(scenePath, project.GetInfo()->activeScenePath);
-    EXPECT_EQ(scenesDirectory, project.GetInfo()->scenesDirectory);
+    EXPECT_EQ(projectRoot / L"Assets" / L"Scenes" / L"Main.xelqoria.scene", project.GetInfo()->activeScenePath);
+    EXPECT_EQ(projectRoot / L"Assets" / L"Scenes", project.GetInfo()->scenesDirectory);
+    EXPECT_FALSE(std::filesystem::exists(scenePath));
+    EXPECT_FALSE(std::filesystem::exists(scenesDirectory));
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorProjectTests, OpenMigratesLegacyProjectToAssetsStructure)
+{
+    const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_MigrateLegacy");
+    const std::filesystem::path projectRoot = parentDirectory / L"LegacyProject";
+    std::filesystem::create_directories(projectRoot);
+    WriteSceneFile(projectRoot / L"Main.scene");
+    WriteSceneFile(projectRoot / L"Scenes" / L"Intro.scene");
+    WriteTextFile(projectRoot / L"player.png", "image");
+    WriteTextFile(projectRoot / L"Textures" / L"player.png", "folder image");
+    WriteTextFile(projectRoot / L"Assets" / L"Textures" / L"player.png", "existing image");
+    WriteTextFile(projectRoot / L"PlayerScript.cpp", "void Update() {}\n");
+    WriteTextFile(projectRoot / L"player_material.json", "{}\n");
+    WriteTextFile(projectRoot / L"project_settings.json", "{\"legacy\":true}\n");
+
+    const std::filesystem::path projectFilePath = projectRoot / L"LegacyProject.proj";
+    {
+        std::ofstream projectFile(projectFilePath, std::ios::binary | std::ios::trunc);
+        projectFile << "XelqoriaProject=1\n";
+        projectFile << "Name=LegacyProject\n";
+        projectFile << "ActiveScene=Main.scene\n";
+    }
+
+    Xelqoria::Editor::EditorProject project{};
+    ASSERT_TRUE(project.Open(projectFilePath));
+    ASSERT_TRUE(project.GetInfo().has_value());
+
+    EXPECT_EQ(projectRoot / L"LegacyProject.xelqoria", project.GetInfo()->projectFilePath);
+    EXPECT_EQ(projectRoot / L"Assets", project.GetInfo()->assetRootDirectory);
+    EXPECT_EQ(projectRoot / L"Assets" / L"Scenes" / L"Main.scene", project.GetInfo()->activeScenePath);
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Scenes" / L"Main.scene"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Scenes" / L"Intro.scene"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Textures" / L"player.png"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Textures" / L"player_1.png"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Textures" / L"player_2.png"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Scripts" / L"PlayerScript.cpp"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Materials" / L"player_material.json"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"ProjectSettings" / L"project_settings.json"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L".xelqoria" / L"cache"));
+
+    const std::string projectText = ReadTextFile(projectRoot / L"LegacyProject.xelqoria");
+    EXPECT_NE(std::string::npos, projectText.find("projectStructureVersion=1\n"));
+    EXPECT_NE(std::string::npos, projectText.find("assetRoot=Assets\n"));
+    EXPECT_NE(std::string::npos, projectText.find("projectSettings=ProjectSettings/project_settings.json\n"));
+    EXPECT_NE(std::string::npos, projectText.find("startupScene=Assets/Scenes/Main.scene\n"));
+
+    EXPECT_FALSE(project.GetLastMigrationMessages().empty());
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorProjectTests, OpenDoesNotMigrateCurrentStructureAgain)
+{
+    const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_NoRemigrate");
+    Xelqoria::Editor::EditorProject createdProject{};
+    ASSERT_TRUE(createdProject.Create(L"CurrentProject", parentDirectory, MakeScene()));
+
+    const std::filesystem::path projectRoot = parentDirectory / L"CurrentProject";
+    WriteTextFile(projectRoot / L"legacy.png", "legacy root image");
+
+    Xelqoria::Editor::EditorProject openedProject{};
+    ASSERT_TRUE(openedProject.Open(projectRoot / L"CurrentProject.xelqoria"));
+
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"legacy.png"));
+    EXPECT_FALSE(std::filesystem::exists(projectRoot / L"Assets" / L"Textures" / L"legacy.png"));
+    EXPECT_TRUE(openedProject.GetLastMigrationMessages().empty());
 
     std::filesystem::remove_all(parentDirectory);
 }

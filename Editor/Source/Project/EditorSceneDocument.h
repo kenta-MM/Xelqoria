@@ -284,6 +284,12 @@ namespace Xelqoria::Editor
         [[nodiscard]] const std::optional<EditorProjectInfo>& GetProjectInfo() const;
 
         /// <summary>
+        /// 直近のプロジェクト構成移行ログを取得する。
+        /// </summary>
+        /// <returns>移行結果ログ一覧。</returns>
+        [[nodiscard]] const std::vector<std::wstring>& GetProjectMigrationMessages() const;
+
+        /// <summary>
         /// 現在のプロジェクトで管理している Scene ファイルを列挙する。
         /// </summary>
         /// <returns>Scene ファイルパス一覧。</returns>
