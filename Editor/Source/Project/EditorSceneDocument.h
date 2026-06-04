@@ -70,7 +70,7 @@ namespace Xelqoria::Editor
         /// <summary>
         /// 既存プロジェクトを開き、アクティブ Scene を読み込む。
         /// </summary>
-        /// <param name="projectFilePath">開く `.proj` ファイル。</param>
+        /// <param name="projectFilePath">開くプロジェクトファイル。</param>
         /// <returns>読込に成功した場合は true。</returns>
         [[nodiscard]] bool OpenProject(const std::filesystem::path& projectFilePath);
 

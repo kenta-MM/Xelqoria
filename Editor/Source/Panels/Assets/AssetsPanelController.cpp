@@ -1169,6 +1169,7 @@ namespace Xelqoria::Editor
         if (const std::optional<int> iconIndex = addIcon(L"file_proj.png"); iconIndex.has_value())
         {
             m_fileIconIndices.emplace(L".proj", *iconIndex);
+            m_fileIconIndices.emplace(L".xelqoria", *iconIndex);
         }
 
         if (const std::optional<int> iconIndex = addIcon(L"file_script.png"); iconIndex.has_value())

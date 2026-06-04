@@ -16,7 +16,7 @@ namespace Xelqoria::Editor
         /// <summary>
         /// 最近使ったプロジェクト一覧を読み込む。
         /// </summary>
-        /// <returns>存在する `.proj` のみを含むプロジェクト情報一覧。</returns>
+        /// <returns>存在するプロジェクトファイルのみを含むプロジェクト情報一覧。</returns>
         [[nodiscard]] std::vector<EditorProjectInfo> Load() const;
 
         /// <summary>
