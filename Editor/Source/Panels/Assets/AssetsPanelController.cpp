@@ -619,11 +619,14 @@ namespace Xelqoria::Editor
             return;
         }
 
-        const std::filesystem::path rootDirectory =
-            EditorPathSecurity::NormalizeForContainment(projectInfo->projectFilePath.parent_path());
-        if (rootDirectory != m_assetsRootDirectory)
+        const std::filesystem::path configuredAssetsRootDirectory = false == projectInfo->assetRootDirectory.empty()
+            ? projectInfo->assetRootDirectory
+            : projectInfo->projectFilePath.parent_path() / L"Assets";
+        const std::filesystem::path assetsRootDirectory =
+            EditorPathSecurity::NormalizeForContainment(configuredAssetsRootDirectory);
+        if (assetsRootDirectory != m_assetsRootDirectory)
         {
-            m_assetsRootDirectory = rootDirectory;
+            m_assetsRootDirectory = assetsRootDirectory;
             m_currentDirectory = m_assetsRootDirectory;
             m_selectedFilePath.clear();
             m_lastClickTick = 0;
