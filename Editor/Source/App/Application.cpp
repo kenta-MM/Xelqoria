@@ -552,6 +552,11 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        for (const std::wstring& message : m_sceneDocument.GetProjectMigrationMessages())
+        {
+            AppendEditorLog(message.c_str());
+        }
+
         RecordCurrentProject();
         m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_sceneDocument.RefreshProjectAssetRegistries();
@@ -581,6 +586,11 @@ namespace Xelqoria::Editor
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを開けませんでした。");
             AppendEditorLog(L"プロジェクトを開けませんでした。");
             return false;
+        }
+
+        for (const std::wstring& message : m_sceneDocument.GetProjectMigrationMessages())
+        {
+            AppendEditorLog(message.c_str());
         }
 
         RecordCurrentProject();
