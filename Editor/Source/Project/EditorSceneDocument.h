@@ -70,7 +70,7 @@ namespace Xelqoria::Editor
         /// <summary>
         /// 既存プロジェクトを開き、アクティブ Scene を読み込む。
         /// </summary>
-        /// <param name="projectFilePath">開く `.proj` ファイル。</param>
+        /// <param name="projectFilePath">開くプロジェクトファイル。</param>
         /// <returns>読込に成功した場合は true。</returns>
         [[nodiscard]] bool OpenProject(const std::filesystem::path& projectFilePath);
 
@@ -282,6 +282,12 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>プロジェクト情報。未オープン時は空。</returns>
         [[nodiscard]] const std::optional<EditorProjectInfo>& GetProjectInfo() const;
+
+        /// <summary>
+        /// 直近のプロジェクト構成移行ログを取得する。
+        /// </summary>
+        /// <returns>移行結果ログ一覧。</returns>
+        [[nodiscard]] const std::vector<std::wstring>& GetProjectMigrationMessages() const;
 
         /// <summary>
         /// 現在のプロジェクトで管理している Scene ファイルを列挙する。

@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -25,9 +26,31 @@ namespace
         scene.CreateEntity();
         return scene;
     }
+
+    void WriteSceneFile(const std::filesystem::path& path)
+    {
+        std::filesystem::create_directories(path.parent_path());
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << Xelqoria::Game::SceneSerializer::SaveToText(MakeScene());
+    }
+
+    void WriteTextFile(const std::filesystem::path& path, const char* text)
+    {
+        std::filesystem::create_directories(path.parent_path());
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << text;
+    }
+
+    [[nodiscard]] std::string ReadTextFile(const std::filesystem::path& path)
+    {
+        std::ifstream input(path, std::ios::binary);
+        return std::string(
+            std::istreambuf_iterator<char>(input),
+            std::istreambuf_iterator<char>());
+    }
 }
 
-TEST(EditorProjectTests, CreateBuildsProjectFileScenesDirectoryAndInitialScene)
+TEST(EditorProjectTests, CreateBuildsStandardProjectStructureAndInitialScene)
 {
     const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_Create");
     Xelqoria::Editor::EditorProject project{};
@@ -35,10 +58,43 @@ TEST(EditorProjectTests, CreateBuildsProjectFileScenesDirectoryAndInitialScene)
     EXPECT_TRUE(project.Create(L"SampleProject", parentDirectory, MakeScene()));
 
     const std::filesystem::path projectRoot = parentDirectory / L"SampleProject";
-    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"SampleProject.proj"));
-    EXPECT_TRUE(std::filesystem::is_directory(projectRoot / L"Scenes"));
-    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Scenes" / L"Main.xelqoria.scene"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"SampleProject.xelqoria"));
+    EXPECT_TRUE(std::filesystem::is_directory(projectRoot / L"Assets" / L"Scenes"));
+    EXPECT_TRUE(std::filesystem::is_directory(projectRoot / L"Assets" / L"Textures"));
+    EXPECT_TRUE(std::filesystem::is_directory(projectRoot / L"Assets" / L"Materials"));
+    EXPECT_TRUE(std::filesystem::is_directory(projectRoot / L"Assets" / L"Scripts"));
+    EXPECT_TRUE(std::filesystem::is_directory(projectRoot / L"ProjectSettings"));
+    EXPECT_TRUE(std::filesystem::is_directory(projectRoot / L".xelqoria" / L"cache"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"ProjectSettings" / L"project_settings.json"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Scenes" / L"Main.scene"));
     EXPECT_TRUE(project.HasProject());
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorProjectTests, CreateWritesProjectMetadataAsRootRelativePaths)
+{
+    const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_Metadata");
+    Xelqoria::Editor::EditorProject project{};
+
+    ASSERT_TRUE(project.Create(L"SampleProject", parentDirectory, MakeScene()));
+
+    const std::filesystem::path projectFilePath = parentDirectory / L"SampleProject" / L"SampleProject.xelqoria";
+    std::string text{};
+    {
+        std::ifstream input(projectFilePath, std::ios::binary);
+        ASSERT_TRUE(input.is_open());
+        text.assign(
+            std::istreambuf_iterator<char>(input),
+            std::istreambuf_iterator<char>());
+    }
+
+    EXPECT_NE(std::string::npos, text.find("projectName=SampleProject\n"));
+    EXPECT_NE(std::string::npos, text.find("version=1\n"));
+    EXPECT_NE(std::string::npos, text.find("projectStructureVersion=1\n"));
+    EXPECT_NE(std::string::npos, text.find("assetRoot=Assets\n"));
+    EXPECT_NE(std::string::npos, text.find("projectSettings=ProjectSettings/project_settings.json\n"));
+    EXPECT_NE(std::string::npos, text.find("startupScene=Assets/Scenes/Main.scene\n"));
 
     std::filesystem::remove_all(parentDirectory);
 }
@@ -52,7 +108,7 @@ TEST(EditorProjectTests, SaveAsSwitchesCurrentProject)
 
     ASSERT_TRUE(project.GetInfo().has_value());
     EXPECT_EQ(L"RenamedProject", project.GetInfo()->name);
-    EXPECT_TRUE(std::filesystem::exists(parentDirectory / L"RenamedProject" / L"RenamedProject.proj"));
+    EXPECT_TRUE(std::filesystem::exists(parentDirectory / L"RenamedProject" / L"RenamedProject.xelqoria"));
 
     std::filesystem::remove_all(parentDirectory);
 }
@@ -64,11 +120,11 @@ TEST(EditorProjectTests, OpenReadsProjectAndEnumeratesScenes)
     ASSERT_TRUE(createdProject.Create(L"OpenProject", parentDirectory, MakeScene()));
 
     Xelqoria::Editor::EditorProject openedProject{};
-    EXPECT_TRUE(openedProject.Open(parentDirectory / L"OpenProject" / L"OpenProject.proj"));
+    EXPECT_TRUE(openedProject.Open(parentDirectory / L"OpenProject" / L"OpenProject.xelqoria"));
 
     const std::vector<std::filesystem::path> sceneFiles = openedProject.EnumerateSceneFiles();
     ASSERT_EQ(1u, sceneFiles.size());
-    EXPECT_EQ(L"Main.xelqoria.scene", sceneFiles[0].filename().wstring());
+    EXPECT_EQ(L"Main.scene", sceneFiles[0].filename().wstring());
 
     std::filesystem::remove_all(parentDirectory);
 }
@@ -83,6 +139,107 @@ TEST(EditorProjectTests, OpenPreservesUtf8ProjectName)
     EXPECT_TRUE(openedProject.Open(createdProject.GetInfo()->projectFilePath));
     ASSERT_TRUE(openedProject.GetInfo().has_value());
     EXPECT_EQ(L"日本語Project", openedProject.GetInfo()->name);
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorProjectTests, OpenSupportsLegacyProjFileByMigratingIt)
+{
+    const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_LegacyOpen");
+    const std::filesystem::path projectRoot = parentDirectory / L"LegacyProject";
+    const std::filesystem::path scenesDirectory = projectRoot / L"Scenes";
+    std::filesystem::create_directories(scenesDirectory);
+
+    const std::filesystem::path scenePath = scenesDirectory / L"Main.xelqoria.scene";
+    {
+        std::ofstream sceneFile(scenePath, std::ios::binary | std::ios::trunc);
+        sceneFile << Xelqoria::Game::SceneSerializer::SaveToText(MakeScene());
+    }
+
+    const std::filesystem::path projectFilePath = projectRoot / L"LegacyProject.proj";
+    {
+        std::ofstream projectFile(projectFilePath, std::ios::binary | std::ios::trunc);
+        projectFile << "XelqoriaProject=1\n";
+        projectFile << "Name=LegacyProject\n";
+        projectFile << "ActiveScene=Scenes/Main.xelqoria.scene\n";
+    }
+
+    Xelqoria::Editor::EditorProject project{};
+    ASSERT_TRUE(project.Open(projectFilePath));
+    ASSERT_TRUE(project.GetInfo().has_value());
+    EXPECT_EQ(projectRoot / L"Assets" / L"Scenes" / L"Main.xelqoria.scene", project.GetInfo()->activeScenePath);
+    EXPECT_EQ(projectRoot / L"Assets" / L"Scenes", project.GetInfo()->scenesDirectory);
+    EXPECT_FALSE(std::filesystem::exists(scenePath));
+    EXPECT_FALSE(std::filesystem::exists(scenesDirectory));
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorProjectTests, OpenMigratesLegacyProjectToAssetsStructure)
+{
+    const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_MigrateLegacy");
+    const std::filesystem::path projectRoot = parentDirectory / L"LegacyProject";
+    std::filesystem::create_directories(projectRoot);
+    WriteSceneFile(projectRoot / L"Main.scene");
+    WriteSceneFile(projectRoot / L"Scenes" / L"Intro.scene");
+    WriteTextFile(projectRoot / L"player.png", "image");
+    WriteTextFile(projectRoot / L"Textures" / L"player.png", "folder image");
+    WriteTextFile(projectRoot / L"Assets" / L"Textures" / L"player.png", "existing image");
+    WriteTextFile(projectRoot / L"PlayerScript.cpp", "void Update() {}\n");
+    WriteTextFile(projectRoot / L"player_material.json", "{}\n");
+    WriteTextFile(projectRoot / L"project_settings.json", "{\"legacy\":true}\n");
+
+    const std::filesystem::path projectFilePath = projectRoot / L"LegacyProject.proj";
+    {
+        std::ofstream projectFile(projectFilePath, std::ios::binary | std::ios::trunc);
+        projectFile << "XelqoriaProject=1\n";
+        projectFile << "Name=LegacyProject\n";
+        projectFile << "ActiveScene=Main.scene\n";
+    }
+
+    Xelqoria::Editor::EditorProject project{};
+    ASSERT_TRUE(project.Open(projectFilePath));
+    ASSERT_TRUE(project.GetInfo().has_value());
+
+    EXPECT_EQ(projectRoot / L"LegacyProject.xelqoria", project.GetInfo()->projectFilePath);
+    EXPECT_EQ(projectRoot / L"Assets", project.GetInfo()->assetRootDirectory);
+    EXPECT_EQ(projectRoot / L"Assets" / L"Scenes" / L"Main.scene", project.GetInfo()->activeScenePath);
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Scenes" / L"Main.scene"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Scenes" / L"Intro.scene"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Textures" / L"player.png"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Textures" / L"player_1.png"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Textures" / L"player_2.png"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Scripts" / L"PlayerScript.cpp"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"Assets" / L"Materials" / L"player_material.json"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"ProjectSettings" / L"project_settings.json"));
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L".xelqoria" / L"cache"));
+
+    const std::string projectText = ReadTextFile(projectRoot / L"LegacyProject.xelqoria");
+    EXPECT_NE(std::string::npos, projectText.find("projectStructureVersion=1\n"));
+    EXPECT_NE(std::string::npos, projectText.find("assetRoot=Assets\n"));
+    EXPECT_NE(std::string::npos, projectText.find("projectSettings=ProjectSettings/project_settings.json\n"));
+    EXPECT_NE(std::string::npos, projectText.find("startupScene=Assets/Scenes/Main.scene\n"));
+
+    EXPECT_FALSE(project.GetLastMigrationMessages().empty());
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorProjectTests, OpenDoesNotMigrateCurrentStructureAgain)
+{
+    const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_NoRemigrate");
+    Xelqoria::Editor::EditorProject createdProject{};
+    ASSERT_TRUE(createdProject.Create(L"CurrentProject", parentDirectory, MakeScene()));
+
+    const std::filesystem::path projectRoot = parentDirectory / L"CurrentProject";
+    WriteTextFile(projectRoot / L"legacy.png", "legacy root image");
+
+    Xelqoria::Editor::EditorProject openedProject{};
+    ASSERT_TRUE(openedProject.Open(projectRoot / L"CurrentProject.xelqoria"));
+
+    EXPECT_TRUE(std::filesystem::exists(projectRoot / L"legacy.png"));
+    EXPECT_FALSE(std::filesystem::exists(projectRoot / L"Assets" / L"Textures" / L"legacy.png"));
+    EXPECT_TRUE(openedProject.GetLastMigrationMessages().empty());
 
     std::filesystem::remove_all(parentDirectory);
 }
@@ -120,21 +277,25 @@ TEST(EditorProjectTests, OpenRejectsActiveSceneOutsideProjectScenesDirectory)
 {
     const std::filesystem::path parentDirectory = MakeTempDirectory(L"XelqoriaEditorProjectTests_RejectOutsideScene");
     const std::filesystem::path projectRoot = parentDirectory / L"UnsafeProject";
-    const std::filesystem::path scenesDirectory = projectRoot / L"Scenes";
+    const std::filesystem::path scenesDirectory = projectRoot / L"Assets" / L"Scenes";
     std::filesystem::create_directories(scenesDirectory);
 
-    const std::filesystem::path outsideScenePath = parentDirectory / L"Outside.xelqoria.scene";
+    const std::filesystem::path outsideScenePath = parentDirectory / L"Outside.scene";
     {
         std::ofstream outsideScene(outsideScenePath, std::ios::binary | std::ios::trunc);
         outsideScene << Xelqoria::Game::SceneSerializer::SaveToText(MakeScene());
     }
 
-    const std::filesystem::path projectFilePath = projectRoot / L"UnsafeProject.proj";
+    const std::filesystem::path projectFilePath = projectRoot / L"UnsafeProject.xelqoria";
     {
         std::ofstream projectFile(projectFilePath, std::ios::binary | std::ios::trunc);
         projectFile << "XelqoriaProject=1\n";
-        projectFile << "Name=UnsafeProject\n";
-        projectFile << "ActiveScene=../Outside.xelqoria.scene\n";
+        projectFile << "projectName=UnsafeProject\n";
+        projectFile << "version=1\n";
+        projectFile << "projectStructureVersion=1\n";
+        projectFile << "assetRoot=Assets\n";
+        projectFile << "projectSettings=ProjectSettings/project_settings.json\n";
+        projectFile << "startupScene=../Outside.scene\n";
     }
 
     Xelqoria::Editor::EditorProject project{};
@@ -149,7 +310,7 @@ TEST(EditorProjectTests, SelectSceneFileRejectsOutsideSceneDirectory)
     Xelqoria::Editor::EditorProject project{};
     ASSERT_TRUE(project.Create(L"SceneProject", parentDirectory, MakeScene()));
 
-    const std::filesystem::path outsideScenePath = parentDirectory / L"Outside.xelqoria.scene";
+    const std::filesystem::path outsideScenePath = parentDirectory / L"Outside.scene";
     std::filesystem::copy_file(project.GetInfo()->activeScenePath, outsideScenePath);
 
     EXPECT_FALSE(project.SelectSceneFile(outsideScenePath));

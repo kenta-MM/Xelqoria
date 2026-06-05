@@ -5,9 +5,13 @@
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <span>
+#include <sstream>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include "PlatformAdapters/ButtonClickWin32Adapter.h"
 #include "GraphicsAPI.h"
@@ -39,6 +43,21 @@ namespace Xelqoria::Editor
         constexpr unsigned ViewMenuSceneViewCommandId = 5203;
         constexpr unsigned ViewMenuInspectorCommandId = 5204;
         constexpr unsigned ViewMenuLogOutputCommandId = 5205;
+        constexpr int ProjectSettingsEditControlId = 5301;
+        constexpr int ProjectSettingsSaveButtonId = 5302;
+        constexpr int ProjectSettingsCancelButtonId = 5303;
+        constexpr const wchar_t* ProjectSettingsEditorWindowClassName = L"XelqoriaProjectSettingsEditor";
+
+        struct ProjectSettingsEditorDialogState
+        {
+            std::filesystem::path filePath{};
+            std::wstring initialText{};
+            HWND window = nullptr;
+            HWND editControl = nullptr;
+            HWND saveButton = nullptr;
+            HWND cancelButton = nullptr;
+            bool saved = false;
+        };
 
         [[nodiscard]] std::filesystem::path GetEditorLayoutFilePath()
         {
@@ -55,7 +74,8 @@ namespace Xelqoria::Editor
                         ownerWindow,
                         {},
                         {
-                            Platform::FileDialogFilter{ L"Xelqoria Project (*.proj)", L"*.proj" },
+                            Platform::FileDialogFilter{ L"Xelqoria Project (*.xelqoria)", L"*.xelqoria" },
+                            Platform::FileDialogFilter{ L"Legacy Xelqoria Project (*.proj)", L"*.proj" },
                             Platform::FileDialogFilter{ L"All Files (*.*)", L"*.*" }
                         },
                         {}
@@ -95,6 +115,320 @@ namespace Xelqoria::Editor
                         title
                     });
             return folderPath.value_or(std::filesystem::path{});
+        }
+
+        [[nodiscard]] bool ReadUtf8TextFile(
+            const std::filesystem::path& filePath,
+            std::string& text)
+        {
+            std::ifstream input(filePath, std::ios::binary);
+            if (false == input.is_open())
+            {
+                return false;
+            }
+
+            std::ostringstream buffer;
+            buffer << input.rdbuf();
+            text = buffer.str();
+            return input.good() || input.eof();
+        }
+
+        [[nodiscard]] bool WriteUtf8TextFile(
+            const std::filesystem::path& filePath,
+            std::string_view text)
+        {
+            std::error_code errorCode;
+            std::filesystem::create_directories(filePath.parent_path(), errorCode);
+            if (errorCode)
+            {
+                return false;
+            }
+
+            std::ofstream output(filePath, std::ios::binary | std::ios::trunc);
+            if (false == output.is_open())
+            {
+                return false;
+            }
+
+            output << text;
+            return output.good();
+        }
+
+        void SetDefaultGuiFont(HWND handle)
+        {
+            SendMessageW(handle, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
+        }
+
+        void LayoutProjectSettingsEditor(ProjectSettingsEditorDialogState& state)
+        {
+            if (nullptr == state.window)
+            {
+                return;
+            }
+
+            RECT clientRect{};
+            GetClientRect(state.window, &clientRect);
+            const int width = clientRect.right - clientRect.left;
+            const int height = clientRect.bottom - clientRect.top;
+            constexpr int Padding = 12;
+            constexpr int ButtonWidth = 96;
+            constexpr int ButtonHeight = 30;
+            constexpr int ButtonGap = 8;
+
+            const int buttonTop = height - Padding - ButtonHeight;
+            const int cancelLeft = width - Padding - ButtonWidth;
+            const int saveLeft = cancelLeft - ButtonGap - ButtonWidth;
+            MoveWindow(state.editControl, Padding, Padding, width - (Padding * 2), buttonTop - (Padding * 2), TRUE);
+            MoveWindow(state.saveButton, saveLeft, buttonTop, ButtonWidth, ButtonHeight, TRUE);
+            MoveWindow(state.cancelButton, cancelLeft, buttonTop, ButtonWidth, ButtonHeight, TRUE);
+        }
+
+        [[nodiscard]] bool SaveProjectSettingsEditorText(ProjectSettingsEditorDialogState& state)
+        {
+            const int textLength = GetWindowTextLengthW(state.editControl);
+            if (textLength < 0)
+            {
+                return false;
+            }
+
+            std::vector<wchar_t> buffer(static_cast<std::size_t>(textLength) + 1u, L'\0');
+            if (0 < textLength)
+            {
+                GetWindowTextW(state.editControl, buffer.data(), static_cast<int>(buffer.size()));
+            }
+
+            const std::wstring wideText(buffer.data(), static_cast<std::size_t>(textLength));
+            const std::string utf8Text = ToNarrowString(wideText);
+            if (false == wideText.empty() && utf8Text.empty())
+            {
+                return false;
+            }
+
+            return WriteUtf8TextFile(state.filePath, utf8Text);
+        }
+
+        LRESULT CALLBACK ProjectSettingsEditorWindowProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam)
+        {
+            auto* state = reinterpret_cast<ProjectSettingsEditorDialogState*>(
+                GetWindowLongPtrW(window, GWLP_USERDATA));
+
+            switch (message)
+            {
+            case WM_NCCREATE:
+            {
+                const auto* createStruct = reinterpret_cast<const CREATESTRUCTW*>(lParam);
+                state = reinterpret_cast<ProjectSettingsEditorDialogState*>(createStruct->lpCreateParams);
+                SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
+                state->window = window;
+                return TRUE;
+            }
+            case WM_CREATE:
+                if (nullptr == state)
+                {
+                    return -1;
+                }
+
+                state->editControl = CreateWindowExW(
+                    WS_EX_CLIENTEDGE,
+                    L"Edit",
+                    state->initialText.c_str(),
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | WS_HSCROLL
+                        | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN,
+                    0,
+                    0,
+                    0,
+                    0,
+                    window,
+                    reinterpret_cast<HMENU>(static_cast<INT_PTR>(ProjectSettingsEditControlId)),
+                    nullptr,
+                    nullptr);
+                state->saveButton = CreateWindowExW(
+                    0,
+                    L"Button",
+                    L"Save",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+                    0,
+                    0,
+                    0,
+                    0,
+                    window,
+                    reinterpret_cast<HMENU>(static_cast<INT_PTR>(ProjectSettingsSaveButtonId)),
+                    nullptr,
+                    nullptr);
+                state->cancelButton = CreateWindowExW(
+                    0,
+                    L"Button",
+                    L"Cancel",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+                    0,
+                    0,
+                    0,
+                    0,
+                    window,
+                    reinterpret_cast<HMENU>(static_cast<INT_PTR>(ProjectSettingsCancelButtonId)),
+                    nullptr,
+                    nullptr);
+                SetDefaultGuiFont(state->editControl);
+                SetDefaultGuiFont(state->saveButton);
+                SetDefaultGuiFont(state->cancelButton);
+                LayoutProjectSettingsEditor(*state);
+                return 0;
+            case WM_SIZE:
+                if (nullptr != state)
+                {
+                    LayoutProjectSettingsEditor(*state);
+                }
+                return 0;
+            case WM_COMMAND:
+                if (nullptr == state)
+                {
+                    break;
+                }
+
+                switch (LOWORD(wParam))
+                {
+                case ProjectSettingsSaveButtonId:
+                    if (SaveProjectSettingsEditorText(*state))
+                    {
+                        state->saved = true;
+                        DestroyWindow(window);
+                    }
+                    else
+                    {
+                        MessageBoxW(
+                            window,
+                            L"Project Settings を保存できませんでした。",
+                            L"Project Settings",
+                            MB_OK | MB_ICONERROR);
+                    }
+                    return 0;
+                case ProjectSettingsCancelButtonId:
+                    DestroyWindow(window);
+                    return 0;
+                default:
+                    break;
+                }
+                break;
+            case WM_CLOSE:
+                DestroyWindow(window);
+                return 0;
+            case WM_NCDESTROY:
+                SetWindowLongPtrW(window, GWLP_USERDATA, 0);
+                return 0;
+            default:
+                break;
+            }
+
+            return DefWindowProcW(window, message, wParam, lParam);
+        }
+
+        [[nodiscard]] bool EnsureProjectSettingsEditorWindowClass(HINSTANCE hInstance)
+        {
+            WNDCLASSW existingClass{};
+            if (GetClassInfoW(hInstance, ProjectSettingsEditorWindowClassName, &existingClass))
+            {
+                return true;
+            }
+
+            WNDCLASSW windowClass{};
+            windowClass.lpfnWndProc = ProjectSettingsEditorWindowProc;
+            windowClass.hInstance = hInstance;
+            windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+            windowClass.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+            windowClass.lpszClassName = ProjectSettingsEditorWindowClassName;
+            return 0 != RegisterClassW(&windowClass);
+        }
+
+        [[nodiscard]] bool ShowProjectSettingsEditorDialog(
+            HINSTANCE hInstance,
+            HWND ownerWindow,
+            const std::filesystem::path& settingsFilePath,
+            std::wstring& errorMessage)
+        {
+            std::string initialText{};
+            std::error_code errorCode;
+            if (std::filesystem::exists(settingsFilePath, errorCode))
+            {
+                if (false == ReadUtf8TextFile(settingsFilePath, initialText))
+                {
+                    errorMessage = L"Project Settings を読み込めませんでした。";
+                    return false;
+                }
+            }
+            else
+            {
+                initialText = "{\n}\n";
+            }
+
+            ProjectSettingsEditorDialogState state{};
+            state.filePath = settingsFilePath;
+            state.initialText = ToWideString(initialText);
+            if (false == initialText.empty() && state.initialText.empty())
+            {
+                errorMessage = L"Project Settings の UTF-8 テキストを読み込めませんでした。";
+                return false;
+            }
+
+            if (false == EnsureProjectSettingsEditorWindowClass(hInstance))
+            {
+                errorMessage = L"Project Settings 編集画面を初期化できませんでした。";
+                return false;
+            }
+
+            constexpr DWORD WindowStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_SIZEBOX;
+            constexpr DWORD WindowExStyle = WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE;
+            RECT windowRect{ 0, 0, 720, 520 };
+            AdjustWindowRectEx(&windowRect, WindowStyle, FALSE, WindowExStyle);
+            const int windowWidth = windowRect.right - windowRect.left;
+            const int windowHeight = windowRect.bottom - windowRect.top;
+
+            RECT ownerRect{};
+            GetWindowRect(ownerWindow, &ownerRect);
+            const int ownerWidth = ownerRect.right - ownerRect.left;
+            const int ownerHeight = ownerRect.bottom - ownerRect.top;
+            const int windowLeft = ownerRect.left + ((ownerWidth - windowWidth) / 2);
+            const int windowTop = ownerRect.top + ((ownerHeight - windowHeight) / 2);
+
+            HWND dialogWindow = CreateWindowExW(
+                WindowExStyle,
+                ProjectSettingsEditorWindowClassName,
+                L"Project Settings",
+                WindowStyle,
+                windowLeft,
+                windowTop,
+                windowWidth,
+                windowHeight,
+                ownerWindow,
+                nullptr,
+                hInstance,
+                &state);
+            if (nullptr == dialogWindow)
+            {
+                errorMessage = L"Project Settings 編集画面を開けませんでした。";
+                return false;
+            }
+
+            EnableWindow(ownerWindow, FALSE);
+            ShowWindow(dialogWindow, SW_SHOW);
+            UpdateWindow(dialogWindow);
+
+            MSG message{};
+            while (IsWindow(dialogWindow) && GetMessageW(&message, nullptr, 0, 0) > 0)
+            {
+                if (false == IsDialogMessageW(dialogWindow, &message))
+                {
+                    TranslateMessage(&message);
+                    DispatchMessageW(&message);
+                }
+            }
+
+            EnableWindow(ownerWindow, TRUE);
+            SetActiveWindow(ownerWindow);
+            return state.saved;
         }
 
         [[nodiscard]] std::wstring BuildNewProjectName(const std::filesystem::path& parentDirectory)
@@ -418,7 +752,7 @@ namespace Xelqoria::Editor
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSaveCommandId, L"プロジェクトを保存する");
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSaveAsCommandId, L"プロジェクトを別名で保存する");
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuOpenCommandId, L"プロジェクトを開く");
-        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSettingsCommandId, L"プロジェクトの設定を開く");
+        AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuSettingsCommandId, L"Settings...");
         AppendMenuW(m_projectMenu, MF_SEPARATOR, 0, nullptr);
         AppendMenuW(m_projectMenu, MF_STRING, ProjectMenuResetLayoutCommandId, L"画面レイアウトを初期状態に戻す");
 
@@ -429,7 +763,7 @@ namespace Xelqoria::Editor
         AppendMenuW(m_viewMenu, MF_STRING, ViewMenuLogOutputCommandId, L"LogOutput");
 
         m_menuBar = CreateMenu();
-        AppendMenuW(m_menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_projectMenu), L"プロジェクト");
+        AppendMenuW(m_menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_projectMenu), L"Project");
         AppendMenuW(m_menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(m_viewMenu), L"表示");
         SetMenu(GetMainWindowHandle(), m_menuBar);
     }
@@ -451,10 +785,7 @@ namespace Xelqoria::Editor
             OpenProjectFromMenu();
             break;
         case ProjectMenuSettingsCommandId:
-            if (m_editorInitialized)
-            {
-                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクト設定画面は未実装です。");
-            }
+            OpenProjectSettingsFromMenu();
             break;
         case ProjectMenuResetLayoutCommandId:
             if (m_editorInitialized)
@@ -551,6 +882,11 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        for (const std::wstring& message : m_sceneDocument.GetProjectMigrationMessages())
+        {
+            AppendEditorLog(message.c_str());
+        }
+
         RecordCurrentProject();
         m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
         m_sceneDocument.RefreshProjectAssetRegistries();
@@ -580,6 +916,11 @@ namespace Xelqoria::Editor
             SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを開けませんでした。");
             AppendEditorLog(L"プロジェクトを開けませんでした。");
             return false;
+        }
+
+        for (const std::wstring& message : m_sceneDocument.GetProjectMigrationMessages())
+        {
+            AppendEditorLog(message.c_str());
         }
 
         RecordCurrentProject();
@@ -745,6 +1086,40 @@ namespace Xelqoria::Editor
         ClearProjectDirty();
         SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"プロジェクトを別名で保存しました。");
         AppendEditorLog(L"プロジェクトを別名で保存しました。");
+    }
+
+    void Application::OpenProjectSettingsFromMenu()
+    {
+        if (false == m_editorInitialized || false == m_sceneDocument.GetProjectInfo().has_value())
+        {
+            return;
+        }
+
+        const std::filesystem::path projectSettingsFilePath =
+            m_sceneDocument.GetProjectInfo()->projectSettingsFilePath;
+        std::wstring errorMessage{};
+        const bool saved = ShowProjectSettingsEditorDialog(
+            m_hInstance,
+            GetMainWindowHandle(),
+            projectSettingsFilePath,
+            errorMessage);
+        if (false == errorMessage.empty())
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), errorMessage.c_str());
+            AppendEditorLog(errorMessage.c_str());
+            MessageBoxW(
+                GetMainWindowHandle(),
+                errorMessage.c_str(),
+                L"Project Settings",
+                MB_OK | MB_ICONERROR);
+            return;
+        }
+
+        if (saved)
+        {
+            SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Project Settings を保存しました。");
+            AppendEditorLog(L"Project Settings を保存しました。");
+        }
     }
 
     bool Application::ConfirmSaveIfDirty()

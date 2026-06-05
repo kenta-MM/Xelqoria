@@ -1365,6 +1365,11 @@ namespace Xelqoria::Editor
         return m_project.GetInfo();
     }
 
+    const std::vector<std::wstring>& EditorSceneDocument::GetProjectMigrationMessages() const
+    {
+        return m_project.GetLastMigrationMessages();
+    }
+
     std::vector<std::filesystem::path> EditorSceneDocument::EnumerateProjectSceneFiles() const
     {
         return m_project.EnumerateSceneFiles();

@@ -30,7 +30,7 @@ TEST(RecentProjectsStoreTests, RecordKeepsMostRecentFiveExistingProjects)
         const std::wstring projectName = L"Project" + std::to_wstring(index);
         const std::filesystem::path projectRoot = tempDirectory / projectName;
         std::filesystem::create_directories(projectRoot);
-        const std::filesystem::path projectFilePath = projectRoot / (projectName + L".proj");
+        const std::filesystem::path projectFilePath = projectRoot / (projectName + L".xelqoria");
         std::ofstream(projectFilePath).put('\n');
 
         Xelqoria::Editor::EditorProjectInfo info{};
@@ -57,7 +57,7 @@ TEST(RecentProjectsStoreTests, RecordPreservesUtf8ProjectNameAndPath)
 
     const std::filesystem::path projectRoot = tempDirectory / L"日本語Project";
     std::filesystem::create_directories(projectRoot);
-    const std::filesystem::path projectFilePath = projectRoot / L"日本語Project.proj";
+    const std::filesystem::path projectFilePath = projectRoot / L"日本語Project.xelqoria";
     std::ofstream(projectFilePath).put('\n');
 
     Xelqoria::Editor::EditorProjectInfo info{};
@@ -72,6 +72,7 @@ TEST(RecentProjectsStoreTests, RecordPreservesUtf8ProjectNameAndPath)
     ASSERT_EQ(1u, projects.size());
     EXPECT_EQ(L"日本語Project", projects[0].name);
     EXPECT_EQ(projectFilePath, projects[0].projectFilePath);
+    EXPECT_EQ(projectRoot / L"Assets" / L"Scenes", projects[0].scenesDirectory);
 
     std::filesystem::current_path(originalCurrentPath);
     std::filesystem::remove_all(tempDirectory);
