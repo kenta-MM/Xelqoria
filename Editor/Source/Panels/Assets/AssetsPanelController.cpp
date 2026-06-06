@@ -13,6 +13,7 @@
 #include <system_error>
 #include <utility>
 #include <Windows.h>
+#include <windowsx.h>
 #include <wincodec.h>
 #include <wrl/client.h>
 
@@ -565,10 +566,17 @@ namespace Xelqoria::Editor
         /// Assets 項目の削除メニューから実行されたコマンド ID を表す。
         /// </summary>
         constexpr UINT_PTR DeleteEntryMenuCommandId = 2;
+
+        constexpr UINT_PTR AssetsListViewSubclassId = 31;
     }
 
     AssetsPanelController::~AssetsPanelController()
     {
+        if (nullptr != m_assetsListView)
+        {
+            RemoveWindowSubclass(m_assetsListView, AssetsListViewSubclassProc, AssetsListViewSubclassId);
+        }
+
         if (m_ownsAssetsImageList && nullptr != m_assetsImageList)
         {
             ImageList_Destroy(m_assetsImageList);
@@ -582,6 +590,11 @@ namespace Xelqoria::Editor
         m_assetsListView = view.GetListView();
         m_assetsSummaryLabel = view.GetSummaryLabel();
         m_cursor = &cursor;
+        SetWindowSubclass(
+            m_assetsListView,
+            AssetsListViewSubclassProc,
+            AssetsListViewSubclassId,
+            reinterpret_cast<DWORD_PTR>(this));
         InitializeListView();
         view.ConfigureListHeaderTheme();
     }
@@ -679,39 +692,8 @@ namespace Xelqoria::Editor
                 return false;
             }
 
-            const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
             const POINT menuPoint = ToWin32Point(m_cursor->GetScreenPosition());
-
-            const int nameLabelIndex = HitTestListViewNameLabel(menuPoint);
-            if (0 <= nameLabelIndex)
-            {
-                return ShowEntryContextMenu(static_cast<std::size_t>(nameLabelIndex), menuPoint);
-            }
-
-            std::filesystem::path createAssetTargetDirectory = false == m_currentDirectory.empty()
-                ? m_currentDirectory
-                : m_assetsRootDirectory;
-            if (0 <= itemActivate->iItem)
-            {
-                const std::size_t entryIndex = static_cast<std::size_t>(itemActivate->iItem);
-                if (entryIndex >= m_visibleEntries.size())
-                {
-                    return false;
-                }
-
-                const AssetListEntry& entry = m_visibleEntries[entryIndex];
-                if (entry.isDirectory && false == entry.isParentLink)
-                {
-                    createAssetTargetDirectory = entry.path;
-                }
-            }
-
-            if (true == createAssetTargetDirectory.empty())
-            {
-                return false;
-            }
-
-            return ShowCreateAssetContextMenu(createAssetTargetDirectory, menuPoint);
+            return ShowContextMenuAt(menuPoint);
         }
 
         if (notifyHeader->code == LVN_KEYDOWN)
@@ -1498,6 +1480,41 @@ namespace Xelqoria::Editor
         return TryOpenEntry(static_cast<std::size_t>(selectedIndex));
     }
 
+    bool AssetsPanelController::ShowContextMenuAt(POINT screenPoint)
+    {
+        const int nameLabelIndex = HitTestListViewNameLabel(screenPoint);
+        if (0 <= nameLabelIndex)
+        {
+            return ShowEntryContextMenu(static_cast<std::size_t>(nameLabelIndex), screenPoint);
+        }
+
+        std::filesystem::path createAssetTargetDirectory = false == m_currentDirectory.empty()
+            ? m_currentDirectory
+            : m_assetsRootDirectory;
+        const int hitIndex = HitTestListView(screenPoint);
+        if (0 <= hitIndex)
+        {
+            const std::size_t entryIndex = static_cast<std::size_t>(hitIndex);
+            if (entryIndex >= m_visibleEntries.size())
+            {
+                return false;
+            }
+
+            const AssetListEntry& entry = m_visibleEntries[entryIndex];
+            if (entry.isDirectory && false == entry.isParentLink)
+            {
+                createAssetTargetDirectory = entry.path;
+            }
+        }
+
+        if (true == createAssetTargetDirectory.empty())
+        {
+            return false;
+        }
+
+        return ShowCreateAssetContextMenu(createAssetTargetDirectory, screenPoint);
+    }
+
     int AssetsPanelController::GetSelectedListViewIndex() const
     {
         if (nullptr == m_assetsListView)
@@ -2083,6 +2100,63 @@ namespace Xelqoria::Editor
 
         ImageList_Destroy(imageList);
         return nullptr;
+    }
+
+    LRESULT CALLBACK AssetsPanelController::AssetsListViewSubclassProc(
+        HWND window,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData)
+    {
+        (void)subclassId;
+
+        AssetsPanelController* controller = reinterpret_cast<AssetsPanelController*>(referenceData);
+        if (nullptr != controller)
+        {
+            if (WM_CONTEXTMENU == message)
+            {
+                POINT menuPoint{
+                    GET_X_LPARAM(lParam),
+                    GET_Y_LPARAM(lParam)
+                };
+                if (-1 == menuPoint.x && -1 == menuPoint.y)
+                {
+                    RECT clientRect{};
+                    GetClientRect(window, &clientRect);
+                    menuPoint = POINT{
+                        clientRect.left + (clientRect.right - clientRect.left) / 2,
+                        clientRect.top + (clientRect.bottom - clientRect.top) / 2
+                    };
+                    ClientToScreen(window, &menuPoint);
+                }
+
+                if (controller->ShowContextMenuAt(menuPoint))
+                {
+                    return 0;
+                }
+            }
+            else if (WM_RBUTTONUP == message)
+            {
+                POINT menuPoint{
+                    GET_X_LPARAM(lParam),
+                    GET_Y_LPARAM(lParam)
+                };
+                ClientToScreen(window, &menuPoint);
+                if (controller->ShowContextMenuAt(menuPoint))
+                {
+                    return 0;
+                }
+            }
+        }
+
+        if (WM_NCDESTROY == message)
+        {
+            RemoveWindowSubclass(window, AssetsListViewSubclassProc, AssetsListViewSubclassId);
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
     }
 
 }

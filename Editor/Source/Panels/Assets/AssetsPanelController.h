@@ -371,6 +371,13 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool TryOpenSelectedEntry();
 
         /// <summary>
+        /// Assets ListView の右クリックメニューをスクリーン座標から表示する。
+        /// </summary>
+        /// <param name="screenPoint">メニュー表示位置のスクリーン座標。</param>
+        /// <returns>メニュー操作を処理した場合は true。</returns>
+        [[nodiscard]] bool ShowContextMenuAt(POINT screenPoint);
+
+        /// <summary>
         /// ListView の選択インデックスを取得する。
         /// </summary>
         /// <returns>選択インデックス。未選択時は -1。</returns>
@@ -476,6 +483,14 @@ namespace Xelqoria::Editor
         [[nodiscard]] HIMAGELIST CreateDragImageList(
             const std::filesystem::path& imagePath,
             int fallbackIconIndex) const;
+
+        static LRESULT CALLBACK AssetsListViewSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
 
     private:
         HWND m_assetsListView = nullptr;
