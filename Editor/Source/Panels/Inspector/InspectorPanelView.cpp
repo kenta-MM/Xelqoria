@@ -35,6 +35,7 @@ namespace Xelqoria::Editor
                 m_spriteRefDropHighlight,
                 m_spriteRefEdit,
                 m_materialOpenButton,
+                m_scriptSectionLabel,
                 m_scriptAssetLabel,
                 m_scriptAssetEdit,
                 m_scriptCreateButton,
@@ -54,6 +55,7 @@ namespace Xelqoria::Editor
                 m_materialTintColorButton,
                 m_materialOutlineEnabledCheckBox,
                 m_materialOutlineColorButton,
+                m_materialRemoveButton,
                 m_collider2DComponentSectionLabel,
                 m_collider2DSummaryLabel,
                 m_collider2DEnabledCheckBox,
@@ -112,10 +114,10 @@ namespace Xelqoria::Editor
             }
         }
 
-        m_spriteComponentSectionLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"SpriteComponent", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW);
-        m_spriteRefLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Texture", WS_CHILD | WS_VISIBLE);
+        m_spriteComponentSectionLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Sprite", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW);
+        m_spriteRefLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Sprite", WS_CHILD | WS_VISIBLE);
         m_spriteRefDropHighlight = CreateChildWindow(parentWindow, hInstance, L"Static", L"", WS_CHILD | SS_BLACKFRAME);
-        m_spriteRefEdit = CreateChildWindow(parentWindow, hInstance, L"Edit", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL);
+        m_spriteRefEdit = CreateChildWindow(parentWindow, hInstance, L"Edit", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY);
         if (nullptr == m_spriteComponentSectionLabel
             || nullptr == m_spriteRefLabel
             || nullptr == m_spriteRefDropHighlight
@@ -125,16 +127,18 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        m_materialOpenButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Open", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_materialOpenButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_scriptSectionLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Script", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW);
         m_scriptAssetLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Script", WS_CHILD | WS_VISIBLE);
         m_scriptAssetEdit = CreateChildWindow(parentWindow, hInstance, L"Edit", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY);
-        m_scriptCreateButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Create Script", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
-        m_scriptAssignButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Assign Script", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
-        m_scriptClearButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Clear Script", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
-        m_spriteComponentActionButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Add SpriteComponent", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_scriptCreateButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_scriptAssignButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"...", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_scriptClearButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_spriteComponentActionButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Remove Sprite", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_collider2DComponentActionButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Remove Collider2DComponent", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_addComponentButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Add Component", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         if (nullptr == m_materialOpenButton
+            || nullptr == m_scriptSectionLabel
             || nullptr == m_scriptAssetLabel
             || nullptr == m_scriptAssetEdit
             || nullptr == m_scriptCreateButton
@@ -157,7 +161,7 @@ namespace Xelqoria::Editor
             parentWindow,
             hInstance,
             L"Static",
-            L"Material Details (from SpriteComponent)",
+            L"Material",
             WS_CHILD | WS_VISIBLE | SS_OWNERDRAW);
         if (nullptr == m_materialSharedNoticeLabel || nullptr == m_materialDetailsSectionLabel)
         {
@@ -191,21 +195,23 @@ namespace Xelqoria::Editor
         m_materialTintColorButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         m_materialOutlineEnabledCheckBox = CreateChildWindow(parentWindow, hInstance, L"Button", L"", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX);
         m_materialOutlineColorButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_materialRemoveButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Remove Material", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         if (nullptr == m_materialTextureDropHighlight
             || nullptr == m_materialTextureBrowseButton
             || nullptr == m_materialTintColorButton
             || nullptr == m_materialOutlineEnabledCheckBox
-            || nullptr == m_materialOutlineColorButton)
+            || nullptr == m_materialOutlineColorButton
+            || nullptr == m_materialRemoveButton)
         {
             return false;
         }
 
-        m_collider2DComponentSectionLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Collider2DComponent", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW);
+        m_collider2DComponentSectionLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Collider2D", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW);
         m_collider2DSummaryLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Collider2D: no entity selected", WS_CHILD | WS_VISIBLE);
-        m_collider2DEnabledCheckBox = CreateChildWindow(parentWindow, hInstance, L"Button", L"Enabled", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX);
-        m_collider2DTriggerCheckBox = CreateChildWindow(parentWindow, hInstance, L"Button", L"Is Trigger", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX);
+        m_collider2DEnabledCheckBox = CreateChildWindow(parentWindow, hInstance, L"Button", L"", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX);
+        m_collider2DTriggerCheckBox = CreateChildWindow(parentWindow, hInstance, L"Button", L"", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX);
         m_collider2DShapeTypeLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Shape", WS_CHILD | WS_VISIBLE);
-        m_collider2DShapeTypeEdit = CreateChildWindow(parentWindow, hInstance, L"Edit", L"Box", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY);
+        m_collider2DShapeTypeEdit = CreateChildWindow(parentWindow, hInstance, L"ComboBox", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST);
         m_collider2DOffsetLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Offset", WS_CHILD | WS_VISIBLE);
         m_collider2DSizeLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Size", WS_CHILD | WS_VISIBLE);
         m_collider2DRotationLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Rotation", WS_CHILD | WS_VISIBLE);
@@ -233,11 +239,13 @@ namespace Xelqoria::Editor
             }
         }
 
-        m_collider2DEditButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"Edit Collider In Scene", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
+        m_collider2DEditButton = CreateChildWindow(parentWindow, hInstance, L"Button", L"", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON);
         if (nullptr == m_collider2DEditButton)
         {
             return false;
         }
+        SendMessageW(m_collider2DShapeTypeEdit, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Box"));
+        SendMessageW(m_collider2DShapeTypeEdit, CB_SETCURSEL, 0, 0);
 
         SetRootWindow(m_panel);
         SetControls(BuildControls());
@@ -264,23 +272,21 @@ namespace Xelqoria::Editor
         const int transformTop = bounds.top + groupHeaderHeight + labelHeight + ScaleMetric(8);
         const int spriteSectionTop = transformTop + labelHeight + ScaleMetric(4) + 3 * (rowHeight + rowSpacing) + sectionSpacing;
         const int spriteRefTop = spriteSectionTop + labelHeight + ScaleMetric(4);
-        const int scriptAssetTop = spriteRefTop + rowHeight + rowSpacing;
-        const int scriptButtonTop = scriptAssetTop + rowHeight + rowSpacing;
-        const int spriteActionTop = scriptButtonTop + rowHeight + ScaleMetric(4) + rowSpacing;
-        const int materialSectionTop = spriteActionTop + rowHeight + ScaleMetric(4) + sectionSpacing;
+        const int spriteActionTop = spriteRefTop + rowHeight + rowSpacing;
+        const int scriptSectionTop = spriteActionTop + rowHeight + ScaleMetric(4) + sectionSpacing;
+        const int scriptAssetTop = scriptSectionTop + labelHeight + ScaleMetric(4);
+        const int scriptButtonTop = scriptAssetTop;
+        const int materialSectionTop = scriptAssetTop + rowHeight + rowSpacing + sectionSpacing;
         const int materialNoticeTop = materialSectionTop + labelHeight + ScaleMetric(4);
         const int materialFirstRowTop = materialNoticeTop + rowHeight;
-        const int colliderSectionTop = materialFirstRowTop + 5 * (rowHeight + rowSpacing) + sectionSpacing;
-        const int colliderCheckTop = colliderSectionTop + labelHeight + ScaleMetric(4);
-        const int colliderShapeTop = colliderCheckTop + rowHeight + rowSpacing;
+        const int materialRemoveTop = materialFirstRowTop + 5 * (rowHeight + rowSpacing) + ScaleMetric(4);
+        const int colliderSectionTop = materialRemoveTop + rowHeight + ScaleMetric(4) + sectionSpacing;
+        const int colliderShapeTop = colliderSectionTop + labelHeight + ScaleMetric(4);
         const int colliderOffsetTop = colliderShapeTop + rowHeight + rowSpacing;
         const int colliderSizeTop = colliderOffsetTop + rowHeight + rowSpacing;
         const int colliderRotationTop = colliderSizeTop + rowHeight + rowSpacing;
-        const int colliderEditButtonTop = colliderRotationTop + rowHeight + rowSpacing;
-        const int colliderActionTop = colliderEditButtonTop + rowHeight + ScaleMetric(4) + rowSpacing;
+        const int colliderActionTop = colliderRotationTop + rowHeight + ScaleMetric(4) + rowSpacing;
         const int addComponentTop = colliderActionTop + rowHeight + ScaleMetric(4) + sectionSpacing;
-        const int scriptButtonGap = ScaleMetric(6);
-        const int scriptButtonWidth = (std::max)(0, (innerWidth - scriptButtonGap * 2) / 3);
         const int materialOpenButtonWidth = ScaleMetric(56);
         const int materialOpenButtonGap = ScaleMetric(6);
         const int materialEditWidth = (std::max)(0, innerWidth - labelWidth - materialOpenButtonWidth - materialOpenButtonGap);
@@ -308,12 +314,13 @@ namespace Xelqoria::Editor
         MoveChildWindowNoRedraw(m_spriteRefDropHighlight, innerX + labelWidth - ScaleMetric(2), spriteRefTop - ScaleMetric(2), materialEditWidth + ScaleMetric(4), rowHeight + ScaleMetric(4));
         MoveChildWindowNoRedraw(m_spriteRefEdit, innerX + labelWidth, spriteRefTop, materialEditWidth, rowHeight);
         MoveChildWindowNoRedraw(m_materialOpenButton, innerX + labelWidth + materialEditWidth + materialOpenButtonGap, spriteRefTop, materialOpenButtonWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_scriptAssetLabel, innerX, scriptAssetTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_scriptAssetEdit, innerX + labelWidth, scriptAssetTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
-        MoveChildWindowNoRedraw(m_scriptCreateButton, innerX, scriptButtonTop, scriptButtonWidth, rowHeight + ScaleMetric(4));
-        MoveChildWindowNoRedraw(m_scriptAssignButton, innerX + scriptButtonWidth + scriptButtonGap, scriptButtonTop, scriptButtonWidth, rowHeight + ScaleMetric(4));
-        MoveChildWindowNoRedraw(m_scriptClearButton, innerX + (scriptButtonWidth + scriptButtonGap) * 2, scriptButtonTop, (std::max)(0, innerWidth - (scriptButtonWidth + scriptButtonGap) * 2), rowHeight + ScaleMetric(4));
         MoveChildWindowNoRedraw(m_spriteComponentActionButton, innerX, spriteActionTop, innerWidth, rowHeight + ScaleMetric(4));
+        MoveChildWindowNoRedraw(m_scriptSectionLabel, innerX, scriptSectionTop, innerWidth, labelHeight);
+        MoveChildWindowNoRedraw(m_scriptAssetLabel, innerX, scriptAssetTop + ScaleMetric(4), labelWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_scriptAssetEdit, innerX + labelWidth, scriptAssetTop, materialEditWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_scriptCreateButton, innerX, scriptButtonTop, 0, 0);
+        MoveChildWindowNoRedraw(m_scriptAssignButton, innerX + labelWidth + materialEditWidth + materialOpenButtonGap, scriptButtonTop, materialOpenButtonWidth, rowHeight);
+        MoveChildWindowNoRedraw(m_scriptClearButton, innerX, scriptButtonTop, 0, 0);
 
         MoveChildWindowNoRedraw(m_materialDetailsSectionLabel, innerX, materialSectionTop, innerWidth, labelHeight);
         MoveChildWindowNoRedraw(m_materialSharedNoticeLabel, innerX, materialNoticeTop, innerWidth, rowHeight);
@@ -347,11 +354,12 @@ namespace Xelqoria::Editor
                 MoveChildWindowNoRedraw(m_materialOutlineColorButton, innerX + labelWidth + currentEditWidth + materialOpenButtonGap, rowTop, materialSmallButtonWidth, rowHeight);
             }
         }
+        MoveChildWindowNoRedraw(m_materialRemoveButton, innerX, materialRemoveTop, innerWidth, rowHeight + ScaleMetric(4));
 
         MoveChildWindowNoRedraw(m_collider2DComponentSectionLabel, innerX, colliderSectionTop, innerWidth, labelHeight);
         MoveChildWindowNoRedraw(m_collider2DSummaryLabel, innerX, colliderSectionTop, 0, 0);
-        MoveChildWindowNoRedraw(m_collider2DEnabledCheckBox, innerX + labelWidth, colliderCheckTop, (std::max)(0, innerWidth / 2 - labelWidth), rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DTriggerCheckBox, innerX + innerWidth / 2, colliderCheckTop, (std::max)(0, innerWidth / 2), rowHeight);
+        MoveChildWindowNoRedraw(m_collider2DEnabledCheckBox, innerX, colliderSectionTop, 0, 0);
+        MoveChildWindowNoRedraw(m_collider2DTriggerCheckBox, innerX, colliderSectionTop, 0, 0);
         MoveChildWindowNoRedraw(m_collider2DShapeTypeLabel, innerX, colliderShapeTop + ScaleMetric(4), labelWidth, rowHeight);
         MoveChildWindowNoRedraw(m_collider2DShapeTypeEdit, innerX + labelWidth, colliderShapeTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
         MoveChildWindowNoRedraw(m_collider2DOffsetLabel, innerX, colliderOffsetTop + ScaleMetric(4), labelWidth, rowHeight);
@@ -362,7 +370,7 @@ namespace Xelqoria::Editor
         MoveChildWindowNoRedraw(m_collider2DEditControls[3], innerX + labelWidth + colliderEdit2Width + ScaleMetric(8), colliderSizeTop, colliderEdit2Width, rowHeight);
         MoveChildWindowNoRedraw(m_collider2DRotationLabel, innerX, colliderRotationTop + ScaleMetric(4), labelWidth, rowHeight);
         MoveChildWindowNoRedraw(m_collider2DRotationEdit, innerX + labelWidth, colliderRotationTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditButton, innerX, colliderEditButtonTop, innerWidth, rowHeight + ScaleMetric(4));
+        MoveChildWindowNoRedraw(m_collider2DEditButton, innerX, colliderActionTop, 0, 0);
         MoveChildWindowNoRedraw(m_collider2DComponentActionButton, innerX, colliderActionTop, innerWidth, rowHeight + ScaleMetric(4));
         MoveChildWindowNoRedraw(m_addComponentButton, innerX, addComponentTop, innerWidth, rowHeight + ScaleMetric(8));
     }
@@ -426,6 +434,7 @@ namespace Xelqoria::Editor
     {
         return window == m_transformSectionLabel
             || window == m_spriteComponentSectionLabel
+            || window == m_scriptSectionLabel
             || window == m_materialDetailsSectionLabel
             || window == m_collider2DComponentSectionLabel;
     }
@@ -438,6 +447,7 @@ namespace Xelqoria::Editor
     HWND InspectorPanelView::GetSpriteRefLabel() const { return m_spriteRefLabel; }
     HWND InspectorPanelView::GetSpriteRefDropHighlight() const { return m_spriteRefDropHighlight; }
     HWND InspectorPanelView::GetSpriteRefEdit() const { return m_spriteRefEdit; }
+    HWND InspectorPanelView::GetScriptSectionLabel() const { return m_scriptSectionLabel; }
     HWND InspectorPanelView::GetScriptAssetLabel() const { return m_scriptAssetLabel; }
     HWND InspectorPanelView::GetScriptAssetEdit() const { return m_scriptAssetEdit; }
     HWND InspectorPanelView::GetScriptCreateButton() const { return m_scriptCreateButton; }
@@ -468,4 +478,5 @@ namespace Xelqoria::Editor
     HWND InspectorPanelView::GetMaterialTintColorButton() const { return m_materialTintColorButton; }
     HWND InspectorPanelView::GetMaterialOutlineEnabledCheckBox() const { return m_materialOutlineEnabledCheckBox; }
     HWND InspectorPanelView::GetMaterialOutlineColorButton() const { return m_materialOutlineColorButton; }
+    HWND InspectorPanelView::GetMaterialRemoveButton() const { return m_materialRemoveButton; }
 }

@@ -115,12 +115,12 @@ namespace Xelqoria::Editor
         /// <summary>
         /// SpriteComponent セクション見出しを表す。
         /// </summary>
-        const wchar_t* sectionLabel = L"SpriteComponent";
+        const wchar_t* sectionLabel = L"Sprite";
 
         /// <summary>
         /// SpriteComponent 操作ボタン文言を表す。
         /// </summary>
-        const wchar_t* buttonLabel = L"Add SpriteComponent";
+        const wchar_t* buttonLabel = L"Remove Sprite";
 
         /// <summary>
         /// SpriteComponent 操作ボタンを有効化するかを表す。
@@ -141,7 +141,7 @@ namespace Xelqoria::Editor
         /// <summary>
         /// Collider2DComponent セクション見出しを表す。
         /// </summary>
-        const wchar_t* sectionLabel = L"Collider2DComponent";
+        const wchar_t* sectionLabel = L"Collider2D";
 
         /// <summary>
         /// Collider2DComponent 操作ボタン文言を表す。
@@ -342,6 +342,36 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// SpriteAssetId から Sprite 欄に表示するファイル名を取得する。
+        /// </summary>
+        /// <param name="spriteAssetId">表示対象の SpriteAssetId。</param>
+        /// <returns>Sprite 欄表示文字列。</returns>
+        [[nodiscard]] static std::wstring FormatSpriteDisplayText(const Core::AssetId& spriteAssetId)
+        {
+            if (spriteAssetId.IsEmpty())
+            {
+                return L"None";
+            }
+
+            std::string spriteRefValue = spriteAssetId.GetValue();
+            constexpr std::string_view spriteAssetPrefix = "sprites/";
+            if (spriteRefValue.starts_with(spriteAssetPrefix))
+            {
+                spriteRefValue = spriteRefValue.substr(spriteAssetPrefix.size());
+            }
+
+            const std::wstring relativePath = ToWideString(spriteRefValue);
+            const std::filesystem::path displayPath(relativePath);
+            const std::wstring fileName = displayPath.filename().wstring();
+            if (false == fileName.empty())
+            {
+                return fileName;
+            }
+
+            return relativePath;
+        }
+
+        /// <summary>
         /// MaterialAssetId から Material 欄に表示するファイル名を取得する。
         /// </summary>
         /// <param name="materialAssetId">表示対象の MaterialAssetId。</param>
@@ -410,17 +440,17 @@ namespace Xelqoria::Editor
             {
                 return InspectorSpriteComponentActionState{
                     true,
-                    L"SpriteComponent",
-                    L"Remove SpriteComponent",
+                    L"Sprite",
+                    L"Remove Sprite",
                     true
                 };
             }
 
             return InspectorSpriteComponentActionState{
                 false,
-                L"SpriteComponent (not attached)",
-                L"Add SpriteComponent",
-                canAddSpriteComponent
+                L"Sprite",
+                L"Remove Sprite",
+                false
             };
         }
 
@@ -446,6 +476,24 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// SpriteComponent の Material 参照だけを解除する。
+        /// </summary>
+        /// <param name="entity">更新対象 Entity。</param>
+        /// <returns>Material 参照を解除した場合は true。</returns>
+        [[nodiscard]] static bool ClearSpriteMaterialReference(Game::Entity& entity)
+        {
+            auto spriteComponent = entity.GetSpriteComponent();
+            if (false == spriteComponent.has_value()
+                || true == spriteComponent->get().materialAssetRef.IsEmpty())
+            {
+                return false;
+            }
+
+            spriteComponent->get().materialAssetRef = {};
+            return true;
+        }
+
+        /// <summary>
         /// Collider2DComponent 操作 UI の表示状態を計算する。
         /// </summary>
         /// <param name="hasCollider2DComponent">Entity が Collider2DComponent を保持しているか。</param>
@@ -457,14 +505,14 @@ namespace Xelqoria::Editor
             {
                 return InspectorCollider2DComponentActionState{
                     true,
-                    L"Collider2DComponent",
+                    L"Collider2D",
                     L"Remove Collider2DComponent"
                 };
             }
 
             return InspectorCollider2DComponentActionState{
                 false,
-                L"Collider2DComponent (not attached)",
+                L"Collider2D",
                 L"Add Collider2DComponent"
             };
         }
@@ -525,6 +573,7 @@ namespace Xelqoria::Editor
         HWND m_spriteRefLabel = nullptr;
         HWND m_spriteRefDropHighlight = nullptr;
         HWND m_spriteRefEdit = nullptr;
+        HWND m_scriptSectionLabel = nullptr;
         HWND m_scriptAssetLabel = nullptr;
         HWND m_scriptAssetEdit = nullptr;
         HWND m_scriptCreateButton = nullptr;
@@ -555,6 +604,7 @@ namespace Xelqoria::Editor
         HWND m_materialTintColorButton = nullptr;
         HWND m_materialOutlineEnabledCheckBox = nullptr;
         HWND m_materialOutlineColorButton = nullptr;
+        HWND m_materialRemoveButton = nullptr;
         Platform::ICursor* m_cursor = nullptr;
         std::optional<Game::EntityId> m_lastInspectorEntityId{};
         Core::AssetId m_lastSpriteRefAssetId{};
@@ -567,6 +617,7 @@ namespace Xelqoria::Editor
         HWND m_dropHighlightTargetEdit = nullptr;
         bool m_isTransformCollapsed = false;
         bool m_isSpriteComponentCollapsed = false;
+        bool m_isScriptCollapsed = false;
         bool m_isMaterialCollapsed = false;
         bool m_isCollider2DCollapsed = false;
     };

@@ -28,6 +28,7 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetSpriteRefLabel() const;
         [[nodiscard]] HWND GetSpriteRefDropHighlight() const;
         [[nodiscard]] HWND GetSpriteRefEdit() const;
+        [[nodiscard]] HWND GetScriptSectionLabel() const;
         [[nodiscard]] HWND GetScriptAssetLabel() const;
         [[nodiscard]] HWND GetScriptAssetEdit() const;
         [[nodiscard]] HWND GetScriptCreateButton() const;
@@ -58,6 +59,7 @@ namespace Xelqoria::Editor
         [[nodiscard]] HWND GetMaterialTintColorButton() const;
         [[nodiscard]] HWND GetMaterialOutlineEnabledCheckBox() const;
         [[nodiscard]] HWND GetMaterialOutlineColorButton() const;
+        [[nodiscard]] HWND GetMaterialRemoveButton() const;
         [[nodiscard]] bool IsInputControl(HWND window) const;
         [[nodiscard]] bool IsSecondaryLabel(HWND window) const;
         [[nodiscard]] bool IsSectionLabel(HWND window) const;
@@ -76,6 +78,7 @@ namespace Xelqoria::Editor
         HWND m_spriteRefDropHighlight = nullptr;
         HWND m_spriteRefEdit = nullptr;
         HWND m_materialOpenButton = nullptr;
+        HWND m_scriptSectionLabel = nullptr;
         HWND m_scriptAssetLabel = nullptr;
         HWND m_scriptAssetEdit = nullptr;
         HWND m_scriptCreateButton = nullptr;
@@ -105,5 +108,6 @@ namespace Xelqoria::Editor
         HWND m_materialTintColorButton = nullptr;
         HWND m_materialOutlineEnabledCheckBox = nullptr;
         HWND m_materialOutlineColorButton = nullptr;
+        HWND m_materialRemoveButton = nullptr;
     };
 }

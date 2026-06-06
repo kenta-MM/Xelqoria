@@ -52,6 +52,17 @@ TEST(InspectorPanelControllerTests, FormatScriptDisplayTextShowsFileNameOrNone)
         Xelqoria::Editor::InspectorPanelController::FormatScriptDisplayText({}));
 }
 
+TEST(InspectorPanelControllerTests, FormatSpriteDisplayTextShowsFileNameOrNone)
+{
+    EXPECT_EQ(
+        L"Player.sprite",
+        Xelqoria::Editor::InspectorPanelController::FormatSpriteDisplayText(
+            Xelqoria::Core::AssetId("sprites/Characters/Player.sprite")));
+    EXPECT_EQ(
+        L"None",
+        Xelqoria::Editor::InspectorPanelController::FormatSpriteDisplayText({}));
+}
+
 TEST(InspectorPanelControllerTests, FormatMaterialDisplayTextShowsFileNameOrNone)
 {
     EXPECT_EQ(
@@ -105,8 +116,8 @@ TEST(InspectorPanelControllerTests, ComputeActionStateShowsEnabledRemoveWhenSpri
         Xelqoria::Editor::InspectorPanelController::ComputeSpriteComponentActionState(true, false);
 
     EXPECT_TRUE(actionState.showSpriteRefControls);
-    EXPECT_STREQ(L"SpriteComponent", actionState.sectionLabel);
-    EXPECT_STREQ(L"Remove SpriteComponent", actionState.buttonLabel);
+    EXPECT_STREQ(L"Sprite", actionState.sectionLabel);
+    EXPECT_STREQ(L"Remove Sprite", actionState.buttonLabel);
     EXPECT_TRUE(actionState.enableActionButton);
 }
 
@@ -116,9 +127,9 @@ TEST(InspectorPanelControllerTests, ComputeActionStateShowsEnabledAddWhenSpriteA
         Xelqoria::Editor::InspectorPanelController::ComputeSpriteComponentActionState(false, true);
 
     EXPECT_FALSE(actionState.showSpriteRefControls);
-    EXPECT_STREQ(L"SpriteComponent (not attached)", actionState.sectionLabel);
-    EXPECT_STREQ(L"Add SpriteComponent", actionState.buttonLabel);
-    EXPECT_TRUE(actionState.enableActionButton);
+    EXPECT_STREQ(L"Sprite", actionState.sectionLabel);
+    EXPECT_STREQ(L"Remove Sprite", actionState.buttonLabel);
+    EXPECT_FALSE(actionState.enableActionButton);
 }
 
 TEST(InspectorPanelControllerTests, ComputeActionStateDisablesAddWhenNoVisibleSpriteAssetExists)
@@ -127,8 +138,8 @@ TEST(InspectorPanelControllerTests, ComputeActionStateDisablesAddWhenNoVisibleSp
         Xelqoria::Editor::InspectorPanelController::ComputeSpriteComponentActionState(false, false);
 
     EXPECT_FALSE(actionState.showSpriteRefControls);
-    EXPECT_STREQ(L"SpriteComponent (not attached)", actionState.sectionLabel);
-    EXPECT_STREQ(L"Add SpriteComponent", actionState.buttonLabel);
+    EXPECT_STREQ(L"Sprite", actionState.sectionLabel);
+    EXPECT_STREQ(L"Remove Sprite", actionState.buttonLabel);
     EXPECT_FALSE(actionState.enableActionButton);
 }
 
@@ -173,20 +184,43 @@ TEST(InspectorPanelControllerTests, ApplySpriteComponentActionSkipsAddWhenNoVisi
     EXPECT_FALSE(entity.HasSpriteComponent());
 }
 
+TEST(InspectorPanelControllerTests, ClearSpriteMaterialReferenceClearsOnlyComponentReference)
+{
+    Xelqoria::Game::Scene scene;
+    auto& entity = scene.CreateEntity();
+    entity.SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+        Xelqoria::Core::AssetId("sprites/player.sprite"),
+        {
+            true,
+            0,
+            1.0f
+        },
+        Xelqoria::Game::SpriteAssetReferenceState::Resolved,
+        {},
+        Xelqoria::Core::AssetId("materials/player.material")
+    });
+
+    const bool changed = Xelqoria::Editor::InspectorPanelController::ClearSpriteMaterialReference(entity);
+
+    ASSERT_TRUE(changed);
+    ASSERT_TRUE(entity.GetSpriteComponent().has_value());
+    EXPECT_TRUE(entity.GetSpriteComponent()->get().materialAssetRef.IsEmpty());
+}
+
 TEST(InspectorPanelControllerTests, ComputeCollider2DComponentActionStateReflectsAttachment)
 {
     const auto detachedState =
         Xelqoria::Editor::InspectorPanelController::ComputeCollider2DComponentActionState(false);
 
     EXPECT_FALSE(detachedState.showColliderControls);
-    EXPECT_STREQ(L"Collider2DComponent (not attached)", detachedState.sectionLabel);
+    EXPECT_STREQ(L"Collider2D", detachedState.sectionLabel);
     EXPECT_STREQ(L"Add Collider2DComponent", detachedState.buttonLabel);
 
     const auto attachedState =
         Xelqoria::Editor::InspectorPanelController::ComputeCollider2DComponentActionState(true);
 
     EXPECT_TRUE(attachedState.showColliderControls);
-    EXPECT_STREQ(L"Collider2DComponent", attachedState.sectionLabel);
+    EXPECT_STREQ(L"Collider2D", attachedState.sectionLabel);
     EXPECT_STREQ(L"Remove Collider2DComponent", attachedState.buttonLabel);
 }
 
