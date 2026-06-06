@@ -568,10 +568,49 @@ namespace Xelqoria::Editor
         constexpr UINT_PTR DeleteEntryMenuCommandId = 2;
 
         constexpr UINT_PTR AssetsListViewSubclassId = 31;
+        constexpr UINT_PTR AssetsPanelSubclassId = 32;
+
+        /// <summary>
+        /// Assets ListView の popup menu を root window 所有として表示する。
+        /// </summary>
+        /// <param name="ownerWindow">メニュー表示元の window。</param>
+        /// <param name="popupMenu">表示する popup menu。</param>
+        /// <param name="screenPoint">メニュー表示位置のスクリーン座標。</param>
+        /// <returns>選択されたコマンド ID。キャンセル時は 0。</returns>
+        [[nodiscard]] UINT TrackAssetsPopupMenu(HWND ownerWindow, HMENU popupMenu, POINT screenPoint)
+        {
+            if (nullptr == ownerWindow || nullptr == popupMenu)
+            {
+                return 0;
+            }
+
+            HWND popupOwnerWindow = GetAncestor(ownerWindow, GA_ROOT);
+            if (nullptr == popupOwnerWindow)
+            {
+                popupOwnerWindow = ownerWindow;
+            }
+
+            SetForegroundWindow(popupOwnerWindow);
+            const UINT command = TrackPopupMenu(
+                popupMenu,
+                TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                screenPoint.x,
+                screenPoint.y,
+                0,
+                popupOwnerWindow,
+                nullptr);
+            PostMessageW(popupOwnerWindow, WM_NULL, 0, 0);
+            return command;
+        }
     }
 
     AssetsPanelController::~AssetsPanelController()
     {
+        if (nullptr != m_assetsPanelWindow)
+        {
+            RemoveWindowSubclass(m_assetsPanelWindow, AssetsPanelSubclassProc, AssetsPanelSubclassId);
+        }
+
         if (nullptr != m_assetsListView)
         {
             RemoveWindowSubclass(m_assetsListView, AssetsListViewSubclassProc, AssetsListViewSubclassId);
@@ -587,9 +626,15 @@ namespace Xelqoria::Editor
 
     void AssetsPanelController::Bind(const AssetsPanelView& view, Platform::ICursor& cursor)
     {
+        m_assetsPanelWindow = view.GetRootWindow();
         m_assetsListView = view.GetListView();
         m_assetsSummaryLabel = view.GetSummaryLabel();
         m_cursor = &cursor;
+        SetWindowSubclass(
+            m_assetsPanelWindow,
+            AssetsPanelSubclassProc,
+            AssetsPanelSubclassId,
+            reinterpret_cast<DWORD_PTR>(this));
         SetWindowSubclass(
             m_assetsListView,
             AssetsListViewSubclassProc,
@@ -1607,14 +1652,10 @@ namespace Xelqoria::Editor
             AppendMenuW(popupMenu, MF_STRING, AssignScriptMenuCommandId, L"Scriptを割り当て");
         }
 
-        const UINT command = TrackPopupMenu(
-            popupMenu,
-            TPM_RETURNCMD | TPM_RIGHTBUTTON,
-            screenPoint.x,
-            screenPoint.y,
-            0,
+        const UINT command = TrackAssetsPopupMenu(
             m_assetsListView,
-            nullptr);
+            popupMenu,
+            screenPoint);
         DestroyMenu(popupMenu);
 
         if (AssignScriptMenuCommandId == command)
@@ -1626,10 +1667,11 @@ namespace Xelqoria::Editor
 
         if (DeleteEntryMenuCommandId != command)
         {
-            return false;
+            return true;
         }
 
-        return DeleteEntry(entryIndex);
+        (void)DeleteEntry(entryIndex);
+        return true;
     }
 
     bool AssetsPanelController::ShowCreateAssetContextMenu(
@@ -1657,14 +1699,10 @@ namespace Xelqoria::Editor
         AppendMenuW(popupMenu, MF_STRING, CreateCollider2DMenuCommandId, L"Collider2Dを作成");
         AppendMenuW(popupMenu, MF_STRING, CreateScriptMenuCommandId, L"Scriptを作成");
 
-        const UINT command = TrackPopupMenu(
-            popupMenu,
-            TPM_RETURNCMD | TPM_RIGHTBUTTON,
-            screenPoint.x,
-            screenPoint.y,
-            0,
+        const UINT command = TrackAssetsPopupMenu(
             m_assetsListView,
-            nullptr);
+            popupMenu,
+            screenPoint);
         DestroyMenu(popupMenu);
 
         if (CreateSpriteMenuCommandId == command)
@@ -1697,10 +1735,10 @@ namespace Xelqoria::Editor
 
         if (0 != command)
         {
-            return false;
+            return true;
         }
 
-        return false;
+        return true;
     }
 
     bool AssetsPanelController::DeleteEntry(std::size_t entryIndex)
@@ -2154,6 +2192,63 @@ namespace Xelqoria::Editor
         if (WM_NCDESTROY == message)
         {
             RemoveWindowSubclass(window, AssetsListViewSubclassProc, AssetsListViewSubclassId);
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
+    }
+
+    LRESULT CALLBACK AssetsPanelController::AssetsPanelSubclassProc(
+        HWND window,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData)
+    {
+        (void)subclassId;
+
+        AssetsPanelController* controller = reinterpret_cast<AssetsPanelController*>(referenceData);
+        if (nullptr != controller)
+        {
+            if (WM_CONTEXTMENU == message)
+            {
+                POINT menuPoint{
+                    GET_X_LPARAM(lParam),
+                    GET_Y_LPARAM(lParam)
+                };
+                if (-1 == menuPoint.x && -1 == menuPoint.y)
+                {
+                    RECT clientRect{};
+                    GetClientRect(window, &clientRect);
+                    menuPoint = POINT{
+                        clientRect.left + (clientRect.right - clientRect.left) / 2,
+                        clientRect.top + (clientRect.bottom - clientRect.top) / 2
+                    };
+                    ClientToScreen(window, &menuPoint);
+                }
+
+                if (controller->ShowContextMenuAt(menuPoint))
+                {
+                    return 0;
+                }
+            }
+            else if (WM_RBUTTONUP == message)
+            {
+                POINT menuPoint{
+                    GET_X_LPARAM(lParam),
+                    GET_Y_LPARAM(lParam)
+                };
+                ClientToScreen(window, &menuPoint);
+                if (controller->ShowContextMenuAt(menuPoint))
+                {
+                    return 0;
+                }
+            }
+        }
+
+        if (WM_NCDESTROY == message)
+        {
+            RemoveWindowSubclass(window, AssetsPanelSubclassProc, AssetsPanelSubclassId);
         }
 
         return DefSubclassProc(window, message, wParam, lParam);

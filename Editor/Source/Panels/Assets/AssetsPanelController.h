@@ -492,7 +492,16 @@ namespace Xelqoria::Editor
             UINT_PTR subclassId,
             DWORD_PTR referenceData);
 
+        static LRESULT CALLBACK AssetsPanelSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
     private:
+        HWND m_assetsPanelWindow = nullptr;
         HWND m_assetsListView = nullptr;
         HWND m_assetsSummaryLabel = nullptr;
         Platform::ICursor* m_cursor = nullptr;
