@@ -688,7 +688,9 @@ namespace Xelqoria::Editor
                 return ShowEntryContextMenu(static_cast<std::size_t>(nameLabelIndex), menuPoint);
             }
 
-            std::filesystem::path createSpriteTargetDirectory = m_assetsRootDirectory;
+            std::filesystem::path createAssetTargetDirectory = false == m_currentDirectory.empty()
+                ? m_currentDirectory
+                : m_assetsRootDirectory;
             if (0 <= itemActivate->iItem)
             {
                 const std::size_t entryIndex = static_cast<std::size_t>(itemActivate->iItem);
@@ -698,20 +700,18 @@ namespace Xelqoria::Editor
                 }
 
                 const AssetListEntry& entry = m_visibleEntries[entryIndex];
-                if (false == entry.isDirectory || entry.isParentLink)
+                if (entry.isDirectory && false == entry.isParentLink)
                 {
-                    return false;
+                    createAssetTargetDirectory = entry.path;
                 }
-
-                createSpriteTargetDirectory = entry.path;
             }
 
-            if (true == createSpriteTargetDirectory.empty())
+            if (true == createAssetTargetDirectory.empty())
             {
                 return false;
             }
 
-            return ShowCreateAssetContextMenu(createSpriteTargetDirectory, menuPoint);
+            return ShowCreateAssetContextMenu(createAssetTargetDirectory, menuPoint);
         }
 
         if (notifyHeader->code == LVN_KEYDOWN)
