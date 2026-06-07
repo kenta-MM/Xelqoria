@@ -166,6 +166,32 @@ TEST(EditorSceneDocumentTests, EnsureMaterialAssetTextureFillsEmptyMaterialTextu
     std::filesystem::remove_all(parentDirectory);
 }
 
+TEST(EditorSceneDocumentTests, CreateMaterialAssetFileWritesDroppedTexture)
+{
+    const std::filesystem::path parentDirectory =
+        MakeTempDirectory(L"XelqoriaEditorSceneDocumentTests_CreateMaterialWithTexture");
+    Xelqoria::Editor::EditorSceneDocument document = MakeProjectDocument(parentDirectory);
+    const std::filesystem::path projectRoot = parentDirectory / L"ScriptInspectorProject";
+    const std::filesystem::path materialsDirectory = projectRoot / L"Assets" / L"Materials";
+    const Xelqoria::Core::AssetId textureAssetId("textures/Textures/player.png");
+
+    const std::optional<Xelqoria::Core::AssetId> materialAssetId =
+        document.CreateMaterialAssetFile(materialsDirectory, textureAssetId);
+
+    ASSERT_TRUE(materialAssetId.has_value());
+    EXPECT_EQ(Xelqoria::Core::AssetId("materials/Materials/NewMaterial.material"), *materialAssetId);
+
+    const auto materialAsset = document.GetMaterialAssetRegistry().ResolveMaterialAsset(*materialAssetId);
+    ASSERT_TRUE(materialAsset.has_value());
+    EXPECT_EQ(textureAssetId, materialAsset->textureAssetId);
+
+    const auto materialPath = document.ResolveMaterialAssetPath(*materialAssetId);
+    ASSERT_TRUE(materialPath.has_value());
+    EXPECT_TRUE(std::filesystem::exists(*materialPath));
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
 TEST(EditorSceneDocumentTests, CreateAndAssignCollider2DAssetToSpriteAssetWritesColliderReference)
 {
     const std::filesystem::path parentDirectory =

@@ -92,6 +92,16 @@ namespace Xelqoria::Editor
         bool materialAssetChanged = false;
 
         /// <summary>
+        /// Material Texture 欄へ Texture Asset がドロップされたかを表す。
+        /// </summary>
+        bool materialTextureDropRequested = false;
+
+        /// <summary>
+        /// Material Texture 欄へドロップされた TextureAssetId を表す。
+        /// </summary>
+        Core::AssetId droppedTextureAssetId{};
+
+        /// <summary>
         /// 保存対象の MaterialAssetId を表す。
         /// </summary>
         Core::AssetId materialTargetAssetId{};

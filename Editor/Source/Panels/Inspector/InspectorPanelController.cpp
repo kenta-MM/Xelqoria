@@ -907,6 +907,9 @@ namespace Xelqoria::Editor
             return result;
         }
 
+        result.materialTextureDropRequested = true;
+        result.droppedTextureAssetId = assetsPanelController.GetDraggingTextureAssetId();
+
         const auto spriteAsset = spriteAssetResolver.ResolveSpriteAsset(spriteComponent->get().spriteAssetRef);
         const Core::AssetId materialAssetId = false == spriteComponent->get().materialAssetRef.IsEmpty()
             ? spriteComponent->get().materialAssetRef
@@ -1263,8 +1266,7 @@ namespace Xelqoria::Editor
         if (false == hasTextureDrag
             || true == assetsPanelController.GetDraggingTextureAssetId().IsEmpty()
             || nullptr == m_materialDetailEditControls[0]
-            || false == IsWindowVisible(m_materialDetailEditControls[0])
-            || false == IsWindowEnabled(m_materialDetailEditControls[0]))
+            || false == IsWindowVisible(m_materialDetailEditControls[0]))
         {
             return false;
         }

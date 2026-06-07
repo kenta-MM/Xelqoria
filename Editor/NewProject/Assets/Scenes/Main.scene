@@ -1,2 +1,11 @@
 magic=xelqoria.scene
 version=2
+entity.0.id=1
+entity.0.name="Entity 1"
+entity.0.transform.position=40.000000,21.500000,0.000000
+entity.0.transform.rotation=0.000000,0.000000,0.000000
+entity.0.transform.scale=0.500000,0.500000,1.000000
+entity.0.hasSpriteComponent=true
+entity.0.spriteRef=sprites/NewSprite.sprite
+entity.0.materialRef=materials/Materials/NewMaterial2.material
+entity.0.hasCollider2DComponent=false
