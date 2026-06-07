@@ -1445,7 +1445,7 @@ namespace Xelqoria::Editor
             AppendEditorLog(L"選択した Scene を読み込みました。");
         }
 
-        m_scriptRuntimeSession.Update(deltaTime);
+        m_scriptRuntimeSession.Update(deltaTime, inputSnapshot);
         if (false == m_scriptRuntimeSession.GetDiagnostics().empty())
         {
             const std::wstring runtimeStatusText =
@@ -1472,33 +1472,16 @@ namespace Xelqoria::Editor
                 m_assetsPanelController.GetCreateSpriteTargetDirectory();
             m_assetsPanelController.ClearCreateSpriteRequest();
 
-            if (nullptr != m_sceneDocument.GetScene())
+            if (true == m_sceneDocument.CreateSpriteAssetFile(createSpriteTargetDirectory))
             {
-                const EditorCamera2D& sceneViewCamera = m_sceneViewController.GetCamera();
-                const SceneEditResult createSpriteResult =
-                    SceneEditingOperations::CreateUntexturedSprite(
-                        *m_sceneDocument.GetScene(),
-                        sceneViewCamera.GetCenterX(),
-                        sceneViewCamera.GetCenterY());
-                if (true == createSpriteResult.changed)
-                {
-                    const auto createdEntity = createSpriteResult.selectedEntityId.has_value()
-                        ? m_sceneDocument.GetScene()->FindEntity(*createSpriteResult.selectedEntityId)
-                        : std::optional<std::reference_wrapper<Game::Entity>>{};
-                    if (true == createdEntity.has_value()
-                        && true == m_sceneDocument.CreateSpriteAssetFile(
-                            createdEntity->get(),
-                            createSpriteTargetDirectory))
-                    {
-                        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
-                    }
-
-                    ApplySelectionChange(createSpriteResult.selectedEntityId, canAddSpriteComponent, true, true);
-                    PersistSceneChanges(
-                        L"Assets から Sprite を作成しました。",
-                        createSpriteResult.operationName,
-                        true);
-                }
+                m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Sprite Asset を作成しました。");
+                AppendEditorLog(L"Sprite Asset を作成しました。");
+            }
+            else
+            {
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Sprite Asset の作成に失敗しました。");
+                AppendEditorLog(L"Sprite Asset の作成に失敗しました。");
             }
         }
 
@@ -1798,6 +1781,16 @@ namespace Xelqoria::Editor
                 AppendEditorLog(L"Material の Texture 保存に失敗しました。");
             }
         }
+        else if (true == materialTextureDropResult.materialTextureDropRequested)
+        {
+            if (false == CreateMaterialForSelectedSpriteTextureDrop(
+                    materialTextureDropResult.droppedTextureAssetId,
+                    canAddSpriteComponent))
+            {
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Material の作成または Texture 設定に失敗しました。");
+                AppendEditorLog(L"Material の作成または Texture 設定に失敗しました。");
+            }
+        }
 
         const InspectorApplyResult materialDropResult = m_inspectorPanelController.ApplyMaterialDrop(
             m_sceneDocument.GetScene(),
@@ -1907,7 +1900,14 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.SetSelectedEntityId(dropResult.selectedEntityId);
         }
 
-        if (true == dropResult.sceneChanged || true == dropResult.selectionChanged)
+        if (true == dropResult.assetChanged)
+        {
+            m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+        }
+
+        if (true == dropResult.sceneChanged
+            || true == dropResult.selectionChanged
+            || true == dropResult.assetChanged)
         {
             RefreshEditorPanels(canAddSpriteComponent, true);
         }
@@ -2053,6 +2053,78 @@ namespace Xelqoria::Editor
         return m_sceneDocument.EnsureMaterialAssetTexture(
             materialAssetId,
             spriteAsset->textureAssetId);
+    }
+
+    bool Application::CreateMaterialForSelectedSpriteTextureDrop(
+        const Core::AssetId& textureAssetId,
+        bool canAddSpriteComponent)
+    {
+        if (textureAssetId.IsEmpty())
+        {
+            return false;
+        }
+
+        Game::Scene* scene = m_sceneDocument.GetScene();
+        const std::optional<Game::EntityId> selectedEntityId = m_hierarchyPanelController.GetSelectedEntityId();
+        if (nullptr == scene || false == selectedEntityId.has_value())
+        {
+            return false;
+        }
+
+        const auto selectedEntity = scene->FindEntity(*selectedEntityId);
+        if (false == selectedEntity.has_value())
+        {
+            return false;
+        }
+
+        const auto spriteComponent = selectedEntity->get().GetSpriteComponent();
+        if (false == spriteComponent.has_value())
+        {
+            return false;
+        }
+
+        const auto spriteAsset = m_sceneDocument.GetSpriteAssetRegistry().ResolveSpriteAsset(
+            spriteComponent->get().spriteAssetRef);
+        const Core::AssetId currentMaterialAssetId = false == spriteComponent->get().materialAssetRef.IsEmpty()
+            ? spriteComponent->get().materialAssetRef
+            : (spriteAsset.has_value() ? spriteAsset->materialAssetId : Core::AssetId{});
+        const std::optional<Game::Assets::SpriteMaterialAsset> currentMaterialAsset =
+            m_sceneDocument.GetMaterialAssetRegistry().ResolveMaterialAsset(currentMaterialAssetId);
+        if (currentMaterialAsset.has_value())
+        {
+            return currentMaterialAsset->textureAssetId == textureAssetId;
+        }
+
+        std::filesystem::path materialTargetDirectory{};
+        if (m_sceneDocument.GetProjectInfo().has_value())
+        {
+            const EditorProjectInfo& projectInfo = *m_sceneDocument.GetProjectInfo();
+            if (false == projectInfo.assetRootDirectory.empty())
+            {
+                materialTargetDirectory = projectInfo.assetRootDirectory / L"Materials";
+            }
+            else
+            {
+                materialTargetDirectory = projectInfo.projectFilePath.parent_path() / L"Assets" / L"Materials";
+            }
+        }
+
+        const std::optional<Core::AssetId> materialAssetId =
+            m_sceneDocument.CreateMaterialAssetFile(materialTargetDirectory, textureAssetId);
+        if (false == materialAssetId.has_value())
+        {
+            return false;
+        }
+
+        spriteComponent->get().materialAssetRef = *materialAssetId;
+        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+        RefreshEditorPanels(canAddSpriteComponent, false);
+        RefreshSceneViewSelectionStatus();
+        (void)PersistSceneChanges(
+            L"Material を作成し、Texture を Sprite に設定しました。",
+            "Change Sprite Material",
+            true);
+        return true;
     }
 
     bool Application::CreateCollider2DAssetForSelectedEntity(bool canAddSpriteComponent)

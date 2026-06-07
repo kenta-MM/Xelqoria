@@ -1,0 +1,7 @@
+XelqoriaProject=1
+projectName=NewProject
+version=1
+projectStructureVersion=1
+assetRoot=Assets
+projectSettings=ProjectSettings/project_settings.json
+startupScene=Assets/Scenes/Main.scene

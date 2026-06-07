@@ -35,6 +35,13 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
     [[nodiscard]] bool IsCollider2DAssetFile(const std::filesystem::path& path);
 
     /// <summary>
+    /// 指定アセットファイルを SceneView へ直接配置できるかを判定する。
+    /// </summary>
+    /// <param name="path">判定対象パス。</param>
+    /// <returns>SceneView へ配置できるアセットの場合は true。</returns>
+    [[nodiscard]] bool CanPlaceAssetFileInSceneView(const std::filesystem::path& path);
+
+    /// <summary>
     /// プロジェクトルート基準の画像ファイルパスから TextureAssetId を生成する。
     /// </summary>
     /// <param name="path">画像ファイルパス。</param>

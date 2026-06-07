@@ -247,6 +247,16 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool EnsureMaterialTextureFromSelectedSprite(const Core::AssetId& materialAssetId);
 
         /// <summary>
+        /// 選択中 Sprite に Material が無い場合、Texture 付き Material Asset を作成して割り当てる。
+        /// </summary>
+        /// <param name="textureAssetId">割り当てる TextureAssetId。</param>
+        /// <param name="canAddSpriteComponent">SpriteComponent を追加可能な場合は true。</param>
+        /// <returns>既存 Material が使用可能、または Material 作成と割り当てに成功した場合は true。</returns>
+        [[nodiscard]] bool CreateMaterialForSelectedSpriteTextureDrop(
+            const Core::AssetId& textureAssetId,
+            bool canAddSpriteComponent);
+
+        /// <summary>
         /// 選択中 Entity の Collider2DComponent から Collider2D Asset を作成する。
         /// </summary>
         /// <param name="canAddSpriteComponent">SpriteComponent を追加可能な場合は true。</param>

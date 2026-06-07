@@ -358,6 +358,14 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool TryOpenEntry(std::size_t entryIndex);
 
         /// <summary>
+        /// 指定項目を Assets ドラッグ状態として開始する。
+        /// </summary>
+        /// <param name="entryIndex">ドラッグ開始項目のインデックス。</param>
+        /// <param name="screenPoint">ドラッグ開始位置のスクリーン座標。</param>
+        /// <returns>ドラッグ可能な項目だった場合は true。</returns>
+        [[nodiscard]] bool BeginDragForEntry(std::size_t entryIndex, POINT screenPoint);
+
+        /// <summary>
         /// Script Asset の管理 C++ ソースを関連付けられたアプリケーションで開く。
         /// </summary>
         /// <param name="entry">対象 Script Asset 項目。</param>
@@ -371,10 +379,31 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool TryOpenSelectedEntry();
 
         /// <summary>
+        /// Assets ListView の右クリックメニューをスクリーン座標から表示する。
+        /// </summary>
+        /// <param name="screenPoint">メニュー表示位置のスクリーン座標。</param>
+        /// <returns>メニュー操作を処理した場合は true。</returns>
+        [[nodiscard]] bool ShowContextMenuAt(POINT screenPoint);
+
+        /// <summary>
         /// ListView の選択インデックスを取得する。
         /// </summary>
         /// <returns>選択インデックス。未選択時は -1。</returns>
         [[nodiscard]] int GetSelectedListViewIndex() const;
+
+        /// <summary>
+        /// ListView の表示インデックスから内部エントリインデックスを取得する。
+        /// </summary>
+        /// <param name="listViewIndex">ListView の表示インデックス。</param>
+        /// <returns>内部エントリインデックス。未解決時は std::nullopt。</returns>
+        [[nodiscard]] std::optional<std::size_t> ResolveEntryIndexFromListViewIndex(int listViewIndex) const;
+
+        /// <summary>
+        /// 内部エントリインデックスから ListView の表示インデックスを取得する。
+        /// </summary>
+        /// <param name="entryIndex">内部エントリインデックス。</param>
+        /// <returns>ListView の表示インデックス。未解決時は -1。</returns>
+        [[nodiscard]] int ResolveListViewIndexFromEntryIndex(std::size_t entryIndex) const;
 
         /// <summary>
         /// スクリーン座標から ListView 項目を取得する。
@@ -477,10 +506,28 @@ namespace Xelqoria::Editor
             const std::filesystem::path& imagePath,
             int fallbackIconIndex) const;
 
+        static LRESULT CALLBACK AssetsListViewSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
+        static LRESULT CALLBACK AssetsPanelSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
+
     private:
+        HWND m_assetsPanelWindow = nullptr;
         HWND m_assetsListView = nullptr;
         HWND m_assetsSummaryLabel = nullptr;
         Platform::ICursor* m_cursor = nullptr;
+        std::filesystem::path m_projectRootDirectory{};
         std::filesystem::path m_assetsRootDirectory{};
         std::filesystem::path m_currentDirectory{};
         std::vector<AssetListEntry> m_visibleEntries{};
@@ -497,6 +544,8 @@ namespace Xelqoria::Editor
         bool m_isAssetDragActive = false;
         bool m_canPlaceDraggingAssetInScene = false;
         bool m_assetDragReleasedThisFrame = false;
+        bool m_hasCapturedAssetDrag = false;
+        bool m_capturedAssetDragReleased = false;
         bool m_createSpriteRequested = false;
         std::filesystem::path m_createSpriteTargetDirectory{};
         bool m_createScriptRequested = false;

@@ -13,6 +13,7 @@
 #include <system_error>
 #include <utility>
 #include <Windows.h>
+#include <windowsx.h>
 #include <wincodec.h>
 #include <wrl/client.h>
 
@@ -37,6 +38,7 @@ namespace Xelqoria::Editor
         constexpr int DragPreviewCursorOffsetX = 14;
         constexpr int DragPreviewCursorOffsetY = 18;
         constexpr int AssetsIconSize = 16;
+
         constexpr const wchar_t* EditorIconsRelativeDirectory = L"Assets\\Editor\\Icons";
 
         /// <summary>
@@ -565,10 +567,56 @@ namespace Xelqoria::Editor
         /// Assets 項目の削除メニューから実行されたコマンド ID を表す。
         /// </summary>
         constexpr UINT_PTR DeleteEntryMenuCommandId = 2;
+
+        constexpr UINT_PTR AssetsListViewSubclassId = 31;
+        constexpr UINT_PTR AssetsPanelSubclassId = 32;
+
+        /// <summary>
+        /// Assets ListView の popup menu を root window 所有として表示する。
+        /// </summary>
+        /// <param name="ownerWindow">メニュー表示元の window。</param>
+        /// <param name="popupMenu">表示する popup menu。</param>
+        /// <param name="screenPoint">メニュー表示位置のスクリーン座標。</param>
+        /// <returns>選択されたコマンド ID。キャンセル時は 0。</returns>
+        [[nodiscard]] UINT TrackAssetsPopupMenu(HWND ownerWindow, HMENU popupMenu, POINT screenPoint)
+        {
+            if (nullptr == ownerWindow || nullptr == popupMenu)
+            {
+                return 0;
+            }
+
+            HWND popupOwnerWindow = GetAncestor(ownerWindow, GA_ROOT);
+            if (nullptr == popupOwnerWindow)
+            {
+                popupOwnerWindow = ownerWindow;
+            }
+
+            SetForegroundWindow(popupOwnerWindow);
+            const UINT command = TrackPopupMenu(
+                popupMenu,
+                TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                screenPoint.x,
+                screenPoint.y,
+                0,
+                popupOwnerWindow,
+                nullptr);
+            PostMessageW(popupOwnerWindow, WM_NULL, 0, 0);
+            return command;
+        }
     }
 
     AssetsPanelController::~AssetsPanelController()
     {
+        if (nullptr != m_assetsPanelWindow)
+        {
+            RemoveWindowSubclass(m_assetsPanelWindow, AssetsPanelSubclassProc, AssetsPanelSubclassId);
+        }
+
+        if (nullptr != m_assetsListView)
+        {
+            RemoveWindowSubclass(m_assetsListView, AssetsListViewSubclassProc, AssetsListViewSubclassId);
+        }
+
         if (m_ownsAssetsImageList && nullptr != m_assetsImageList)
         {
             ImageList_Destroy(m_assetsImageList);
@@ -579,9 +627,20 @@ namespace Xelqoria::Editor
 
     void AssetsPanelController::Bind(const AssetsPanelView& view, Platform::ICursor& cursor)
     {
+        m_assetsPanelWindow = view.GetRootWindow();
         m_assetsListView = view.GetListView();
         m_assetsSummaryLabel = view.GetSummaryLabel();
         m_cursor = &cursor;
+        SetWindowSubclass(
+            m_assetsPanelWindow,
+            AssetsPanelSubclassProc,
+            AssetsPanelSubclassId,
+            reinterpret_cast<DWORD_PTR>(this));
+        SetWindowSubclass(
+            m_assetsListView,
+            AssetsListViewSubclassProc,
+            AssetsListViewSubclassId,
+            reinterpret_cast<DWORD_PTR>(this));
         InitializeListView();
         view.ConfigureListHeaderTheme();
     }
@@ -590,6 +649,7 @@ namespace Xelqoria::Editor
     {
         if (false == projectInfo.has_value())
         {
+            m_projectRootDirectory.clear();
             m_assetsRootDirectory.clear();
             m_currentDirectory.clear();
             ReloadEditorIconImages({});
@@ -618,6 +678,11 @@ namespace Xelqoria::Editor
             RefreshSummaryLabel();
             return;
         }
+
+        const std::filesystem::path configuredProjectRootDirectory = false == projectInfo->rootDirectory.empty()
+            ? projectInfo->rootDirectory
+            : projectInfo->projectFilePath.parent_path();
+        m_projectRootDirectory = EditorPathSecurity::NormalizeForContainment(configuredProjectRootDirectory);
 
         const std::filesystem::path configuredAssetsRootDirectory = false == projectInfo->assetRootDirectory.empty()
             ? projectInfo->assetRootDirectory
@@ -666,7 +731,9 @@ namespace Xelqoria::Editor
             const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
             if (0 <= itemActivate->iItem)
             {
-                return TryOpenEntry(static_cast<std::size_t>(itemActivate->iItem));
+                const std::optional<std::size_t> entryIndex =
+                    ResolveEntryIndexFromListViewIndex(itemActivate->iItem);
+                return entryIndex.has_value() && TryOpenEntry(*entryIndex);
             }
 
             return false;
@@ -679,39 +746,29 @@ namespace Xelqoria::Editor
                 return false;
             }
 
-            const NMITEMACTIVATE* itemActivate = reinterpret_cast<NMITEMACTIVATE*>(notifyParameter);
             const POINT menuPoint = ToWin32Point(m_cursor->GetScreenPosition());
+            return ShowContextMenuAt(menuPoint);
+        }
 
-            const int nameLabelIndex = HitTestListViewNameLabel(menuPoint);
-            if (0 <= nameLabelIndex)
-            {
-                return ShowEntryContextMenu(static_cast<std::size_t>(nameLabelIndex), menuPoint);
-            }
-
-            std::filesystem::path createSpriteTargetDirectory = m_assetsRootDirectory;
-            if (0 <= itemActivate->iItem)
-            {
-                const std::size_t entryIndex = static_cast<std::size_t>(itemActivate->iItem);
-                if (entryIndex >= m_visibleEntries.size())
-                {
-                    return false;
-                }
-
-                const AssetListEntry& entry = m_visibleEntries[entryIndex];
-                if (false == entry.isDirectory || entry.isParentLink)
-                {
-                    return false;
-                }
-
-                createSpriteTargetDirectory = entry.path;
-            }
-
-            if (true == createSpriteTargetDirectory.empty())
+        if (notifyHeader->code == LVN_BEGINDRAG)
+        {
+            const NMLISTVIEW* listView = reinterpret_cast<NMLISTVIEW*>(notifyParameter);
+            if (nullptr == listView || listView->iItem < 0)
             {
                 return false;
             }
 
-            return ShowCreateAssetContextMenu(createSpriteTargetDirectory, menuPoint);
+            POINT dragPoint = listView->ptAction;
+            ClientToScreen(m_assetsListView, &dragPoint);
+            ListView_SetItemState(
+                m_assetsListView,
+                listView->iItem,
+                LVIS_SELECTED | LVIS_FOCUSED,
+                LVIS_SELECTED | LVIS_FOCUSED);
+            SetFocus(m_assetsListView);
+            SyncSelectedPathFromListView();
+            const std::optional<std::size_t> entryIndex = ResolveEntryIndexFromListViewIndex(listView->iItem);
+            return entryIndex.has_value() && BeginDragForEntry(*entryIndex, dragPoint);
         }
 
         if (notifyHeader->code == LVN_KEYDOWN)
@@ -751,7 +808,8 @@ namespace Xelqoria::Editor
             return;
         }
 
-        m_assetDragReleasedThisFrame = false;
+        m_assetDragReleasedThisFrame = m_capturedAssetDragReleased;
+        m_capturedAssetDragReleased = false;
         if (false == inputSnapshot.IsMouseButtonDown(Core::MouseButton::Left))
         {
             if (m_isAssetDragActive)
@@ -759,6 +817,11 @@ namespace Xelqoria::Editor
                 m_assetDragReleasedThisFrame = true;
             }
 
+            if (m_hasCapturedAssetDrag && GetCapture() == m_assetsListView)
+            {
+                ReleaseCapture();
+            }
+            m_hasCapturedAssetDrag = false;
             EndDragImage();
             m_isAssetDragActive = false;
             return;
@@ -788,69 +851,10 @@ namespace Xelqoria::Editor
         SetFocus(m_assetsListView);
         SyncSelectedPathFromListView();
 
-        const AssetListEntry& hitEntry = m_visibleEntries[static_cast<std::size_t>(hitIndex)];
-        if (false == hitEntry.isDirectory
-            && EditorPathSecurity::IsPathInsideOrEqual(hitEntry.path, m_assetsRootDirectory)
-            && EditorAssetPathUtils::IsTextureImageFile(hitEntry.path))
+        const std::optional<std::size_t> hitEntryIndex = ResolveEntryIndexFromListViewIndex(hitIndex);
+        if (false == hitEntryIndex.has_value())
         {
-            m_draggingImagePath = hitEntry.path;
-            m_draggingScriptAssetPath.clear();
-            m_draggingTextureAssetId = EditorAssetPathUtils::BuildTextureAssetId(hitEntry.path, m_assetsRootDirectory);
-            m_draggingSpriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(hitEntry.path, m_assetsRootDirectory);
-            m_draggingScriptAssetId = {};
-            m_draggingMaterialAssetId = {};
-            m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
-            m_canPlaceDraggingAssetInScene = false;
-            if (m_isAssetDragActive)
-            {
-                BeginDragImage(hitEntry.path, hitEntry.iconIndex, ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
-            }
-        }
-        else if (false == hitEntry.isDirectory
-            && EditorPathSecurity::IsPathInsideOrEqual(hitEntry.path, m_assetsRootDirectory)
-            && ScriptAssetService::IsScriptAssetFile(hitEntry.path))
-        {
-            m_draggingImagePath.clear();
-            m_draggingTextureAssetId = {};
-            m_draggingSpriteAssetId = {};
-            m_draggingScriptAssetPath = hitEntry.path;
-            m_draggingScriptAssetId = ScriptAssetService::BuildScriptAssetId(m_assetsRootDirectory, hitEntry.path);
-            m_draggingMaterialAssetId = {};
-            m_isAssetDragActive = false == m_draggingScriptAssetId.IsEmpty();
-            m_canPlaceDraggingAssetInScene = false;
-            if (m_isAssetDragActive)
-            {
-                BeginDragPreview(hitEntry.path, ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
-            }
-        }
-        else if (false == hitEntry.isDirectory
-            && EditorPathSecurity::IsPathInsideOrEqual(hitEntry.path, m_assetsRootDirectory)
-            && EditorAssetPathUtils::IsMaterialAssetFile(hitEntry.path))
-        {
-            m_draggingImagePath.clear();
-            m_draggingTextureAssetId = {};
-            m_draggingSpriteAssetId = {};
-            m_draggingScriptAssetPath.clear();
-            m_draggingScriptAssetId = {};
-            m_draggingMaterialAssetId = EditorAssetPathUtils::BuildMaterialAssetId(hitEntry.path, m_assetsRootDirectory);
-            m_isAssetDragActive = false == m_draggingMaterialAssetId.IsEmpty();
-            m_canPlaceDraggingAssetInScene = false;
-            if (m_isAssetDragActive)
-            {
-                BeginDragPreview(hitEntry.path, ToWin32Point(inputSnapshot.GetCursorScreenPoint()));
-            }
-        }
-        else
-        {
-            m_draggingImagePath.clear();
-            m_draggingTextureAssetId = {};
-            m_draggingSpriteAssetId = {};
-            m_draggingScriptAssetPath.clear();
-            m_draggingScriptAssetId = {};
-            m_draggingMaterialAssetId = {};
-            m_isAssetDragActive = false;
-            m_canPlaceDraggingAssetInScene = false;
-            EndDragImage();
+            return;
         }
 
         const ULONGLONG currentTick = GetTickCount64();
@@ -861,8 +865,110 @@ namespace Xelqoria::Editor
 
         if (isDoubleClick)
         {
-            (void)TryOpenEntry(static_cast<std::size_t>(hitIndex));
+            (void)TryOpenEntry(*hitEntryIndex);
         }
+    }
+
+    bool AssetsPanelController::BeginDragForEntry(std::size_t entryIndex, POINT screenPoint)
+    {
+        if (entryIndex >= m_visibleEntries.size())
+        {
+            return false;
+        }
+
+        const AssetListEntry& entry = m_visibleEntries[entryIndex];
+        if (false == entry.isDirectory
+            && EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory)
+            && EditorAssetPathUtils::IsTextureImageFile(entry.path))
+        {
+            m_draggingImagePath = entry.path;
+            m_draggingScriptAssetPath.clear();
+            m_draggingTextureAssetId = EditorAssetPathUtils::BuildTextureAssetId(entry.path, m_assetsRootDirectory);
+            m_draggingSpriteAssetId = {};
+            m_draggingScriptAssetId = {};
+            m_draggingMaterialAssetId = {};
+            m_isAssetDragActive = false == m_draggingTextureAssetId.IsEmpty();
+            m_canPlaceDraggingAssetInScene = false;
+            if (m_isAssetDragActive)
+            {
+                SetCapture(m_assetsListView);
+                m_hasCapturedAssetDrag = true;
+                BeginDragImage(entry.path, entry.iconIndex, screenPoint);
+                return true;
+            }
+
+            return false;
+        }
+
+        if (false == entry.isDirectory
+            && EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory)
+            && EditorAssetPathUtils::IsSpriteAssetFile(entry.path))
+        {
+            m_draggingImagePath.clear();
+            m_draggingTextureAssetId = {};
+            m_draggingSpriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(entry.path, m_assetsRootDirectory);
+            m_draggingScriptAssetPath.clear();
+            m_draggingScriptAssetId = {};
+            m_draggingMaterialAssetId = {};
+            m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
+            m_canPlaceDraggingAssetInScene =
+                m_isAssetDragActive && EditorAssetPathUtils::CanPlaceAssetFileInSceneView(entry.path);
+            if (m_isAssetDragActive)
+            {
+                SetCapture(m_assetsListView);
+                m_hasCapturedAssetDrag = true;
+                BeginDragPreview(entry.path, screenPoint);
+                return true;
+            }
+
+            return false;
+        }
+
+        if (false == entry.isDirectory
+            && EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory)
+            && ScriptAssetService::IsScriptAssetFile(entry.path))
+        {
+            m_draggingImagePath.clear();
+            m_draggingTextureAssetId = {};
+            m_draggingSpriteAssetId = {};
+            m_draggingScriptAssetPath = entry.path;
+            m_draggingScriptAssetId = ScriptAssetService::BuildScriptAssetId(m_projectRootDirectory, entry.path);
+            m_draggingMaterialAssetId = {};
+            m_isAssetDragActive = false == m_draggingScriptAssetId.IsEmpty();
+            m_canPlaceDraggingAssetInScene = false;
+            if (m_isAssetDragActive)
+            {
+                SetCapture(m_assetsListView);
+                m_hasCapturedAssetDrag = true;
+                BeginDragPreview(entry.path, screenPoint);
+                return true;
+            }
+
+            return false;
+        }
+
+        if (false == entry.isDirectory
+            && EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory)
+            && EditorAssetPathUtils::IsMaterialAssetFile(entry.path))
+        {
+            m_draggingImagePath.clear();
+            m_draggingTextureAssetId = {};
+            m_draggingSpriteAssetId = {};
+            m_draggingScriptAssetPath.clear();
+            m_draggingScriptAssetId = {};
+            m_draggingMaterialAssetId = EditorAssetPathUtils::BuildMaterialAssetId(entry.path, m_assetsRootDirectory);
+            m_isAssetDragActive = false == m_draggingMaterialAssetId.IsEmpty();
+            m_canPlaceDraggingAssetInScene = false;
+            if (m_isAssetDragActive)
+            {
+                SetCapture(m_assetsListView);
+                m_hasCapturedAssetDrag = true;
+                BeginDragPreview(entry.path, screenPoint);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void AssetsPanelController::UpdateFileSystemWatch()
@@ -912,6 +1018,12 @@ namespace Xelqoria::Editor
         m_draggingImagePath.clear();
         m_draggingScriptAssetPath.clear();
         m_canPlaceDraggingAssetInScene = false;
+        if (m_hasCapturedAssetDrag && GetCapture() == m_assetsListView)
+        {
+            ReleaseCapture();
+        }
+        m_hasCapturedAssetDrag = false;
+        m_capturedAssetDragReleased = false;
         EndDragImage();
         RefreshSummaryLabel();
     }
@@ -975,7 +1087,7 @@ namespace Xelqoria::Editor
     {
         for (const AssetListEntry& entry : m_visibleEntries)
         {
-            if (false == entry.isDirectory && EditorAssetPathUtils::IsTextureImageFile(entry.path))
+            if (false == entry.isDirectory && EditorAssetPathUtils::IsSpriteAssetFile(entry.path))
             {
                 return true;
             }
@@ -1341,27 +1453,31 @@ namespace Xelqoria::Editor
             item.pszText = const_cast<wchar_t*>(entry.displayName.c_str());
             item.iImage = entry.iconIndex;
             item.lParam = static_cast<LPARAM>(index);
-            ListView_InsertItem(m_assetsListView, &item);
+            const int insertedIndex = ListView_InsertItem(m_assetsListView, &item);
+            if (insertedIndex < 0)
+            {
+                continue;
+            }
 
             ListView_SetItemText(
                 m_assetsListView,
-                static_cast<int>(index),
+                insertedIndex,
                 ModifiedTimeColumnIndex,
                 const_cast<wchar_t*>(entry.modifiedTimeText.c_str()));
             ListView_SetItemText(
                 m_assetsListView,
-                static_cast<int>(index),
+                insertedIndex,
                 TypeColumnIndex,
                 const_cast<wchar_t*>(entry.typeName.c_str()));
             ListView_SetItemText(
                 m_assetsListView,
-                static_cast<int>(index),
+                insertedIndex,
                 SizeColumnIndex,
                 const_cast<wchar_t*>(entry.sizeText.c_str()));
 
             if (false == m_selectedFilePath.empty() && entry.path == m_selectedFilePath)
             {
-                selectedIndex = static_cast<int>(index);
+                selectedIndex = insertedIndex;
             }
         }
 
@@ -1378,12 +1494,13 @@ namespace Xelqoria::Editor
     void AssetsPanelController::SyncSelectedPathFromListView()
     {
         const int selectedIndex = GetSelectedListViewIndex();
-        if (selectedIndex < 0 || static_cast<std::size_t>(selectedIndex) >= m_visibleEntries.size())
+        const std::optional<std::size_t> entryIndex = ResolveEntryIndexFromListViewIndex(selectedIndex);
+        if (false == entryIndex.has_value())
         {
             return;
         }
 
-        const AssetListEntry& entry = m_visibleEntries[static_cast<std::size_t>(selectedIndex)];
+        const AssetListEntry& entry = m_visibleEntries[*entryIndex];
         if (entry.isParentLink)
         {
             m_selectedFilePath.clear();
@@ -1393,7 +1510,8 @@ namespace Xelqoria::Editor
         {
             m_selectedFilePath = entry.path;
             m_selectedSpriteAssetId = EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory)
-                && EditorAssetPathUtils::IsTextureImageFile(entry.path)
+                && (EditorAssetPathUtils::IsTextureImageFile(entry.path)
+                    || EditorAssetPathUtils::IsSpriteAssetFile(entry.path))
                 ? EditorAssetPathUtils::BuildSpriteAssetId(entry.path, m_assetsRootDirectory)
                 : Core::AssetId{};
         }
@@ -1452,12 +1570,13 @@ namespace Xelqoria::Editor
         if (entry.isDirectory
             || entry.isParentLink
             || false == ScriptAssetService::IsScriptAssetFile(entry.path)
-            || false == EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory))
+            || false == EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory)
+            || m_projectRootDirectory.empty())
         {
             return false;
         }
 
-        const auto sourcePath = ScriptAssetService::ResolveSourcePath(m_assetsRootDirectory, entry.path);
+        const auto sourcePath = ScriptAssetService::ResolveSourcePath(m_projectRootDirectory, entry.path);
         if (false == sourcePath.has_value() || false == std::filesystem::exists(*sourcePath))
         {
             MessageBoxW(
@@ -1490,12 +1609,45 @@ namespace Xelqoria::Editor
     bool AssetsPanelController::TryOpenSelectedEntry()
     {
         const int selectedIndex = GetSelectedListViewIndex();
-        if (selectedIndex < 0)
+        const std::optional<std::size_t> entryIndex = ResolveEntryIndexFromListViewIndex(selectedIndex);
+        if (false == entryIndex.has_value())
         {
             return false;
         }
 
-        return TryOpenEntry(static_cast<std::size_t>(selectedIndex));
+        return TryOpenEntry(*entryIndex);
+    }
+
+    bool AssetsPanelController::ShowContextMenuAt(POINT screenPoint)
+    {
+        const int nameLabelIndex = HitTestListViewNameLabel(screenPoint);
+        const std::optional<std::size_t> nameLabelEntryIndex =
+            ResolveEntryIndexFromListViewIndex(nameLabelIndex);
+        if (nameLabelEntryIndex.has_value())
+        {
+            return ShowEntryContextMenu(*nameLabelEntryIndex, screenPoint);
+        }
+
+        std::filesystem::path createAssetTargetDirectory = false == m_currentDirectory.empty()
+            ? m_currentDirectory
+            : m_assetsRootDirectory;
+        const int hitIndex = HitTestListView(screenPoint);
+        const std::optional<std::size_t> hitEntryIndex = ResolveEntryIndexFromListViewIndex(hitIndex);
+        if (hitEntryIndex.has_value())
+        {
+            const AssetListEntry& entry = m_visibleEntries[*hitEntryIndex];
+            if (entry.isDirectory && false == entry.isParentLink)
+            {
+                createAssetTargetDirectory = entry.path;
+            }
+        }
+
+        if (true == createAssetTargetDirectory.empty())
+        {
+            return false;
+        }
+
+        return ShowCreateAssetContextMenu(createAssetTargetDirectory, screenPoint);
     }
 
     int AssetsPanelController::GetSelectedListViewIndex() const
@@ -1506,6 +1658,48 @@ namespace Xelqoria::Editor
         }
 
         return ListView_GetNextItem(m_assetsListView, -1, LVNI_SELECTED);
+    }
+
+    std::optional<std::size_t> AssetsPanelController::ResolveEntryIndexFromListViewIndex(int listViewIndex) const
+    {
+        if (nullptr == m_assetsListView || listViewIndex < 0)
+        {
+            return std::nullopt;
+        }
+
+        LVITEMW item{};
+        item.mask = LVIF_PARAM;
+        item.iItem = listViewIndex;
+        if (FALSE == ListView_GetItem(m_assetsListView, &item))
+        {
+            return std::nullopt;
+        }
+
+        if (item.lParam < 0)
+        {
+            return std::nullopt;
+        }
+
+        const std::size_t entryIndex = static_cast<std::size_t>(item.lParam);
+        if (entryIndex >= m_visibleEntries.size())
+        {
+            return std::nullopt;
+        }
+
+        return entryIndex;
+    }
+
+    int AssetsPanelController::ResolveListViewIndexFromEntryIndex(std::size_t entryIndex) const
+    {
+        if (nullptr == m_assetsListView || entryIndex >= m_visibleEntries.size())
+        {
+            return -1;
+        }
+
+        LVFINDINFOW findInfo{};
+        findInfo.flags = LVFI_PARAM;
+        findInfo.lParam = static_cast<LPARAM>(entryIndex);
+        return ListView_FindItem(m_assetsListView, -1, &findInfo);
     }
 
     int AssetsPanelController::HitTestListView(POINT screenPoint) const
@@ -1565,9 +1759,15 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        const int listViewIndex = ResolveListViewIndexFromEntryIndex(entryIndex);
+        if (listViewIndex < 0)
+        {
+            return false;
+        }
+
         ListView_SetItemState(
             m_assetsListView,
-            static_cast<int>(entryIndex),
+            listViewIndex,
             LVIS_SELECTED | LVIS_FOCUSED,
             LVIS_SELECTED | LVIS_FOCUSED);
         SetFocus(m_assetsListView);
@@ -1590,14 +1790,10 @@ namespace Xelqoria::Editor
             AppendMenuW(popupMenu, MF_STRING, AssignScriptMenuCommandId, L"Scriptを割り当て");
         }
 
-        const UINT command = TrackPopupMenu(
-            popupMenu,
-            TPM_RETURNCMD | TPM_RIGHTBUTTON,
-            screenPoint.x,
-            screenPoint.y,
-            0,
+        const UINT command = TrackAssetsPopupMenu(
             m_assetsListView,
-            nullptr);
+            popupMenu,
+            screenPoint);
         DestroyMenu(popupMenu);
 
         if (AssignScriptMenuCommandId == command)
@@ -1609,10 +1805,11 @@ namespace Xelqoria::Editor
 
         if (DeleteEntryMenuCommandId != command)
         {
-            return false;
+            return true;
         }
 
-        return DeleteEntry(entryIndex);
+        (void)DeleteEntry(entryIndex);
+        return true;
     }
 
     bool AssetsPanelController::ShowCreateAssetContextMenu(
@@ -1640,14 +1837,10 @@ namespace Xelqoria::Editor
         AppendMenuW(popupMenu, MF_STRING, CreateCollider2DMenuCommandId, L"Collider2Dを作成");
         AppendMenuW(popupMenu, MF_STRING, CreateScriptMenuCommandId, L"Scriptを作成");
 
-        const UINT command = TrackPopupMenu(
-            popupMenu,
-            TPM_RETURNCMD | TPM_RIGHTBUTTON,
-            screenPoint.x,
-            screenPoint.y,
-            0,
+        const UINT command = TrackAssetsPopupMenu(
             m_assetsListView,
-            nullptr);
+            popupMenu,
+            screenPoint);
         DestroyMenu(popupMenu);
 
         if (CreateSpriteMenuCommandId == command)
@@ -1680,10 +1873,10 @@ namespace Xelqoria::Editor
 
         if (0 != command)
         {
-            return false;
+            return true;
         }
 
-        return false;
+        return true;
     }
 
     bool AssetsPanelController::DeleteEntry(std::size_t entryIndex)
@@ -1730,7 +1923,11 @@ namespace Xelqoria::Editor
             m_selectedSpriteAssetId = {};
         }
 
-        if (m_draggingImagePath == entry.path || m_draggingScriptAssetPath == entry.path)
+        const bool isDeletingDraggedSpriteAsset =
+            false == entry.isDirectory
+            && EditorAssetPathUtils::IsSpriteAssetFile(entry.path)
+            && m_draggingSpriteAssetId == EditorAssetPathUtils::BuildSpriteAssetId(entry.path, m_assetsRootDirectory);
+        if (m_draggingImagePath == entry.path || m_draggingScriptAssetPath == entry.path || isDeletingDraggedSpriteAsset)
         {
             CompleteReleasedDrag();
         }
@@ -2083,6 +2280,109 @@ namespace Xelqoria::Editor
 
         ImageList_Destroy(imageList);
         return nullptr;
+    }
+
+    LRESULT CALLBACK AssetsPanelController::AssetsListViewSubclassProc(
+        HWND window,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData)
+    {
+        (void)subclassId;
+
+        AssetsPanelController* controller = reinterpret_cast<AssetsPanelController*>(referenceData);
+        if (nullptr != controller)
+        {
+            if (WM_LBUTTONUP == message && controller->m_hasCapturedAssetDrag)
+            {
+                controller->m_capturedAssetDragReleased = true;
+                controller->m_isAssetDragActive = false;
+                if (GetCapture() == window)
+                {
+                    ReleaseCapture();
+                }
+                controller->m_hasCapturedAssetDrag = false;
+                controller->EndDragImage();
+            }
+            else if (WM_CAPTURECHANGED == message && controller->m_hasCapturedAssetDrag)
+            {
+                controller->m_hasCapturedAssetDrag = false;
+            }
+
+            if (WM_CONTEXTMENU == message)
+            {
+                return DefSubclassProc(window, message, wParam, lParam);
+            }
+        }
+
+        if (WM_NCDESTROY == message)
+        {
+            RemoveWindowSubclass(window, AssetsListViewSubclassProc, AssetsListViewSubclassId);
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
+    }
+
+    LRESULT CALLBACK AssetsPanelController::AssetsPanelSubclassProc(
+        HWND window,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData)
+    {
+        (void)subclassId;
+
+        AssetsPanelController* controller = reinterpret_cast<AssetsPanelController*>(referenceData);
+        if (nullptr != controller)
+        {
+            if (WM_CONTEXTMENU == message)
+            {
+                if (reinterpret_cast<HWND>(wParam) == controller->m_assetsListView)
+                {
+                    return DefSubclassProc(window, message, wParam, lParam);
+                }
+
+                POINT menuPoint{
+                    GET_X_LPARAM(lParam),
+                    GET_Y_LPARAM(lParam)
+                };
+                if (-1 == menuPoint.x && -1 == menuPoint.y)
+                {
+                    RECT clientRect{};
+                    GetClientRect(window, &clientRect);
+                    menuPoint = POINT{
+                        clientRect.left + (clientRect.right - clientRect.left) / 2,
+                        clientRect.top + (clientRect.bottom - clientRect.top) / 2
+                    };
+                    ClientToScreen(window, &menuPoint);
+                }
+
+                if (nullptr != controller->m_assetsListView)
+                {
+                    RECT listViewRect{};
+                    GetWindowRect(controller->m_assetsListView, &listViewRect);
+                    if (PtInRect(&listViewRect, menuPoint) != FALSE)
+                    {
+                        return DefSubclassProc(window, message, wParam, lParam);
+                    }
+                }
+
+                if (controller->ShowContextMenuAt(menuPoint))
+                {
+                    return 0;
+                }
+            }
+        }
+
+        if (WM_NCDESTROY == message)
+        {
+            RemoveWindowSubclass(window, AssetsPanelSubclassProc, AssetsPanelSubclassId);
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
     }
 
 }

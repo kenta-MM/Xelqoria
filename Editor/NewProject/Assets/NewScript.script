@@ -1,0 +1,5 @@
+magic=XelqoriaScriptAsset
+version=1
+language=cpp
+name="NewScript"
+source=".xelqoria/Scripts/Assets_NewScript.cpp"

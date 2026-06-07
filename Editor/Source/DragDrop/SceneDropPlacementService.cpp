@@ -25,6 +25,67 @@ namespace Xelqoria::Editor
             return result;
         }
 
+        if (ScenePendingDropState::Kind::ScriptAsset == pendingDropState.kind)
+        {
+            if (pendingDropState.scriptAssetId.IsEmpty()
+                || true == pendingDropState.scriptAssetPath.empty())
+            {
+                ::OutputDebugStringA("Editor::SceneDropPlacementService could not assign a script because drop payload Script Asset was empty.\n");
+                result.status = SceneDropPlacementStatus::EmptyAssetId;
+                return result;
+            }
+
+            if (false == pendingDropState.targetEntityId.has_value())
+            {
+                ::OutputDebugStringA("Editor::SceneDropPlacementService could not assign a script because no Sprite Entity was hit.\n");
+                result.status = SceneDropPlacementStatus::MissingTargetEntity;
+                return result;
+            }
+
+            const auto entity = scene->FindEntity(*pendingDropState.targetEntityId);
+            if (false == entity.has_value())
+            {
+                ::OutputDebugStringA("Editor::SceneDropPlacementService could not assign a script because the target Entity was missing.\n");
+                result.status = SceneDropPlacementStatus::MissingTargetEntity;
+                return result;
+            }
+
+            const auto spriteComponent = entity->get().GetSpriteComponent();
+            if (false == spriteComponent.has_value()
+                || true == spriteComponent->get().spriteAssetRef.IsEmpty())
+            {
+                ::OutputDebugStringA("Editor::SceneDropPlacementService could not assign a script because the target Entity has no Sprite Asset reference.\n");
+                result.status = SceneDropPlacementStatus::MissingSpriteComponent;
+                return result;
+            }
+
+            if (false == document.AssignScriptAssetToSpriteAsset(
+                    spriteComponent->get().spriteAssetRef,
+                    pendingDropState.scriptAssetPath))
+            {
+                ::OutputDebugStringA("Editor::SceneDropPlacementService failed to assign dropped Script Asset to Sprite Asset.\n");
+                result.status = SceneDropPlacementStatus::ScriptAssignFailed;
+                return result;
+            }
+
+            result.assetChanged = true;
+            result.selectionChanged = true;
+            result.selectedEntityId = *pendingDropState.targetEntityId;
+            result.operationName = "Assign Script Asset";
+            result.status = SceneDropPlacementStatus::Success;
+
+            const std::string debugLine =
+                "Editor::SceneDropPlacementService assigned Script AssetId '"
+                + pendingDropState.scriptAssetId.GetValue()
+                + "' to Sprite AssetId '"
+                + spriteComponent->get().spriteAssetRef.GetValue()
+                + "' on Entity "
+                + std::to_string(*pendingDropState.targetEntityId)
+                + ".\n";
+            ::OutputDebugStringA(debugLine.c_str());
+            return result;
+        }
+
         const Core::AssetId droppedAssetId = pendingDropState.spriteAssetId;
         const float dropWorldX = pendingDropState.worldX;
         const float dropWorldY = pendingDropState.worldY;
@@ -43,19 +104,6 @@ namespace Xelqoria::Editor
                 "Editor::SceneDropPlacementService could not resolve dropped Sprite AssetId '" + droppedAssetId.GetValue() + "'.\n";
             ::OutputDebugStringA(debugLine.c_str());
             result.status = SceneDropPlacementStatus::MissingSpriteAsset;
-            return result;
-        }
-
-        if (false == static_cast<bool>(document.GetTextureAssetRegistry().ResolveTexture(spriteAsset->textureAssetId)))
-        {
-            const std::string debugLine =
-                "Editor::SceneDropPlacementService could not resolve Texture AssetId '"
-                + spriteAsset->textureAssetId.GetValue()
-                + "' for dropped Sprite AssetId '"
-                + droppedAssetId.GetValue()
-                + "'.\n";
-            ::OutputDebugStringA(debugLine.c_str());
-            result.status = SceneDropPlacementStatus::MissingTexture;
             return result;
         }
 

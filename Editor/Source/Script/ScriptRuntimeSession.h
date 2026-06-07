@@ -9,6 +9,7 @@
 
 #include "AssetId.h"
 #include "Assets/ISpriteAssetResolver.h"
+#include "InputSystem.h"
 #include "Entity.h"
 #include "Scene.h"
 #include "Assets/ScriptAssetService.h"
@@ -165,7 +166,8 @@ namespace Xelqoria::Editor
         /// Script の Start と Update を実行する。
         /// </summary>
         /// <param name="deltaTime">前フレームからの経過時間（秒）。</param>
-        void Update(float deltaTime);
+        /// <param name="inputSnapshot">現在フレームの入力状態。</param>
+        void Update(float deltaTime, const Core::InputSnapshot& inputSnapshot);
 
         /// <summary>
         /// Script 実行セッションを一時停止する。
@@ -215,6 +217,7 @@ namespace Xelqoria::Editor
             void (*setScale)(void* context, float x, float y, float z) = nullptr;
             void (*setVisible)(void* context, int visible) = nullptr;
             void (*setColor)(void* context, float red, float green, float blue, float alpha) = nullptr;
+            int (*isKeyDown)(void* context, int keyCode) = nullptr;
         };
 
         struct ScriptRuntimeInstance
@@ -238,6 +241,7 @@ namespace Xelqoria::Editor
         static void SetScaleCallback(void* context, float x, float y, float z);
         static void SetVisibleCallback(void* context, int visible);
         static void SetColorCallback(void* context, float red, float green, float blue, float alpha);
+        static int IsKeyDownCallback(void* context, int keyCode);
 
         /// <summary>
         /// Script Runtime 診断メッセージを追加する。
@@ -252,6 +256,7 @@ namespace Xelqoria::Editor
 
         std::vector<ScriptRuntimeInstance> m_instances{};
         std::vector<ScriptRuntimeDiagnostic> m_diagnostics{};
+        const Core::InputSnapshot* m_currentInputSnapshot = nullptr;
         bool m_playing = false;
         bool m_paused = false;
     };

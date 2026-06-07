@@ -317,7 +317,8 @@ namespace Xelqoria::Editor
                 &ScriptRuntimeSession::SetRotationCallback,
                 &ScriptRuntimeSession::SetScaleCallback,
                 &ScriptRuntimeSession::SetVisibleCallback,
-                &ScriptRuntimeSession::SetColorCallback
+                &ScriptRuntimeSession::SetColorCallback,
+                &ScriptRuntimeSession::IsKeyDownCallback
             };
 
             if (nullptr != setSpriteApi)
@@ -331,13 +332,14 @@ namespace Xelqoria::Editor
         return m_diagnostics.empty();
     }
 
-    void ScriptRuntimeSession::Update(float deltaTime)
+    void ScriptRuntimeSession::Update(float deltaTime, const Core::InputSnapshot& inputSnapshot)
     {
         if (false == m_playing || true == m_paused)
         {
             return;
         }
 
+        m_currentInputSnapshot = &inputSnapshot;
         for (ScriptRuntimeInstance& instance : m_instances)
         {
             if (instance.failed)
@@ -393,6 +395,7 @@ namespace Xelqoria::Editor
                     BuildRuntimeExceptionMessage(L"Update", nullptr));
             }
         }
+        m_currentInputSnapshot = nullptr;
     }
 
     void ScriptRuntimeSession::Pause()
@@ -424,6 +427,7 @@ namespace Xelqoria::Editor
 
         m_instances.clear();
         m_diagnostics.clear();
+        m_currentInputSnapshot = nullptr;
         m_playing = false;
         m_paused = false;
     }
@@ -567,5 +571,18 @@ namespace Xelqoria::Editor
                 instance->scriptAssetId,
                 L"Script Sprite API の色操作対象が見つかりません。");
         }
+    }
+
+    int ScriptRuntimeSession::IsKeyDownCallback(void* context, int keyCode)
+    {
+        ScriptRuntimeInstance* instance = static_cast<ScriptRuntimeInstance*>(context);
+        if (nullptr == instance
+            || nullptr == instance->owner
+            || nullptr == instance->owner->m_currentInputSnapshot)
+        {
+            return 0;
+        }
+
+        return instance->owner->m_currentInputSnapshot->IsKeyDown(keyCode) ? 1 : 0;
     }
 }

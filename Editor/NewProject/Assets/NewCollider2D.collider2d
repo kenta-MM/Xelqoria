@@ -1,0 +1,7 @@
+magic=XelqoriaCollider2DAsset
+version=1
+enabled=true
+isTrigger=false
+shapeType=Box
+offset=0.000000,0.000000
+size=1.000000,1.000000

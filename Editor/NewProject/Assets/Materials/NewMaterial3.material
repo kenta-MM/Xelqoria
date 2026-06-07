@@ -1,0 +1,7 @@
+magic=XelqoriaSpriteMaterialAsset
+version=1
+textureAssetId=textures/Textures/タイトルなし.png
+color=1.000000,1.000000,1.000000,1.000000
+outline.enabled=false
+outline.thickness=1.000000
+outline.color=1.000000,1.000000,0.000000,1.000000

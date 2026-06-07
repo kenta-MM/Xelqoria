@@ -39,6 +39,9 @@
     <ClCompile Include="..\..\Editor\Source\Script\ScriptRuntimeSession.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Editor\Source\DragDrop\SceneDropPlacementService.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\ScriptAssetServiceTests.cpp">
       <Filter>Source</Filter>
     </ClCompile>

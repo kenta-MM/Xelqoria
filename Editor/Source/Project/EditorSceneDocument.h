@@ -225,6 +225,13 @@ namespace Xelqoria::Editor
             const std::filesystem::path& targetDirectory);
 
         /// <summary>
+        /// Entity を生成せずに空の Sprite Asset ファイルを作成する。
+        /// </summary>
+        /// <param name="targetDirectory">作成先フォルダ。空またはプロジェクト外の場合は Assets 直下。</param>
+        /// <returns>作成と登録に成功した場合は true。</returns>
+        [[nodiscard]] bool CreateSpriteAssetFile(const std::filesystem::path& targetDirectory);
+
+        /// <summary>
         /// Entity の SpriteComponent が実体 `.sprite` を参照するようにし、必要なら Sprite アセットファイルを作成する。
         /// </summary>
         /// <param name="entity">更新対象の Sprite Entity。</param>
