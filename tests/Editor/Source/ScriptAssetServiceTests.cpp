@@ -85,11 +85,14 @@ TEST(ScriptAssetServiceTests, CreateScriptAssetWritesManifestAndInitialCode)
     EXPECT_NE(std::string::npos, source.find("#include \"XelqoriaScriptApi.h\""));
     EXPECT_NE(std::string::npos, source.find("void Start()"));
     EXPECT_NE(std::string::npos, source.find("void Update(float deltaTime)"));
+    EXPECT_NE(std::string::npos, source.find("(void)deltaTime;"));
 
     const std::string apiHeader =
         ReadTextFile(projectRoot / L".xelqoria" / L"Scripts" / L"XelqoriaScriptApi.h");
     EXPECT_NE(std::string::npos, apiHeader.find("SetSpritePosition"));
     EXPECT_NE(std::string::npos, apiHeader.find("SetSpriteColor"));
+    EXPECT_NE(std::string::npos, apiHeader.find("XelqoriaKeyLeft"));
+    EXPECT_NE(std::string::npos, apiHeader.find("IsKeyDown"));
 
     std::filesystem::remove_all(projectRoot);
 }

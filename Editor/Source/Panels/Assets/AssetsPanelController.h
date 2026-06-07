@@ -527,6 +527,7 @@ namespace Xelqoria::Editor
         HWND m_assetsListView = nullptr;
         HWND m_assetsSummaryLabel = nullptr;
         Platform::ICursor* m_cursor = nullptr;
+        std::filesystem::path m_projectRootDirectory{};
         std::filesystem::path m_assetsRootDirectory{};
         std::filesystem::path m_currentDirectory{};
         std::vector<AssetListEntry> m_visibleEntries{};

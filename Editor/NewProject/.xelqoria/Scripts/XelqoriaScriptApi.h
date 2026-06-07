@@ -9,7 +9,13 @@ struct XelqoriaScriptSpriteApi
     void (*SetScale)(void* context, float x, float y, float z);
     void (*SetVisible)(void* context, int visible);
     void (*SetColor)(void* context, float red, float green, float blue, float alpha);
+    int (*IsKeyDown)(void* context, int keyCode);
 };
+
+constexpr int XelqoriaKeyLeft = 0x25;
+constexpr int XelqoriaKeyUp = 0x26;
+constexpr int XelqoriaKeyRight = 0x27;
+constexpr int XelqoriaKeyDown = 0x28;
 
 inline XelqoriaScriptSpriteApi* g_xelqoriaScriptSpriteApi = nullptr;
 
@@ -64,4 +70,14 @@ inline void SetSpriteColor(float red, float green, float blue, float alpha)
     {
         g_xelqoriaScriptSpriteApi->SetColor(g_xelqoriaScriptSpriteApi->context, red, green, blue, alpha);
     }
+}
+
+inline bool IsKeyDown(int keyCode)
+{
+    if (nullptr == g_xelqoriaScriptSpriteApi || nullptr == g_xelqoriaScriptSpriteApi->IsKeyDown)
+    {
+        return false;
+    }
+
+    return 0 != g_xelqoriaScriptSpriteApi->IsKeyDown(g_xelqoriaScriptSpriteApi->context, keyCode);
 }

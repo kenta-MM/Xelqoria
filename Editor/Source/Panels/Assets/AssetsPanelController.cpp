@@ -649,6 +649,7 @@ namespace Xelqoria::Editor
     {
         if (false == projectInfo.has_value())
         {
+            m_projectRootDirectory.clear();
             m_assetsRootDirectory.clear();
             m_currentDirectory.clear();
             ReloadEditorIconImages({});
@@ -677,6 +678,11 @@ namespace Xelqoria::Editor
             RefreshSummaryLabel();
             return;
         }
+
+        const std::filesystem::path configuredProjectRootDirectory = false == projectInfo->rootDirectory.empty()
+            ? projectInfo->rootDirectory
+            : projectInfo->projectFilePath.parent_path();
+        m_projectRootDirectory = EditorPathSecurity::NormalizeForContainment(configuredProjectRootDirectory);
 
         const std::filesystem::path configuredAssetsRootDirectory = false == projectInfo->assetRootDirectory.empty()
             ? projectInfo->assetRootDirectory
@@ -926,7 +932,7 @@ namespace Xelqoria::Editor
             m_draggingTextureAssetId = {};
             m_draggingSpriteAssetId = {};
             m_draggingScriptAssetPath = entry.path;
-            m_draggingScriptAssetId = ScriptAssetService::BuildScriptAssetId(m_assetsRootDirectory, entry.path);
+            m_draggingScriptAssetId = ScriptAssetService::BuildScriptAssetId(m_projectRootDirectory, entry.path);
             m_draggingMaterialAssetId = {};
             m_isAssetDragActive = false == m_draggingScriptAssetId.IsEmpty();
             m_canPlaceDraggingAssetInScene = false;
@@ -1564,12 +1570,13 @@ namespace Xelqoria::Editor
         if (entry.isDirectory
             || entry.isParentLink
             || false == ScriptAssetService::IsScriptAssetFile(entry.path)
-            || false == EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory))
+            || false == EditorPathSecurity::IsPathInsideOrEqual(entry.path, m_assetsRootDirectory)
+            || m_projectRootDirectory.empty())
         {
             return false;
         }
 
-        const auto sourcePath = ScriptAssetService::ResolveSourcePath(m_assetsRootDirectory, entry.path);
+        const auto sourcePath = ScriptAssetService::ResolveSourcePath(m_projectRootDirectory, entry.path);
         if (false == sourcePath.has_value() || false == std::filesystem::exists(*sourcePath))
         {
             MessageBoxW(

@@ -1445,7 +1445,7 @@ namespace Xelqoria::Editor
             AppendEditorLog(L"選択した Scene を読み込みました。");
         }
 
-        m_scriptRuntimeSession.Update(deltaTime);
+        m_scriptRuntimeSession.Update(deltaTime, inputSnapshot);
         if (false == m_scriptRuntimeSession.GetDiagnostics().empty())
         {
             const std::wstring runtimeStatusText =
