@@ -1,11 +1,15 @@
 #include "Panels/Inspector/InspectorPanelView.h"
 
 #include <algorithm>
+#include <CommCtrl.h>
+#include <windowsx.h>
 
 namespace Xelqoria::Editor
 {
     namespace
     {
+        constexpr UINT_PTR InspectorScrollSubclassId = 41;
+
         template <std::size_t Count>
         void AppendArrayControls(std::vector<HWND>& controls, const std::array<HWND, Count>& values)
         {
@@ -16,6 +20,11 @@ namespace Xelqoria::Editor
     InspectorPanelView::InspectorPanelView(EditorPanelHostContext& hostContext)
         : EditorPanelViewBase(hostContext, EditorPanelId::Inspector, L"Inspector")
     {
+    }
+
+    InspectorPanelView::~InspectorPanelView()
+    {
+        RemoveScrollSubclasses();
     }
 
     std::vector<HWND> InspectorPanelView::BuildControls() const
@@ -88,7 +97,7 @@ namespace Xelqoria::Editor
 
     bool InspectorPanelView::Initialize(HWND parentWindow, HINSTANCE hInstance)
     {
-        constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE;
+        constexpr DWORD panelStyle = WS_CHILD | WS_VISIBLE | WS_VSCROLL;
         m_panel = CreateChildWindow(parentWindow, hInstance, EditorPanelWindowClassName, L"INSPECTOR", panelStyle);
         m_summaryLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Inspector: pending", WS_CHILD | WS_VISIBLE);
         m_transformSectionLabel = CreateChildWindow(parentWindow, hInstance, L"Static", L"Transform", WS_CHILD | WS_VISIBLE | SS_OWNERDRAW);
@@ -156,7 +165,7 @@ namespace Xelqoria::Editor
             hInstance,
             L"Static",
             L"Shared Material editing. Changes affect sprites using this material.",
-            WS_CHILD | WS_VISIBLE);
+            WS_CHILD | WS_VISIBLE | SS_LEFTNOWORDWRAP);
         m_materialDetailsSectionLabel = CreateChildWindow(
             parentWindow,
             hInstance,
@@ -252,11 +261,158 @@ namespace Xelqoria::Editor
         SetVisibleControls(BuildVisibleControls());
         SetAlwaysHiddenControls({});
         SetHideWhenInvisibleControls({ m_spriteRefDropHighlight, m_materialTextureDropHighlight });
+        InstallScrollSubclasses();
         return true;
+    }
+
+    void InspectorPanelView::InstallScrollSubclasses()
+    {
+        for (HWND control : BuildControls())
+        {
+            if (nullptr != control)
+            {
+                SetWindowSubclass(
+                    control,
+                    InspectorScrollSubclassProc,
+                    InspectorScrollSubclassId,
+                    reinterpret_cast<DWORD_PTR>(this));
+            }
+        }
+    }
+
+    void InspectorPanelView::RemoveScrollSubclasses()
+    {
+        for (HWND control : BuildControls())
+        {
+            if (nullptr != control)
+            {
+                RemoveWindowSubclass(control, InspectorScrollSubclassProc, InspectorScrollSubclassId);
+            }
+        }
+    }
+
+    void InspectorPanelView::MoveScrollableChild(
+        HWND window,
+        const RECT& viewport,
+        int x,
+        int y,
+        int width,
+        int height) const
+    {
+        if (nullptr == window)
+        {
+            return;
+        }
+
+        if (width <= 0 || height <= 0 || y < viewport.top || viewport.bottom < y + height)
+        {
+            MoveChildWindowNoRedraw(window, x, y, 0, 0);
+            return;
+        }
+
+        MoveChildWindowNoRedraw(window, x, y, width, height);
+    }
+
+    void InspectorPanelView::UpdateScrollInfo(int viewportHeight)
+    {
+        const int maxScrollOffset = (std::max)(0, m_contentHeight - viewportHeight);
+        m_scrollOffsetY = (std::min)((std::max)(0, m_scrollOffsetY), maxScrollOffset);
+
+        if (nullptr == m_panel)
+        {
+            return;
+        }
+
+        SCROLLINFO scrollInfo{};
+        scrollInfo.cbSize = sizeof(scrollInfo);
+        scrollInfo.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+        scrollInfo.nMin = 0;
+        scrollInfo.nMax = (std::max)(0, m_contentHeight - 1);
+        scrollInfo.nPage = static_cast<UINT>((std::max)(0, viewportHeight));
+        scrollInfo.nPos = m_scrollOffsetY;
+        SetScrollInfo(m_panel, SB_VERT, &scrollInfo, TRUE);
+        ShowScrollBar(m_panel, SB_VERT, 0 < maxScrollOffset);
+    }
+
+    bool InspectorPanelView::SetScrollOffsetY(int scrollOffsetY)
+    {
+        const int viewportHeight = m_lastLayoutBounds.bottom - m_lastLayoutBounds.top;
+        const int maxScrollOffset = (std::max)(0, m_contentHeight - viewportHeight);
+        const int clampedOffset = (std::min)((std::max)(0, scrollOffsetY), maxScrollOffset);
+        if (clampedOffset == m_scrollOffsetY)
+        {
+            return false;
+        }
+
+        m_scrollOffsetY = clampedOffset;
+        Layout(m_lastLayoutBounds);
+        InvalidateRect(m_panel, nullptr, TRUE);
+        return true;
+    }
+
+    bool InspectorPanelView::ScrollBy(int deltaY)
+    {
+        return SetScrollOffsetY(m_scrollOffsetY + deltaY);
+    }
+
+    LRESULT InspectorPanelView::HandleScrollMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    {
+        (void)lParam;
+
+        if (WM_MOUSEWHEEL == message)
+        {
+            const int wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+            const int scrollDelta = -MulDiv(wheelDelta, ScaleMetric(48), WHEEL_DELTA);
+            (void)ScrollBy(scrollDelta);
+            return 0;
+        }
+
+        if (WM_VSCROLL == message && window == m_panel)
+        {
+            SCROLLINFO scrollInfo{};
+            scrollInfo.cbSize = sizeof(scrollInfo);
+            scrollInfo.fMask = SIF_ALL;
+            GetScrollInfo(m_panel, SB_VERT, &scrollInfo);
+
+            int nextOffset = m_scrollOffsetY;
+            switch (LOWORD(wParam))
+            {
+            case SB_LINEUP:
+                nextOffset -= ScaleMetric(24);
+                break;
+            case SB_LINEDOWN:
+                nextOffset += ScaleMetric(24);
+                break;
+            case SB_PAGEUP:
+                nextOffset -= static_cast<int>(scrollInfo.nPage);
+                break;
+            case SB_PAGEDOWN:
+                nextOffset += static_cast<int>(scrollInfo.nPage);
+                break;
+            case SB_TOP:
+                nextOffset = 0;
+                break;
+            case SB_BOTTOM:
+                nextOffset = m_contentHeight;
+                break;
+            case SB_THUMBPOSITION:
+            case SB_THUMBTRACK:
+                nextOffset = scrollInfo.nTrackPos;
+                break;
+            default:
+                return 0;
+            }
+
+            (void)SetScrollOffsetY(nextOffset);
+            return 0;
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
     }
 
     void InspectorPanelView::Layout(const RECT& bounds)
     {
+        m_lastLayoutBounds = bounds;
         const int outerPadding = ScaleMetric(12);
         const int groupHeaderHeight = 0;
         const int labelHeight = ScaleMetric(24);
@@ -267,7 +423,7 @@ namespace Xelqoria::Editor
         const int width = bounds.right - bounds.left;
         const int height = bounds.bottom - bounds.top;
         const int innerX = bounds.left + outerPadding;
-        const int innerWidth = (std::max)(0, width - outerPadding * 2);
+        const int innerWidth = (std::max)(0, width - outerPadding * 2 - GetSystemMetrics(SM_CXVSCROLL));
         const int editWidth = (std::max)(0, (innerWidth - labelWidth - ScaleMetric(16)) / 3);
         const int transformTop = bounds.top + groupHeaderHeight + labelHeight + ScaleMetric(8);
         const int spriteSectionTop = transformTop + labelHeight + ScaleMetric(4) + 3 * (rowHeight + rowSpacing) + sectionSpacing;
@@ -278,7 +434,7 @@ namespace Xelqoria::Editor
         const int scriptButtonTop = scriptAssetTop;
         const int materialSectionTop = scriptAssetTop + rowHeight + rowSpacing + sectionSpacing;
         const int materialNoticeTop = materialSectionTop + labelHeight + ScaleMetric(4);
-        const int materialFirstRowTop = materialNoticeTop + rowHeight;
+        const int materialFirstRowTop = materialNoticeTop + rowHeight + rowSpacing;
         const int materialRemoveTop = materialFirstRowTop + 5 * (rowHeight + rowSpacing) + ScaleMetric(4);
         const int colliderSectionTop = materialRemoveTop + rowHeight + ScaleMetric(4) + sectionSpacing;
         const int colliderShapeTop = colliderSectionTop + labelHeight + ScaleMetric(4);
@@ -293,45 +449,52 @@ namespace Xelqoria::Editor
         const int materialSmallButtonWidth = ScaleMetric(38);
         const int materialDetailEditWidth = (std::max)(0, innerWidth - labelWidth - materialSmallButtonWidth - materialOpenButtonGap);
         const int colliderEdit2Width = (std::max)(0, (innerWidth - labelWidth - ScaleMetric(8)) / 2);
+        m_contentHeight = addComponentTop + rowHeight + ScaleMetric(8) + outerPadding - bounds.top;
+        UpdateScrollInfo(height);
+
+        const auto move = [this, &bounds](HWND window, int x, int y, int controlWidth, int controlHeight)
+        {
+            MoveScrollableChild(window, bounds, x, y - m_scrollOffsetY, controlWidth, controlHeight);
+        };
 
         MoveChildWindowNoRedraw(m_panel, bounds.left, bounds.top, width, height);
-        MoveChildWindowNoRedraw(m_summaryLabel, innerX, bounds.top + groupHeaderHeight, innerWidth, labelHeight);
-        MoveChildWindowNoRedraw(m_transformSectionLabel, innerX, transformTop, innerWidth, labelHeight);
+        move(m_summaryLabel, innerX, bounds.top + groupHeaderHeight, innerWidth, labelHeight);
+        move(m_transformSectionLabel, innerX, transformTop, innerWidth, labelHeight);
         for (int row = 0; row < 3; ++row)
         {
             const int rowTop = transformTop + labelHeight + ScaleMetric(4) + row * (rowHeight + rowSpacing);
-            MoveChildWindowNoRedraw(m_transformLabels[static_cast<std::size_t>(row)], innerX, rowTop + ScaleMetric(4), labelWidth, rowHeight);
+            move(m_transformLabels[static_cast<std::size_t>(row)], innerX, rowTop + ScaleMetric(4), labelWidth, rowHeight);
             for (int column = 0; column < 3; ++column)
             {
                 const int editIndex = row * 3 + column;
                 const int editLeft = innerX + labelWidth + column * (editWidth + ScaleMetric(8));
-                MoveChildWindowNoRedraw(m_transformEditControls[static_cast<std::size_t>(editIndex)], editLeft, rowTop, editWidth, rowHeight);
+                move(m_transformEditControls[static_cast<std::size_t>(editIndex)], editLeft, rowTop, editWidth, rowHeight);
             }
         }
 
-        MoveChildWindowNoRedraw(m_spriteComponentSectionLabel, innerX, spriteSectionTop, innerWidth, labelHeight);
-        MoveChildWindowNoRedraw(m_spriteRefLabel, innerX, spriteRefTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_spriteRefDropHighlight, innerX + labelWidth - ScaleMetric(2), spriteRefTop - ScaleMetric(2), materialEditWidth + ScaleMetric(4), rowHeight + ScaleMetric(4));
-        MoveChildWindowNoRedraw(m_spriteRefEdit, innerX + labelWidth, spriteRefTop, materialEditWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_materialOpenButton, innerX + labelWidth + materialEditWidth + materialOpenButtonGap, spriteRefTop, materialOpenButtonWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_spriteComponentActionButton, innerX, spriteActionTop, innerWidth, rowHeight + ScaleMetric(4));
-        MoveChildWindowNoRedraw(m_scriptSectionLabel, innerX, scriptSectionTop, innerWidth, labelHeight);
-        MoveChildWindowNoRedraw(m_scriptAssetLabel, innerX, scriptAssetTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_scriptAssetEdit, innerX + labelWidth, scriptAssetTop, materialEditWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_scriptCreateButton, innerX, scriptButtonTop, 0, 0);
-        MoveChildWindowNoRedraw(m_scriptAssignButton, innerX + labelWidth + materialEditWidth + materialOpenButtonGap, scriptButtonTop, materialOpenButtonWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_scriptClearButton, innerX, scriptButtonTop, 0, 0);
+        move(m_spriteComponentSectionLabel, innerX, spriteSectionTop, innerWidth, labelHeight);
+        move(m_spriteRefLabel, innerX, spriteRefTop + ScaleMetric(4), labelWidth, rowHeight);
+        move(m_spriteRefDropHighlight, innerX + labelWidth - ScaleMetric(2), spriteRefTop - ScaleMetric(2), materialEditWidth + ScaleMetric(4), rowHeight + ScaleMetric(4));
+        move(m_spriteRefEdit, innerX + labelWidth, spriteRefTop, materialEditWidth, rowHeight);
+        move(m_materialOpenButton, innerX + labelWidth + materialEditWidth + materialOpenButtonGap, spriteRefTop, materialOpenButtonWidth, rowHeight);
+        move(m_spriteComponentActionButton, innerX, spriteActionTop, innerWidth, rowHeight + ScaleMetric(4));
+        move(m_scriptSectionLabel, innerX, scriptSectionTop, innerWidth, labelHeight);
+        move(m_scriptAssetLabel, innerX, scriptAssetTop + ScaleMetric(4), labelWidth, rowHeight);
+        move(m_scriptAssetEdit, innerX + labelWidth, scriptAssetTop, materialEditWidth, rowHeight);
+        move(m_scriptCreateButton, innerX, scriptButtonTop, 0, 0);
+        move(m_scriptAssignButton, innerX + labelWidth + materialEditWidth + materialOpenButtonGap, scriptButtonTop, materialOpenButtonWidth, rowHeight);
+        move(m_scriptClearButton, innerX, scriptButtonTop, 0, 0);
 
-        MoveChildWindowNoRedraw(m_materialDetailsSectionLabel, innerX, materialSectionTop, innerWidth, labelHeight);
-        MoveChildWindowNoRedraw(m_materialSharedNoticeLabel, innerX, materialNoticeTop, innerWidth, rowHeight);
+        move(m_materialDetailsSectionLabel, innerX, materialSectionTop, innerWidth, labelHeight);
+        move(m_materialSharedNoticeLabel, innerX, materialNoticeTop, innerWidth, rowHeight);
         for (std::size_t index = 0; index < m_materialDetailLabels.size(); ++index)
         {
             const int rowTop = materialFirstRowTop + static_cast<int>(index) * (rowHeight + rowSpacing);
-            MoveChildWindowNoRedraw(m_materialDetailLabels[index], innerX, rowTop + ScaleMetric(4), labelWidth, rowHeight);
+            move(m_materialDetailLabels[index], innerX, rowTop + ScaleMetric(4), labelWidth, rowHeight);
             if (2 == index)
             {
-                MoveChildWindowNoRedraw(m_materialDetailEditControls[index], innerX + labelWidth, rowTop, 0, 0);
-                MoveChildWindowNoRedraw(m_materialOutlineEnabledCheckBox, innerX + labelWidth, rowTop + ScaleMetric(2), ScaleMetric(28), rowHeight);
+                move(m_materialDetailEditControls[index], innerX + labelWidth, rowTop, 0, 0);
+                move(m_materialOutlineEnabledCheckBox, innerX + labelWidth, rowTop + ScaleMetric(2), ScaleMetric(28), rowHeight);
                 continue;
             }
 
@@ -339,40 +502,64 @@ namespace Xelqoria::Editor
             const int currentEditWidth = hasAccessoryButton
                 ? materialDetailEditWidth
                 : (std::max)(0, innerWidth - labelWidth);
-            MoveChildWindowNoRedraw(m_materialDetailEditControls[index], innerX + labelWidth, rowTop, currentEditWidth, rowHeight);
+            move(m_materialDetailEditControls[index], innerX + labelWidth, rowTop, currentEditWidth, rowHeight);
             if (0 == index)
             {
-                MoveChildWindowNoRedraw(m_materialTextureDropHighlight, innerX + labelWidth - ScaleMetric(2), rowTop - ScaleMetric(2), currentEditWidth + ScaleMetric(4), rowHeight + ScaleMetric(4));
-                MoveChildWindowNoRedraw(m_materialTextureBrowseButton, innerX + labelWidth + currentEditWidth + materialOpenButtonGap, rowTop, materialSmallButtonWidth, rowHeight);
+                move(m_materialTextureDropHighlight, innerX + labelWidth - ScaleMetric(2), rowTop - ScaleMetric(2), currentEditWidth + ScaleMetric(4), rowHeight + ScaleMetric(4));
+                move(m_materialTextureBrowseButton, innerX + labelWidth + currentEditWidth + materialOpenButtonGap, rowTop, materialSmallButtonWidth, rowHeight);
             }
             else if (1 == index)
             {
-                MoveChildWindowNoRedraw(m_materialTintColorButton, innerX + labelWidth + currentEditWidth + materialOpenButtonGap, rowTop, materialSmallButtonWidth, rowHeight);
+                move(m_materialTintColorButton, innerX + labelWidth + currentEditWidth + materialOpenButtonGap, rowTop, materialSmallButtonWidth, rowHeight);
             }
             else if (4 == index)
             {
-                MoveChildWindowNoRedraw(m_materialOutlineColorButton, innerX + labelWidth + currentEditWidth + materialOpenButtonGap, rowTop, materialSmallButtonWidth, rowHeight);
+                move(m_materialOutlineColorButton, innerX + labelWidth + currentEditWidth + materialOpenButtonGap, rowTop, materialSmallButtonWidth, rowHeight);
             }
         }
-        MoveChildWindowNoRedraw(m_materialRemoveButton, innerX, materialRemoveTop, innerWidth, rowHeight + ScaleMetric(4));
+        move(m_materialRemoveButton, innerX, materialRemoveTop, innerWidth, rowHeight + ScaleMetric(4));
 
-        MoveChildWindowNoRedraw(m_collider2DComponentSectionLabel, innerX, colliderSectionTop, innerWidth, labelHeight);
-        MoveChildWindowNoRedraw(m_collider2DSummaryLabel, innerX, colliderSectionTop, 0, 0);
-        MoveChildWindowNoRedraw(m_collider2DEnabledCheckBox, innerX, colliderSectionTop, 0, 0);
-        MoveChildWindowNoRedraw(m_collider2DTriggerCheckBox, innerX, colliderSectionTop, 0, 0);
-        MoveChildWindowNoRedraw(m_collider2DShapeTypeLabel, innerX, colliderShapeTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DShapeTypeEdit, innerX + labelWidth, colliderShapeTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DOffsetLabel, innerX, colliderOffsetTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[0], innerX + labelWidth, colliderOffsetTop, colliderEdit2Width, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[1], innerX + labelWidth + colliderEdit2Width + ScaleMetric(8), colliderOffsetTop, colliderEdit2Width, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DSizeLabel, innerX, colliderSizeTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[2], innerX + labelWidth, colliderSizeTop, colliderEdit2Width, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditControls[3], innerX + labelWidth + colliderEdit2Width + ScaleMetric(8), colliderSizeTop, colliderEdit2Width, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DRotationLabel, innerX, colliderRotationTop + ScaleMetric(4), labelWidth, rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DRotationEdit, innerX + labelWidth, colliderRotationTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
-        MoveChildWindowNoRedraw(m_collider2DEditButton, innerX, colliderActionTop, 0, 0);
-        MoveChildWindowNoRedraw(m_collider2DComponentActionButton, innerX, colliderActionTop, innerWidth, rowHeight + ScaleMetric(4));
-        MoveChildWindowNoRedraw(m_addComponentButton, innerX, addComponentTop, innerWidth, rowHeight + ScaleMetric(8));
+        move(m_collider2DComponentSectionLabel, innerX, colliderSectionTop, innerWidth, labelHeight);
+        move(m_collider2DSummaryLabel, innerX, colliderSectionTop, 0, 0);
+        move(m_collider2DEnabledCheckBox, innerX, colliderSectionTop, 0, 0);
+        move(m_collider2DTriggerCheckBox, innerX, colliderSectionTop, 0, 0);
+        move(m_collider2DShapeTypeLabel, innerX, colliderShapeTop + ScaleMetric(4), labelWidth, rowHeight);
+        move(m_collider2DShapeTypeEdit, innerX + labelWidth, colliderShapeTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
+        move(m_collider2DOffsetLabel, innerX, colliderOffsetTop + ScaleMetric(4), labelWidth, rowHeight);
+        move(m_collider2DEditControls[0], innerX + labelWidth, colliderOffsetTop, colliderEdit2Width, rowHeight);
+        move(m_collider2DEditControls[1], innerX + labelWidth + colliderEdit2Width + ScaleMetric(8), colliderOffsetTop, colliderEdit2Width, rowHeight);
+        move(m_collider2DSizeLabel, innerX, colliderSizeTop + ScaleMetric(4), labelWidth, rowHeight);
+        move(m_collider2DEditControls[2], innerX + labelWidth, colliderSizeTop, colliderEdit2Width, rowHeight);
+        move(m_collider2DEditControls[3], innerX + labelWidth + colliderEdit2Width + ScaleMetric(8), colliderSizeTop, colliderEdit2Width, rowHeight);
+        move(m_collider2DRotationLabel, innerX, colliderRotationTop + ScaleMetric(4), labelWidth, rowHeight);
+        move(m_collider2DRotationEdit, innerX + labelWidth, colliderRotationTop, (std::max)(0, innerWidth - labelWidth), rowHeight);
+        move(m_collider2DEditButton, innerX, colliderActionTop, 0, 0);
+        move(m_collider2DComponentActionButton, innerX, colliderActionTop, innerWidth, rowHeight + ScaleMetric(4));
+        move(m_addComponentButton, innerX, addComponentTop, innerWidth, rowHeight + ScaleMetric(8));
+    }
+
+    LRESULT CALLBACK InspectorPanelView::InspectorScrollSubclassProc(
+        HWND window,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam,
+        UINT_PTR subclassId,
+        DWORD_PTR referenceData)
+    {
+        (void)subclassId;
+
+        InspectorPanelView* view = reinterpret_cast<InspectorPanelView*>(referenceData);
+        if (nullptr != view && (WM_MOUSEWHEEL == message || WM_VSCROLL == message))
+        {
+            return view->HandleScrollMessage(window, message, wParam, lParam);
+        }
+
+        if (WM_NCDESTROY == message)
+        {
+            RemoveWindowSubclass(window, InspectorScrollSubclassProc, InspectorScrollSubclassId);
+        }
+
+        return DefSubclassProc(window, message, wParam, lParam);
     }
 
     bool InspectorPanelView::IsInputControl(HWND window) const

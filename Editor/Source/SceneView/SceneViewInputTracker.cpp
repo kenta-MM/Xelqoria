@@ -38,6 +38,25 @@ namespace Xelqoria::Editor
                 && spriteComponent.materialAssetRef.IsEmpty();
         }
 
+        /// <summary>
+        /// 指定 Entity が Texture 解決済み Sprite として扱われているかを判定する。
+        /// </summary>
+        /// <param name="resolvedSprites">Texture 解決済み Sprite 一覧。</param>
+        /// <param name="entityId">確認対象 EntityId。</param>
+        /// <returns>解決済み Sprite が存在する場合は true。</returns>
+        bool HasResolvedSprite(
+            const std::vector<Game::ResolvedSceneSprite>& resolvedSprites,
+            Game::EntityId entityId)
+        {
+            return resolvedSprites.end() != std::find_if(
+                resolvedSprites.begin(),
+                resolvedSprites.end(),
+                [entityId](const Game::ResolvedSceneSprite& resolvedSprite)
+                {
+                    return resolvedSprite.entityId == entityId;
+                });
+        }
+
         [[nodiscard]] POINT ToWin32Point(Platform::Point point)
         {
             return POINT{ static_cast<LONG>(point.x), static_cast<LONG>(point.y) };
@@ -399,6 +418,7 @@ namespace Xelqoria::Editor
                     static_cast<float>(clientPoint.y)
                 });
 
+                m_pendingDropState.kind = ScenePendingDropState::Kind::SpriteAsset;
                 m_pendingDropState.spriteAssetId = assetsPanelController.GetDraggingSpriteAssetId();
                 m_pendingDropState.worldX = worldPoint.x;
                 m_pendingDropState.worldY = worldPoint.y;
@@ -420,6 +440,57 @@ namespace Xelqoria::Editor
                     "Editor::SceneViewInputTracker ignored asset drop for Sprite AssetId '"
                     + assetsPanelController.GetDraggingSpriteAssetId().GetValue()
                     + "' because the cursor was outside SceneView.\n";
+                ::OutputDebugStringA(debugLine.c_str());
+            }
+
+            ClearSceneDragPreview();
+        }
+        else if (assetsPanelController.WasDragReleasedThisFrame()
+            && false == assetsPanelController.GetDraggingScriptAssetId().IsEmpty()
+            && false == assetsPanelController.GetDraggingScriptAssetPath().empty())
+        {
+            if (isCursorInside && nullptr != scene)
+            {
+                POINT clientPoint = screenPoint;
+                ScreenToClient(m_sceneViewHost, &clientPoint);
+
+                const EditorWorldPoint worldPoint = camera.TransformScreenToWorld(EditorScreenPoint{
+                    static_cast<float>(clientPoint.x),
+                    static_cast<float>(clientPoint.y)
+                });
+
+                const auto resolvedSprites = scene->ResolveSceneSprites(
+                    spriteAssetRegistry,
+                    materialAssetResolver,
+                    textureAssetRegistry);
+                const auto renderItems = scene->CollectSpriteRenderItems();
+                const auto hitTargets = BuildSceneHitTargets(resolvedSprites, renderItems, currentSelectedEntityId);
+                const auto targetEntityId = PickTopmostEntityAtWorldPoint(hitTargets, worldPoint.x, worldPoint.y);
+
+                m_pendingDropState.kind = ScenePendingDropState::Kind::ScriptAsset;
+                m_pendingDropState.scriptAssetId = assetsPanelController.GetDraggingScriptAssetId();
+                m_pendingDropState.scriptAssetPath = assetsPanelController.GetDraggingScriptAssetPath();
+                m_pendingDropState.targetEntityId = targetEntityId;
+                m_pendingDropState.worldX = worldPoint.x;
+                m_pendingDropState.worldY = worldPoint.y;
+                m_pendingDropState.hasPendingDrop = true;
+
+                const std::string debugLine =
+                    "Editor::SceneViewInputTracker accepted SceneView drop for Script AssetId '"
+                    + m_pendingDropState.scriptAssetId.GetValue()
+                    + "' at world position ("
+                    + std::to_string(m_pendingDropState.worldX)
+                    + ", "
+                    + std::to_string(m_pendingDropState.worldY)
+                    + ").\n";
+                ::OutputDebugStringA(debugLine.c_str());
+            }
+            else
+            {
+                const std::string debugLine =
+                    "Editor::SceneViewInputTracker ignored script asset drop for Script AssetId '"
+                    + assetsPanelController.GetDraggingScriptAssetId().GetValue()
+                    + "' because the cursor was outside SceneView or Scene was unavailable.\n";
                 ::OutputDebugStringA(debugLine.c_str());
             }
 
@@ -522,7 +593,8 @@ namespace Xelqoria::Editor
         {
             if (nullptr == renderItem.transform
                 || nullptr == renderItem.spriteComponent
-                || false == ShouldUseUntexturedSpriteHitTarget(*renderItem.spriteComponent))
+                || (false == ShouldUseUntexturedSpriteHitTarget(*renderItem.spriteComponent)
+                    && HasResolvedSprite(resolvedSprites, renderItem.entityId)))
             {
                 continue;
             }

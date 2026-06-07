@@ -1303,8 +1303,29 @@ namespace Xelqoria::Editor
 
         const POINT cursorPoint = ToWin32Point(m_cursor->GetScreenPosition());
 
-        RECT scriptRect{};
-        GetWindowRect(m_scriptAssetEdit, &scriptRect);
-        return PtInRect(&scriptRect, cursorPoint) != FALSE;
+        const std::array<HWND, 4> scriptDropTargets{
+            m_scriptSectionLabel,
+            m_scriptAssetLabel,
+            m_scriptAssetEdit,
+            m_scriptAssignButton
+        };
+        for (HWND scriptDropTarget : scriptDropTargets)
+        {
+            if (nullptr == scriptDropTarget
+                || FALSE == IsWindowVisible(scriptDropTarget)
+                || FALSE == IsWindowEnabled(scriptDropTarget))
+            {
+                continue;
+            }
+
+            RECT scriptRect{};
+            GetWindowRect(scriptDropTarget, &scriptRect);
+            if (PtInRect(&scriptRect, cursorPoint) != FALSE)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -56,6 +56,25 @@ namespace Xelqoria::Editor
         }
 
         /// <summary>
+        /// 指定 Entity が Texture 解決済み Sprite として描画されるかを判定する。
+        /// </summary>
+        /// <param name="resolvedSprites">Texture 解決済み Sprite 一覧。</param>
+        /// <param name="entityId">確認対象 EntityId。</param>
+        /// <returns>解決済み Sprite が存在する場合は true。</returns>
+        bool HasResolvedSprite(
+            const std::vector<Game::ResolvedSceneSprite>& resolvedSprites,
+            Game::EntityId entityId)
+        {
+            return resolvedSprites.end() != std::find_if(
+                resolvedSprites.begin(),
+                resolvedSprites.end(),
+                [entityId](const Game::ResolvedSceneSprite& resolvedSprite)
+                {
+                    return resolvedSprite.entityId == entityId;
+                });
+        }
+
+        /// <summary>
         /// SceneView オーバーレイ描画に使う色定義を返す。
         /// </summary>
         /// <returns>色定義一覧。</returns>
@@ -581,7 +600,8 @@ namespace Xelqoria::Editor
                 {
                     if (nullptr == renderItem.transform
                         || nullptr == renderItem.spriteComponent
-                        || false == ShouldDrawUntexturedSpritePlaceholder(*renderItem.spriteComponent))
+                        || (false == ShouldDrawUntexturedSpritePlaceholder(*renderItem.spriteComponent)
+                            && HasResolvedSprite(resolvedSprites, renderItem.entityId)))
                     {
                         continue;
                     }

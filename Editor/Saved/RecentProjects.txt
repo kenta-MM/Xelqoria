@@ -1,1 +1,2 @@
+NewProject|./NewProject/NewProject.xelqoria
 NewProject|./NewProject/NewProject.proj

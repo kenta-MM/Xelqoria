@@ -358,6 +358,14 @@ namespace Xelqoria::Editor
         [[nodiscard]] bool TryOpenEntry(std::size_t entryIndex);
 
         /// <summary>
+        /// 指定項目を Assets ドラッグ状態として開始する。
+        /// </summary>
+        /// <param name="entryIndex">ドラッグ開始項目のインデックス。</param>
+        /// <param name="screenPoint">ドラッグ開始位置のスクリーン座標。</param>
+        /// <returns>ドラッグ可能な項目だった場合は true。</returns>
+        [[nodiscard]] bool BeginDragForEntry(std::size_t entryIndex, POINT screenPoint);
+
+        /// <summary>
         /// Script Asset の管理 C++ ソースを関連付けられたアプリケーションで開く。
         /// </summary>
         /// <param name="entry">対象 Script Asset 項目。</param>
@@ -382,6 +390,20 @@ namespace Xelqoria::Editor
         /// </summary>
         /// <returns>選択インデックス。未選択時は -1。</returns>
         [[nodiscard]] int GetSelectedListViewIndex() const;
+
+        /// <summary>
+        /// ListView の表示インデックスから内部エントリインデックスを取得する。
+        /// </summary>
+        /// <param name="listViewIndex">ListView の表示インデックス。</param>
+        /// <returns>内部エントリインデックス。未解決時は std::nullopt。</returns>
+        [[nodiscard]] std::optional<std::size_t> ResolveEntryIndexFromListViewIndex(int listViewIndex) const;
+
+        /// <summary>
+        /// 内部エントリインデックスから ListView の表示インデックスを取得する。
+        /// </summary>
+        /// <param name="entryIndex">内部エントリインデックス。</param>
+        /// <returns>ListView の表示インデックス。未解決時は -1。</returns>
+        [[nodiscard]] int ResolveListViewIndexFromEntryIndex(std::size_t entryIndex) const;
 
         /// <summary>
         /// スクリーン座標から ListView 項目を取得する。
@@ -521,6 +543,8 @@ namespace Xelqoria::Editor
         bool m_isAssetDragActive = false;
         bool m_canPlaceDraggingAssetInScene = false;
         bool m_assetDragReleasedThisFrame = false;
+        bool m_hasCapturedAssetDrag = false;
+        bool m_capturedAssetDragReleased = false;
         bool m_createSpriteRequested = false;
         std::filesystem::path m_createSpriteTargetDirectory{};
         bool m_createScriptRequested = false;

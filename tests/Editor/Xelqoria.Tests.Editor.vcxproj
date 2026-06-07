@@ -26,6 +26,7 @@
     <ClCompile Include="..\..\Editor\Source\Project\RecentProjectsStore.cpp" />
     <ClCompile Include="..\..\Editor\Source\Commands\SceneCommandHistory.cpp" />
     <ClCompile Include="..\..\Editor\Source\Commands\SceneEditingOperations.cpp" />
+    <ClCompile Include="..\..\Editor\Source\DragDrop\SceneDropPlacementService.cpp" />
     <ClCompile Include="..\..\Editor\Source\Assets\ScriptAssetService.cpp" />
     <ClCompile Include="..\..\Editor\Source\Script\ScriptRuntimeSession.cpp" />
     <ClCompile Include="Source\EditorProjectTests.cpp" />

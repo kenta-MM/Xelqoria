@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -73,9 +74,39 @@ namespace Xelqoria::Editor
     struct ScenePendingDropState
     {
         /// <summary>
+        /// SceneView ドロップ入力の種類を表す。
+        /// </summary>
+        enum class Kind
+        {
+            None,
+            SpriteAsset,
+            ScriptAsset
+        };
+
+        /// <summary>
+        /// ドロップ入力の種類を表す。
+        /// </summary>
+        Kind kind = Kind::None;
+
+        /// <summary>
         /// ドロップされた SpriteAssetId を表す。
         /// </summary>
         Core::AssetId spriteAssetId{};
+
+        /// <summary>
+        /// ドロップされた ScriptAssetId を表す。
+        /// </summary>
+        Core::AssetId scriptAssetId{};
+
+        /// <summary>
+        /// ドロップされた Script Asset ファイルパスを表す。
+        /// </summary>
+        std::filesystem::path scriptAssetPath{};
+
+        /// <summary>
+        /// Script Asset を割り当てる対象 EntityId を表す。
+        /// </summary>
+        std::optional<Game::EntityId> targetEntityId{};
 
         /// <summary>
         /// ドロップ先のワールド座標 X を表す。
@@ -143,6 +174,9 @@ namespace Xelqoria::Editor
         EmptyAssetId,
         MissingSpriteAsset,
         MissingTexture,
+        MissingTargetEntity,
+        MissingSpriteComponent,
+        ScriptAssignFailed,
         ReloadFailed,
         SaveFailed,
         Success
@@ -167,6 +201,11 @@ namespace Xelqoria::Editor
         /// 選択状態が変化したかを表す。
         /// </summary>
         bool selectionChanged = false;
+
+        /// <summary>
+        /// Scene ではなく Asset ファイルが更新されたかを表す。
+        /// </summary>
+        bool assetChanged = false;
 
         /// <summary>
         /// 更新後の選択 EntityId を表す。

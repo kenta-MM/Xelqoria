@@ -1472,33 +1472,16 @@ namespace Xelqoria::Editor
                 m_assetsPanelController.GetCreateSpriteTargetDirectory();
             m_assetsPanelController.ClearCreateSpriteRequest();
 
-            if (nullptr != m_sceneDocument.GetScene())
+            if (true == m_sceneDocument.CreateSpriteAssetFile(createSpriteTargetDirectory))
             {
-                const EditorCamera2D& sceneViewCamera = m_sceneViewController.GetCamera();
-                const SceneEditResult createSpriteResult =
-                    SceneEditingOperations::CreateUntexturedSprite(
-                        *m_sceneDocument.GetScene(),
-                        sceneViewCamera.GetCenterX(),
-                        sceneViewCamera.GetCenterY());
-                if (true == createSpriteResult.changed)
-                {
-                    const auto createdEntity = createSpriteResult.selectedEntityId.has_value()
-                        ? m_sceneDocument.GetScene()->FindEntity(*createSpriteResult.selectedEntityId)
-                        : std::optional<std::reference_wrapper<Game::Entity>>{};
-                    if (true == createdEntity.has_value()
-                        && true == m_sceneDocument.CreateSpriteAssetFile(
-                            createdEntity->get(),
-                            createSpriteTargetDirectory))
-                    {
-                        m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
-                    }
-
-                    ApplySelectionChange(createSpriteResult.selectedEntityId, canAddSpriteComponent, true, true);
-                    PersistSceneChanges(
-                        L"Assets から Sprite を作成しました。",
-                        createSpriteResult.operationName,
-                        true);
-                }
+                m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Sprite Asset を作成しました。");
+                AppendEditorLog(L"Sprite Asset を作成しました。");
+            }
+            else
+            {
+                SetWindowTextW(m_editorShell.GetSceneViewPlanLabel(), L"Sprite Asset の作成に失敗しました。");
+                AppendEditorLog(L"Sprite Asset の作成に失敗しました。");
             }
         }
 
@@ -1907,7 +1890,14 @@ namespace Xelqoria::Editor
             m_hierarchyPanelController.SetSelectedEntityId(dropResult.selectedEntityId);
         }
 
-        if (true == dropResult.sceneChanged || true == dropResult.selectionChanged)
+        if (true == dropResult.assetChanged)
+        {
+            m_assetsPanelController.Refresh(m_sceneDocument.GetProjectInfo());
+        }
+
+        if (true == dropResult.sceneChanged
+            || true == dropResult.selectionChanged
+            || true == dropResult.assetChanged)
         {
             RefreshEditorPanels(canAddSpriteComponent, true);
         }

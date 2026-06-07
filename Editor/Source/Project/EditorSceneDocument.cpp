@@ -168,6 +168,58 @@ namespace Xelqoria::Editor
             return outputDirectory;
         }
 
+        /// <summary>
+        /// AssetId 生成の基準ディレクトリを asset の場所から取得する。
+        /// </summary>
+        /// <param name="projectInfo">現在のプロジェクト情報。</param>
+        /// <param name="assetPath">対象 asset ファイル。</param>
+        /// <returns>Assets ルート配下なら Assets ルート、そうでなければプロジェクトルート。</returns>
+        [[nodiscard]] std::filesystem::path GetAssetIdBaseDirectory(
+            const EditorProjectInfo& projectInfo,
+            const std::filesystem::path& assetPath)
+        {
+            if (false == projectInfo.assetRootDirectory.empty()
+                && EditorPathSecurity::IsPathInsideOrEqual(assetPath, projectInfo.assetRootDirectory))
+            {
+                return projectInfo.assetRootDirectory;
+            }
+
+            return projectInfo.projectFilePath.parent_path();
+        }
+
+        /// <summary>
+        /// AssetId の相対パスから実ファイルパスを解決する。
+        /// </summary>
+        /// <param name="projectInfo">現在のプロジェクト情報。</param>
+        /// <param name="relativePath">AssetId prefix を除いた相対パス。</param>
+        /// <returns>存在する asset パス。見つからない場合は空。</returns>
+        [[nodiscard]] std::optional<std::filesystem::path> ResolveAssetPathFromId(
+            const EditorProjectInfo& projectInfo,
+            const std::filesystem::path& relativePath)
+        {
+            const std::array<std::filesystem::path, 2> baseDirectories{
+                projectInfo.assetRootDirectory,
+                projectInfo.projectFilePath.parent_path()
+            };
+
+            for (const std::filesystem::path& baseDirectory : baseDirectories)
+            {
+                if (baseDirectory.empty())
+                {
+                    continue;
+                }
+
+                const std::filesystem::path assetPath = baseDirectory / relativePath;
+                if (EditorPathSecurity::IsPathInsideOrEqual(assetPath, baseDirectory)
+                    && std::filesystem::exists(assetPath))
+                {
+                    return assetPath;
+                }
+            }
+
+            return std::nullopt;
+        }
+
         [[nodiscard]] std::filesystem::path BuildUniqueMaterialAssetFilePath(
             const std::filesystem::path& rootDirectory,
             const std::filesystem::path& targetDirectory)
@@ -177,6 +229,20 @@ namespace Xelqoria::Editor
             for (int index = 1; std::filesystem::exists(candidate); ++index)
             {
                 candidate = outputDirectory / (L"NewMaterial" + std::to_wstring(index) + L".material");
+            }
+
+            return candidate;
+        }
+
+        [[nodiscard]] std::filesystem::path BuildUniqueSpriteAssetFilePath(
+            const std::filesystem::path& rootDirectory,
+            const std::filesystem::path& targetDirectory)
+        {
+            const std::filesystem::path outputDirectory = ResolveAssetOutputDirectory(rootDirectory, targetDirectory);
+            std::filesystem::path candidate = outputDirectory / L"NewSprite.sprite";
+            for (int index = 1; std::filesystem::exists(candidate); ++index)
+            {
+                candidate = outputDirectory / (L"NewSprite" + std::to_wstring(index) + L".sprite");
             }
 
             return candidate;
@@ -320,29 +386,6 @@ namespace Xelqoria::Editor
         }
 
         m_scene = std::make_unique<Game::Scene>();
-
-        auto& firstEntity = m_scene->CreateEntity();
-        firstEntity.SetPosition(-160.0f, 0.0f, 0.0f);
-        firstEntity.SetSpriteComponent(Game::SpriteComponent{
-            m_registeredSpriteAssetIds[0],
-            {
-                true,
-                0,
-                1.0f
-            }
-        });
-
-        auto& secondEntity = m_scene->CreateEntity();
-        secondEntity.SetPosition(160.0f, 90.0f, 0.0f);
-        secondEntity.SetScale(0.75f, 0.75f, 1.0f);
-        secondEntity.SetSpriteComponent(Game::SpriteComponent{
-            m_registeredSpriteAssetIds[1],
-            {
-                true,
-                1,
-                1.0f
-            }
-        });
 
         if (false == Save())
         {
@@ -502,8 +545,12 @@ namespace Xelqoria::Editor
             return false;
         }
 
-        const Core::AssetId textureAssetId = EditorAssetPathUtils::BuildTextureAssetId(imagePath, rootDirectory);
-        const Core::AssetId spriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(imagePath, rootDirectory);
+        const std::filesystem::path assetIdBaseDirectory =
+            m_project.GetInfo().has_value()
+            ? GetAssetIdBaseDirectory(*m_project.GetInfo(), imagePath)
+            : rootDirectory;
+        const Core::AssetId textureAssetId = EditorAssetPathUtils::BuildTextureAssetId(imagePath, assetIdBaseDirectory);
+        const Core::AssetId spriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(imagePath, assetIdBaseDirectory);
         if (textureAssetId.IsEmpty() || spriteAssetId.IsEmpty())
         {
             return false;
@@ -564,8 +611,10 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        const std::filesystem::path assetIdBaseDirectory =
+            GetAssetIdBaseDirectory(*m_project.GetInfo(), collider2DAssetPath);
         const Core::AssetId collider2DAssetId =
-            EditorAssetPathUtils::BuildCollider2DAssetId(collider2DAssetPath, rootDirectory);
+            EditorAssetPathUtils::BuildCollider2DAssetId(collider2DAssetPath, assetIdBaseDirectory);
         if (collider2DAssetId.IsEmpty())
         {
             return false;
@@ -612,8 +661,10 @@ namespace Xelqoria::Editor
             return false;
         }
 
+        const std::filesystem::path assetIdBaseDirectory =
+            GetAssetIdBaseDirectory(*m_project.GetInfo(), materialAssetPath);
         const Core::AssetId materialAssetId =
-            EditorAssetPathUtils::BuildMaterialAssetId(materialAssetPath, rootDirectory);
+            EditorAssetPathUtils::BuildMaterialAssetId(materialAssetPath, assetIdBaseDirectory);
         if (materialAssetId.IsEmpty())
         {
             return false;
@@ -671,7 +722,9 @@ namespace Xelqoria::Editor
             return std::nullopt;
         }
 
-        return EditorAssetPathUtils::BuildMaterialAssetId(materialAssetPath, rootDirectory);
+        return EditorAssetPathUtils::BuildMaterialAssetId(
+            materialAssetPath,
+            GetAssetIdBaseDirectory(*m_project.GetInfo(), materialAssetPath));
     }
 
     std::optional<Core::AssetId> EditorSceneDocument::CreateCollider2DAssetFile(
@@ -713,7 +766,9 @@ namespace Xelqoria::Editor
             return std::nullopt;
         }
 
-        return EditorAssetPathUtils::BuildCollider2DAssetId(collider2DAssetPath, rootDirectory);
+        return EditorAssetPathUtils::BuildCollider2DAssetId(
+            collider2DAssetPath,
+            GetAssetIdBaseDirectory(*m_project.GetInfo(), collider2DAssetPath));
     }
 
     std::optional<std::filesystem::path> EditorSceneDocument::ResolveMaterialAssetPath(
@@ -740,15 +795,13 @@ namespace Xelqoria::Editor
             return std::nullopt;
         }
 
-        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
-        const std::filesystem::path materialAssetPath = rootDirectory / relativePath;
-        if (false == EditorPathSecurity::IsPathInsideOrEqual(materialAssetPath, rootDirectory)
-            || false == std::filesystem::exists(materialAssetPath))
+        const auto materialAssetPath = ResolveAssetPathFromId(*m_project.GetInfo(), relativePath);
+        if (false == materialAssetPath.has_value())
         {
             return std::nullopt;
         }
 
-        return materialAssetPath;
+        return *materialAssetPath;
     }
 
     std::optional<std::filesystem::path> EditorSceneDocument::ResolveCollider2DAssetPath(
@@ -775,15 +828,13 @@ namespace Xelqoria::Editor
             return std::nullopt;
         }
 
-        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
-        const std::filesystem::path collider2DAssetPath = rootDirectory / relativePath;
-        if (false == EditorPathSecurity::IsPathInsideOrEqual(collider2DAssetPath, rootDirectory)
-            || false == std::filesystem::exists(collider2DAssetPath))
+        const auto collider2DAssetPath = ResolveAssetPathFromId(*m_project.GetInfo(), relativePath);
+        if (false == collider2DAssetPath.has_value())
         {
             return std::nullopt;
         }
 
-        return collider2DAssetPath;
+        return *collider2DAssetPath;
     }
 
     bool EditorSceneDocument::SaveMaterialAsset(
@@ -985,7 +1036,9 @@ namespace Xelqoria::Editor
         }
 
         const Core::AssetId spriteAssetId =
-            EditorAssetPathUtils::BuildSpriteAssetId(spriteAssetPath, rootDirectory);
+            EditorAssetPathUtils::BuildSpriteAssetId(
+                spriteAssetPath,
+                GetAssetIdBaseDirectory(*m_project.GetInfo(), spriteAssetPath));
         if (spriteAssetId.IsEmpty())
         {
             return false;
@@ -1037,15 +1090,13 @@ namespace Xelqoria::Editor
             return std::nullopt;
         }
 
-        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
-        const std::filesystem::path spriteAssetPath = rootDirectory / relativePath;
-        if (false == EditorPathSecurity::IsPathInsideOrEqual(spriteAssetPath, rootDirectory)
-            || false == std::filesystem::exists(spriteAssetPath))
+        const auto spriteAssetPath = ResolveAssetPathFromId(*m_project.GetInfo(), relativePath);
+        if (false == spriteAssetPath.has_value())
         {
             return std::nullopt;
         }
 
-        return spriteAssetPath;
+        return *spriteAssetPath;
     }
 
     bool EditorSceneDocument::CreateSpriteAssetFile(
@@ -1173,6 +1224,69 @@ namespace Xelqoria::Editor
         return RegisterSpriteAssetFile(*spriteAssetPath);
     }
 
+    bool EditorSceneDocument::CreateSpriteAssetFile(const std::filesystem::path& targetDirectory)
+    {
+        if (false == m_project.GetInfo().has_value())
+        {
+            return false;
+        }
+
+        const std::filesystem::path rootDirectory = m_project.GetInfo()->projectFilePath.parent_path();
+        const std::filesystem::path spriteAssetPath =
+            BuildUniqueSpriteAssetFilePath(rootDirectory, targetDirectory);
+        if (false == EditorPathSecurity::IsPathInsideOrEqual(spriteAssetPath, rootDirectory))
+        {
+            return false;
+        }
+
+        std::error_code errorCode;
+        std::filesystem::create_directories(spriteAssetPath.parent_path(), errorCode);
+        if (errorCode)
+        {
+            return false;
+        }
+
+        const Game::SpriteRenderSettings renderSettings{};
+        std::ofstream output(spriteAssetPath, std::ios::binary | std::ios::trunc);
+        if (false == output.is_open())
+        {
+            return false;
+        }
+
+        std::ostringstream text;
+        text << std::fixed << std::setprecision(6);
+        text << "magic=XelqoriaSpriteAsset\n";
+        text << "version=1\n";
+        text << "name=\"NewSprite\"\n";
+        text << "transform.position=0.000000,0.000000,0.000000\n";
+        text << "transform.rotation=0.000000,0.000000,0.000000\n";
+        text << "transform.scale=1.000000,1.000000,1.000000\n";
+        text << "hasSpriteComponent=false\n";
+        text << "spriteAssetRef=\n";
+        text << "textureAssetId=\n";
+        text << "scriptAssetId=\n";
+        text << "materialAssetId=\n";
+        text << "collider2DAssetId=\n";
+        text << "texture.size=0,0\n";
+        text << "render.visible=" << (renderSettings.visible ? "true" : "false") << "\n";
+        text << "render.sortOrder=" << renderSettings.sortOrder << "\n";
+        text << "render.opacity=" << renderSettings.opacity << "\n";
+        text << "render.color="
+            << renderSettings.color[0] << ","
+            << renderSettings.color[1] << ","
+            << renderSettings.color[2] << ","
+            << renderSettings.color[3] << "\n";
+
+        output << text.str();
+        if (false == static_cast<bool>(output))
+        {
+            return false;
+        }
+        output.close();
+
+        return RegisterSpriteAssetFile(spriteAssetPath);
+    }
+
     std::optional<Core::AssetId> EditorSceneDocument::EnsureSpriteAssetFileForEntity(
         Game::Entity& entity,
         const std::filesystem::path& targetDirectory)
@@ -1203,7 +1317,9 @@ namespace Xelqoria::Editor
         }
 
         const Core::AssetId spriteAssetId =
-            EditorAssetPathUtils::BuildSpriteAssetId(*spriteAssetPath, rootDirectory);
+            EditorAssetPathUtils::BuildSpriteAssetId(
+                *spriteAssetPath,
+                GetAssetIdBaseDirectory(*m_project.GetInfo(), *spriteAssetPath));
         if (spriteAssetId.IsEmpty())
         {
             return std::nullopt;

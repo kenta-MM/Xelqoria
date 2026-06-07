@@ -1,0 +1,17 @@
+magic=XelqoriaSpriteAsset
+version=1
+name="NewSprite"
+transform.position=0.000000,0.000000,0.000000
+transform.rotation=0.000000,0.000000,0.000000
+transform.scale=1.000000,1.000000,1.000000
+hasSpriteComponent=false
+spriteAssetRef=
+textureAssetId=
+scriptAssetId=
+materialAssetId=
+collider2DAssetId=
+texture.size=0,0
+render.visible=true
+render.sortOrder=0
+render.opacity=1.000000
+render.color=1.000000,1.000000,1.000000,1.000000

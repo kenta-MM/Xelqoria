@@ -9,6 +9,7 @@
 
 #include "Assets/SpriteAsset.h"
 #include "Collider2DComponent.h"
+#include "DragDrop/SceneDropPlacementService.h"
 #include "Scene.h"
 
 namespace
@@ -59,6 +60,14 @@ namespace
         document.ReplaceScene(std::move(scene));
         EXPECT_TRUE(document.CreateProject(L"ScriptInspectorProject", parentDirectory));
         return document;
+    }
+
+    [[nodiscard]] std::string ReadTextFile(const std::filesystem::path& path)
+    {
+        std::ifstream input(path, std::ios::binary);
+        return std::string(
+            std::istreambuf_iterator<char>(input),
+            std::istreambuf_iterator<char>());
     }
 }
 
@@ -226,6 +235,169 @@ TEST(EditorSceneDocumentTests, EnsureSpriteAssetFileForEntityCreatesFileAndRepoi
     ASSERT_TRUE(spriteAsset.has_value());
     EXPECT_EQ(Xelqoria::Core::AssetId("textures/player.png"), spriteAsset->textureAssetId);
     EXPECT_TRUE(std::filesystem::exists(parentDirectory / L"ScriptInspectorProject" / L"Player.sprite"));
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorSceneDocumentTests, CreateSpriteAssetFileCreatesAssetWithoutAddingSceneEntity)
+{
+    const std::filesystem::path parentDirectory =
+        MakeTempDirectory(L"XelqoriaEditorSceneDocumentTests_CreateSpriteAssetOnly");
+    Xelqoria::Editor::EditorSceneDocument document = MakeProjectDocument(parentDirectory);
+    const std::filesystem::path projectRoot = parentDirectory / L"ScriptInspectorProject";
+
+    ASSERT_NE(nullptr, document.GetScene());
+    const std::size_t entityCountBefore = document.GetScene()->GetEntityCount();
+
+    ASSERT_TRUE(document.CreateSpriteAssetFile(projectRoot));
+
+    EXPECT_EQ(entityCountBefore, document.GetScene()->GetEntityCount());
+    const std::filesystem::path spriteAssetPath = projectRoot / L"NewSprite.sprite";
+    EXPECT_TRUE(std::filesystem::exists(spriteAssetPath));
+
+    const std::string text = ReadTextFile(spriteAssetPath);
+    EXPECT_NE(std::string::npos, text.find("magic=XelqoriaSpriteAsset\n"));
+    EXPECT_NE(std::string::npos, text.find("hasSpriteComponent=false\n"));
+
+    const auto spriteAsset =
+        document.GetSpriteAssetRegistry().ResolveSpriteAsset(Xelqoria::Core::AssetId("sprites/NewSprite.sprite"));
+    ASSERT_TRUE(spriteAsset.has_value());
+    EXPECT_TRUE(spriteAsset->scriptAssetId.IsEmpty());
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorSceneDocumentTests, SceneViewSpriteDropCreatesEntityForSpriteAssetWithoutTexture)
+{
+    const std::filesystem::path parentDirectory =
+        MakeTempDirectory(L"XelqoriaEditorSceneDocumentTests_SceneViewSpriteDropWithoutTexture");
+    Xelqoria::Editor::EditorSceneDocument document = MakeProjectDocument(parentDirectory);
+    const std::filesystem::path projectRoot = parentDirectory / L"ScriptInspectorProject";
+
+    ASSERT_TRUE(document.CreateSpriteAssetFile(projectRoot));
+    ASSERT_NE(nullptr, document.GetScene());
+    const std::size_t entityCountBefore = document.GetScene()->GetEntityCount();
+
+    Xelqoria::Editor::ScenePendingDropState pendingDropState{};
+    pendingDropState.kind = Xelqoria::Editor::ScenePendingDropState::Kind::SpriteAsset;
+    pendingDropState.spriteAssetId = Xelqoria::Core::AssetId("sprites/NewSprite.sprite");
+    pendingDropState.worldX = 12.0f;
+    pendingDropState.worldY = -8.0f;
+    pendingDropState.hasPendingDrop = true;
+
+    const Xelqoria::Editor::SceneDropPlacementService service{};
+    const Xelqoria::Editor::SceneViewDropResult result =
+        service.ProcessPendingSceneDrop(document, pendingDropState);
+
+    EXPECT_EQ(Xelqoria::Editor::SceneDropPlacementStatus::Success, result.status);
+    EXPECT_TRUE(result.sceneChanged);
+    EXPECT_TRUE(result.selectionChanged);
+    ASSERT_TRUE(result.selectedEntityId.has_value());
+    ASSERT_NE(nullptr, document.GetScene());
+    EXPECT_EQ(entityCountBefore + 1u, document.GetScene()->GetEntityCount());
+
+    const auto entity = document.GetScene()->FindEntity(*result.selectedEntityId);
+    ASSERT_TRUE(entity.has_value());
+    EXPECT_EQ(12.0f, entity->get().GetTransform().position.x);
+    EXPECT_EQ(-8.0f, entity->get().GetTransform().position.y);
+    const auto spriteComponent = entity->get().GetSpriteComponent();
+    ASSERT_TRUE(spriteComponent.has_value());
+    EXPECT_EQ(Xelqoria::Core::AssetId("sprites/NewSprite.sprite"), spriteComponent->get().spriteAssetRef);
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorSceneDocumentTests, SceneViewSpriteDropCreatesEntityForSpriteAssetCreatedUnderAssetsRoot)
+{
+    const std::filesystem::path parentDirectory =
+        MakeTempDirectory(L"XelqoriaEditorSceneDocumentTests_SceneViewAssetsRootSpriteDrop");
+    Xelqoria::Editor::EditorSceneDocument document = MakeProjectDocument(parentDirectory);
+    const std::filesystem::path projectRoot = parentDirectory / L"ScriptInspectorProject";
+    const std::filesystem::path assetsRoot = projectRoot / L"Assets";
+
+    ASSERT_TRUE(document.CreateSpriteAssetFile(assetsRoot));
+    const std::filesystem::path spriteAssetPath = assetsRoot / L"NewSprite.sprite";
+    ASSERT_TRUE(std::filesystem::exists(spriteAssetPath));
+
+    const Xelqoria::Core::AssetId assetsPanelSpriteAssetId("sprites/NewSprite.sprite");
+    ASSERT_TRUE(document.ResolveSpriteAssetPath(assetsPanelSpriteAssetId).has_value());
+    ASSERT_TRUE(document.GetSpriteAssetRegistry().ResolveSpriteAsset(assetsPanelSpriteAssetId).has_value());
+    ASSERT_NE(nullptr, document.GetScene());
+    const std::size_t entityCountBefore = document.GetScene()->GetEntityCount();
+
+    Xelqoria::Editor::ScenePendingDropState pendingDropState{};
+    pendingDropState.kind = Xelqoria::Editor::ScenePendingDropState::Kind::SpriteAsset;
+    pendingDropState.spriteAssetId = assetsPanelSpriteAssetId;
+    pendingDropState.worldX = 21.0f;
+    pendingDropState.worldY = -13.0f;
+    pendingDropState.hasPendingDrop = true;
+
+    const Xelqoria::Editor::SceneDropPlacementService service{};
+    const Xelqoria::Editor::SceneViewDropResult result =
+        service.ProcessPendingSceneDrop(document, pendingDropState);
+
+    EXPECT_EQ(Xelqoria::Editor::SceneDropPlacementStatus::Success, result.status);
+    EXPECT_TRUE(result.sceneChanged);
+    EXPECT_TRUE(result.selectionChanged);
+    ASSERT_TRUE(result.selectedEntityId.has_value());
+    ASSERT_NE(nullptr, document.GetScene());
+    EXPECT_EQ(entityCountBefore + 1u, document.GetScene()->GetEntityCount());
+
+    const auto entity = document.GetScene()->FindEntity(*result.selectedEntityId);
+    ASSERT_TRUE(entity.has_value());
+    const auto spriteComponent = entity->get().GetSpriteComponent();
+    ASSERT_TRUE(spriteComponent.has_value());
+    EXPECT_EQ(assetsPanelSpriteAssetId, spriteComponent->get().spriteAssetRef);
+
+    std::filesystem::remove_all(parentDirectory);
+}
+
+TEST(EditorSceneDocumentTests, SceneViewScriptDropAssignsScriptAssetToHitSpriteAsset)
+{
+    const std::filesystem::path parentDirectory =
+        MakeTempDirectory(L"XelqoriaEditorSceneDocumentTests_SceneViewScriptDrop");
+    Xelqoria::Editor::EditorSceneDocument document = MakeProjectDocument(parentDirectory);
+    const std::filesystem::path projectRoot = parentDirectory / L"ScriptInspectorProject";
+
+    const std::filesystem::path spriteAssetPath = projectRoot / L"Player.sprite";
+    WriteSpriteAsset(spriteAssetPath, "textures/player", "");
+    ASSERT_TRUE(document.RegisterSpriteAssetFile(spriteAssetPath));
+
+    ASSERT_NE(nullptr, document.GetScene());
+    auto entity = document.GetScene()->FindEntity(1);
+    ASSERT_TRUE(entity.has_value());
+    entity->get().SetSpriteComponent(Xelqoria::Game::SpriteComponent{
+        Xelqoria::Core::AssetId("sprites/Player.sprite"),
+        {}
+    });
+
+    const std::filesystem::path scriptAssetPath = projectRoot / L"Scripts" / L"Player.script";
+    std::filesystem::create_directories(scriptAssetPath.parent_path());
+    std::ofstream scriptOutput(scriptAssetPath, std::ios::binary | std::ios::trunc);
+    scriptOutput << "magic=XelqoriaScriptAsset\n";
+    scriptOutput.close();
+
+    Xelqoria::Editor::ScenePendingDropState pendingDropState{};
+    pendingDropState.kind = Xelqoria::Editor::ScenePendingDropState::Kind::ScriptAsset;
+    pendingDropState.scriptAssetPath = scriptAssetPath;
+    pendingDropState.scriptAssetId = Xelqoria::Core::AssetId("scripts/Scripts/Player.script");
+    pendingDropState.targetEntityId = entity->get().GetId();
+    pendingDropState.hasPendingDrop = true;
+
+    const Xelqoria::Editor::SceneDropPlacementService service{};
+    const Xelqoria::Editor::SceneViewDropResult result =
+        service.ProcessPendingSceneDrop(document, pendingDropState);
+
+    EXPECT_EQ(Xelqoria::Editor::SceneDropPlacementStatus::Success, result.status);
+    EXPECT_TRUE(result.assetChanged);
+    EXPECT_FALSE(result.sceneChanged);
+    EXPECT_TRUE(result.selectionChanged);
+    EXPECT_EQ(entity->get().GetId(), result.selectedEntityId);
+
+    const auto spriteAsset =
+        document.GetSpriteAssetRegistry().ResolveSpriteAsset(Xelqoria::Core::AssetId("sprites/Player.sprite"));
+    ASSERT_TRUE(spriteAsset.has_value());
+    EXPECT_EQ(Xelqoria::Core::AssetId("scripts/Scripts/Player.script"), spriteAsset->scriptAssetId);
 
     std::filesystem::remove_all(parentDirectory);
 }

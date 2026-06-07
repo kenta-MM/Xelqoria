@@ -17,6 +17,8 @@ namespace Xelqoria::Editor
         /// </summary>
         explicit InspectorPanelView(EditorPanelHostContext& hostContext);
 
+        ~InspectorPanelView() override;
+
         bool Initialize(HWND parentWindow, HINSTANCE hInstance) override;
         void Layout(const RECT& bounds) override;
 
@@ -67,6 +69,21 @@ namespace Xelqoria::Editor
     private:
         [[nodiscard]] std::vector<HWND> BuildControls() const;
         [[nodiscard]] std::vector<HWND> BuildVisibleControls() const;
+        void InstallScrollSubclasses();
+        void RemoveScrollSubclasses();
+        void MoveScrollableChild(HWND window, const RECT& viewport, int x, int y, int width, int height) const;
+        void UpdateScrollInfo(int viewportHeight);
+        [[nodiscard]] bool SetScrollOffsetY(int scrollOffsetY);
+        [[nodiscard]] bool ScrollBy(int deltaY);
+        [[nodiscard]] LRESULT HandleScrollMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
+        static LRESULT CALLBACK InspectorScrollSubclassProc(
+            HWND window,
+            UINT message,
+            WPARAM wParam,
+            LPARAM lParam,
+            UINT_PTR subclassId,
+            DWORD_PTR referenceData);
 
         HWND m_panel = nullptr;
         HWND m_summaryLabel = nullptr;
@@ -109,5 +126,8 @@ namespace Xelqoria::Editor
         HWND m_materialOutlineEnabledCheckBox = nullptr;
         HWND m_materialOutlineColorButton = nullptr;
         HWND m_materialRemoveButton = nullptr;
+        RECT m_lastLayoutBounds{};
+        int m_scrollOffsetY = 0;
+        int m_contentHeight = 0;
     };
 }
