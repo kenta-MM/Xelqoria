@@ -878,11 +878,11 @@ namespace Xelqoria::Editor
             m_draggingImagePath = entry.path;
             m_draggingScriptAssetPath.clear();
             m_draggingTextureAssetId = EditorAssetPathUtils::BuildTextureAssetId(entry.path, m_assetsRootDirectory);
-            m_draggingSpriteAssetId = EditorAssetPathUtils::BuildSpriteAssetId(entry.path, m_assetsRootDirectory);
+            m_draggingSpriteAssetId = {};
             m_draggingScriptAssetId = {};
             m_draggingMaterialAssetId = {};
-            m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
-            m_canPlaceDraggingAssetInScene = m_isAssetDragActive;
+            m_isAssetDragActive = false == m_draggingTextureAssetId.IsEmpty();
+            m_canPlaceDraggingAssetInScene = false;
             if (m_isAssetDragActive)
             {
                 SetCapture(m_assetsListView);
@@ -905,7 +905,8 @@ namespace Xelqoria::Editor
             m_draggingScriptAssetId = {};
             m_draggingMaterialAssetId = {};
             m_isAssetDragActive = false == m_draggingSpriteAssetId.IsEmpty();
-            m_canPlaceDraggingAssetInScene = m_isAssetDragActive;
+            m_canPlaceDraggingAssetInScene =
+                m_isAssetDragActive && EditorAssetPathUtils::CanPlaceAssetFileInSceneView(entry.path);
             if (m_isAssetDragActive)
             {
                 SetCapture(m_assetsListView);
@@ -1080,7 +1081,7 @@ namespace Xelqoria::Editor
     {
         for (const AssetListEntry& entry : m_visibleEntries)
         {
-            if (false == entry.isDirectory && EditorAssetPathUtils::IsTextureImageFile(entry.path))
+            if (false == entry.isDirectory && EditorAssetPathUtils::IsSpriteAssetFile(entry.path))
             {
                 return true;
             }

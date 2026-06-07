@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <filesystem>
 #include <string>
 
 #include "Utils/EditorStringUtils.h"
+#include "Assets/EditorAssetPathUtils.h"
 #include "Panels/Inspector/InspectorPanelController.h"
 
 TEST(EditorStringUtilsTests, Utf8ConversionRoundTripsJapaneseFileName)
@@ -21,6 +23,19 @@ TEST(InspectorPanelControllerTests, FormatTextureDisplayTextShowsFileNameOnly)
             Xelqoria::Core::AssetId("textures/タイトルなし.png"));
 
     EXPECT_EQ(L"タイトルなし.png", displayText);
+}
+
+TEST(EditorAssetPathUtilsTests, TextureImageIsNotDirectSceneViewPlacementAsset)
+{
+    EXPECT_TRUE(
+        Xelqoria::Editor::EditorAssetPathUtils::IsTextureImageFile(
+            std::filesystem::path(L"Assets/Textures/player.png")));
+    EXPECT_FALSE(
+        Xelqoria::Editor::EditorAssetPathUtils::CanPlaceAssetFileInSceneView(
+            std::filesystem::path(L"Assets/Textures/player.png")));
+    EXPECT_TRUE(
+        Xelqoria::Editor::EditorAssetPathUtils::CanPlaceAssetFileInSceneView(
+            std::filesystem::path(L"Assets/Sprites/player.sprite")));
 }
 
 TEST(InspectorPanelControllerTests, FormatTextureDisplayTextShowsNestedFileNameOnly)

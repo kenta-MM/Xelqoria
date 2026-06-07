@@ -62,6 +62,11 @@ namespace Xelqoria::Editor::EditorAssetPathUtils
         return path.extension() == L".collider2d";
     }
 
+    bool CanPlaceAssetFileInSceneView(const std::filesystem::path& path)
+    {
+        return IsSpriteAssetFile(path);
+    }
+
     Core::AssetId BuildTextureAssetId(
         const std::filesystem::path& path,
         const std::filesystem::path& assetsRootDirectory)
